@@ -914,6 +914,7 @@ td:nth-child(6) {
     font-weight: 800;
     text-transform: uppercase;
     margin-bottom: 3px;
+  }
 }
 
 @keyframes spin {

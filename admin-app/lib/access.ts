@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { NextResponse } from 'next/server';
 
 import { auth } from './auth';
-import { getDb } from './course-db';
+import { getPool } from './supabase-pdf';
 import { databasePool } from './database';
 
 export type SessionUser = {
@@ -29,34 +29,46 @@ export const getSessionUser = async (): Promise<SessionUser | null> => {
   return session.user as SessionUser;
 };
 
-export const syncProfile = (user: SessionUser) => {
-  const db = getDb();
+export const syncProfile = async (user: SessionUser) => {
   const role = adminAllowedEmails().has(user.email.toLowerCase()) ? 'admin' : user.role ?? 'student';
-  const existing = db.prepare('select id from profiles where id = ?').get(user.id);
-  if (existing) {
-    db.prepare('update profiles set email = ?, name = ?, role = ?, updated_at = CURRENT_TIMESTAMP where id = ?').run(
-      user.email,
-      user.name ?? user.email,
-      role,
-      user.id,
-    );
-  } else {
-    db.prepare('insert into profiles (id, email, name, role) values (?, ?, ?, ?)').run(
-      user.id,
-      user.email,
-      user.name ?? user.email,
-      role,
-    );
-    db.prepare('insert into wallets (id, user_id, balance_coins) values (?, ?, ?)').run(
-      `wallet_${user.id}`,
-      user.id,
-      role === 'admin' ? 0 : 5000,
-    );
+  const pool = getPool();
+  
+  if (pool) {
+    try {
+      const existing = await pool.query('select id from public.profiles where id = $1', [user.id]);
+      if (existing.rows.length > 0) {
+        await pool.query(
+          'update public.profiles set email = $1, name = $2, role = $3, updated_at = now() where id = $4',
+          [user.email, user.name ?? user.email, role, user.id]
+        );
+      } else {
+        await pool.query(
+          'insert into public.profiles (id, email, name, role) values ($1, $2, $3, $4)',
+          [user.id, user.email, user.name ?? user.email, role]
+        );
+        await pool.query(
+          'insert into public.wallets (user_id, balance_coins) values ($1, $2) on conflict (user_id) do nothing',
+          [user.id, role === 'admin' ? 0 : 5000]
+        );
+      }
+    } catch (err) {
+      console.error('Error syncing profile to Postgres:', err);
+    }
   }
 
   if (role === 'admin') {
-    databasePool.query('update "user" set role = $1, "updatedAt" = now() where id = $2 and (role is null or role != $1)', ['admin', user.id]).catch(console.error);
-    databasePool.query('update public.app_users set role = $1, updated_at = now() where better_auth_user_id = $2 and (role is null or role != $1)', ['admin', user.id]).catch(console.error);
+    try {
+      await databasePool.query(
+        'update "user" set role = $1, "updatedAt" = now() where id = $2 and (role is null or role != $1)',
+        ['admin', user.id]
+      );
+      await databasePool.query(
+        'update public.app_users set role = $1, updated_at = now() where better_auth_user_id = $2 and (role is null or role != $1)',
+        ['admin', user.id]
+      );
+    } catch (err) {
+      console.error('Error syncing admin roles:', err);
+    }
   }
 };
 
@@ -70,7 +82,7 @@ export const isAdmin = (user: SessionUser | null) =>
 export const requireAdminPage = async () => {
   const user = await getSessionUser();
   if (!user) redirect('/admin/login');
-  syncProfile(user);
+  await syncProfile(user);
   if (!isAdmin(user)) redirect('/admin/forbidden');
   return user;
 };
@@ -80,7 +92,7 @@ export const requireAdminApi = async () => {
   if (!user) {
     return { user: null, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   }
-  syncProfile(user);
+  await syncProfile(user);
   if (!isAdmin(user)) {
     return { user, response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
   }
