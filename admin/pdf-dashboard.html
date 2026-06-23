@@ -1,0 +1,1363 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Campus-Bordes Admin PDF</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #090b0f;
+        --sidebar: #0d1118;
+        --panel: #111722;
+        --panel-soft: #0f141d;
+        --line: #242b37;
+        --text: #f6f7fb;
+        --muted: #8d96a8;
+        --green: #0bd18a;
+        --lime: #d4f65a;
+        --danger: #ff6b6b;
+        --blue: #7cb7ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        overflow-x: hidden;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      svg {
+        width: 17px;
+        height: 17px;
+        stroke-width: 2.2;
+      }
+
+      .layout {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 72px minmax(0, 1fr);
+        width: 100%;
+      }
+
+      aside {
+        border-right: 1px solid var(--line);
+        padding: 18px 10px;
+        background: var(--sidebar);
+      }
+
+      main {
+        padding: 20px 24px 26px;
+        min-width: 0;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-size: 20px;
+        font-weight: 900;
+        margin-bottom: 6px;
+      }
+
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        background: var(--green);
+        color: #03130d;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .nav-item {
+        width: 100%;
+        margin-top: 18px;
+        padding: 11px 12px;
+        border-radius: 8px;
+        background: #151c28;
+        border: 1px solid var(--line);
+        color: var(--text);
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .brand span:last-child,
+      aside > .muted,
+      .nav-caption,
+      .nav-item span {
+        display: none;
+      }
+
+      .nav-caption {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-top: 24px;
+        margin-bottom: 6px;
+      }
+
+      .route-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: var(--blue);
+        background: #0b1624;
+        border: 1px solid #1d3452;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 800;
+        margin-bottom: 10px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 14px;
+        min-width: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 26px;
+        letter-spacing: 0;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .btn {
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: var(--green);
+        color: #03130d;
+        font-weight: 900;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 40px;
+      }
+
+      .btn.secondary {
+        background: #1b2435;
+        color: var(--text);
+        border: 1px solid #2d3a52;
+      }
+
+      .btn.danger {
+        background: #3a1b23;
+        color: #ffaaaa;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .metric {
+        background: var(--panel-soft);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 13px;
+        display: grid;
+        grid-template-columns: 34px 1fr;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 21px;
+        margin-bottom: 4px;
+      }
+
+      .metric-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        background: #172131;
+        color: var(--green);
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(340px, 0.9fr) minmax(520px, 1.4fr);
+        align-items: start;
+        gap: 16px;
+        min-width: 0;
+      }
+
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 13px 14px;
+        min-width: 0;
+      }
+
+      section h2 {
+        margin: 0;
+        font-size: 17px;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .section-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      label {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+        margin: 9px 0 5px;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid #263149;
+        border-radius: 8px;
+        background: #0b111c;
+        color: var(--text);
+        padding: 9px 10px;
+      }
+
+      textarea {
+        min-height: 74px;
+        resize: vertical;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: minmax(190px, 1.4fr) minmax(150px, 0.9fr) minmax(140px, 0.9fr) minmax(140px, 0.9fr);
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #202a3d;
+        padding: 11px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      th:nth-child(1),
+      td:nth-child(1) {
+        width: 40%;
+      }
+
+      th:nth-child(2),
+      td:nth-child(2),
+      th:nth-child(3),
+      td:nth-child(3),
+      th:nth-child(4),
+      td:nth-child(4),
+      th:nth-child(5),
+      td:nth-child(5) {
+        width: 12%;
+      }
+
+      th:nth-child(6),
+      td:nth-child(6) {
+        width: 18%;
+      }
+
+      .badge {
+        display: inline-flex;
+        border-radius: 999px;
+        padding: 4px 8px;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .badge.published {
+        background: #142d23;
+        color: var(--green);
+      }
+
+      .badge.draft {
+        background: #252d17;
+        color: var(--lime);
+      }
+
+      .badge.archived {
+        background: #2a3040;
+        color: #b8c2d8;
+      }
+
+      .table-actions {
+        display: flex;
+        gap: 5px;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+      }
+
+      .small-btn {
+        flex: 0 0 32px;
+        border: 1px solid #2d3a52;
+        border-radius: 7px;
+        background: #1b2435;
+        color: var(--text);
+        width: 32px;
+        height: 32px;
+        display: inline-grid;
+        place-items: center;
+        font-size: 0;
+        font-weight: 800;
+        overflow: hidden;
+      }
+
+      .small-btn svg,
+      .small-btn .fallback {
+        font-size: 11px;
+      }
+
+      .small-btn.publish {
+        color: var(--green);
+        background: #13271f;
+        border-color: #1f4a38;
+      }
+
+      .small-btn.draft {
+        color: var(--lime);
+        background: #252d17;
+        border-color: #3f4c22;
+      }
+
+      .small-btn.danger {
+        background: #3a1b23;
+        border-color: #57303a;
+        color: #ffaaaa;
+      }
+
+      .fallback {
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .icons-ready .fallback {
+        display: none;
+      }
+
+      .preview-box {
+        min-height: 74px;
+        border: 1px dashed #3b475f;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+        text-align: center;
+        padding: 12px;
+        margin-top: 8px;
+      }
+
+      .doc-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 900;
+        min-width: 0;
+      }
+
+      .doc-title span {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .doc-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+      }
+
+      .meta-chip {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        border: 1px solid #263149;
+        padding: 3px 7px;
+        color: var(--muted);
+        font-size: 12px;
+        max-width: 100%;
+      }
+
+      .analysis-panel {
+        margin-top: 8px;
+        padding: 10px 12px;
+        border: 1px solid #263149;
+        border-radius: 8px;
+        background: #0b111c;
+      }
+
+      .analysis-panel strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .analysis-list {
+        margin: 6px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .confidence {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 4px 8px;
+        background: #142d23;
+        color: var(--green);
+        font-size: 12px;
+        font-weight: 900;
+        margin-top: 8px;
+      }
+
+      @media (max-width: 1180px) {
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .grid {
+          grid-template-columns: repeat(4, minmax(120px, 1fr));
+        }
+
+        .toolbar {
+          grid-template-columns: 1.4fr 1fr 1fr 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 16px;
+        }
+
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        aside {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+          padding: 12px 16px;
+        }
+
+        .brand span:last-child,
+        .nav-item span {
+          display: inline;
+        }
+
+        aside > .muted,
+        .nav-caption {
+          display: none;
+        }
+
+        .nav-item {
+          width: auto;
+          margin-top: 0;
+        }
+
+        .header {
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+
+        .actions {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        .btn {
+          padding-inline: 10px;
+        }
+
+        .grid,
+        .toolbar,
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+
+        .metric {
+          grid-template-columns: 34px 1fr;
+        }
+
+        table {
+          display: block;
+        }
+
+        thead {
+          display: none;
+        }
+
+        tbody,
+        tr,
+        td {
+          display: block;
+          width: 100% !important;
+        }
+
+        tr {
+          border: 1px solid #202a3d;
+          border-radius: 8px;
+          padding: 10px;
+          margin-bottom: 10px;
+          background: #0d131d;
+        }
+
+        td {
+          border-bottom: 0;
+          padding: 7px 0;
+        }
+
+        td:not(:first-child)::before {
+          content: attr(data-label);
+          display: block;
+          color: var(--muted);
+          font-size: 11px;
+          font-weight: 800;
+          text-transform: uppercase;
+          margin-bottom: 3px;
+        }
+
+        .table-actions {
+          justify-content: flex-start;
+        }
+      }
+
+      @media (max-width: 460px) {
+        main {
+          padding: 12px;
+        }
+
+        .actions {
+          grid-template-columns: 1fr;
+        }
+
+        .brand span:last-child {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside>
+        <div class="brand">
+          <span class="brand-mark"><i data-lucide="graduation-cap"></i></span>
+          <span>Campus-Bordes</span>
+        </div>
+        <div class="muted">Admin</div>
+        <div class="nav-caption">Route</div>
+        <button class="nav-item" type="button">
+          <i data-lucide="file-text"></i>
+          <span>PDF</span>
+        </button>
+      </aside>
+
+      <main>
+        <div class="header">
+          <div>
+            <div class="route-pill"><i data-lucide="route"></i><span>/admin/pdf</span></div>
+            <h1>PDF academiques</h1>
+          </div>
+          <div class="actions">
+            <button class="btn secondary" id="seedButton" title="Recharger les exemples">
+              <i data-lucide="refresh-cw"></i><span>Exemples</span>
+            </button>
+            <button class="btn secondary" id="exportButton" title="Exporter le catalogue JSON">
+              <i data-lucide="download"></i><span>Export</span>
+            </button>
+            <button class="btn danger" id="clearButton" title="Vider les donnees locales">
+              <i data-lucide="trash-2"></i><span>Vider</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="metric">
+            <span class="metric-icon"><i data-lucide="files"></i></span>
+            <div><strong id="totalDocs">0</strong><span class="muted">PDF</span></div>
+          </div>
+          <div class="metric">
+            <span class="metric-icon"><i data-lucide="check-circle-2"></i></span>
+            <div><strong id="publishedDocs">0</strong><span class="muted">Publies</span></div>
+          </div>
+          <div class="metric">
+            <span class="metric-icon"><i data-lucide="shopping-bag"></i></span>
+            <div><strong id="totalSales">0</strong><span class="muted">Ventes</span></div>
+          </div>
+          <div class="metric">
+            <span class="metric-icon"><i data-lucide="wallet"></i></span>
+            <div><strong id="totalRevenue">0</strong><span class="muted">Revenus</span></div>
+          </div>
+        </div>
+
+        <div class="workspace">
+          <section>
+            <div class="section-head">
+              <h2 class="section-title" id="formTitle">
+                <i data-lucide="upload-cloud"></i>
+                <span>Ajouter un PDF</span>
+              </h2>
+            </div>
+            <form id="pdfForm">
+              <input type="hidden" id="documentId" />
+
+              <label for="title">Titre</label>
+              <input id="title" required placeholder="Ex: Analyse 2 - sujets corriges" />
+
+              <label for="description">Description</label>
+              <textarea id="description" required placeholder="Ce que l'etudiant trouvera dans le PDF"></textarea>
+
+              <div class="form-row">
+                <div>
+                  <label for="university">Universite</label>
+                  <input id="university" required value="Universite de Douala" />
+                </div>
+                <div>
+                  <label for="faculty">Filiere / Faculte</label>
+                  <input id="faculty" required placeholder="Informatique" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div>
+                  <label for="subject">Matiere</label>
+                  <input id="subject" required placeholder="Mathematiques" />
+                </div>
+                <div>
+                  <label for="teacher">Professeur</label>
+                  <input id="teacher" placeholder="Pr. Nom" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div>
+                  <label for="level">Niveau</label>
+                  <input id="level" required placeholder="L2 Informatique" />
+                </div>
+                <div>
+                  <label for="academicYear">Annee academique</label>
+                  <input id="academicYear" required value="2025-2026" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div>
+                  <label for="price">Prix en Coins</label>
+                  <input id="price" required type="number" min="0" step="50" value="300" />
+                </div>
+                <div>
+                  <label for="status">Statut</label>
+                  <select id="status">
+                    <option value="draft">Brouillon</option>
+                    <option value="published">Publie</option>
+                    <option value="archived">Archive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div>
+                  <label for="pageCount">Pages</label>
+                  <input id="pageCount" type="number" min="1" value="20" />
+                </div>
+                <div>
+                  <label for="commissionRate">Commission Campus-Bordes (%)</label>
+                  <input id="commissionRate" type="number" min="0" max="100" value="20" />
+                </div>
+              </div>
+
+              <label for="pdfFile">Fichier PDF</label>
+              <input id="pdfFile" type="file" accept="application/pdf" />
+              <div class="preview-box" id="filePreview">Aucun fichier selectionne</div>
+              <div class="analysis-panel" id="analysisPanel">
+                <strong>Analyse automatique du PDF</strong>
+                <div class="muted" id="analysisStatus">
+                  Selectionne un PDF pour pre-remplir le formulaire.
+                </div>
+                <ul class="analysis-list" id="analysisList"></ul>
+              </div>
+
+              <div class="actions" style="margin-top: 14px">
+                <button class="btn" type="submit">Enregistrer PDF</button>
+                <button class="btn secondary" type="button" id="resetButton">Nouveau</button>
+              </div>
+            </form>
+          </section>
+
+          <section>
+            <div class="section-head">
+              <h2 class="section-title">
+                <i data-lucide="library"></i>
+                <span>Catalogue</span>
+              </h2>
+            </div>
+            <div class="toolbar">
+              <input id="search" placeholder="Rechercher titre, matiere, prof..." />
+              <select id="statusFilter">
+                <option value="all">Tous les statuts</option>
+                <option value="published">Publies</option>
+                <option value="draft">Brouillons</option>
+                <option value="archived">Archives</option>
+              </select>
+              <input id="subjectFilter" placeholder="Filtrer matiere" />
+              <input id="levelFilter" placeholder="Filtrer niveau" />
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Document</th>
+                  <th>Prix</th>
+                  <th>Statut</th>
+                  <th>Ventes</th>
+                  <th>Revenu</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="documentsTable"></tbody>
+            </table>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+      const storageKey = "campus360_admin_pdf_documents";
+      const seedDocuments = [
+        {
+          id: "doc-1",
+          title: "Analyse 2 - sujets corriges",
+          description: "Compilation de sujets corriges avec rappels de methode.",
+          university: "Universite de Douala",
+          faculty: "Faculte des Sciences",
+          subject: "Mathematiques",
+          teacher: "Pr. Moukoko",
+          level: "L2 Informatique",
+          academicYear: "2025-2026",
+          price: 350,
+          pageCount: 42,
+          fileName: "analyse-2-sujets-corriges.pdf",
+          fileSize: "4.8 MB",
+          previewPages: 1,
+          rating: 4.8,
+          sales: 32,
+          downloads: 31,
+          uploaderName: "Admin Campus-Bordes",
+          status: "published",
+          commissionRate: 20,
+          createdAt: "17 juin 2026",
+        },
+        {
+          id: "doc-2",
+          title: "Droit OHADA resume complet",
+          description: "Resume structure pour reviser rapidement les actes uniformes.",
+          university: "Universite de Yaounde II",
+          faculty: "Faculte de Droit",
+          subject: "Droit",
+          teacher: "Mme Nlend",
+          level: "L3 Droit prive",
+          academicYear: "2025-2026",
+          price: 500,
+          pageCount: 68,
+          fileName: "droit-ohada-resume.pdf",
+          fileSize: "7.1 MB",
+          previewPages: 1,
+          rating: 4.6,
+          sales: 19,
+          downloads: 17,
+          uploaderName: "Admin Campus-Bordes",
+          status: "published",
+          commissionRate: 20,
+          createdAt: "15 juin 2026",
+        },
+      ];
+
+      const fields = [
+        "documentId",
+        "title",
+        "description",
+        "university",
+        "faculty",
+        "subject",
+        "teacher",
+        "level",
+        "academicYear",
+        "price",
+        "status",
+        "pageCount",
+        "commissionRate",
+      ];
+
+      const getEl = (id) => document.getElementById(id);
+      const formatCoins = (value) => new Intl.NumberFormat("fr-CM").format(value);
+      const loadDocuments = () => JSON.parse(localStorage.getItem(storageKey) || "null") || seedDocuments;
+      const saveDocuments = (documents) => localStorage.setItem(storageKey, JSON.stringify(documents));
+      const refreshIcons = () => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+          document.body.classList.add("icons-ready");
+        }
+      };
+      const setFormTitle = (label, icon = "upload-cloud") => {
+        getEl("formTitle").innerHTML = `<i data-lucide="${icon}"></i><span>${label}</span>`;
+        refreshIcons();
+      };
+      const defaultValues = {
+        university: "Universite de Douala",
+        academicYear: "2025-2026",
+        price: "300",
+        pageCount: "20",
+        commissionRate: "20",
+      };
+
+      let documents = loadDocuments();
+      let selectedFile = null;
+
+      if (window.pdfjsLib) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      }
+
+      const normalizeText = (value) =>
+        (value || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+
+      const cleanFileTitle = (fileName) =>
+        fileName
+          .replace(/\.pdf$/i, "")
+          .replace(/[-_]+/g, " ")
+          .replace(/\b\w/g, (letter) => letter.toUpperCase())
+          .trim();
+
+      const setIfEmpty = (fieldId, value, detected) => {
+        if (!value) return false;
+        const field = getEl(fieldId);
+        const current = field.value.trim();
+        const defaultValue = defaultValues[fieldId];
+        if (current && current !== defaultValue) return false;
+        field.value = value;
+        detected.push(`${fieldId}: ${value}`);
+        return true;
+      };
+
+      const findFirstMatch = (text, patterns) => {
+        for (const pattern of patterns) {
+          const match = text.match(pattern);
+          if (match?.[1]) return match[1].trim();
+          if (match?.[0]) return match[0].trim();
+        }
+        return "";
+      };
+
+      const inferUniversity = (rawText) => {
+        const text = normalizeText(rawText).toLowerCase();
+        const universities = [
+          ["Universite de Douala", ["universite de douala", "university of douala"]],
+          ["Universite de Yaounde I", ["universite de yaounde i", "university of yaounde i"]],
+          ["Universite de Yaounde II", ["universite de yaounde ii", "university of yaounde ii"]],
+          ["Universite de Dschang", ["universite de dschang", "university of dschang"]],
+          ["Universite de Buea", ["universite de buea", "university of buea"]],
+          ["Universite de Bamenda", ["universite de bamenda", "university of bamenda"]],
+        ];
+
+        return universities.find(([, aliases]) => aliases.some((alias) => text.includes(alias)))?.[0] || "";
+      };
+
+      const inferSubject = (rawText, fileName) => {
+        const text = `${normalizeText(rawText)} ${normalizeText(fileName)}`.toLowerCase();
+        const subjects = [
+          ["Mathematiques", ["analyse", "algebre", "mathematique", "maths", "probabilite"]],
+          ["Droit", ["droit", "ohada", "juridique", "constitution", "penal"]],
+          ["Reseaux", ["reseau", "tcp", "ip", "osi", "routage", "network"]],
+          ["Comptabilite", ["comptabilite", "bilan", "journal comptable", "compte de resultat"]],
+          ["Programmation", ["programmation", "algorithme", "java", "python", "javascript", "code"]],
+          ["Economie", ["economie", "microeconomie", "macroeconomie", "marche"]],
+          ["Marketing", ["marketing", "vente", "client", "marque"]],
+          ["Gestion", ["gestion", "management", "entreprise", "organisation"]],
+        ];
+
+        return subjects.find(([, keywords]) => keywords.some((keyword) => text.includes(keyword)))?.[0] || "";
+      };
+
+      const inferFaculty = (rawText, subject) => {
+        const text = normalizeText(rawText).toLowerCase();
+        if (text.includes("faculte des sciences") || ["Mathematiques", "Reseaux", "Programmation"].includes(subject)) {
+          return "Faculte des Sciences";
+        }
+        if (text.includes("droit") || subject === "Droit") return "Faculte de Droit";
+        if (text.includes("economie") || text.includes("gestion") || ["Comptabilite", "Economie", "Gestion"].includes(subject)) {
+          return "FSEG";
+        }
+        if (text.includes("technology") || text.includes("engineering")) return "College of Technology";
+        return "";
+      };
+
+      const inferLevel = (rawText, fileName) => {
+        const text = normalizeText(`${rawText} ${fileName}`);
+        const direct = findFirstMatch(text, [
+          /\b(L[1-3]\s+[A-Za-z ]{3,40})\b/i,
+          /\b(Master\s?[12]\s+[A-Za-z ]{3,40})\b/i,
+          /\b(Niveau\s?[1-5]\s+[A-Za-z ]{3,40})\b/i,
+        ]);
+        if (direct) return direct;
+
+        const simple = findFirstMatch(text, [/\bL[1-3]\b/i, /\bMaster\s?[12]\b/i, /\bNiveau\s?[1-5]\b/i]);
+        return simple;
+      };
+
+      const inferAcademicYear = (rawText) =>
+        findFirstMatch(normalizeText(rawText), [/\b(20\d{2}\s*[-/]\s*20\d{2})\b/]);
+
+      const inferTeacher = (rawText) =>
+        findFirstMatch(rawText, [
+          /\b((?:Pr|Prof|Professeur|Dr|Docteur|Mme|M)\.?\s+[A-Z][A-Za-zÀ-ÿ'-]{2,}(?:\s+[A-Z][A-Za-zÀ-ÿ'-]{2,})?)\b/,
+          /\b(?:Enseignant|Charge de cours|Lecturer)\s*:\s*([A-Z][A-Za-zÀ-ÿ' -]{3,50})/i,
+        ]);
+
+      const inferTitle = (rawText, fileName, metadataTitle) => {
+        if (metadataTitle && !/^untitled$/i.test(metadataTitle)) return metadataTitle.trim();
+        const lines = rawText
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter((line) => line.length >= 8 && line.length <= 90);
+        const ignored = /universite|republique|ministere|faculty|faculte|departement|department/i;
+        const firstGoodLine = lines.find((line) => !ignored.test(line));
+        return firstGoodLine || cleanFileTitle(fileName);
+      };
+
+      const buildDescription = (analysis) => {
+        const parts = [
+          analysis.subject ? `Document de ${analysis.subject}` : "Document academique",
+          analysis.level ? `pour ${analysis.level}` : "",
+          analysis.teacher ? `associe a ${analysis.teacher}` : "",
+          analysis.academicYear ? `annee ${analysis.academicYear}` : "",
+        ].filter(Boolean);
+        return `${parts.join(" ")}. Preview gratuite avant achat, fichier complet disponible apres paiement.`;
+      };
+
+      const extractPdfText = async (file) => {
+        if (!window.pdfjsLib) {
+          throw new Error("La librairie PDF.js n'est pas chargee. Verifie ta connexion internet.");
+        }
+
+        const buffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+        const metadata = await pdf.getMetadata().catch(() => ({ info: {} }));
+        const maxPages = Math.min(pdf.numPages, 3);
+        const pageTexts = [];
+
+        for (let pageNumber = 1; pageNumber <= maxPages; pageNumber += 1) {
+          const page = await pdf.getPage(pageNumber);
+          const content = await page.getTextContent();
+          pageTexts.push(content.items.map((item) => item.str).join("\n"));
+        }
+
+        return {
+          pageCount: pdf.numPages,
+          text: pageTexts.join("\n"),
+          metadataTitle: metadata?.info?.Title || "",
+        };
+      };
+
+      const analyzeSelectedPdf = async (file) => {
+        const analysisStatus = getEl("analysisStatus");
+        const analysisList = getEl("analysisList");
+        analysisStatus.textContent = "Analyse du PDF en cours...";
+        analysisList.innerHTML = "";
+
+        try {
+          const extracted = await extractPdfText(file);
+          const subject = inferSubject(extracted.text, file.name);
+          const analysis = {
+            title: inferTitle(extracted.text, file.name, extracted.metadataTitle),
+            university: inferUniversity(extracted.text),
+            subject,
+            faculty: inferFaculty(extracted.text, subject),
+            teacher: inferTeacher(extracted.text),
+            level: inferLevel(extracted.text, file.name),
+            academicYear: inferAcademicYear(extracted.text),
+            pageCount: String(extracted.pageCount),
+          };
+
+          const detected = [];
+          setIfEmpty("title", analysis.title, detected);
+          setIfEmpty("university", analysis.university, detected);
+          setIfEmpty("faculty", analysis.faculty, detected);
+          setIfEmpty("subject", analysis.subject, detected);
+          setIfEmpty("teacher", analysis.teacher, detected);
+          setIfEmpty("level", analysis.level, detected);
+          setIfEmpty("academicYear", analysis.academicYear, detected);
+          setIfEmpty("pageCount", analysis.pageCount, detected);
+
+          if (!getEl("description").value.trim()) {
+            const description = buildDescription(analysis);
+            getEl("description").value = description;
+            detected.push(`description: ${description}`);
+          }
+
+          const missing = [
+            ["title", "titre"],
+            ["university", "universite"],
+            ["faculty", "filiere/faculte"],
+            ["subject", "matiere"],
+            ["teacher", "professeur"],
+            ["level", "niveau"],
+            ["academicYear", "annee academique"],
+          ]
+            .filter(([fieldId]) => !getEl(fieldId).value.trim())
+            .map(([, label]) => label);
+
+          analysisStatus.innerHTML = detected.length
+            ? `<span class="confidence">${detected.length} champ(s) pre-rempli(s)</span>`
+            : "Aucune information fiable detectee automatiquement.";
+          analysisList.innerHTML = [
+            ...detected.map((item) => `<li>${item}</li>`),
+            missing.length ? `<li>A completer manuellement : ${missing.join(", ")}</li>` : "",
+          ]
+            .filter(Boolean)
+            .join("");
+        } catch (error) {
+          analysisStatus.textContent = error.message || "Analyse impossible. Remplis les champs manuellement.";
+          analysisList.innerHTML = "";
+        }
+      };
+
+      function getFormData() {
+        const id = getEl("documentId").value || `doc-${Date.now()}`;
+        const existing = documents.find((document) => document.id === id);
+        return {
+          id,
+          title: getEl("title").value.trim(),
+          description: getEl("description").value.trim(),
+          university: getEl("university").value.trim(),
+          faculty: getEl("faculty").value.trim(),
+          subject: getEl("subject").value.trim(),
+          teacher: getEl("teacher").value.trim() || "Non renseigne",
+          level: getEl("level").value.trim(),
+          academicYear: getEl("academicYear").value.trim(),
+          price: Number(getEl("price").value || 0),
+          pageCount: Number(getEl("pageCount").value || 1),
+          fileName: selectedFile?.name || existing?.fileName || "document.pdf",
+          fileSize: selectedFile ? `${(selectedFile.size / 1024 / 1024).toFixed(1)} MB` : existing?.fileSize || "0 MB",
+          previewPages: 1,
+          rating: existing?.rating || 0,
+          sales: existing?.sales || 0,
+          downloads: existing?.downloads || 0,
+          uploaderName: "Admin Campus-Bordes",
+          status: getEl("status").value,
+          commissionRate: Number(getEl("commissionRate").value || 20),
+          createdAt: existing?.createdAt || new Date().toLocaleDateString("fr-FR"),
+        };
+      }
+
+      function resetForm() {
+        getEl("pdfForm").reset();
+        getEl("documentId").value = "";
+        setFormTitle("Ajouter un PDF", "upload-cloud");
+        getEl("academicYear").value = "2025-2026";
+        getEl("price").value = "300";
+        getEl("pageCount").value = "20";
+        getEl("commissionRate").value = "20";
+        getEl("university").value = "Universite de Douala";
+        getEl("filePreview").textContent = "Aucun fichier selectionne";
+        getEl("analysisStatus").textContent = "Selectionne un PDF pour pre-remplir le formulaire.";
+        getEl("analysisList").innerHTML = "";
+        selectedFile = null;
+      }
+
+      function editDocument(id) {
+        const documentData = documents.find((document) => document.id === id);
+        if (!documentData) return;
+        setFormTitle("Modifier un PDF", "file-pen-line");
+        fields.forEach((field) => {
+          if (field === "documentId") {
+            getEl(field).value = documentData.id;
+          } else if (getEl(field)) {
+            getEl(field).value = documentData[field] ?? "";
+          }
+        });
+        getEl("filePreview").textContent = documentData.fileName
+          ? `${documentData.fileName} - ${documentData.fileSize}`
+          : "Fichier existant";
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function updateStatus(id, status) {
+        documents = documents.map((document) => (document.id === id ? { ...document, status } : document));
+        saveDocuments(documents);
+        render();
+      }
+
+      function deleteDocument(id) {
+        if (!confirm("Supprimer ce PDF du catalogue local ?")) return;
+        documents = documents.filter((document) => document.id !== id);
+        saveDocuments(documents);
+        render();
+      }
+
+      function getFilteredDocuments() {
+        const query = getEl("search").value.trim().toLowerCase();
+        const status = getEl("statusFilter").value;
+        const subject = getEl("subjectFilter").value.trim().toLowerCase();
+        const level = getEl("levelFilter").value.trim().toLowerCase();
+
+        return documents.filter((document) => {
+          const haystack = [
+            document.title,
+            document.description,
+            document.subject,
+            document.teacher,
+            document.level,
+            document.faculty,
+            document.university,
+          ]
+            .join(" ")
+            .toLowerCase();
+
+          return (
+            (!query || haystack.includes(query)) &&
+            (status === "all" || document.status === status) &&
+            (!subject || document.subject.toLowerCase().includes(subject)) &&
+            (!level || document.level.toLowerCase().includes(level))
+          );
+        });
+      }
+
+      function renderDocumentRow(document) {
+        const revenue = Math.round(document.sales * document.price * (document.commissionRate / 100));
+        return `
+          <tr>
+            <td data-label="Document">
+              <div class="doc-title"><i data-lucide="file-text"></i><span>${document.title}</span></div>
+              <div class="doc-meta">
+                <span class="meta-chip">${document.subject}</span>
+                <span class="meta-chip">${document.level}</span>
+                <span class="meta-chip">${document.teacher}</span>
+                <span class="meta-chip">${document.pageCount} pages</span>
+              </div>
+            </td>
+            <td data-label="Prix">${formatCoins(document.price)} C</td>
+            <td data-label="Statut"><span class="badge ${document.status}">${document.status}</span></td>
+            <td data-label="Ventes">${document.sales}</td>
+            <td data-label="Revenu">${formatCoins(revenue)} C</td>
+            <td data-label="Actions">
+              <div class="table-actions">
+                <button class="small-btn" title="Modifier" data-action="edit" data-id="${document.id}">
+                  <i data-lucide="file-pen-line"></i>
+                  <span class="fallback">M</span>
+                </button>
+                <button class="small-btn publish" title="Publier" data-action="publish" data-id="${document.id}">
+                  <i data-lucide="check"></i>
+                  <span class="fallback">P</span>
+                </button>
+                <button class="small-btn draft" title="Brouillon" data-action="draft" data-id="${document.id}">
+                  <i data-lucide="pencil"></i>
+                  <span class="fallback">B</span>
+                </button>
+                <button class="small-btn danger" title="Supprimer" data-action="delete" data-id="${document.id}">
+                  <i data-lucide="trash-2"></i>
+                  <span class="fallback">S</span>
+                </button>
+              </div>
+            </td>
+          </tr>`;
+      }
+
+      function render() {
+        const table = getEl("documentsTable");
+        const filtered = getFilteredDocuments();
+        const published = documents.filter((document) => document.status === "published");
+        const sales = documents.reduce((sum, document) => sum + Number(document.sales || 0), 0);
+        const revenue = documents.reduce(
+          (sum, document) =>
+            sum + Math.round(Number(document.sales || 0) * Number(document.price || 0) * (Number(document.commissionRate || 0) / 100)),
+          0,
+        );
+
+        getEl("totalDocs").textContent = documents.length;
+        getEl("publishedDocs").textContent = published.length;
+        getEl("totalSales").textContent = sales;
+        getEl("totalRevenue").textContent = formatCoins(revenue);
+
+        table.innerHTML =
+          filtered
+            .map((document) => {
+              const revenue = Math.round(document.sales * document.price * (document.commissionRate / 100));
+              return `
+                <tr>
+                  <td>
+                    <strong>${document.title}</strong><br />
+                    <span class="muted">${document.subject} · ${document.level} · ${document.teacher}</span><br />
+                    <span class="muted">${document.fileName || "PDF non lie"} · ${document.pageCount} pages</span>
+                  </td>
+                  <td>${formatCoins(document.price)} C</td>
+                  <td><span class="badge ${document.status}">${document.status}</span></td>
+                  <td>${document.sales}</td>
+                  <td>${formatCoins(revenue)} C</td>
+                  <td>
+                    <div class="table-actions">
+                      <button class="small-btn" data-action="edit" data-id="${document.id}">Modifier</button>
+                      <button class="small-btn" data-action="publish" data-id="${document.id}">Publier</button>
+                      <button class="small-btn" data-action="draft" data-id="${document.id}">Brouillon</button>
+                      <button class="small-btn danger" data-action="delete" data-id="${document.id}">Supprimer</button>
+                    </div>
+                  </td>
+                </tr>`;
+            })
+            .join("") || `<tr><td colspan="6" class="muted">Aucun PDF trouve.</td></tr>`;
+        table.innerHTML =
+          filtered.map(renderDocumentRow).join("") ||
+          `<tr><td colspan="6" class="muted">Aucun PDF trouve.</td></tr>`;
+        refreshIcons();
+      }
+
+      getEl("pdfFile").addEventListener("change", (event) => {
+        selectedFile = event.target.files[0] || null;
+        getEl("filePreview").textContent = selectedFile
+          ? `${selectedFile.name} - ${(selectedFile.size / 1024 / 1024).toFixed(1)} MB`
+          : "Aucun fichier selectionne";
+        if (selectedFile) {
+          analyzeSelectedPdf(selectedFile);
+        } else {
+          getEl("analysisStatus").textContent = "Selectionne un PDF pour pre-remplir le formulaire.";
+          getEl("analysisList").innerHTML = "";
+        }
+      });
+
+      getEl("pdfForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const documentData = getFormData();
+        const exists = documents.some((document) => document.id === documentData.id);
+        documents = exists
+          ? documents.map((document) => (document.id === documentData.id ? documentData : document))
+          : [documentData, ...documents];
+        saveDocuments(documents);
+        resetForm();
+        render();
+      });
+
+      getEl("documentsTable").addEventListener("click", (event) => {
+        const button = event.target.closest("button");
+        if (!button) return;
+        const id = button.dataset.id;
+        const action = button.dataset.action;
+        if (action === "edit") editDocument(id);
+        if (action === "publish") updateStatus(id, "published");
+        if (action === "draft") updateStatus(id, "draft");
+        if (action === "delete") deleteDocument(id);
+      });
+
+      ["search", "statusFilter", "subjectFilter", "levelFilter"].forEach((id) =>
+        getEl(id).addEventListener("input", render),
+      );
+
+      getEl("resetButton").addEventListener("click", resetForm);
+      getEl("seedButton").addEventListener("click", () => {
+        documents = seedDocuments;
+        saveDocuments(documents);
+        resetForm();
+        render();
+      });
+      getEl("clearButton").addEventListener("click", () => {
+        if (!confirm("Vider les PDF locaux ?")) return;
+        documents = [];
+        saveDocuments(documents);
+        resetForm();
+        render();
+      });
+      getEl("exportButton").addEventListener("click", () => {
+        const blob = new Blob([JSON.stringify(documents, null, 2)], { type: "application/json" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "campus360-pdf-catalog.json";
+        link.click();
+        URL.revokeObjectURL(link.href);
+      });
+
+      resetForm();
+      render();
+      refreshIcons();
+    </script>
+  </body>
+</html>

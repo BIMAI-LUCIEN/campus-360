@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lecteur PDF</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #F8FAFC; /* Slate 50 to match application */
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow-x: hidden;
+    }
+    #viewer-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .page-container {
+      margin-bottom: 16px;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      background-color: #FFFFFF;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      max-width: 95%;
+    }
+    canvas {
+      display: block;
+      max-width: 100%;
+      height: auto !important;
+    }
+    #loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 16px;
+      color: #64748B;
+      font-weight: 600;
+      text-align: center;
+    }
+    .spinner {
+      border: 4px solid #F1F5F9;
+      border-top: 4px solid #3B82F6;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 12px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+</head>
+<body>
+  <div id="loading">
+    <div class="spinner"></div>
+    Chargement du document...
+  </div>
+  <div id="viewer-container"></div>
+
+  <script>
+    // Configure PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const pdfUrl = urlParams.get('url');
+    const container = document.getElementById('viewer-container');
+    const loadingText = document.getElementById('loading');
+
+    if (pdfUrl) {
+      pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
+        loadingText.style.display = 'none';
+        
+        // Render all pages sequentially
+        let renderQueue = Promise.resolve();
+
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const pageContainer = document.createElement('div');
+          pageContainer.className = 'page-container';
+          container.appendChild(pageContainer);
+
+          const canvas = document.createElement('canvas');
+          pageContainer.appendChild(canvas);
+
+          // Chain rendering to ensure pages render in order and don't freeze the browser
+          renderQueue = renderQueue.then(() => {
+            return pdf.getPage(pageNum).then(page => {
+              const containerWidth = window.innerWidth * 0.95;
+              const unscaledViewport = page.getViewport({ scale: 1 });
+              const scale = containerWidth / unscaledViewport.width;
+              // Limit max scale to avoid huge canvas memory usage
+              const viewport = page.getViewport({ scale: Math.min(scale, 2.0) });
+
+              const context = canvas.getContext('2d');
+              const outputScale = window.devicePixelRatio || 1;
+              
+              canvas.width = Math.floor(viewport.width * outputScale);
+              canvas.height = Math.floor(viewport.height * outputScale);
+              canvas.style.width = Math.floor(viewport.width) + "px";
+              canvas.style.height = Math.floor(viewport.height) + "px";
+
+              const transform = outputScale !== 1 
+                ? [outputScale, 0, 0, outputScale, 0, 0] 
+                : null;
+
+              const renderContext = {
+                canvasContext: context,
+                transform: transform,
+                viewport: viewport
+              };
+              return page.render(renderContext).promise;
+            });
+          });
+        }
+      }).catch(err => {
+        loadingText.innerHTML = '<div style="color: #EF4444;">Erreur de chargement</div><div style="font-size: 13px; margin-top: 8px;">' + err.message + '</div>';
+        console.error(err);
+      });
+    } else {
+      loadingText.innerText = 'Aucun document PDF spécifié.';
+    }
+
+    // Handle resizing to adjust canvas layout
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    });
+  </script>
+</body>
+</html>

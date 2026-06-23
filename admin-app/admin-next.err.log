@@ -1,0 +1,26 @@
+[Error: Connection terminated due to connection timeout] {
+  [cause]: [Error: Connection terminated unexpectedly]
+}
+(node:11944) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 error listeners added to [BoundPool]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(Use `node --trace-warnings ...` to show where the warning was created)
+Mobile API error Error: timeout exceeded when trying to connect
+    at async GET (app\api\mobile\account\route.ts:14:54)
+  12 |     const user = access.user;
+  13 |
+> 14 |     const [wallet, documents, packs, transactions] = await Promise.all([
+     |                                                      ^
+  15 |       databasePool.query('select balance_coins from public.app_wallets where user_id = $1', [user.id]),
+  16 |       databasePool.query('select document_id from public.app_document_purchases where buyer_id = $1', [user.id]),
+  17 |       databasePool.query('select pack_id, document_ids from public.app_pack_purchases where buyer_id = $1', [user.id]),
+Mobile API error Error: timeout exceeded when trying to connect
+    at async GET (app\api\mobile\account\route.ts:14:54)
+  12 |     const user = access.user;
+  13 |
+> 14 |     const [wallet, documents, packs, transactions] = await Promise.all([
+     |                                                      ^
+  15 |       databasePool.query('select balance_coins from public.app_wallets where user_id = $1', [user.id]),
+  16 |       databasePool.query('select document_id from public.app_document_purchases where buyer_id = $1', [user.id]),
+  17 |       databasePool.query('select pack_id, document_ids from public.app_pack_purchases where buyer_id = $1', [user.id]),
+[Error: Connection terminated due to connection timeout] {
+  [cause]: [Error: Connection terminated unexpectedly]
+}

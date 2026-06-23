@@ -1,0 +1,63 @@
+export type Transaction = {
+  id: string;
+  label: string;
+  amount: number;
+  type: 'topup' | 'purchase' | 'withdrawal' | 'commission';
+  status: 'success' | 'pending' | 'failed';
+  date: string;
+};
+
+export type CampusDocument = {
+  id: string;
+  title: string;
+  description: string;
+  university: string;
+  faculty: string;
+  subject: string;
+  teacher: string;
+  level: string;
+  academicYear: string;
+  price: number;
+  pageCount: number;
+  filePath: string;
+  previewPath?: string;
+  fileSize: string;
+  previewPages: number;
+  rating: number;
+  sales: number;
+  downloads: number;
+  uploaderName: string;
+  status: 'draft' | 'analyzing' | 'needs_review' | 'published' | 'archived';
+  commissionRate: number;
+  createdAt: string;
+  aiSummary?: string;
+  aiTags?: string[];
+  aiDifficulty?: string;
+  suggestedPrice?: number;
+  qualityScore?: number;
+  studyPlan?: string[];
+  quiz?: Array<{ question: string; answer: string }>;
+};
+
+export type CampusPdfPack = {
+  id: string;
+  title: string;
+  description: string;
+  university: string;
+  faculty: string;
+  level: string;
+  semester: string;
+  packType: 'semester' | 'exam_prep' | 'corrections' | 'course_bundle' | 'catch_up' | 'transversal';
+  price: number;
+  originalPrice: number;
+  discountPercent: number;
+  documentIds: string[];
+  documentCount: number;
+  pageCount: number;
+  status: 'draft' | 'needs_review' | 'published' | 'archived';
+  sales: number;
+  revenue: number;
+  aiSummary?: string;
+  aiConfidence?: number;
+  createdAt: string;
+};
