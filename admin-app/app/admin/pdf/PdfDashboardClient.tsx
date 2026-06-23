@@ -770,7 +770,8 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
             <input value={level} onChange={(event) => setLevel(event.target.value)} placeholder="Niveau" />
           </div>
 
-          <table>
+          <div className="table-responsive">
+            <table>
             <thead>
               <tr>
                 <th>Document</th>
@@ -848,6 +849,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
               })}
             </tbody>
           </table>
+          </div>
         </section>
       </div>
     </>
