@@ -87,7 +87,8 @@ const parseQuiz = (value: string) => {
 export async function GET() {
   const { response } = await requireAdminApi();
   if (response) return response;
-  return NextResponse.json({ documents: listPdfs() });
+  const documents = await listPdfs();
+  return NextResponse.json({ documents });
 }
 
 export async function POST(request: NextRequest) {
@@ -159,7 +160,7 @@ export async function POST(request: NextRequest) {
   const aiStudyPlan = parseStringArray(parsed.data.aiStudyPlan);
   const aiQuiz = parseQuiz(parsed.data.aiQuiz);
 
-  const document = createPdf(
+  const document = await createPdf(
     {
       ...parsed.data,
       fileName: file.name,
@@ -176,7 +177,6 @@ export async function POST(request: NextRequest) {
     },
     user!.id,
   );
-  await upsertSupabasePdf(document);
 
   return NextResponse.json({ document }, { status: 201 });
 }

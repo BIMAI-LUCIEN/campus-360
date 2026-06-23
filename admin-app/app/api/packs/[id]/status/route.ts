@@ -25,11 +25,10 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const pack = updatePackStatus(id, parsed.data.status, user!.id);
+  const pack = await updatePackStatus(id, parsed.data.status, user!.id);
   if (!pack) {
     return NextResponse.json({ error: 'Pack introuvable.' }, { status: 404 });
   }
 
-  await upsertSupabasePack(pack);
   return NextResponse.json({ pack });
 }

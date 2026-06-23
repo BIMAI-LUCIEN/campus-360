@@ -17,6 +17,6 @@ export async function DELETE(
     return NextResponse.json({ error: 'Pack introuvable.' }, { status: 400 });
   }
 
-  deletePack(id, user!.id);
+  await deletePack(id, user!.id);
   return NextResponse.json({ ok: true });
 }

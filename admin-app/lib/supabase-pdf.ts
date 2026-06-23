@@ -36,7 +36,7 @@ export type PdfAnalyticsSummary = {
   }>;
 };
 
-const getPool = () => {
+export const getPool = () => {
   if (!process.env.DATABASE_URL) return null;
   pool ??= new Pool({
     connectionString: process.env.DATABASE_URL,

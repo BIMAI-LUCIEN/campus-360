@@ -27,7 +27,8 @@ const packSchema = z.object({
 export async function GET() {
   const { response } = await requireAdminApi();
   if (response) return response;
-  return NextResponse.json({ packs: listPacks() });
+  const packs = await listPacks();
+  return NextResponse.json({ packs });
 }
 
 export async function POST(request: NextRequest) {
@@ -40,8 +41,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const pack = createPack(parsed.data, user!.id);
-  await upsertSupabasePack(pack);
+  const pack = await createPack(parsed.data, user!.id);
 
   return NextResponse.json({ pack }, { status: 201 });
 }

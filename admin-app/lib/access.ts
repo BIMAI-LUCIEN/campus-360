@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 
 import { auth } from './auth';
 import { getDb } from './course-db';
+import { databasePool } from './database';
 
 export type SessionUser = {
   id: string;
@@ -51,6 +52,11 @@ export const syncProfile = (user: SessionUser) => {
       user.id,
       role === 'admin' ? 0 : 5000,
     );
+  }
+
+  if (role === 'admin') {
+    databasePool.query('update "user" set role = $1, "updatedAt" = now() where id = $2 and (role is null or role != $1)', ['admin', user.id]).catch(console.error);
+    databasePool.query('update public.app_users set role = $1, updated_at = now() where better_auth_user_id = $2 and (role is null or role != $1)', ['admin', user.id]).catch(console.error);
   }
 };
 

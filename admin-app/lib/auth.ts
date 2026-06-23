@@ -17,6 +17,7 @@ const trustedOrigins = [
   'http://10.48.198.18:8081',
   'http://10.48.198.18:8082',
   'http://10.48.198.18:3001',
+  'https://campus-360-hi97.vercel.app',
   process.env.BETTER_AUTH_URL,
   process.env.EXPO_APP_ORIGIN,
 ].filter((origin): origin is string => Boolean(origin));

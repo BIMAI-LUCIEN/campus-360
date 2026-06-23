@@ -21,8 +21,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   }
 
   const { id } = await context.params;
-  const document = updatePdfStatus(id, body.data.status, user!.id);
+  const document = await updatePdfStatus(id, body.data.status, user!.id);
   if (!document) return NextResponse.json({ error: 'PDF not found' }, { status: 404 });
-  await upsertSupabasePdf(document);
   return NextResponse.json({ document });
 }

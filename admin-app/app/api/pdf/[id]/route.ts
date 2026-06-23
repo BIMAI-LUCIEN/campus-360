@@ -11,7 +11,6 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
   if (response) return response;
 
   const { id } = await context.params;
-  deletePdf(id, user!.id);
-  await deleteSupabasePdf(id);
+  await deletePdf(id, user!.id);
   return NextResponse.json({ ok: true });
 }

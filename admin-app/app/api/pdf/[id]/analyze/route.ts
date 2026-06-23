@@ -12,10 +12,10 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   if (response) return response;
 
   const { id } = await context.params;
-  const current = getPdfById(id);
+  const current = await getPdfById(id);
   if (!current) return NextResponse.json({ error: 'PDF not found' }, { status: 404 });
 
-  updatePdfStatus(id, 'analyzing', user!.id);
+  await updatePdfStatus(id, 'analyzing', user!.id);
   const intelligence = inferPdfIntelligence({
     fileName: current.fileName,
     title: current.title,
@@ -31,7 +31,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     rawText: current.extractedText || `${current.title}\n${current.description}`,
   });
 
-  const document = updatePdfAiMetadata(
+  const document = await updatePdfAiMetadata(
     id,
     {
       aiSummary: intelligence.aiSummary,
@@ -46,7 +46,6 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     user!.id,
   );
 
-  const finalDocument = updatePdfStatus(id, document && document.qualityScore >= 70 ? 'needs_review' : 'draft', user!.id);
-  await upsertSupabasePdf(finalDocument);
+  const finalDocument = await updatePdfStatus(id, document && document.qualityScore >= 70 ? 'needs_review' : 'draft', user!.id);
   return NextResponse.json({ document: finalDocument });
 }

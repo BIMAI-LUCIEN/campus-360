@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { databasePool } from '@/lib/database';
-import { getDb } from '@/lib/course-db';
 
 export const runtime = 'nodejs';
 
@@ -31,18 +30,20 @@ export async function POST(request: NextRequest) {
     [user.id, user.email],
   );
 
-  const db = getDb();
-  const profile = db.prepare('select id from profiles where id = ?').get(user.id);
-  if (profile) {
-    db.prepare('update profiles set role = ?, updated_at = CURRENT_TIMESTAMP where id = ?').run('admin', user.id);
-  } else {
-    db.prepare('insert into profiles (id, email, name, role) values (?, ?, ?, ?)').run(
-      user.id,
-      user.email,
-      user.name ?? user.email,
-      'admin',
+  const pool = require('@/lib/supabase-pdf').getPool();
+  if (pool) {
+    await pool.query(
+      `insert into public.profiles (id, email, name, role) 
+       values ($1, $2, $3, 'admin') 
+       on conflict (id) do update set role = 'admin', updated_at = now()`,
+      [user.id, user.email, user.name ?? user.email]
     );
-    db.prepare('insert into wallets (id, user_id, balance_coins) values (?, ?, ?)').run(`wallet_${user.id}`, user.id, 0);
+    await pool.query(
+      `insert into public.wallets (user_id, balance_coins) 
+       values ($1, 0) 
+       on conflict (user_id) do nothing`,
+      [user.id]
+    );
   }
 
   return NextResponse.json({ ok: true });
