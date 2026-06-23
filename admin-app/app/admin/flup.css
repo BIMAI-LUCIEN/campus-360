@@ -1,0 +1,328 @@
+/* Flup-inspired Dashboard Theme */
+
+:root {
+  --flup-bg: #f5f6fa;
+  --flup-surface: #ffffff;
+  --flup-surface-alt: #f8f9fc;
+  --flup-border: #eaedf2;
+  --flup-text-main: #1a202c;
+  --flup-text-muted: #718096;
+  --flup-brand: #02b075;
+  --flup-brand-light: #e6f7f1;
+  --flup-accent: #ffb800;
+  --flup-shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+  --flup-shadow-md: 0 4px 12px rgba(0,0,0,0.03);
+  --flup-shadow-lg: 0 10px 25px rgba(0,0,0,0.04);
+  --flup-radius: 12px;
+}
+
+body:has(.flup-layout) {
+  background-color: var(--flup-bg);
+  color: var(--flup-text-main);
+}
+
+.flup-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* 1. Nav Rail (Thin Sidebar) */
+.flup-nav-rail {
+  width: 72px;
+  background-color: var(--flup-surface-alt);
+  border-right: 1px solid var(--flup-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0;
+  z-index: 20;
+}
+
+.rail-top {
+  margin-bottom: 40px;
+}
+
+.brand-mark-small {
+  width: 40px;
+  height: 40px;
+  background-color: var(--flup-brand);
+  color: white;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rail-center {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+}
+
+.rail-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  color: var(--flup-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.rail-btn:hover {
+  background-color: rgba(2, 176, 117, 0.1);
+  color: var(--flup-brand);
+}
+
+.rail-btn.active {
+  background-color: var(--flup-brand-light);
+  color: var(--flup-brand);
+}
+
+.rail-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+.avatar-small img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* 2. Nav Menu (Inner Sidebar) */
+.flup-nav-menu {
+  width: 240px;
+  background-color: var(--flup-surface);
+  border-right: 1px solid var(--flup-border);
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  z-index: 10;
+}
+
+.menu-header {
+  margin-bottom: 40px;
+}
+
+.menu-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--flup-text-main);
+}
+
+.menu-brand .brand-icon {
+  color: var(--flup-brand);
+}
+
+.menu-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--flup-text-muted);
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.menu-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--flup-text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.menu-link:hover {
+  background-color: var(--flup-bg);
+  color: var(--flup-text-main);
+}
+
+.menu-link.active {
+  background-color: var(--flup-brand-light);
+  color: var(--flup-brand);
+  font-weight: 600;
+}
+
+/* Main Area */
+.flup-main {
+  flex: 1;
+  padding: 40px;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+/* Typography & Utilities for Dashboard */
+.flup-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.flup-page-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--flup-text-main);
+}
+
+/* Cards */
+.flup-card {
+  background: var(--flup-surface);
+  border-radius: var(--flup-radius);
+  border: 1px solid var(--flup-border);
+  box-shadow: var(--flup-shadow-sm);
+  padding: 24px;
+}
+
+.flup-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kpi-label {
+  font-size: 13px;
+  color: var(--flup-text-muted);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kpi-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.kpi-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--flup-text-main);
+}
+
+.kpi-trend {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kpi-trend.up { color: var(--flup-brand); }
+.kpi-trend.down { color: #e53e3e; }
+
+/* Dashboard Grid Layout */
+.flup-dash-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.flup-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.flup-chart-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--flup-text-main);
+  margin: 0;
+}
+
+.flup-legend {
+  display: flex;
+  gap: 16px;
+}
+
+.flup-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--flup-text-muted);
+  font-weight: 500;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legend-dot.blue { background-color: #3182ce; }
+.legend-dot.orange { background-color: var(--flup-accent); }
+.legend-dot.brand { background-color: var(--flup-brand); }
+
+/* Custom table for top documents */
+.flup-list-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.flup-list-table th,
+.flup-list-table td {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--flup-border);
+  text-align: left;
+  font-size: 14px;
+}
+
+.flup-list-table th {
+  color: var(--flup-text-muted);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.flup-list-table td {
+  color: var(--flup-text-main);
+  font-weight: 500;
+}
+
+.flup-list-table tr:last-child td {
+  border-bottom: none;
+}

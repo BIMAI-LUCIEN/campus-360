@@ -26,6 +26,7 @@
     "puppeteer": "^25.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "recharts": "^3.9.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

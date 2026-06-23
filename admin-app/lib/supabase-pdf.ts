@@ -4,7 +4,7 @@ import type { PdfDocument, PdfPack } from './course-db';
 
 let pool: Pool | null = null;
 
-export type PdfAnalyticsSummary = {
+export interface PdfAnalyticsSummary {
   configured: boolean;
   totals: {
     sessions: number;
@@ -15,8 +15,18 @@ export type PdfAnalyticsSummary = {
     purchaseFailures: number;
     readers: number;
     assistantQuestions: number;
+    revenue: number;
   };
-  topDocuments: Array<{
+  dailyStats: {
+    date: string;
+    purchases: number;
+    previews: number;
+  }[];
+  categoryStats: {
+    subject: string;
+    purchases: number;
+  }[];
+  topDocuments: {
     id: string;
     title: string;
     subject: string;
@@ -24,17 +34,18 @@ export type PdfAnalyticsSummary = {
     purchases: number;
     readers: number;
     conversionRate: number;
-  }>;
-  recentEvents: Array<{
+  }[];
+  recentEvents: {
     id: string;
     eventType: string;
     documentTitle: string;
     documentId: string;
     sessionId: string;
     userId: string;
+    userEmail?: string;
     createdAt: string;
-  }>;
-};
+  }[];
+}
 
 export const getPool = () => {
   if (!process.env.DATABASE_URL) return null;
@@ -51,7 +62,7 @@ export const isSupabaseStorageConfigured = () =>
   Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 const getSupabaseUrl = () => process.env.SUPABASE_URL?.replace(/\/$/, '') ?? '';
-const emptyAnalytics = (configured: boolean): PdfAnalyticsSummary => ({
+export const emptyAnalytics = (configured: boolean): PdfAnalyticsSummary => ({
   configured,
   totals: {
     sessions: 0,
@@ -62,8 +73,11 @@ const emptyAnalytics = (configured: boolean): PdfAnalyticsSummary => ({
     purchaseFailures: 0,
     readers: 0,
     assistantQuestions: 0,
+    revenue: 0,
   },
   topDocuments: [],
+  dailyStats: [],
+  categoryStats: [],
   recentEvents: [],
 });
 
@@ -246,19 +260,21 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
   if (!db) return emptyAnalytics(false);
 
   try {
-    const [totalsResult, topDocumentsResult, recentEventsResult] = await Promise.all([
+    const [totalsResult, topDocumentsResult, recentEventsResult, dailyStatsResult, categoryStatsResult] = await Promise.all([
       db.query(`
         select
-          count(distinct session_id)::int as sessions,
-          count(*) filter (where event_type = 'search')::int as searches,
-          count(*) filter (where event_type = 'preview_open')::int as previews,
-          count(*) filter (where event_type = 'purchase_start')::int as purchase_starts,
-          count(*) filter (where event_type = 'purchase_success')::int as purchases,
-          count(*) filter (where event_type = 'purchase_failed')::int as purchase_failures,
-          count(*) filter (where event_type = 'reader_open')::int as readers,
-          count(*) filter (where event_type = 'assistant_question')::int as assistant_questions
-        from public.document_events
-        where created_at >= now() - interval '30 days'
+          count(distinct e.session_id)::int as sessions,
+          count(*) filter (where e.event_type = 'search')::int as searches,
+          count(*) filter (where e.event_type = 'preview_open')::int as previews,
+          count(*) filter (where e.event_type = 'purchase_start')::int as purchase_starts,
+          count(*) filter (where e.event_type = 'purchase_success')::int as purchases,
+          count(*) filter (where e.event_type = 'purchase_failed')::int as purchase_failures,
+          count(*) filter (where e.event_type = 'reader_open')::int as readers,
+          count(*) filter (where e.event_type = 'assistant_question')::int as assistant_questions,
+          sum(coalesce(d.price_coins, 0)) filter (where e.event_type = 'purchase_success')::int as revenue
+        from public.document_events e
+        left join public.documents d on d.id = e.document_id
+        where e.created_at >= now() - interval '30 days'
       `),
       db.query(`
         select
@@ -284,12 +300,35 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
           e.session_id,
           e.user_id,
           e.created_at,
-          coalesce(d.title, e.document_id, 'Catalogue') as document_title
+          coalesce(d.title, e.document_id, 'Catalogue') as document_title,
+          u.email as user_email
         from public.document_events e
         left join public.documents d on d.id = e.document_id
+        left join "user" u on u.id = e.user_id
         order by e.created_at desc
         limit 20
       `),
+      db.query(`
+        select
+          to_char(created_at, 'DD Mon') as date,
+          count(*) filter (where event_type = 'purchase_success')::int as purchases,
+          count(*) filter (where event_type = 'preview_open')::int as previews
+        from public.document_events
+        where created_at >= now() - interval '14 days'
+        group by to_char(created_at, 'DD Mon'), date_trunc('day', created_at)
+        order by date_trunc('day', created_at) asc
+      `),
+      db.query(`
+        select
+          coalesce(d.subject, 'Autre') as subject,
+          count(*) filter (where e.event_type = 'purchase_success')::int as purchases
+        from public.document_events e
+        left join public.documents d on d.id = e.document_id
+        where e.created_at >= now() - interval '30 days'
+        group by coalesce(d.subject, 'Autre')
+        having count(*) filter (where e.event_type = 'purchase_success') > 0
+        order by purchases desc
+      `)
     ]);
 
     const totalsRow = totalsResult.rows[0] ?? {};
@@ -302,11 +341,21 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
       purchaseFailures: Number(totalsRow.purchase_failures ?? 0),
       readers: Number(totalsRow.readers ?? 0),
       assistantQuestions: Number(totalsRow.assistant_questions ?? 0),
+      revenue: Number(totalsRow.revenue ?? 0),
     };
 
     return {
       configured: true,
       totals,
+      dailyStats: dailyStatsResult.rows.map((row) => ({
+        date: String(row.date),
+        purchases: Number(row.purchases ?? 0),
+        previews: Number(row.previews ?? 0),
+      })),
+      categoryStats: categoryStatsResult.rows.map((row) => ({
+        subject: String(row.subject),
+        purchases: Number(row.purchases ?? 0),
+      })),
       topDocuments: topDocumentsResult.rows.map((row) => {
         const previews = Number(row.previews ?? 0);
         const purchases = Number(row.purchases ?? 0);
@@ -327,6 +376,7 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
         documentId: String(row.document_id ?? ''),
         sessionId: String(row.session_id ?? ''),
         userId: String(row.user_id ?? ''),
+        userEmail: row.user_email ? String(row.user_email) : undefined,
         createdAt: new Date(row.created_at).toLocaleString('fr-FR', {
           day: '2-digit',
           month: 'short',
