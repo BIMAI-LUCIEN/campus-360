@@ -273,6 +273,14 @@ export const updatePdfStatus = async (pdfId: string, status: PdfStatus, adminUse
   return getPdfById(pdfId);
 };
 
+export const updatePdfPrice = async (pdfId: string, priceCoins: number, adminUserId: string) => {
+  const db = getPool();
+  if (!db) return null;
+  await db.query('update public.documents set price_coins = $1, updated_at = now() where id = $2', [priceCoins, pdfId]);
+  await audit(adminUserId, 'pdf.update_price', 'pdf_document', pdfId, { priceCoins });
+  return getPdfById(pdfId);
+};
+
 export const updatePdfAiMetadata = async (
   pdfId: string,
   input: {

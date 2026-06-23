@@ -436,6 +436,20 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     await refresh();
   };
 
+  const updatePrice = async (documentId: string, newPrice: number) => {
+    const response = await fetch(`/api/pdf/${documentId}/price`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priceCoins: newPrice }),
+    });
+    if (!response.ok) {
+      setMessage('Mise à jour du prix impossible.');
+      return;
+    }
+    setMessage('Prix mis à jour avec succès.');
+    await refresh();
+  };
+
   const remove = async (documentId: string) => {
     if (!confirm('Supprimer ce PDF ?')) return;
     const response = await fetch(`/api/pdf/${documentId}`, { method: 'DELETE' });
@@ -674,85 +688,6 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
 
         <section className="panel">
           <h2 className="section-title">
-            <PackagePlus size={18} />
-            Packs IA
-          </h2>
-          <div className="pack-grid">
-            {packSuggestions.length ? (
-              packSuggestions.map((suggestion) => {
-                const exists = packs.some((pack) => pack.title === suggestion.title);
-                return (
-                  <div className="pack-card" key={suggestion.key}>
-                    <div className="pack-card-top">
-                      <div>
-                        <strong>{suggestion.title}</strong>
-                        <span>{suggestion.university} - {suggestion.level}</span>
-                      </div>
-                      <span className="badge needs_review">{suggestion.aiConfidence}% IA</span>
-                    </div>
-                    <p>{suggestion.description}</p>
-                    <div className="doc-meta">
-                      <span className="meta-chip">{suggestion.documentIds.length} PDF</span>
-                      <span className="meta-chip">{formatCoins(suggestion.priceCoins)} C</span>
-                      <span className="meta-chip">-{suggestion.discountPercent}%</span>
-                    </div>
-                    <button
-                      className="btn secondary"
-                      type="button"
-                      disabled={exists}
-                      onClick={() => createSuggestedPack(suggestion)}
-                    >
-                      <PackagePlus size={16} />
-                      {exists ? 'Deja cree' : 'Creer le pack'}
-                    </button>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="empty-panel">
-                <strong>Aucune proposition fiable</strong>
-                <span>Ajoute au moins deux PDF proches par matiere, niveau et filiere.</span>
-              </div>
-            )}
-          </div>
-
-          <h3 className="subsection-title">Packs existants</h3>
-          <div className="pack-list">
-            {packs.map((pack) => (
-              <div className="pack-row" key={pack.id}>
-                <div className="pack-row-main">
-                  <strong>{pack.title}</strong>
-                  <span>{pack.documentIds.length} PDF - {pack.level} - {pack.semester}</span>
-                  {pack.aiSummary ? <p className="pack-row-summary">{pack.aiSummary}</p> : null}
-                </div>
-                <div className="pack-row-side">
-                  <span className={`badge ${pack.status}`}>{pack.status}</span>
-                  <strong>{formatCoins(pack.priceCoins)} C</strong>
-                  <div className="table-actions">
-                    <button className="icon-btn publish" title="Publier" onClick={() => updatePack(pack.id, 'published')}>
-                      <Check size={16} />
-                    </button>
-                    <button className="icon-btn review" title="A corriger" onClick={() => updatePack(pack.id, 'needs_review')}>
-                      <CircleAlert size={16} />
-                    </button>
-                    <button className="icon-btn draft" title="Brouillon" onClick={() => updatePack(pack.id, 'draft')}>
-                      <FilePenLine size={16} />
-                    </button>
-                    <button className="icon-btn" title="Archiver" onClick={() => updatePack(pack.id, 'archived')}>
-                      <Archive size={16} />
-                    </button>
-                    <button className="icon-btn danger" title="Supprimer" onClick={() => removePack(pack.id)}>
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="panel">
-          <h2 className="section-title">
             <FileText size={18} />
             Catalogue
           </h2>
@@ -796,27 +731,26 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
                         <span className="meta-chip">{document.subject}</span>
                         <span className="meta-chip">{document.level}</span>
                         <span className="meta-chip">{document.teacher}</span>
-                        <span className="meta-chip">{document.pageCount} pages</span>
-                        <span className="meta-chip">Qualite {document.qualityScore}/100</span>
-                        <span className="meta-chip">{document.aiDifficulty}</span>
                       </div>
-                      {document.aiSummary ? <p className="doc-summary">{document.aiSummary}</p> : null}
-                      {document.aiTags.length ? (
-                        <div className="doc-meta">
-                          {document.aiTags.map((tag) => (
-                            <span className="meta-chip ai" key={tag}>{tag}</span>
-                          ))}
-                        </div>
-                      ) : null}
-                      {document.aiStudyPlan.length ? (
-                        <div className="doc-mini-plan">
-                          {document.aiStudyPlan.slice(0, 2).map((step) => (
-                            <span key={step}>{step}</span>
-                          ))}
-                        </div>
-                      ) : null}
                     </td>
-                    <td data-label="Prix">{formatCoins(document.priceCoins)} C</td>
+                    <td data-label="Prix">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input 
+                          type="number" 
+                          defaultValue={document.priceCoins} 
+                          step="50"
+                          min="0"
+                          style={{ width: '80px', padding: '4px', borderRadius: '4px', border: '1px solid var(--line)', background: 'var(--panel-soft)', color: 'var(--text)' }}
+                          onBlur={(e) => {
+                            const newPrice = parseInt(e.target.value, 10);
+                            if (!isNaN(newPrice) && newPrice !== document.priceCoins) {
+                              updatePrice(document.id, newPrice);
+                            }
+                          }}
+                        />
+                        <span className="muted">C</span>
+                      </div>
+                    </td>
                     <td data-label="Statut">
                       <span className={`badge ${document.status}`}>{document.status}</span>
                     </td>

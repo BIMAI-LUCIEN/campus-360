@@ -2,9 +2,28 @@ import { expo } from '@better-auth/expo';
 import { betterAuth } from 'better-auth';
 import { admin } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
+import os from 'node:os';
 
 import { databasePool } from './database';
 import { sendPasswordResetEmail, sendVerificationEmail } from './mailer';
+
+const getLocalIpAddresses = () => {
+  const interfaces = os.networkInterfaces();
+  const addresses: string[] = [];
+  for (const name of Object.keys(interfaces)) {
+    const netInterface = interfaces[name];
+    if (netInterface) {
+      for (const ip of netInterface) {
+        if (ip.family === 'IPv4') {
+          addresses.push(`http://${ip.address}:3001`);
+          addresses.push(`http://${ip.address}:8081`);
+          addresses.push(`http://${ip.address}:8082`);
+        }
+      }
+    }
+  }
+  return addresses;
+};
 
 const trustedOrigins = [
   'campus-bordes://',
@@ -14,12 +33,10 @@ const trustedOrigins = [
   'http://127.0.0.1:8082',
   'http://localhost:3001',
   'http://127.0.0.1:3001',
-  'http://10.48.198.18:8081',
-  'http://10.48.198.18:8082',
-  'http://10.48.198.18:3001',
   'https://campus-360-hi97.vercel.app',
   process.env.BETTER_AUTH_URL,
   process.env.EXPO_APP_ORIGIN,
+  ...getLocalIpAddresses(),
 ].filter((origin): origin is string => Boolean(origin));
 
 export const auth = betterAuth({
