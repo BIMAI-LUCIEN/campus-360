@@ -19,7 +19,7 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
-import { Bell, Shield, MessageSquare, Smartphone, Wallet, BookOpen, Crown, Home, Search, User, Sparkles } from 'lucide-react-native';
+import { Bell, Shield, MessageSquare, Smartphone, Wallet, BookOpen, Crown, Home, Search, User, Sparkles, FileText } from 'lucide-react-native';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 
@@ -145,6 +145,10 @@ function NavGlyph({ section, active }: { section: AppSection; active: boolean })
 
   if (section === 'library') {
     return <BookOpen size={size} color={iconColor} />;
+  }
+
+  if (section === 'reports') {
+    return <FileText size={size} color={iconColor} />;
   }
 
   return <User size={size} color={iconColor} />;
@@ -1007,6 +1011,18 @@ export default function App() {
       return;
     }
 
+    if (section === 'reports') {
+      if (!studentSession) {
+        setActiveSection('account');
+        setAuthMode('sign-in');
+        setAuthNotice('Connecte-toi pour rédiger tes rapports de stage.');
+        setAuthVisible(true);
+        return;
+      }
+      setActiveSection(section);
+      return;
+    }
+
     if (section === 'premium') {
       setActiveSection('premium');
       setSubscriptionVisible(false); // In case it was opened via modal
@@ -1410,6 +1426,26 @@ export default function App() {
                   </View>
                 </View>
 
+                <View style={[styles.homeLeadCard, { borderRadius: 24, padding: 24, marginTop: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 }]}>
+                  <View style={styles.dashboardFeatureRow}>
+                    <View style={[styles.dashboardFeatureText, { flex: 1 }]}>
+                      <Text style={[styles.dashboardActionKicker, { fontSize: 13, color: '#10B981', textTransform: 'none', marginBottom: 6 }]}>✨ Rédaction & Rapport</Text>
+                      <Text style={[styles.dashboardActionTitle, { fontSize: 20, fontWeight: '700', lineHeight: 28 }]}>Rapport de Stage & Mémoire</Text>
+                      <Text style={[styles.dashboardActionText, { fontSize: 14, color: '#64748B', lineHeight: 22, marginTop: 8 }]}>
+                        Rédigez vos rapports d'internship et mémoires directement, générez vos chapitres par IA, et exportez en Word / PDF.
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={[styles.homeLeadActions, { marginTop: 24 }]}>
+                    <PrimaryButton 
+                      label="Rédiger mon rapport" 
+                      fluid 
+                      onPress={() => openSection('reports')} 
+                      style={{ backgroundColor: '#10B981' }}
+                    />
+                  </View>
+                </View>
+
                 {featuredHomePack ? (
                   <Pressable style={[styles.homeFeatureStrip, { backgroundColor: '#F8FAFC', borderRadius: 20, padding: 20, marginTop: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 }]} onPress={() => openSection('explore')}>
                     <View style={styles.flex}>
@@ -1757,9 +1793,10 @@ export default function App() {
             { key: 'home', label: 'Accueil' },
             { key: 'explore', label: 'Explorer' },
             { key: 'library', label: 'Biblio' },
+            { key: 'reports', label: 'Rapports' },
             { key: 'account', label: 'Compte' },
           ].map((item) => {
-            const active = activeSection === item.key || (item.key === 'account' && activeSection === 'reports');
+            const active = activeSection === item.key;
             return (
               <Pressable key={item.key} style={[styles.navItem, compactScreen && styles.navItemCompact]} onPress={() => openSection(item.key as AppSection)}>
                 <View style={[styles.navIconWrap, active && styles.navIconWrapActive]}>
