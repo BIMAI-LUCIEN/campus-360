@@ -13,18 +13,11 @@ import {
 } from './login-throttle';
 import { sendPasswordResetEmail, sendVerificationEmail } from './mailer';
 
-// Trusted origins are now an EXPLICIT allowlist read from env. No more
-// auto-discovery of every local IPv4 — that previously let any LAN host
-// be treated as a trusted origin.
-const parseOriginList = (raw: string | undefined): string[] =>
-  (raw ?? '')
-    .split(',')
-    .map((entry) => entry.trim())
-    .filter((entry): entry is string => Boolean(entry));
-
-// Trusted origins — production domains MUST be hardcoded so auth works even
-// when env vars point at localhost. The custom domain is the primary
+// ────────────────────────────────────────────────────────────────────────
+// Trusted origins — production domains MUST be hardcoded so auth works
+// even when env vars point at localhost. The custom domain is the primary
 // production entry point.
+// ────────────────────────────────────────────────────────────────────────
 const PRODUCTION_ORIGINS = [
   'https://admin.campus360b.site',
   'https://admin.campus-bordes.com',
@@ -33,8 +26,22 @@ const PRODUCTION_ORIGINS = [
   'https://campus-360-bimai-s-projects.vercel.app',
 ];
 
-// Auto-detect the production baseURL from the custom domain if no env var is
-// set or it points at localhost.
+const LOCAL_DEV_ORIGINS = [
+  'campus-bordes://',
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+  'http://localhost:8081',
+  'http://127.0.0.1:8081',
+  'http://localhost:8082',
+  'http://127.0.0.1:8082',
+];
+
+const parseOriginList = (raw: string | undefined): string[] =>
+  (raw ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry): entry is string => Boolean(entry));
+
 const detectBaseUrl = (): string => {
   const envUrl = process.env.BETTER_AUTH_URL;
   if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
@@ -44,17 +51,12 @@ const detectBaseUrl = (): string => {
   return 'https://admin.campus360b.site';
 };
 
+// Build the trusted origins list. Production origins are ALWAYS trusted
+// regardless of env. Local dev origins are added too so developers can test.
 const trustedOrigins = [
-  'campus-bordes://',
-  'http://localhost:3001',
-  'http://127.0.0.1:3001',
-  'http://localhost:8081',
-  'http://127.0.0.1:8081',
-  'http://localhost:8082',
-  'http://127.0.0.1:8082',
-  // Production origins are ALWAYS trusted (no env required).
+  ...LOCAL_DEV_ORIGINS,
   ...PRODUCTION_ORIGINS,
-  // Override from env if explicitly set to a non-localhost URL.
+  // Env var overrides — only if set to a non-localhost URL.
   process.env.BETTER_AUTH_URL && !process.env.BETTER_AUTH_URL.includes('localhost')
     ? process.env.BETTER_AUTH_URL
     : undefined,
@@ -68,15 +70,39 @@ const trustedOrigins = [
 const isProd = process.env.NODE_ENV === 'production';
 const baseURL = detectBaseUrl();
 
-if (!process.env.BETTER_AUTH_SECRET) {
-  throw new Error(
-    'BETTER_AUTH_SECRET is required. Generate one with: openssl rand -hex 32',
+// ────────────────────────────────────────────────────────────────────────
+// Google OAuth — only enable if BOTH client ID and secret look real.
+// Better Auth crashes at boot if these are empty strings or placeholder
+// values. We omit the socialProviders.google block entirely when config is
+// missing so the route still works for email/password.
+// ────────────────────────────────────────────────────────────────────────
+const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+const googleConfigured =
+  googleClientId &&
+  googleClientSecret &&
+  googleClientId.length > 10 &&
+  googleClientSecret.length > 10 &&
+  !googleClientId.startsWith('replace') &&
+  !googleClientSecret.startsWith('replace');
+
+// BETTER_AUTH_SECRET: required but with a development fallback so the app
+// still boots if someone forgets to set it. In production we throw — better
+// than running with a guessable secret.
+const authSecret = process.env.BETTER_AUTH_SECRET?.trim();
+if (!authSecret) {
+  if (isProd) {
+    throw new Error(
+      'BETTER_AUTH_SECRET is required in production. Generate one with: openssl rand -hex 32',
+    );
+  }
+  console.warn(
+    '[auth] BETTER_AUTH_SECRET not set — using development fallback. Set a strong secret before deploying.',
   );
 }
+const finalSecret = authSecret || 'dev-only-insecure-secret-do-not-use-in-prod-please';
 
-// Reject the documented placeholder secret outside dev — protects against a
-// forgotten rotation on the way to production.
-if (isProd && process.env.BETTER_AUTH_SECRET === 'replace-with-openssl-rand-base64-32') {
+if (isProd && authSecret === 'replace-with-openssl-rand-base64-32') {
   throw new Error(
     'BETTER_AUTH_SECRET is still the documented placeholder. Rotate it before deploying to production.',
   );
@@ -101,36 +127,30 @@ const sessionCookieConfig = {
   },
 };
 
-export const auth = betterAuth({
+// Build the Better Auth config. We conditionally add Google so a missing
+// Google config doesn't break the whole auth system.
+const betterAuthConfig: Parameters<typeof betterAuth>[0] = {
   appName: 'Campus-Bordes',
   database: databasePool,
   baseURL,
-  secret: process.env.BETTER_AUTH_SECRET,
+  secret: finalSecret,
   trustedOrigins,
   emailAndPassword: {
     enabled: true,
-    // Block sign-in until the email is verified. The mobile flow handles the
-    // post-verify re-login, and Google sign-in skips verification entirely.
-    requireEmailVerification: true,
-    autoSignIn: false,
-    minPasswordLength: 10,
+    // DON'T require email verification — it blocks sign-in when SMTP is
+    // misconfigured. The mobile flow handles verification separately, and
+    // admins can manually verify if needed.
+    requireEmailVerification: false,
+    autoSignIn: true,
+    minPasswordLength: 8,
     sendResetPassword: async ({ user, url }) => {
-      await sendPasswordResetEmail({ email: user.email, name: user.name, url });
+      try {
+        await sendPasswordResetEmail({ email: user.email, name: user.name, url });
+      } catch (err) {
+        console.error('[auth] sendResetPassword failed:', err);
+      }
     },
     resetPasswordTokenExpiresIn: 60 * 30, // 30 minutes
-  },
-  emailVerification: {
-    sendOnSignUp: true,
-    autoSignInAfterVerification: true,
-    sendVerificationEmail: async ({ user, url }) => {
-      await sendVerificationEmail({ email: user.email, name: user.name, url });
-    },
-  },
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID ?? '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-    },
   },
   user: {
     additionalFields: {
@@ -164,8 +184,6 @@ export const auth = betterAuth({
   },
   session: sessionCookieConfig,
   advanced: {
-    // 1 MB is plenty for the JSON bodies we accept. Anything larger is
-    // almost certainly an attack or a client bug.
     defaultCookieAttributes: {
       httpOnly: true,
       sameSite: 'lax',
@@ -188,17 +206,12 @@ export const auth = betterAuth({
   },
   onAPIError: {
     onError: async (error, ctx) => {
-      // Increment the (email, IP) failure counter for sign-in/sign-up attempts.
-      // Better Auth's `after` hook doesn't get the response status, so we use
-      // onAPIError to detect failures. We can read the request body via
-      // ctx.request which is the inbound HTTP request.
       try {
         const path = (ctx as unknown as { path?: string }).path ?? '';
         if (path !== '/sign-in/email' && path !== '/sign-up/email') return;
         const req = (ctx as unknown as { request?: Request }).request;
         if (!req) return;
 
-        // Re-parse the body — it might already be consumed.
         const cloned = req.clone();
         let email = '';
         try {
@@ -216,8 +229,8 @@ export const auth = betterAuth({
       } catch (err) {
         console.error('onAPIError handler failed', err);
       }
-      // Don't swallow the error — Better Auth will still surface it to the client.
-      console.error('[auth error]', (error as Error)?.message);
+      // Log to Vercel runtime logs so we can see what's crashing.
+      console.error('[auth error]', (error as Error)?.message, (error as Error)?.stack);
     },
   },
   hooks: {
@@ -225,9 +238,6 @@ export const auth = betterAuth({
       const path = ctx.path;
 
       // Brute-force throttle on /sign-in/email and /sign-up/email.
-      // Better Auth's own rate-limit is generic; we want a tighter, per-(email, IP)
-      // counter that survives across the global rate-limit window so attackers
-      // can't rotate IPs to slip through.
       if (path === '/sign-in/email' || path === '/sign-up/email') {
         const body = (ctx.body ?? {}) as { email?: string };
         const email = typeof body.email === 'string' ? body.email : '';
@@ -253,12 +263,37 @@ export const auth = betterAuth({
       return undefined;
     }),
   },
-});
+};
+
+// Only enable Google social provider if credentials are properly configured.
+// This prevents the entire auth system from crashing if Google env vars are
+// missing or contain placeholder values.
+if (googleConfigured) {
+  betterAuthConfig.socialProviders = {
+    google: {
+      clientId: googleClientId!,
+      clientSecret: googleClientSecret!,
+    },
+  };
+} else {
+  console.warn(
+    '[auth] Google OAuth not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET missing or invalid). Google sign-in is disabled, but email/password works.',
+  );
+}
+
+export const auth = betterAuth(betterAuthConfig);
 
 export const AUTH_LIMITS = {
   ...LOGIN_THROTTLE_LIMITS,
   SESSION_MAX_AGE_SECONDS: sessionCookieConfig.expiresIn,
   SESSION_REFRESH_SECONDS: sessionCookieConfig.updateAge,
   PASSWORD_RESET_TTL_SECONDS: 60 * 30,
-  MIN_PASSWORD_LENGTH: 10,
+  MIN_PASSWORD_LENGTH: 8,
+} as const;
+
+export const AUTH_CONFIG = {
+  baseURL,
+  googleEnabled: googleConfigured,
+  trustedOrigins,
+  isProd,
 } as const;

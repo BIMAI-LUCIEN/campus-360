@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
+import { AUTH_CONFIG } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
 export function GET() {
   return NextResponse.json({
-    passwordReset: Boolean(process.env.SMTP_USER && process.env.SMTP_PASSWORD),
-    google: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+    passwordReset: Boolean(process.env.RESEND_API_KEY),
+    google: AUTH_CONFIG.googleEnabled,
   });
 }
 
