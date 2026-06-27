@@ -3,14 +3,37 @@ import { z } from 'zod';
 
 import { databasePool } from '@/lib/database';
 import { MobileApiError, mobileErrorResponse, requireMobileUser } from '@/lib/mobile-access';
+import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
-const bodySchema = z.object({ documentId: z.string().min(1).max(200) });
+const bodySchema = z.object({ documentId: z.string().uuid() });
 export const runtime = 'nodejs';
+
+const MAX_BODY_BYTES = 4 * 1024;
 
 export async function POST(request: NextRequest) {
   try {
+    const contentLength = Number(request.headers.get('content-length') ?? 0);
+    if (contentLength > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: 'Requete trop volumineuse.' }, { status: 413 });
+    }
     const access = await requireMobileUser(request);
     if (access.response) return access.response;
+
+    // Anti-bot: limit purchase attempts. Each attempt runs a transaction +
+    // writes a row. 20/min per user is plenty for normal UX.
+    try {
+      await enforceRateLimit(request, {
+        bucket: 'purchase-document',
+        max: 20,
+        windowMs: 60_000,
+        userId: access.user.id,
+      });
+    } catch (error) {
+      const response = rateLimitFailedResponse(error);
+      if (response) return response;
+      throw error;
+    }
+
     const { documentId } = bodySchema.parse(await request.json());
     const client = await databasePool.connect();
     try {

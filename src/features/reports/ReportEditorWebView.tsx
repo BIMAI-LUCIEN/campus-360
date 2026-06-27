@@ -15,7 +15,9 @@ export function ReportEditorWebView({ reportId, onClose }: ReportEditorWebViewPr
   const webViewRef = useRef<any>(null);
 
   // Get the current session cookie
-  const cookie = (authClient as any).getCookie?.() || '';
+  const cookie = Platform.OS !== 'web' && typeof (authClient as any).getCookie === 'function'
+    ? (authClient as any).getCookie()
+    : '';
   
   // Construct the URL
   const editorUrl = `${authBaseUrl}/reports/${reportId}?mode=mobile`;
@@ -66,44 +68,67 @@ export function ReportEditorWebView({ reportId, onClose }: ReportEditorWebViewPr
             </View>
           </View>
         ) : (
-          <WebViewComponent
-            ref={webViewRef}
-            source={{
-              uri: editorUrl,
-              headers: cookie ? { 'Cookie': cookie } : undefined,
-            }}
-            style={styles.webview}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            sharedCookiesEnabled={true}
-            thirdPartyCookiesEnabled={true}
-            startInLoadingState={true}
-            onLoadStart={() => {
-              setIsLoading(true);
-              setConnectionError(false);
-            }}
-            onLoadEnd={() => setIsLoading(false)}
-            renderLoading={() => (
+          <View style={{ flex: 1, position: 'relative' }}>
+            {Platform.OS === 'web' ? (
+              <iframe
+                src={editorUrl}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                  backgroundColor: '#090D16',
+                }}
+                onLoad={() => setIsLoading(false)}
+                title="Édition de rapport"
+              />
+            ) : (
+              <WebViewComponent
+                ref={webViewRef}
+                source={{
+                  uri: editorUrl,
+                  headers: cookie ? { 'Cookie': cookie } : undefined,
+                }}
+                style={styles.webview}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                sharedCookiesEnabled={true}
+                thirdPartyCookiesEnabled={true}
+                startInLoadingState={true}
+                onLoadStart={() => {
+                  setIsLoading(true);
+                  setConnectionError(false);
+                }}
+                onLoadEnd={() => setIsLoading(false)}
+                renderLoading={() => (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#059669" />
+                    <Text style={styles.loadingText}>Chargement de l'éditeur guidé...</Text>
+                  </View>
+                )}
+                onError={(syntheticEvent: any) => {
+                  const { nativeEvent } = syntheticEvent;
+                  console.warn('[WebView Editor] Error loading editor page:', nativeEvent);
+                  setConnectionError(true);
+                  setIsLoading(false);
+                }}
+                onHttpError={(syntheticEvent: any) => {
+                  const { nativeEvent } = syntheticEvent;
+                  console.warn('[WebView Editor] HTTP Error loading editor page:', nativeEvent.statusCode);
+                  if (nativeEvent.statusCode >= 400) {
+                    setConnectionError(true);
+                  }
+                  setIsLoading(false);
+                }}
+              />
+            )}
+            
+            {isLoading && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#059669" />
                 <Text style={styles.loadingText}>Chargement de l'éditeur guidé...</Text>
               </View>
             )}
-            onError={(syntheticEvent: any) => {
-              const { nativeEvent } = syntheticEvent;
-              console.warn('[WebView Editor] Error loading editor page:', nativeEvent);
-              setConnectionError(true);
-              setIsLoading(false);
-            }}
-            onHttpError={(syntheticEvent: any) => {
-              const { nativeEvent } = syntheticEvent;
-              console.warn('[WebView Editor] HTTP Error loading editor page:', nativeEvent.statusCode);
-              if (nativeEvent.statusCode >= 400) {
-                setConnectionError(true);
-              }
-              setIsLoading(false);
-            }}
-          />
+          </View>
         )}
       </View>
     </SafeAreaView>

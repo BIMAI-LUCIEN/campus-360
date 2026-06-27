@@ -6,11 +6,23 @@ import { deleteSupabasePdf } from '@/lib/supabase-pdf';
 
 export const runtime = 'nodejs';
 
-export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
-  const { user, response } = await requireAdminApi();
-  if (response) return response;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  const { id } = await context.params;
-  await deletePdf(id, user!.id);
-  return NextResponse.json({ ok: true });
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    const { user, response } = await requireAdminApi();
+    if (response) return response;
+
+    const { id } = await context.params;
+    if (!UUID_REGEX.test(id)) {
+      return NextResponse.json({ error: 'Identifiant invalide.' }, { status: 400 });
+    }
+
+    await deletePdf(id, user!.id);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('PDF delete error:', error);
+    return NextResponse.json({ error: 'Erreur interne.' }, { status: 500 });
+  }
 }

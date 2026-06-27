@@ -3,8 +3,11 @@ import { z } from 'zod';
 
 import { databasePool } from '@/lib/database';
 import { mobileErrorResponse, MobileApiError, requireMobileUser } from '@/lib/mobile-access';
+import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
+
+const MAX_BODY_BYTES = 4 * 1024;
 
 const purchaseSchema = z.object({
   tier: z.enum(['basic', 'premium']),
@@ -12,8 +15,25 @@ const purchaseSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const contentLength = Number(request.headers.get('content-length') ?? 0);
+    if (contentLength > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: 'Requete trop volumineuse.' }, { status: 413 });
+    }
     const access = await requireMobileUser(request);
     if (access.response) return access.response;
+
+    try {
+      await enforceRateLimit(request, {
+        bucket: 'subscription-purchase',
+        max: 10,
+        windowMs: 60_000,
+        userId: access.user.id,
+      });
+    } catch (error) {
+      const response = rateLimitFailedResponse(error);
+      if (response) return response;
+      throw error;
+    }
 
     const body = await request.json().catch(() => null);
     const parsed = purchaseSchema.safeParse(body);
@@ -61,15 +81,16 @@ export async function POST(request: NextRequest) {
         [access.user.id, -price, tier]
       );
 
-      // Update user profile
+      // Update user profile. Note: parameterized interval via make_interval(days => $3)
+      // to avoid string interpolation.
       const userRes = await client.query(
         `update public.app_users
          set subscription_tier = $2,
-             subscription_expires_at = now() + interval '${durationDays} days',
+             subscription_expires_at = now() + make_interval(days => $3),
              updated_at = now()
          where id = $1
          returning subscription_tier, subscription_expires_at`,
-        [access.user.id, tier]
+        [access.user.id, tier, durationDays],
       );
 
       await client.query('commit');

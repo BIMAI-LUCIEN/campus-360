@@ -8,30 +8,39 @@ import { createPdf, listPdfs } from '@/lib/course-db';
 import { inferPdfIntelligence } from '@/lib/pdf-intelligence';
 import { pdfUploadDir } from '@/lib/paths';
 import { uploadSupabasePdfBytes, upsertSupabasePdf } from '@/lib/supabase-pdf';
+import { generateWatermarkedPreview } from '@/lib/pdf-preview';
+import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
 
+// Hard cap on the overall multipart payload. 25 MB leaves 5 MB of headroom
+// beyond the per-file 20 MB limit for the form fields.
+const MAX_REQUEST_BYTES = 25 * 1024 * 1024;
+
+const MAX_FIELD_LENGTH = 5_000;
+const MAX_DESCRIPTION_LENGTH = 10_000;
+
 const pdfSchema = z.object({
-  title: z.string().min(2),
-  description: z.string().min(2),
-  university: z.string().min(2),
-  faculty: z.string().min(2),
-  subject: z.string().min(2),
-  teacher: z.string().min(1).default('Non renseigne'),
-  level: z.string().min(1),
-  academicYear: z.string().min(4),
-  priceCoins: z.coerce.number().int().min(0),
-  pageCount: z.coerce.number().int().min(1),
+  title: z.string().trim().min(2).max(200),
+  description: z.string().trim().min(2).max(MAX_DESCRIPTION_LENGTH),
+  university: z.string().trim().min(2).max(MAX_FIELD_LENGTH),
+  faculty: z.string().trim().min(2).max(MAX_FIELD_LENGTH),
+  subject: z.string().trim().min(2).max(MAX_FIELD_LENGTH),
+  teacher: z.string().trim().min(1).max(MAX_FIELD_LENGTH).default('Non renseigne'),
+  level: z.string().trim().min(1).max(MAX_FIELD_LENGTH),
+  academicYear: z.string().trim().min(4).max(MAX_FIELD_LENGTH),
+  priceCoins: z.coerce.number().int().min(0).max(1_000_000),
+  pageCount: z.coerce.number().int().min(1).max(100_000),
   status: z.enum(['draft', 'analyzing', 'needs_review', 'published', 'archived']).default('needs_review'),
   commissionRate: z.coerce.number().int().min(0).max(100).default(20),
-  aiSummary: z.string().optional().default(''),
-  aiTags: z.string().optional().default('[]'),
-  aiDifficulty: z.string().optional().default('standard'),
-  suggestedPriceCoins: z.coerce.number().int().min(0).optional().default(0),
+  aiSummary: z.string().max(MAX_DESCRIPTION_LENGTH).optional().default(''),
+  aiTags: z.string().max(MAX_FIELD_LENGTH).optional().default('[]'),
+  aiDifficulty: z.string().max(MAX_FIELD_LENGTH).optional().default('standard'),
+  suggestedPriceCoins: z.coerce.number().int().min(0).max(1_000_000).optional().default(0),
   qualityScore: z.coerce.number().int().min(0).max(100).optional().default(0),
-  aiStudyPlan: z.string().optional().default('[]'),
-  aiQuiz: z.string().optional().default('[]'),
-  extractedText: z.string().optional().default(''),
+  aiStudyPlan: z.string().max(MAX_FIELD_LENGTH).optional().default('[]'),
+  aiQuiz: z.string().max(MAX_FIELD_LENGTH).optional().default('[]'),
+  extractedText: z.string().max(200_000).optional().default(''),
 });
 
 const safeName = (name: string) =>
@@ -91,9 +100,49 @@ export async function GET() {
   return NextResponse.json({ documents });
 }
 
+// PDF files always start with the magic header `%PDF-` (0x25 0x50 0x44 0x46 0x2D).
+// We also accept the occasional BOM variant. A simple magic check is much
+// cheaper than letting puppeteer or pdf-lib try to parse an attacker-controlled
+// binary.
+const isPdfMagic = (bytes: Uint8Array): boolean => {
+  if (bytes.length < 5) return false;
+  return (
+    bytes[0] === 0x25 && // %
+    bytes[1] === 0x50 && // P
+    bytes[2] === 0x44 && // D
+    bytes[3] === 0x46 && // F
+    bytes[4] === 0x2d // -
+  );
+};
+
 export async function POST(request: NextRequest) {
   const { user, response } = await requireAdminApi();
   if (response) return response;
+
+  // PDF upload is expensive (disk IO + supabase upload + puppeteer preview
+  // generation). Cap per-admin so a compromised admin token can't saturate the
+  // pipeline.
+  try {
+    await enforceRateLimit(request, {
+      bucket: 'pdf-upload',
+      max: 20,
+      windowMs: 60_000,
+      userId: user!.id,
+    });
+  } catch (error) {
+    const response = rateLimitFailedResponse(error);
+    if (response) return response;
+    throw error;
+  }
+
+  // Reject obviously oversized requests BEFORE streaming the body.
+  const contentLength = Number(request.headers.get('content-length') ?? 0);
+  if (contentLength > MAX_REQUEST_BYTES) {
+    return NextResponse.json(
+      { error: 'Le fichier ou les champs depassent la limite (25 MB).' },
+      { status: 413 },
+    );
+  }
 
   const formData = await request.formData();
   const parsed = pdfSchema.safeParse({
@@ -133,14 +182,46 @@ export async function POST(request: NextRequest) {
   if (file.size > 20 * 1024 * 1024) {
     return NextResponse.json({ error: 'PDF is too large. Max size is 20 MB.' }, { status: 400 });
   }
+  if (file.size === 0) {
+    return NextResponse.json({ error: 'Le fichier est vide.' }, { status: 400 });
+  }
+
+  // Magic-bytes check: defence in depth against uploaded executables that
+  // claim to be PDFs via Content-Type alone.
+  const probeBytes = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  if (!isPdfMagic(probeBytes)) {
+    return NextResponse.json(
+      { error: 'Le contenu du fichier ne correspond pas a un PDF valide.' },
+      { status: 400 },
+    );
+  }
 
   await mkdir(pdfUploadDir, { recursive: true });
-  const fileName = `${Date.now()}-${safeName(file.name)}.pdf`;
-  const absolutePath = path.join(pdfUploadDir, fileName);
+  // Belt-and-braces: ensure the original filename has no path separators or
+  // null bytes (some browsers and proxies will happily forward `..\..`).
+  if (/[\\/]|%2[fF]|%5[cC]|\x00/.test(file.name)) {
+    return NextResponse.json(
+      { error: 'Nom de fichier invalide.' },
+      { status: 400 },
+    );
+  }
+  const safeBaseName = safeName(file.name) || 'document';
+  const fileName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeBaseName}.pdf`;
+  // Resolve and verify the final path is still inside pdfUploadDir to defend
+  // against any future change that bypasses safeName.
+  const absolutePath = path.resolve(pdfUploadDir, fileName);
+  if (!absolutePath.startsWith(path.resolve(pdfUploadDir) + path.sep)) {
+    return NextResponse.json({ error: 'Chemin invalide.' }, { status: 400 });
+  }
   const bytes = Buffer.from(await file.arrayBuffer());
   await writeFile(absolutePath, bytes);
   const storagePath = `admin/${fileName}`;
   await uploadSupabasePdfBytes(storagePath, bytes);
+
+  // Generate watermarked preview PDF buffer
+  const previewBytes = await generateWatermarkedPreview(bytes);
+  // Upload to document-previews bucket
+  await uploadSupabasePdfBytes(storagePath, previewBytes, 'document-previews');
 
   const inferred = inferPdfIntelligence({
     fileName: file.name,
@@ -166,6 +247,7 @@ export async function POST(request: NextRequest) {
       fileName: file.name,
       filePath: `/uploads/pdfs/${fileName}`,
       fileSize: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+      previewPath: storagePath,
       aiSummary: parsed.data.aiSummary || inferred.aiSummary,
       aiTags: aiTags.length ? aiTags : inferred.aiTags,
       aiDifficulty: parsed.data.aiDifficulty || inferred.aiDifficulty,

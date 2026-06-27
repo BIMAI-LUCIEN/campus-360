@@ -2,42 +2,42 @@ import { expo } from '@better-auth/expo';
 import { betterAuth } from 'better-auth';
 import { admin } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
-import os from 'node:os';
 
 import { databasePool } from './database';
 import { sendPasswordResetEmail, sendVerificationEmail } from './mailer';
 
-const getLocalIpAddresses = () => {
-  const interfaces = os.networkInterfaces();
-  const addresses: string[] = [];
-  for (const name of Object.keys(interfaces)) {
-    const netInterface = interfaces[name];
-    if (netInterface) {
-      for (const ip of netInterface) {
-        if (ip.family === 'IPv4') {
-          addresses.push(`http://${ip.address}:3001`);
-          addresses.push(`http://${ip.address}:8081`);
-          addresses.push(`http://${ip.address}:8082`);
-        }
-      }
-    }
-  }
-  return addresses;
-};
+// Trusted origins are now an EXPLICIT allowlist read from env. No more
+// auto-discovery of every local IPv4 — that previously let any LAN host
+// be treated as a trusted origin.
+const parseOriginList = (raw: string | undefined): string[] =>
+  (raw ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry): entry is string => Boolean(entry));
 
 const trustedOrigins = [
   'campus-bordes://',
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
   'http://localhost:8081',
   'http://127.0.0.1:8081',
   'http://localhost:8082',
   'http://127.0.0.1:8082',
-  'http://localhost:3001',
-  'http://127.0.0.1:3001',
+  // Public-facing web origin (set via env in production).
   'https://campus-360-hi97.vercel.app',
   process.env.BETTER_AUTH_URL,
   process.env.EXPO_APP_ORIGIN,
-  ...getLocalIpAddresses(),
-].filter((origin): origin is string => Boolean(origin));
+  process.env.TRUSTED_EXTRA_ORIGINS,
+]
+  .filter(Boolean)
+  .flatMap((value) => (typeof value === 'string' && value.includes(',') ? parseOriginList(value) : [value]))
+  .filter((value): value is string => typeof value === 'string' && value.length > 0);
+
+if (!process.env.BETTER_AUTH_SECRET) {
+  throw new Error(
+    'BETTER_AUTH_SECRET is required. Generate one with: openssl rand -hex 32',
+  );
+}
 
 export const auth = betterAuth({
   appName: 'Campus-Bordes',
@@ -45,9 +45,6 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3001',
   secret: process.env.BETTER_AUTH_SECRET,
   trustedOrigins,
-  advanced: {
-    disableOriginCheck: true,
-  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,

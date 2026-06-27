@@ -1,4 +1,7 @@
 import { Pool } from 'pg';
+import { unlink } from 'node:fs/promises';
+import path from 'node:path';
+import { pdfUploadDir } from './paths';
 
 import type { PdfDocument, PdfPack } from './course-db';
 
@@ -81,10 +84,10 @@ export const emptyAnalytics = (configured: boolean): PdfAnalyticsSummary => ({
   recentEvents: [],
 });
 
-export const uploadSupabasePdfBytes = async (filePath: string, bytes: Buffer) => {
+export const uploadSupabasePdfBytes = async (filePath: string, bytes: Buffer, bucket: string = 'documents') => {
   if (!isSupabaseStorageConfigured()) return;
 
-  const response = await fetch(`${getSupabaseUrl()}/storage/v1/object/documents/${filePath}`, {
+  const response = await fetch(`${getSupabaseUrl()}/storage/v1/object/${bucket}/${filePath}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
@@ -109,13 +112,13 @@ export const upsertSupabasePdf = async (document: PdfDocument | null) => {
     `
       insert into public.documents (
         id, title, description, university, faculty, subject, teacher, level, academic_year,
-        price_coins, page_count, file_path, file_size, status, commission_rate, rating,
+        price_coins, page_count, file_path, preview_path, file_size, status, commission_rate, rating,
         sales_count, downloads_count, ai_summary, ai_tags, ai_difficulty, suggested_price_coins,
         quality_score, ai_study_plan, ai_quiz, updated_at
       )
       values (
         $1, $2, $3, $4, $5, $6, $7, $8, $9,
-        $10, $11, $12, $13, $14, $15, $16,
+        $10, $11, $12, $26, $13, $14, $15, $16,
         $17, $18, $19, $20::jsonb, $21, $22,
         $23, $24::jsonb, $25::jsonb, now()
       )
@@ -131,6 +134,7 @@ export const upsertSupabasePdf = async (document: PdfDocument | null) => {
           price_coins = excluded.price_coins,
           page_count = excluded.page_count,
           file_path = excluded.file_path,
+          preview_path = excluded.preview_path,
           file_size = excluded.file_size,
           status = excluded.status,
           commission_rate = excluded.commission_rate,
@@ -171,6 +175,7 @@ export const upsertSupabasePdf = async (document: PdfDocument | null) => {
       document.qualityScore,
       JSON.stringify(document.aiStudyPlan),
       JSON.stringify(document.aiQuiz),
+      document.previewPath,
     ],
   );
 };
@@ -249,9 +254,63 @@ export const upsertSupabasePack = async (pack: PdfPack | null) => {
   }
 };
 
+export const deleteSupabaseFile = async (bucket: string, storagePath: string) => {
+  if (!isSupabaseStorageConfigured()) return;
+  const url = `${getSupabaseUrl()}/storage/v1/object/${bucket}/${storagePath}`;
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+      },
+    });
+    if (!response.ok && response.status !== 404) {
+      const body = await response.text();
+      console.error(`Failed to delete file from Supabase bucket ${bucket}: ${body}`);
+    }
+  } catch (err) {
+    console.error(`Error deleting file from Supabase bucket ${bucket}:`, err);
+  }
+};
+
 export const deleteSupabasePdf = async (documentId: string) => {
   const db = getPool();
   if (!db) return;
+
+  // 1. Retrieve the file_path and preview_path
+  const { rows } = await db.query(
+    'select file_path, preview_path from public.documents where id = $1',
+    [documentId]
+  );
+  const doc = rows[0];
+
+  if (doc) {
+    // 2. Call DELETE request via the Supabase Storage API for both files
+    if (doc.file_path) {
+      await deleteSupabaseFile('documents', doc.file_path);
+    }
+    if (doc.preview_path) {
+      await deleteSupabaseFile('document-previews', doc.preview_path);
+    }
+
+    // 3. Unlink/delete the local file if it exists
+    if (doc.file_path) {
+      const filename = doc.file_path.split('/').pop();
+      if (filename) {
+        const localPath = path.join(pdfUploadDir, filename);
+        try {
+          await unlink(localPath);
+        } catch (err: any) {
+          if (err.code !== 'ENOENT') {
+            console.error(`Error deleting local file ${localPath}:`, err);
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Delete the document database record
   await db.query('delete from public.documents where id = $1', [documentId]);
 };
 
@@ -271,9 +330,8 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
           count(*) filter (where e.event_type = 'purchase_failed')::int as purchase_failures,
           count(*) filter (where e.event_type = 'reader_open')::int as readers,
           count(*) filter (where e.event_type = 'assistant_question')::int as assistant_questions,
-          sum(coalesce(d.price_coins, 0)) filter (where e.event_type = 'purchase_success')::int as revenue
+          (select coalesce(sum(amount_coins), 0)::int from public.document_purchases where created_at >= now() - interval '30 days') as revenue
         from public.document_events e
-        left join public.documents d on d.id = e.document_id
         where e.created_at >= now() - interval '30 days'
       `),
       db.query(`
@@ -301,10 +359,10 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
           e.user_id,
           e.created_at,
           coalesce(d.title, e.document_id, 'Catalogue') as document_title,
-          u.email as user_email
+          p.email as user_email
         from public.document_events e
         left join public.documents d on d.id = e.document_id
-        left join "user" u on u.id = e.user_id
+        left join public.profiles p on p.id = e.user_id
         order by e.created_at desc
         limit 20
       `),

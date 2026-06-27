@@ -32,6 +32,7 @@ export type PdfDocument = {
   aiStudyPlan: string[];
   aiQuiz: Array<{ question: string; answer: string }>;
   extractedText: string;
+  previewPath: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -82,6 +83,7 @@ export type CreatePdfInput = {
   aiStudyPlan?: string[];
   aiQuiz?: Array<{ question: string; answer: string }>;
   extractedText?: string;
+  previewPath?: string;
 };
 
 export type CreatePackInput = {
@@ -131,6 +133,7 @@ const mapPdf = (row: any): PdfDocument => ({
   aiStudyPlan: Array.isArray(row.ai_study_plan) ? row.ai_study_plan : [],
   aiQuiz: Array.isArray(row.ai_quiz) ? row.ai_quiz : [],
   extractedText: '', // Kept empty for admin UI lightness
+  previewPath: row.preview_path ? String(row.preview_path) : null,
   createdAt: String(row.created_at),
   updatedAt: String(row.updated_at),
 });
@@ -215,6 +218,7 @@ export const createPdf = async (input: CreatePdfInput, adminUserId: string) => {
     aiStudyPlan: input.aiStudyPlan ?? [],
     aiQuiz: input.aiQuiz ?? [],
     extractedText: input.extractedText ?? '',
+    previewPath: input.previewPath ?? null,
     createdAt: now,
     updatedAt: now,
   };

@@ -7,13 +7,15 @@ import { MobileApiError, mobileErrorResponse, requireMobileUser } from '@/lib/mo
 export const runtime = 'nodejs';
 
 const updateProfileSchema = z.object({
-  name: z.string().trim().min(2),
-  phone: z.string().trim().min(6),
-  whatsappPhone: z.string().trim().min(6),
-  university: z.string().trim().min(2),
-  faculty: z.string().trim().min(2),
-  level: z.string().trim().optional().default(''),
+  name: z.string().trim().min(2).max(120),
+  phone: z.string().trim().min(6).max(20).regex(/^[+0-9 ()\-]+$/, 'Telephone invalide.'),
+  whatsappPhone: z.string().trim().min(6).max(20).regex(/^[+0-9 ()\-]+$/, 'WhatsApp invalide.'),
+  university: z.string().trim().min(2).max(120),
+  faculty: z.string().trim().min(2).max(120),
+  level: z.string().trim().max(60).optional().default(''),
 });
+
+const MAX_BODY_BYTES = 4 * 1024;
 
 export async function GET(request: NextRequest) {
   try {
@@ -63,12 +65,16 @@ export async function GET(request: NextRequest) {
       },
       subscription: {
         tier: String(user.subscription_tier || 'free'),
-        expiresAt: user.subscription_expires_at ? new Date(user.subscription_expires_at).toISOString() : null,
+        expiresAt: user.subscription_expires_at
+          ? new Date(user.subscription_expires_at).toISOString()
+          : null,
       },
-      purchasedDocumentIds: Array.from(new Set([
-        ...documents.rows.map((row) => String(row.document_id)),
-        ...packDocumentIds.map(String),
-      ])),
+      purchasedDocumentIds: Array.from(
+        new Set([
+          ...documents.rows.map((row) => String(row.document_id)),
+          ...packDocumentIds.map(String),
+        ]),
+      ),
       purchasedPackIds: packs.rows.map((row) => String(row.pack_id)),
       transactions: transactions.rows.map((row) => ({
         ...row,
@@ -83,6 +89,10 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const contentLength = Number(request.headers.get('content-length') ?? 0);
+    if (contentLength > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: 'Requete trop volumineuse.' }, { status: 413 });
+    }
     const access = await requireMobileUser(request);
     if (access.response) return access.response;
 
@@ -92,11 +102,8 @@ export async function PATCH(request: NextRequest) {
       throw new MobileApiError('Profil etudiant incomplet.');
     }
 
-    await databasePool.query(`
-      alter table public.app_users add column if not exists phone text;
-      alter table public.app_users add column if not exists whatsapp_phone text;
-    `);
-
+    // NOTE: columns must already exist; we no longer run ALTER TABLE on every
+    // request. Run the migration in admin-app/scripts/setup-supabase-pdf.mjs.
     const result = await databasePool.query(
       `update public.app_users
        set

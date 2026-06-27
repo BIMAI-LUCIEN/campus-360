@@ -60,9 +60,21 @@ export type AuthCapabilities = {
 
 const getAuthBaseUrl = () => {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-      return publicEnv.authWebUrl.replace('localhost', hostname).replace('127.0.0.1', hostname).replace(/\/$/, '');
+    try {
+      const base = new URL(publicEnv.authWebUrl || publicEnv.authUrl);
+      const current = window.location;
+      // Only rewrite the host when the configured base is a loopback address.
+      // Otherwise the URL might legitimately be production (e.g. campus-360.fr)
+      // and we must NOT swap its host.
+      if ((base.hostname === 'localhost' || base.hostname === '127.0.0.1') &&
+          current.hostname !== 'localhost' && current.hostname !== '127.0.0.1') {
+        base.hostname = current.hostname;
+        base.protocol = current.protocol;
+        if (current.port) base.port = current.port;
+      }
+      return base.toString().replace(/\/$/, '');
+    } catch {
+      // Fall through to the static env value.
     }
   }
   return (Platform.OS === 'web' ? publicEnv.authWebUrl : publicEnv.authUrl).replace(/\/$/, '');
@@ -128,6 +140,15 @@ export const signInStudent = async (email: string, password: string) => {
   return session;
 };
 
+export const signInWithGoogle = async () => {
+  const result = await authClient.signIn.social({
+    provider: 'google',
+    callbackURL: 'campus-bordes://',
+  });
+  if (result?.error) throw new Error(errorMessage(result.error));
+  return loadSession();
+};
+
 export const signUpStudent = async (
   email: string,
   password: string,
@@ -160,7 +181,7 @@ export const requestStudentPasswordReset = async (email: string) => {
   }
   const result = await authClient.requestPasswordReset({
     email,
-    redirectTo: 'campus-bordes://reset-password',
+    redirectTo: `${authBaseUrl}/api/mobile/reset-password-redirect`,
   });
   if (result.error) throw new Error(errorMessage(result.error));
 };

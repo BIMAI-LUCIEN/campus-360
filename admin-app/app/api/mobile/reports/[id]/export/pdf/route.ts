@@ -3,41 +3,147 @@ import puppeteer from 'puppeteer';
 
 import { requireMobileUser, mobileErrorResponse } from '@/lib/mobile-access';
 import { getReportById, getReportSections } from '@/lib/reports-db';
+import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-function renderCoverPage(template: string, data: Record<string, any>): string {
-  const school = data.school || 'Nom de l\'Établissement';
-  const title = data.title || 'Titre du Rapport de Stage';
-  const subtitle = data.subtitle || 'Sujet ou thématique principale';
-  const studentName = data.studentName || 'Prénom Nom';
-  const company = data.company || 'Entreprise d\'Accueil';
-  const tutorCorporate = data.tutorCorporate || 'Maitre de Stage';
-  const tutorAcademic = data.tutorAcademic || 'Tuteur Académique';
-  const year = data.year || '2025 - 2026';
-  const logoUrl = data.logoUrl || '';
+// Allowlist of tags we permit in section bodies. Anything else is stripped.
+const SECTION_ALLOWED_TAGS = new Set([
+  'P',
+  'STRONG',
+  'B',
+  'EM',
+  'I',
+  'U',
+  'UL',
+  'OL',
+  'LI',
+  'BR',
+  'H1',
+  'H2',
+  'H3',
+  'H4',
+  'BLOCKQUOTE',
+  'A',
+]);
+
+// Allowlist of CSS font names. Anything outside this list falls back to
+// 'Lora, serif' so a malicious cover_data entry cannot inject CSS rules.
+const ALLOWED_FONTS = new Set([
+  'Inter',
+  'Lora',
+  'Playfair Display',
+  'Times New Roman',
+  'Arial',
+  'Georgia',
+  'Helvetica',
+]);
+
+// Robust HTML-attribute / text escape. Used for everything we drop into HTML
+// strings via interpolation (not for the section_html body which is
+// separately sanitised below).
+const escapeHtml = (value: unknown): string => {
+  const str = value == null ? '' : String(value);
+  return str.replace(/[&<>"']/g, (ch) => {
+    switch (ch) {
+      case '&':
+        return '&amp;';
+      case '<':
+        return '&lt;';
+      case '>':
+        return '&gt;';
+      case '"':
+        return '&quot;';
+      default:
+        return '&#39;';
+    }
+  });
+};
+
+// Escape a URL for use in `href` or `src`. Allow only http(s), data:image,
+// mailto, and relative paths; reject everything else.
+const sanitizeUrl = (raw: unknown): string => {
+  const str = typeof raw === 'string' ? raw.trim() : '';
+  if (!str) return '';
+  try {
+    const u = new URL(str, 'https://placeholder.local/');
+    if (u.protocol === 'http:' || u.protocol === 'https:') {
+      return u.toString();
+    }
+    if (u.protocol === 'mailto:') {
+      return u.toString();
+    }
+    return '';
+  } catch {
+    return '';
+  }
+};
+
+// Strip every tag not in the allowlist and drop any leftover on* handlers /
+// javascript: URLs. Returns a safe HTML fragment suitable for embedding inside
+// a <div>.
+const sanitizeSectionHtml = (raw: unknown): string => {
+  const str = typeof raw === 'string' ? raw : '';
+  let html = str;
+  // Drop <script>, <style>, <iframe>, <object>, <embed> entirely (including content).
+  html = html.replace(
+    /<(script|style|iframe|object|embed|link|meta|base)\b[^>]*>[\s\S]*?<\/\1>/gi,
+    '',
+  );
+  html = html.replace(/<(script|style|iframe|object|embed|link|meta|base)\b[^>]*\/?>/gi, '');
+  // Filter tags.
+  html = html.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/g, (match, tag) => {
+    return SECTION_ALLOWED_TAGS.has(String(tag).toUpperCase()) ? match : '';
+  });
+  // Strip event handlers and javascript: URLs from any remaining attributes.
+  html = html.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  html = html.replace(/(href|src)\s*=\s*("javascript:[^"]*"|'javascript:[^']*'|javascript:[^\s>]+)/gi, '');
+  // Force external links to open safely.
+  html = html.replace(/<a\s+([^>]*?)href=/gi, (match, attrs) => {
+    if (/target\s*=/i.test(attrs)) return match;
+    return `<a ${attrs} target="_blank" rel="noopener noreferrer" href=`;
+  });
+  return html.trim();
+};
+
+const renderCoverPage = (
+  template: string,
+  data: Record<string, unknown>,
+): string => {
+  // All values go through escapeHtml / sanitizeUrl.
+  const safeData = {
+    school: escapeHtml(data.school ?? "Nom de l'etablissement"),
+    title: escapeHtml(data.title ?? 'Titre du Rapport de Stage'),
+    subtitle: escapeHtml(data.subtitle ?? 'Sujet ou thematique principale'),
+    studentName: escapeHtml(data.studentName ?? 'Prenom Nom'),
+    company: escapeHtml(data.company ?? "Entreprise d'accueil"),
+    tutorCorporate: escapeHtml(data.tutorCorporate ?? 'Maitre de Stage'),
+    tutorAcademic: escapeHtml(data.tutorAcademic ?? 'Tuteur Academique'),
+    year: escapeHtml(data.year ?? '2025 - 2026'),
+    logoUrl: sanitizeUrl(data.logoUrl),
+  };
 
   if (template === 'minimalist') {
     return `
       <div class="cover-page cover-minimalist">
         <div class="top-meta">
-          <div class="school">${school}</div>
-          <div class="year">${year}</div>
+          <div class="school">${safeData.school}</div>
+          <div class="year">${safeData.year}</div>
         </div>
         <div class="middle-title">
-          <div class="title">${title}</div>
-          <div class="subtitle">${subtitle}</div>
+          <div class="title">${safeData.title}</div>
+          <div class="subtitle">${safeData.subtitle}</div>
         </div>
         <div class="bottom-details">
           <div class="left-col">
-            <div class="label">Rédigé par</div>
-            <div class="val">${studentName}</div>
+            <div class="label">Redige par</div>
+            <div class="val">${safeData.studentName}</div>
           </div>
           <div class="right-col">
             <div class="label">Entreprise</div>
-            <div class="val">${company}</div>
+            <div class="val">${safeData.company}</div>
           </div>
         </div>
       </div>
@@ -49,59 +155,81 @@ function renderCoverPage(template: string, data: Record<string, any>): string {
       <div class="cover-page cover-tech">
         <div class="tech-header">
           <div class="tech-indicator">RAPPORT TECH</div>
-          <div class="school">${school}</div>
+          <div class="school">${safeData.school}</div>
         </div>
         <div class="tech-body">
-          <h1 class="title">${title}</h1>
-          <p class="subtitle">${subtitle}</p>
+          <h1 class="title">${safeData.title}</h1>
+          <p class="subtitle">${safeData.subtitle}</p>
           <div class="meta-box">
-            <div class="meta-row"><strong>Écrit par :</strong> ${studentName}</div>
-            <div class="meta-row"><strong>Firme :</strong> ${company}</div>
-            <div class="meta-row"><strong>Superviseur :</strong> ${tutorCorporate}</div>
-            <div class="meta-row"><strong>Encadreur :</strong> ${tutorAcademic}</div>
+            <div class="meta-row"><strong>Ecrit par :</strong> ${safeData.studentName}</div>
+            <div class="meta-row"><strong>Firme :</strong> ${safeData.company}</div>
+            <div class="meta-row"><strong>Superviseur :</strong> ${safeData.tutorCorporate}</div>
+            <div class="meta-row"><strong>Encadreur :</strong> ${safeData.tutorAcademic}</div>
           </div>
         </div>
         <div class="tech-footer">
-          <div>Session ${year}</div>
+          <div>Session ${safeData.year}</div>
         </div>
       </div>
     `;
   }
 
-  // Classic template (Default)
   return `
     <div class="cover-page cover-classic">
-      <div class="school">${school}</div>
-      ${logoUrl ? `<img class="logo" src="${logoUrl}" alt="Logo" />` : '<div class="logo-spacer"></div>'}
+      <div class="school">${safeData.school}</div>
+      ${
+        safeData.logoUrl
+          ? `<img class="logo" src="${escapeHtml(safeData.logoUrl)}" alt="Logo" />`
+          : '<div class="logo-spacer"></div>'
+      }
       <div class="title-container">
-        <div class="title">${title}</div>
-        <div class="subtitle">${subtitle}</div>
+        <div class="title">${safeData.title}</div>
+        <div class="subtitle">${safeData.subtitle}</div>
       </div>
       <div class="details">
         <div class="student-info">
-          <strong>Présenté par :</strong><br/>
-          ${studentName}<br/>
-          <em>Filière / Niveau</em>
+          <strong>Presente par :</strong><br/>
+          ${safeData.studentName}<br/>
+          <em>Filiere / Niveau</em>
         </div>
         <div class="tutors-info">
           <strong>Sous l'encadrement de :</strong><br/>
-          ${tutorCorporate} (Tuteur en Entreprise)<br/>
-          ${tutorAcademic} (Tuteur Académique)
+          ${safeData.tutorCorporate} (Tuteur en Entreprise)<br/>
+          ${safeData.tutorAcademic} (Tuteur Academique)
         </div>
       </div>
       <div class="footer-info">
-        <strong>Entreprise d'accueil :</strong> ${company}<br/>
-        Année académique : ${year}
+        <strong>Entreprise d'accueil :</strong> ${safeData.company}<br/>
+        Annee academique : ${safeData.year}
       </div>
     </div>
   `;
-}
+};
+
+const safeFont = (raw: unknown) => {
+  const str = typeof raw === 'string' ? raw.trim() : '';
+  return ALLOWED_FONTS.has(str) ? str : 'Lora';
+};
 
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
     const access = await requireMobileUser(request);
     if (access.response) return access.response;
+
+    // PDF rendering launches a full Chromium process — very expensive. Hard cap.
+    try {
+      await enforceRateLimit(request, {
+        bucket: 'report-pdf-export',
+        max: 5,
+        windowMs: 60_000,
+        userId: access.user.id,
+      });
+    } catch (error) {
+      const response = rateLimitFailedResponse(error);
+      if (response) return response;
+      throw error;
+    }
 
     const report = await getReportById(id, access.user.id);
     if (!report) {
@@ -110,22 +238,35 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const sections = await getReportSections(id);
 
-    // Assemble HTML
-    const coverHtml = renderCoverPage(report.cover_template, report.cover_data);
+    const coverHtml = renderCoverPage(report.cover_template, report.cover_data ?? {});
 
-    // Map margin size
-    let marginStyle = 'margin: 2.5cm 2.5cm 2.5cm 2.5cm;'; // normal
+    let marginStyle = 'margin: 2.5cm 2.5cm 2.5cm 2.5cm;';
     if (report.margins === 'narrow') {
       marginStyle = 'margin: 1.5cm 1.5cm 1.5cm 1.5cm;';
     } else if (report.margins === 'wide') {
       marginStyle = 'margin: 3.0cm 3.0cm 3.0cm 3.0cm;';
     }
 
-    // Dynamic TOC (Table of Contents)
+    // TOC: section titles get escapeHtml, never the raw value.
     const tocItems = sections
-      .filter((s) => s.title.toLowerCase() !== 'page de garde' && s.title.toLowerCase() !== 'sommaire')
-      .map((s) => `<div class="toc-row"><span>${s.title}</span><span class="dots"></span></div>`)
+      .filter(
+        (s) =>
+          s.title.toLowerCase() !== 'page de garde' &&
+          s.title.toLowerCase() !== 'sommaire',
+      )
+      .map(
+        (s) =>
+          `<div class="toc-row"><span>${escapeHtml(s.title)}</span><span class="dots"></span></div>`,
+      )
       .join('');
+
+    // Font must be allowlisted to avoid CSS injection.
+    const fontFamily = safeFont(report.font_family);
+    const lineSpacing = Number(report.line_spacing);
+    const safeLineSpacing =
+      Number.isFinite(lineSpacing) && lineSpacing >= 0.5 && lineSpacing <= 4.0
+        ? String(lineSpacing)
+        : '1.5';
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -133,34 +274,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       <head>
         <meta charset="utf-8">
         <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
-          
           body {
-            font-family: '${report.font_family === 'Times New Roman' ? 'Lora, serif' : report.font_family}', serif;
-            line-height: ${report.line_spacing};
+            font-family: '${fontFamily === 'Times New Roman' ? 'Lora, serif' : fontFamily}', serif;
+            line-height: ${safeLineSpacing};
             font-size: 12pt;
             color: #1A1A1A;
             margin: 0;
             padding: 0;
           }
-          
-          .cover-page {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            box-sizing: border-box;
-            page-break-after: always;
-            padding: 3cm;
-          }
-          
-          /* Classic cover */
-          .cover-classic {
-            text-align: center;
-            border: 2px solid #E2E8F0;
-          }
+          .cover-page { width: 100%; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; box-sizing: border-box; page-break-after: always; padding: 3cm; }
+          .cover-classic { text-align: center; border: 2px solid #E2E8F0; }
           .cover-classic .school { font-size: 14pt; font-weight: 700; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 10px; width: 100%; }
           .cover-classic .logo { max-height: 80px; margin: 40px auto; display: block; }
           .cover-classic .logo-spacer { height: 80px; margin: 40px auto; }
@@ -169,13 +292,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           .cover-classic .subtitle { font-size: 16pt; color: #64748B; font-style: italic; }
           .cover-classic .details { display: flex; justify-content: space-between; width: 100%; text-align: left; margin-top: 80px; font-size: 11pt; }
           .cover-classic .footer-info { font-size: 11pt; border-top: 1px solid #E2E8F0; padding-top: 20px; width: 100%; margin-top: auto; }
-
-          /* Minimalist cover */
-          .cover-minimalist {
-            align-items: flex-start;
-            text-align: left;
-            padding: 4cm;
-          }
+          .cover-minimalist { align-items: flex-start; text-align: left; padding: 4cm; }
           .cover-minimalist .top-meta { display: flex; justify-content: space-between; width: 100%; font-size: 10pt; text-transform: uppercase; color: #64748B; border-bottom: 1px solid #E2E8F0; padding-bottom: 15px; }
           .cover-minimalist .middle-title { margin: 150px 0; }
           .cover-minimalist .title { font-size: 32pt; font-weight: 800; color: #0F172A; margin-bottom: 20px; }
@@ -183,14 +300,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           .cover-minimalist .bottom-details { display: flex; gap: 80px; margin-top: auto; border-top: 1px solid #E2E8F0; padding-top: 30px; width: 100%; }
           .cover-minimalist .label { font-size: 9pt; text-transform: uppercase; color: #94A3B8; margin-bottom: 5px; }
           .cover-minimalist .val { font-size: 12pt; font-weight: 700; color: #1E293B; }
-
-          /* Tech cover */
-          .cover-tech {
-            background-color: #0F172A;
-            color: #F8FAFC;
-            text-align: left;
-            padding: 3cm;
-          }
+          .cover-tech { background-color: #0F172A; color: #F8FAFC; text-align: left; padding: 3cm; }
           .cover-tech .tech-header { display: flex; justify-content: space-between; width: 100%; border-bottom: 2px solid #38BDF8; padding-bottom: 20px; }
           .cover-tech .tech-indicator { background: #38BDF8; color: #0F172A; font-weight: 800; font-size: 9pt; padding: 4px 10px; border-radius: 4px; }
           .cover-tech .school { font-size: 11pt; font-weight: 700; color: #94A3B8; }
@@ -201,164 +311,130 @@ export async function GET(request: NextRequest, context: RouteContext) {
           .cover-tech .meta-row { margin-bottom: 10px; color: #CBD5E1; }
           .cover-tech .meta-row strong { color: #FFFFFF; }
           .cover-tech .tech-footer { border-top: 1px solid #334155; padding-top: 20px; width: 100%; color: #64748B; font-size: 10pt; }
-
-          /* Document Body Styles */
-          .document-content {
-            ${marginStyle}
-            box-sizing: border-box;
-          }
-          
-          .section-block {
-            page-break-after: always;
-          }
-          
-          .section-block:last-child {
-            page-break-after: avoid;
-          }
-          
-          h1 {
-            page-break-before: always;
-            font-size: 22pt;
-            font-weight: 700;
-            color: #0F172A;
-            margin-top: 0;
-            margin-bottom: 24px;
-            border-bottom: 1px solid #E2E8F0;
-            padding-bottom: 12px;
-          }
-          
-          h2 {
-            font-size: 16pt;
-            font-weight: 600;
-            color: #1E293B;
-            margin-top: 30px;
-            margin-bottom: 16px;
-          }
-          
-          p {
-            margin-bottom: 16px;
-            text-align: justify;
-          }
-          
-          ul, ol {
-            margin-bottom: 16px;
-            padding-left: 24px;
-          }
-          
-          li {
-            margin-bottom: 8px;
-          }
-          
-          strong {
-            font-weight: 700;
-          }
-          
-          /* Sommaire khusus */
-          .sommaire-block {
-            page-break-after: always;
-          }
-          .toc-container {
-            margin-top: 40px;
-          }
-          .toc-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 15px;
-            font-size: 12pt;
-          }
-          .toc-row span:first-child {
-            background-color: #FFF;
-            padding-right: 5px;
-            z-index: 2;
-          }
-          .toc-row .dots {
-            flex-grow: 1;
-            border-bottom: 1px dotted #94A3B8;
-            margin: 0 10px 4px 10px;
-            z-index: 1;
-          }
-          
-          @media print {
-            .cover-page {
-              height: 100vh !important;
-            }
-          }
+          .document-content { ${marginStyle} box-sizing: border-box; }
+          .section-block { page-break-after: always; }
+          .section-block:last-child { page-break-after: avoid; }
+          h1 { page-break-before: always; font-size: 22pt; font-weight: 700; color: #0F172A; margin-top: 0; margin-bottom: 24px; border-bottom: 1px solid #E2E8F0; padding-bottom: 12px; }
+          h2 { font-size: 16pt; font-weight: 600; color: #1E293B; margin-top: 30px; margin-bottom: 16px; }
+          p { margin-bottom: 16px; text-align: justify; }
+          ul, ol { margin-bottom: 16px; padding-left: 24px; }
+          li { margin-bottom: 8px; }
+          strong { font-weight: 700; }
+          .sommaire-block { page-break-after: always; }
+          .toc-container { margin-top: 40px; }
+          .toc-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; font-size: 12pt; }
+          .toc-row span:first-child { background-color: #FFF; padding-right: 5px; z-index: 2; }
+          .toc-row .dots { flex-grow: 1; border-bottom: 1px dotted #94A3B8; margin: 0 10px 4px 10px; z-index: 1; }
+          @media print { .cover-page { height: 100vh !important; } }
         </style>
       </head>
       <body>
-        <!-- 1. Cover Page -->
         ${coverHtml}
-        
-        <!-- 2. Content -->
         <div class="document-content">
-          ${sections.map((section) => {
-            const lowerTitle = section.title.toLowerCase();
-            if (lowerTitle === 'page de garde') return '';
-            
-            if (lowerTitle === 'sommaire') {
-              return `
-                <div class="sommaire-block">
-                  <h1>Sommaire</h1>
-                  <div class="toc-container">
-                    ${tocItems}
+          ${sections
+            .map((section) => {
+              const lowerTitle = section.title.toLowerCase();
+              if (lowerTitle === 'page de garde') return '';
+
+              if (lowerTitle === 'sommaire') {
+                return `
+                  <div class="sommaire-block">
+                    <h1>Sommaire</h1>
+                    <div class="toc-container">${tocItems}</div>
                   </div>
+                `;
+              }
+
+              const safeBody = section.content_html
+                ? sanitizeSectionHtml(section.content_html)
+                : `<p style="color: #94A3B8; font-style: italic;">Redigez le contenu de cette section...</p>`;
+
+              return `
+                <div class="section-block">
+                  <h1>${escapeHtml(section.title)}</h1>
+                  <div class="section-body">${safeBody}</div>
                 </div>
               `;
-            }
-            
-            return `
-              <div class="section-block">
-                <h1>${section.title}</h1>
-                <div class="section-body">
-                  ${section.content_html || `<p style="color: #94A3B8; font-style: italic;">Rédigez le contenu de cette section...</p>`}
-                </div>
-              </div>
-            `;
-          }).join('')}
+            })
+            .join('')}
         </div>
       </body>
       </html>
     `;
 
-    // 2. Launch Puppeteer
-    console.log(`[PDF Export] Launching Puppeteer for report "${report.title}"...`);
+    console.log('[PDF Export] Launching Puppeteer', { reportId: id, userId: access.user.id });
+
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        // Defence in depth: even if a malicious payload somehow executes
+        // before our sanitiser runs, this prevents the page from making
+        // network calls to anywhere except what's embedded.
+        '--disable-features=IsolateOrigins,site-per-process',
+      ],
     });
 
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' as any });
+    try {
+      const page = await browser.newPage();
+      // Block network requests for anything we didn't embed — the only external
+      // resource we want is the Google Fonts CSS, which is HTTPS-only.
+      await page.setRequestInterception(true);
+      page.on('request', (req) => {
+        const url = req.url();
+        // Always allow data: and about: requests.
+        if (url.startsWith('data:') || url.startsWith('about:')) {
+          req.continue();
+          return;
+        }
+        try {
+          const parsed = new URL(url);
+          if (parsed.protocol === 'https:') {
+            req.continue();
+            return;
+          }
+        } catch {
+          // Fall through to abort.
+        }
+        req.abort();
+      });
 
-    // 3. Print PDF
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      displayHeaderFooter: true,
-      headerTemplate: `<div style="font-size: 8px; width: 100%; text-align: right; padding-right: 30px; font-family: sans-serif; color: #94A3B8;">${report.title}</div>`,
-      footerTemplate: `<div style="font-size: 8px; width: 100%; text-align: center; font-family: sans-serif; color: #94A3B8;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>`,
-      margin: {
-        top: '1.5cm',
-        bottom: '1.5cm',
-        left: '0px',
-        right: '0px', // We handled margins in css class '.document-content' so cover page is perfectly fullscreen!
-      },
-    });
+      await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
 
-    await browser.close();
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        displayHeaderFooter: true,
+        headerTemplate: `<div style="font-size: 8px; width: 100%; text-align: right; padding-right: 30px; font-family: sans-serif; color: #94A3B8;">${escapeHtml(report.title)}</div>`,
+        footerTemplate:
+          '<div style="font-size: 8px; width: 100%; text-align: center; font-family: sans-serif; color: #94A3B8;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>',
+        margin: { top: '1.5cm', bottom: '1.5cm', left: '0px', right: '0px' },
+      });
 
-    // 4. Return PDF
-    return new NextResponse(pdfBuffer as any, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="Rapport_Stage_${report.title.replace(/\s+/g, '_')}.pdf"`,
-      },
-    });
+      const filename = `Rapport_Stage_${String(report.title || 'rapport')
+        .replace(/[^\p{L}\p{N}_-]+/gu, '_')
+        .slice(0, 80)}.pdf`;
 
-  } catch (error: any) {
+      return new NextResponse(pdfBuffer as unknown as ArrayBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Cache-Control': 'no-store',
+        },
+      });
+    } finally {
+      await browser.close().catch(() => undefined);
+    }
+  } catch (error) {
     console.error('[PDF Export] Error:', error);
-    return NextResponse.json({ error: `Erreur d'exportation PDF : ${error.message}` }, { status: 500 });
+    if (error instanceof Error && /timeout|exited|launch/i.test(error.message)) {
+      return NextResponse.json(
+        { error: "Le moteur PDF est indisponible. Reessayez dans quelques instants." },
+        { status: 503 },
+      );
+    }
+    return mobileErrorResponse(error);
   }
 }

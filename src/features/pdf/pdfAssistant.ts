@@ -53,19 +53,27 @@ export const askPdfAssistant = async ({
   question: string;
   messages: PdfAssistantMessage[];
 }) => {
-  const response = await authFetch('/api/ai/pdf-chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      question,
-      pdfContext: buildPdfStudyContext(document),
-      messages: messages.slice(-8).map(({ role, content }) => ({ role, content })),
-    }),
-  }).catch(() => null);
+  let response: Response | null = null;
+  try {
+    response = await authFetch('/api/ai/pdf-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question,
+        pdfContext: buildPdfStudyContext(document),
+        messages: messages.slice(-8).map(({ role, content }) => ({ role, content })),
+      }),
+    });
+  } catch {
+    // Network or transport failure → fall back to local answer.
+    return localAnswer(document, question);
+  }
 
-  if (!response?.ok) {
+  if (!response || !response.ok) {
     if (response?.status === 403) {
-      const payload = (await response.json().catch(() => null)) as { error?: string, message?: string } | null;
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string; message?: string }
+        | null;
       if (payload?.error === 'CREDITS_EXHAUSTED') {
         throw new Error(payload.message || "Vous n'avez plus de credits IA. Veuillez recharger.");
       }

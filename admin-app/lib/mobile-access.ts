@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 
 import { auth } from './auth';
 import { databasePool } from './database';
+import { RateLimitError, rateLimit } from './rate-limit';
 
 export type MobileUser = {
   id: string;
@@ -31,11 +32,12 @@ type AuthSessionUser = {
   level?: string;
 };
 
-const adminEmails = () => new Set(
-  [process.env.ADMIN_BOOTSTRAP_EMAIL, ...(process.env.ADMIN_ALLOWED_EMAILS ?? '').split(',')]
-    .map((email) => email?.trim().toLowerCase())
-    .filter((email): email is string => Boolean(email)),
-);
+const adminEmails = () =>
+  new Set(
+    [process.env.ADMIN_BOOTSTRAP_EMAIL, ...(process.env.ADMIN_ALLOWED_EMAILS ?? '').split(',')]
+      .map((email) => email?.trim().toLowerCase())
+      .filter((email): email is string => Boolean(email)),
+  );
 
 const mapUser = (row: Record<string, unknown>): MobileUser => ({
   id: String(row.id),
@@ -49,7 +51,9 @@ const mapUser = (row: Record<string, unknown>): MobileUser => ({
   faculty: row.faculty ? String(row.faculty) : undefined,
   level: row.level ? String(row.level) : undefined,
   subscription_tier: row.subscription_tier ? String(row.subscription_tier) : 'free',
-  subscription_expires_at: row.subscription_expires_at ? new Date(row.subscription_expires_at as string).toISOString() : null,
+  subscription_expires_at: row.subscription_expires_at
+    ? new Date(row.subscription_expires_at as string).toISOString()
+    : null,
 });
 
 const copyLegacyData = async (client: PoolClient, appUserId: string, legacyUserId: string) => {
@@ -145,13 +149,51 @@ export const ensureMobileUser = async (authUser: AuthSessionUser): Promise<Mobil
   }
 };
 
-export const requireMobileUser = async (request: NextRequest) => {
+// Per-user daily read budget. Reads (signed URLs, account, events) are cheap
+// but should still be bounded so a single user can't burn DB cycles.
+const DEFAULT_USER_READ_LIMIT_PER_MIN = 120;
+
+// Mutations are tighter. Wallet operations especially need hard caps.
+export type MobileAccessOptions = {
+  readBudgetPerMinute?: number;
+};
+
+export const requireMobileUser = async (
+  request: NextRequest,
+  options: MobileAccessOptions = {},
+) => {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session?.user) {
     return {
       user: null,
       response: NextResponse.json({ error: 'Session requise.' }, { status: 401 }),
     };
+  }
+
+  const budget = options.readBudgetPerMinute ?? DEFAULT_USER_READ_LIMIT_PER_MIN;
+
+  // Per-user rate limit. Falls back to IP for unauthenticated attempts (should
+  // never happen because we check session first, but defensive).
+  try {
+    await rateLimit(request, {
+      bucket: `user:${session.user.id}`,
+      max: budget,
+      windowMs: 60_000,
+    });
+  } catch (error) {
+    if (error instanceof RateLimitError) {
+      return {
+        user: null,
+        response: NextResponse.json(
+          { error: error.message, retryAfter: error.retryAfterSeconds },
+          {
+            status: 429,
+            headers: { 'Retry-After': String(error.retryAfterSeconds) },
+          },
+        ),
+      };
+    }
+    throw error;
   }
 
   const user = await ensureMobileUser(session.user as AuthSessionUser);
@@ -171,6 +213,18 @@ export const mobileErrorResponse = (error: unknown) => {
   if (error instanceof MobileApiError) {
     return NextResponse.json({ error: error.message }, { status: error.status });
   }
+  if (error instanceof RateLimitError) {
+    return NextResponse.json(
+      { error: error.message, retryAfter: error.retryAfterSeconds },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(error.retryAfterSeconds) },
+      },
+    );
+  }
   console.error('Mobile API error', error);
-  return NextResponse.json({ error: 'Service momentanement indisponible.' }, { status: 500 });
+  return NextResponse.json(
+    { error: 'Service momentanement indisponible.' },
+    { status: 500 },
+  );
 };

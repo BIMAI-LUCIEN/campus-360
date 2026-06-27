@@ -1,27 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-function isAllowedOrigin(origin: string) {
-  return (
-    origin.startsWith('http://localhost:') ||
-    origin.startsWith('http://127.0.0.1:') ||
-    origin.startsWith('http://10.48.198.18:') ||
-    origin === 'campus-bordes://'
-  );
-}
+const ALLOWED_ORIGIN_PREFIXES = [
+  'http://localhost:',
+  'http://127.0.0.1:',
+  'https://campus-360-hi97.vercel.app',
+];
+
+const isAllowedOrigin = (origin: string) => {
+  if (origin === 'campus-bordes://') return true;
+  return ALLOWED_ORIGIN_PREFIXES.some((prefix) => origin.startsWith(prefix));
+};
 
 export function middleware(request: NextRequest) {
   const origin = request.headers.get('origin');
-  const response = request.method === 'OPTIONS'
+  const isPreflight = request.method === 'OPTIONS';
+  const response = isPreflight
     ? new NextResponse(null, { status: 204 })
     : NextResponse.next();
 
   if (origin && isAllowedOrigin(origin)) {
     response.headers.set('Access-Control-Allow-Origin', origin);
     response.headers.set('Access-Control-Allow-Credentials', 'true');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Cookie, Expo-Origin, Authorization');
+    response.headers.set(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Cookie, Expo-Origin, Authorization',
+    );
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
     response.headers.set('Vary', 'Origin');
   }
+
+  // Security headers on every response that flows through the middleware.
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
   return response;
 }

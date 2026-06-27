@@ -5,18 +5,26 @@ import { deletePack } from '@/lib/course-db';
 
 export const runtime = 'nodejs';
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function DELETE(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const { user, response } = await requireAdminApi();
-  if (response) return response;
+  try {
+    const { user, response } = await requireAdminApi();
+    if (response) return response;
 
-  const { id } = await context.params;
-  if (!id) {
-    return NextResponse.json({ error: 'Pack introuvable.' }, { status: 400 });
+    const { id } = await context.params;
+    if (!UUID_REGEX.test(id)) {
+      return NextResponse.json({ error: 'Identifiant invalide.' }, { status: 400 });
+    }
+
+    await deletePack(id, user!.id);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('Pack delete error:', error);
+    return NextResponse.json({ error: 'Erreur interne.' }, { status: 500 });
   }
-
-  await deletePack(id, user!.id);
-  return NextResponse.json({ ok: true });
 }

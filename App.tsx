@@ -31,6 +31,7 @@ import {
   requestStudentPasswordReset,
   resetStudentPassword,
   signInStudent,
+  signInWithGoogle,
   signUpStudent,
   topUpStudentWallet,
   checkTopUpStatus,
@@ -333,26 +334,7 @@ export default function App() {
     body: string;
     receivedAt: string;
     data?: any;
-  }>>([
-    {
-      id: 'mock-1',
-      title: 'Nouveaux packs IUT !',
-      body: 'Les corrigés de Génie Informatique 2023 sont dispos.',
-      receivedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: 'mock-2',
-      title: 'Recharge réussie',
-      body: 'Ton compte a été crédité de 1000 Coins via MTN MoMo.',
-      receivedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: 'mock-3',
-      title: 'Passe en Premium',
-      body: 'Débloque tous les PDF en illimité et l\'assistant IA avancé !',
-      receivedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-  ]);
+  }>>([]);
 
   const registerForPushNotifications = async () => {
     if (Platform.OS === 'web') return;
@@ -398,14 +380,15 @@ export default function App() {
       });
 
       const pushToken = tokenResult.data;
-      console.log('[Notification] Push Token obtenu:', pushToken);
+      // Don't log full push tokens — they are addressable identifiers.
+      console.log('[Notification] Push token obtained (length):', pushToken.length);
 
       await registerPushToken(
         pushToken,
         Platform.OS === 'android' ? 'Android Device' : Platform.OS === 'ios' ? 'iOS Device' : 'Web Device',
         Platform.OS === 'android' ? 'android' : Platform.OS === 'ios' ? 'ios' : 'web'
       );
-      console.log('[Notification] Token enregistré sur le serveur.');
+      console.log('[Notification] Token registered with server.');
     } catch (error) {
       console.warn(
         "[Notification] Impossible d'enregistrer le token push. Remarques :\n" +
@@ -581,7 +564,8 @@ export default function App() {
   };
 
   const submitAuth = async () => {
-    console.log('submitAuth starting...', { authMode, authEmail });
+    // authEmail intentionally not logged — it's PII.
+    console.log('submitAuth starting...', { authMode });
     const email = authEmail.trim();
     const password = authPassword.trim();
     const name = authName.trim();
@@ -657,7 +641,8 @@ export default function App() {
               level,
             });
 
-      console.log('Auth session received:', session);
+      // Don't dump the whole session (which contains the email and id).
+      console.log('Auth session received:', Boolean(session));
       if (!session) {
         setAuthMode('verify-email');
         return;
@@ -681,6 +666,30 @@ export default function App() {
       Alert.alert('Connecte', 'Tes achats PDF et ton wallet sont synchronises.');
     } catch (error) {
       console.error('submitAuth error:', error);
+      Alert.alert('Connexion impossible', error instanceof Error ? error.message : 'Reessaie dans un instant.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    console.log('handleGoogleSignIn starting...');
+    setAuthLoading(true);
+    setAuthNotice('');
+    try {
+      const session = await signInWithGoogle();
+      console.log('Google Auth session received:', Boolean(session));
+      if (!session) {
+        setAuthNotice('Erreur lors de la connexion Google.');
+        return;
+      }
+      setStudentSession(session);
+      await syncStudentAccount(session);
+      setAuthVisible(false);
+      setActiveSection('home');
+      Alert.alert('Connecte', 'Connexion via Google reussie.');
+    } catch (error) {
+      console.error('Google sign-in error:', error);
       Alert.alert('Connexion impossible', error instanceof Error ? error.message : 'Reessaie dans un instant.');
     } finally {
       setAuthLoading(false);
@@ -1270,6 +1279,34 @@ export default function App() {
                         : 'Envoyer le lien'}
               </Text>
             </Pressable>
+
+            {(authMode === 'sign-in' || authMode === 'sign-up') && authCapabilities.google ? (
+              <>
+                <View style={styles.authDivider}>
+                  <View style={styles.authDividerLine} />
+                  <Text style={styles.authDividerText}>OU</Text>
+                  <View style={styles.authDividerLine} />
+                </View>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.googleButton,
+                    authLoading && styles.buttonDisabled,
+                    pressed && !authLoading && styles.pressed,
+                  ]}
+                  onPress={handleGoogleSignIn}
+                  disabled={authLoading}
+                >
+                  <View style={styles.googleMarkWrap}>
+                    <Text style={styles.googleMark}>G</Text>
+                  </View>
+                  <View style={styles.googleButtonTextWrap}>
+                    <Text style={styles.googleButtonLabel}>Google</Text>
+                    <Text style={styles.googleButtonText}>Se connecter avec Google</Text>
+                  </View>
+                </Pressable>
+              </>
+            ) : null}
           </View>
 
           <Pressable
@@ -1781,7 +1818,7 @@ export default function App() {
               purchasingDocumentId={purchasingDocumentId}
               purchasingPackId={purchasingPackId}
               onRefresh={() => refreshDocuments()}
-              externalTab={activeSection === 'explore' ? 'catalog' : 'library'}
+              externalTab={activeSection === 'explore' ? 'packs' : 'library'}
             />
           )}
         </ScrollView>

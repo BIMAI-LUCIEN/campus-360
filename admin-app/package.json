@@ -10,7 +10,8 @@
     "auth:migrate": "auth migrate",
     "mobile:setup": "node scripts/setup-better-auth-mobile.mjs",
     "auth:migrate-legacy": "node scripts/migrate-legacy-auth.mjs",
-    "supabase:setup": "node scripts/setup-supabase-pdf.mjs"
+    "supabase:setup": "node scripts/setup-supabase-pdf.mjs",
+    "verify": "node scripts/verify-implementation.mjs"
   },
   "dependencies": {
     "@better-auth/expo": "^1.6.19",
@@ -21,6 +22,7 @@
     "lucide-react": "^0.468.0",
     "next": "^15.5.7",
     "nodemailer": "^9.0.1",
+    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "5.4.54",
     "pg": "^8.21.0",
     "puppeteer": "^25.1.0",

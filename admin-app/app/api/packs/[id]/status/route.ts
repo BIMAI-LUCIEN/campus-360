@@ -7,6 +7,11 @@ import { upsertSupabasePack } from '@/lib/supabase-pdf';
 
 export const runtime = 'nodejs';
 
+const MAX_BODY_BYTES = 4 * 1024;
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const bodySchema = z.object({
   status: z.enum(['draft', 'analyzing', 'needs_review', 'published', 'archived']),
 });
@@ -15,20 +20,32 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const { user, response } = await requireAdminApi();
-  if (response) return response;
+  try {
+    const contentLength = Number(request.headers.get('content-length') ?? 0);
+    if (contentLength > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: 'Requete trop volumineuse.' }, { status: 413 });
+    }
+    const { user, response } = await requireAdminApi();
+    if (response) return response;
 
-  const { id } = await context.params;
-  const payload = await request.json().catch(() => null);
-  const parsed = bodySchema.safeParse(payload);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    const { id } = await context.params;
+    if (!UUID_REGEX.test(id)) {
+      return NextResponse.json({ error: 'Identifiant invalide.' }, { status: 400 });
+    }
+    const payload = await request.json().catch(() => null);
+    const parsed = bodySchema.safeParse(payload);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const pack = await updatePackStatus(id, parsed.data.status, user!.id);
+    if (!pack) {
+      return NextResponse.json({ error: 'Pack introuvable.' }, { status: 404 });
+    }
+
+    return NextResponse.json({ pack });
+  } catch (error) {
+    console.error('Pack status error:', error);
+    return NextResponse.json({ error: 'Erreur interne.' }, { status: 500 });
   }
-
-  const pack = await updatePackStatus(id, parsed.data.status, user!.id);
-  if (!pack) {
-    return NextResponse.json({ error: 'Pack introuvable.' }, { status: 404 });
-  }
-
-  return NextResponse.json({ pack });
 }

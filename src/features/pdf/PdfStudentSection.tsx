@@ -116,7 +116,7 @@ export function PdfStudentSection({
   const { width } = useWindowDimensions();
   const compact = width < 520;
   const [activeTab, setActiveTab] = useState<TabKey>('packs');
-  const isLibraryView = externalTab === 'library';
+  const viewMode = externalTab === 'library' ? 'library' : 'explore';
   const [activeTool, setActiveTool] = useState<'pdf' | 'summary' | 'plan' | 'quiz' | 'assistant'>('pdf');
   const [query, setQuery] = useState('');
   const [university, setUniversity] = useState(allValue);
@@ -138,11 +138,14 @@ export function PdfStudentSection({
   const [assistantInput, setAssistantInput] = useState('');
   const [assistantLoading, setAssistantLoading] = useState(false);
   const [isFullscreenReader, setIsFullscreenReader] = useState(false);
-  const [pdfLayoutMode, setPdfLayoutMode] = useState<'pdf' | 'split' | 'chat'>('split');
 
   useEffect(() => {
     if (externalTab) {
-      setActiveTab(externalTab);
+      if (externalTab === 'library') {
+        setActiveTab('packs');
+      } else {
+        setActiveTab(externalTab);
+      }
     }
   }, [externalTab]);
 
@@ -213,7 +216,7 @@ export function PdfStudentSection({
     const normalizedQuery = query.trim().toLowerCase();
     const filtered = publishedDocuments.filter((document) => {
       const owned = ownedDocumentIds.includes(document.id);
-      const matchesTab = activeTab === 'catalog' || owned;
+      const matchesTab = viewMode === 'library' ? (activeTab === 'catalog' && owned) : (activeTab === 'catalog');
       const matchesUniversity = university === allValue || document.university === university;
       const matchesFaculty = faculty === allValue || document.faculty === faculty;
       const matchesSubject = subject === allValue || document.subject === subject;
@@ -239,7 +242,7 @@ export function PdfStudentSection({
     return filtered.sort((left, right) => {
       const leftOwned = ownedDocumentIds.includes(left.id) ? 1 : 0;
       const rightOwned = ownedDocumentIds.includes(right.id) ? 1 : 0;
-      if (activeTab === 'library' && leftOwned !== rightOwned) return rightOwned - leftOwned;
+      if (viewMode === 'library' && leftOwned !== rightOwned) return rightOwned - leftOwned;
 
       const leftScore = getDocumentPriority(left);
       const rightScore = getDocumentPriority(right);
@@ -247,13 +250,13 @@ export function PdfStudentSection({
 
       return right.pageCount - left.pageCount;
     });
-  }, [activeTab, faculty, level, ownedDocumentIds, publishedDocuments, query, subject, university]);
+  }, [activeTab, faculty, level, ownedDocumentIds, publishedDocuments, query, subject, university, viewMode]);
 
   const visiblePacks = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     const filtered = publishedPacks.filter((pack) => {
       const owned = purchasedPackIds.includes(pack.id);
-      const matchesTab = activeTab === 'packs' || (activeTab === 'library' && owned);
+      const matchesTab = viewMode === 'library' ? (activeTab === 'packs' && owned) : (activeTab === 'packs');
       const matchesUniversity = university === allValue || pack.university === university || pack.university === 'Multi-etablissements';
       const matchesFaculty = faculty === allValue || pack.faculty === faculty || pack.faculty === 'Transversal';
       const matchesLevel = level === allValue || pack.level === level || pack.level === 'Tous niveaux';
@@ -270,7 +273,7 @@ export function PdfStudentSection({
     return filtered.sort((left, right) => {
       const leftOwned = purchasedPackIds.includes(left.id) ? 1 : 0;
       const rightOwned = purchasedPackIds.includes(right.id) ? 1 : 0;
-      if (activeTab === 'library' && leftOwned !== rightOwned) return rightOwned - leftOwned;
+      if (viewMode === 'library' && leftOwned !== rightOwned) return rightOwned - leftOwned;
 
       const leftScore = getPackPriority(left);
       const rightScore = getPackPriority(right);
@@ -278,7 +281,7 @@ export function PdfStudentSection({
 
       return right.documentCount - left.documentCount;
     });
-  }, [activeTab, faculty, level, publishedPacks, purchasedPackIds, query, university]);
+  }, [activeTab, faculty, level, publishedPacks, purchasedPackIds, query, university, viewMode]);
 
   const featuredPack = activeTab === 'packs' ? visiblePacks[0] ?? null : null;
   const featuredDocument = activeTab === 'catalog' ? visibleDocuments[0] ?? null : null;
@@ -481,83 +484,83 @@ export function PdfStudentSection({
 
   return (
     <View>
-      {isLibraryView ? (
+      {viewMode === 'library' && (
         <View style={styles.libraryHeadingSection}>
           <Text style={styles.libraryHeadingTitle}>Mes Achats</Text>
           <Text style={styles.libraryHeadingSubtitle}>
             Retrouve ici tous les PDF et Packs que tu as débloqués.
           </Text>
         </View>
-      ) : (
-        <View style={styles.controls}>
-          <View style={styles.resultRow}>
-            <Text style={styles.resultText}>
-              {activeTab === 'packs' ? `${visiblePacks.length} packs` : `${visibleDocuments.length} PDF`}
-            </Text>
-            {hasActiveFilters ? (
-              <Pressable style={styles.clearButton} onPress={resetFilters}>
-                <Text style={styles.clearButtonText}>Effacer</Text>
-              </Pressable>
-            ) : null}
-          </View>
-
-          <View style={styles.segment}>
-            {([
-              ['packs', `Packs (${publishedPacks.length})`],
-              ['catalog', 'PDF'],
-            ] as Array<[TabKey, string]>).map(([key, label]) => {
-              const active = activeTab === key;
-              return (
-                <Pressable
-                  key={key}
-                  style={[styles.segmentButton, active && styles.segmentButtonActive]}
-                  onPress={() => setActiveTab(key)}
-                >
-                  <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Titre, matiere, prof..."
-            placeholderTextColor={colors.muted}
-            style={styles.searchInput}
-          />
-
-          <View style={styles.filterToolbar}>
-            <Pressable style={styles.filterTrigger} onPress={() => setFiltersVisible(true)}>
-              <Text style={styles.filterTriggerText}>Filtres</Text>
-              {activeFilterCount ? (
-                <View style={styles.filterBadge}>
-                  <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                </View>
-              ) : null}
-            </Pressable>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterSummaryRow}
-            >
-              {filterSummary.length ? (
-                filterSummary.map((section) => (
-                  <Pressable key={section.key} style={styles.summaryChip} onPress={() => setFiltersVisible(true)}>
-                    <Text style={styles.summaryChipLabel}>{section.label}</Text>
-                    <Text style={styles.summaryChipValue} numberOfLines={1}>{section.value}</Text>
-                  </Pressable>
-                ))
-              ) : (
-                <View style={styles.summaryChipMuted}>
-                  <Text style={styles.summaryChipMutedText}>Tous les etablissements</Text>
-                </View>
-              )}
-            </ScrollView>
-          </View>
-        </View>
       )}
+
+      <View style={styles.controls}>
+        <View style={styles.resultRow}>
+          <Text style={styles.resultText}>
+            {activeTab === 'packs' ? `${visiblePacks.length} packs` : `${visibleDocuments.length} PDF`}
+          </Text>
+          {hasActiveFilters ? (
+            <Pressable style={styles.clearButton} onPress={resetFilters}>
+              <Text style={styles.clearButtonText}>Effacer</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        <View style={styles.segment}>
+          {([
+            ['packs', viewMode === 'library' ? 'Mes packs' : 'Packs'],
+            ['catalog', viewMode === 'library' ? 'Mes PDF' : 'PDF'],
+          ] as Array<[TabKey, string]>).map(([key, label]) => {
+            const active = activeTab === key;
+            return (
+              <Pressable
+                key={key}
+                style={[styles.segmentButton, active && styles.segmentButtonActive]}
+                onPress={() => setActiveTab(key)}
+              >
+                <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Titre, matiere, prof..."
+          placeholderTextColor={colors.muted}
+          style={styles.searchInput}
+        />
+
+        <View style={styles.filterToolbar}>
+          <Pressable style={styles.filterTrigger} onPress={() => setFiltersVisible(true)}>
+            <Text style={styles.filterTriggerText}>Filtres</Text>
+            {activeFilterCount ? (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterSummaryRow}
+          >
+            {filterSummary.length ? (
+              filterSummary.map((section) => (
+                <Pressable key={section.key} style={styles.summaryChip} onPress={() => setFiltersVisible(true)}>
+                  <Text style={styles.summaryChipLabel}>{section.label}</Text>
+                  <Text style={styles.summaryChipValue} numberOfLines={1}>{section.value}</Text>
+                </Pressable>
+              ))
+            ) : (
+              <View style={styles.summaryChipMuted}>
+                <Text style={styles.summaryChipMutedText}>Tous les etablissements</Text>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </View>
 
       {loading ? (
         <View style={styles.statePanel}>
@@ -589,9 +592,11 @@ export function PdfStudentSection({
           <View style={styles.stateBadge}>
             <Text style={styles.stateBadgeText}>+</Text>
           </View>
-          <Text style={styles.stateTitle}>Aucun pack</Text>
+          <Text style={styles.stateTitle}>
+            {viewMode === 'library' ? 'aucun pack achete' : 'aucun pack trouve'}
+          </Text>
           <Text style={styles.bodyMuted}>
-            Essaie une autre recherche ou regarde les PDF.
+            {viewMode === 'library' ? "Tu n'as pas encore acheté de pack." : "Essaie une autre recherche ou regarde les PDF."}
           </Text>
         </View>
       ) : null}
@@ -601,8 +606,12 @@ export function PdfStudentSection({
           <View style={styles.stateBadge}>
             <Text style={styles.stateBadgeText}>0</Text>
           </View>
-          <Text style={styles.stateTitle}>Aucun PDF</Text>
-          <Text style={styles.bodyMuted}>Essaie une autre recherche.</Text>
+          <Text style={styles.stateTitle}>
+            {viewMode === 'library' ? 'aucun PDF debloque' : 'aucun PDF trouve'}
+          </Text>
+          <Text style={styles.bodyMuted}>
+            {viewMode === 'library' ? "Tu n'as pas encore débloqué de PDF." : "Essaie une autre recherche."}
+          </Text>
         </View>
       ) : null}
 
@@ -664,13 +673,13 @@ export function PdfStudentSection({
         </View>
       ) : null}
 
-      {!loading && !error && activeTab !== 'catalog' ? (
+      {!loading && !error && activeTab === 'packs' ? (
         visiblePacks.map((pack) => {
           const owned = purchasedPackIds.includes(pack.id);
           const purchasing = purchasingPackId === pack.id;
           const packDocuments = getPackDocuments(pack);
           const readCount = packDocuments.filter((document) => ownedDocumentIds.includes(document.id)).length;
-          const inLibrary = activeTab === 'library';
+          const inLibrary = viewMode === 'library';
           const savings = Math.max(0, pack.originalPrice - pack.price);
 
           return (
@@ -752,11 +761,11 @@ export function PdfStudentSection({
         })
       ) : null}
 
-      {!loading && !error && activeTab !== 'packs' ? (
+      {!loading && !error && activeTab === 'catalog' ? (
         visibleDocuments.map((document) => {
           const owned = ownedDocumentIds.includes(document.id);
           const purchasing = purchasingDocumentId === document.id;
-          const inLibrary = activeTab === 'library';
+          const inLibrary = viewMode === 'library';
           return (
             <LinearGradient
               key={document.id}
