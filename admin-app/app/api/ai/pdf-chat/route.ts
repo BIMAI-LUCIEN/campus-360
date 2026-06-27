@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': process.env.BETTER_AUTH_URL ?? 'http://localhost:3001',
-          'X-OpenRouter-Title': 'Campus-Bordes',
+          'X-OpenRouter-Title': 'Campus 3602',
         },
         body: JSON.stringify({
           model,

@@ -7,7 +7,7 @@ const ALLOWED_ORIGIN_PREFIXES = [
 ];
 
 const isAllowedOrigin = (origin: string) => {
-  if (origin === 'campus-bordes://') return true;
+  if (origin === 'campus-3602://') return true;
   return ALLOWED_ORIGIN_PREFIXES.some((prefix) => origin.startsWith(prefix));
 };
 

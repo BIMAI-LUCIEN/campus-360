@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Campus-Bordes",
-    "slug": "campus-bordes",
-    "scheme": "campus-bordes",
+    "name": "Campus 3602",
+    "slug": "campus-3602",
+    "scheme": "campus-3602",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

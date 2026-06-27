@@ -1,6 +1,6 @@
-# Campus-Bordes Admin PDF
+# Campus 3602 Admin PDF
 
-Dashboard web Next.js pour gerer les PDF de Campus-Bordes.
+Dashboard web Next.js pour gerer les PDF de Campus 3602.
 
 ## Lancer en local
 
@@ -109,6 +109,6 @@ https://ton-domaine.com/api/auth/callback/google
 
 ## Recuperation de mot de passe
 
-Le flux mobile revient dans l'application avec `campus-bordes://reset-password`. Pour envoyer les
+Le flux mobile revient dans l'application avec `campus-3602://reset-password`. Pour envoyer les
 emails avec Gmail a cout nul, active la validation en deux etapes Google puis cree un mot de passe
 d'application. Configure ensuite `SMTP_USER`, `SMTP_PASSWORD` et `SMTP_FROM` dans `.env.local`.

@@ -22,7 +22,7 @@ create table if not exists public.app_users (
   better_auth_user_id text not null unique,
   legacy_supabase_user_id uuid unique,
   email text not null unique,
-  name text not null default 'Etudiant Campus-Bordes',
+  name text not null default 'Etudiant Campus 3602',
   role text not null default 'student' check (role in ('student', 'admin', 'super_admin')),
   phone text,
   whatsapp_phone text,

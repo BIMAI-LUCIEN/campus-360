@@ -16,7 +16,7 @@ const parseOriginList = (raw: string | undefined): string[] =>
     .filter((entry): entry is string => Boolean(entry));
 
 const trustedOrigins = [
-  'campus-bordes://',
+  'campus-3602://',
   'http://localhost:3001',
   'http://127.0.0.1:3001',
   'http://localhost:8081',
@@ -40,7 +40,7 @@ if (!process.env.BETTER_AUTH_SECRET) {
 }
 
 export const auth = betterAuth({
-  appName: 'Campus-Bordes',
+  appName: 'Campus 3602',
   database: databasePool,
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3001',
   secret: process.env.BETTER_AUTH_SECRET,

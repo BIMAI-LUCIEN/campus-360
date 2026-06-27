@@ -61,7 +61,7 @@ type AppSection = 'home' | 'explore' | 'library' | 'reports' | 'account' | 'prem
 
 const logo = require('./assets/icon.png');
 const catalogCard = require('./assets/catalog-card.png');
-const onboardingStorageKey = 'campus-bordes.onboarding-seen';
+const onboardingStorageKey = 'campus-3602.onboarding-seen';
 
 const formatCoins = (value: number) =>
   new Intl.NumberFormat('fr-CM', { maximumFractionDigits: 0 }).format(value);
@@ -433,7 +433,7 @@ export default function App() {
   useEffect(() => {
     let mounted = true;
     const handleAuthLink = (url: string | null) => {
-      if (!url || !url.startsWith('campus-bordes://reset-password')) return;
+      if (!url || !url.startsWith('campus-3602://reset-password')) return;
       const token = new URL(url).searchParams.get('token');
       if (!token) return;
       setResetToken(token);
@@ -1354,7 +1354,7 @@ export default function App() {
         <View style={[styles.topBar, narrowScreen && styles.topBarCompact]}>
           <View style={styles.headerBrand}>
             <Image source={logo} style={styles.headerLogo} />
-            <Text style={styles.appName} numberOfLines={1}>Campus-Bordes</Text>
+            <Text style={styles.appName} numberOfLines={1}>Campus 3602</Text>
           </View>
           <Pressable 
             style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', position: 'relative' }} 
@@ -1369,7 +1369,7 @@ export default function App() {
           <View style={{ flex: 1, backgroundColor: '#0F172A', justifyContent: 'center', alignItems: 'center', gap: 16 }}>
             <Image source={logo} style={{ width: 80, height: 80, borderRadius: 20 }} />
             <ActivityIndicator size="large" color="#059669" />
-            <Text style={{ color: '#94A3B8', fontSize: 14, fontWeight: '600' }}>Chargement de Campus-Bordes...</Text>
+            <Text style={{ color: '#94A3B8', fontSize: 14, fontWeight: '600' }}>Chargement de Campus 3602...</Text>
           </View>
         ) : !hasSeenOnboarding ? (
           <OnboardingScreen onFinish={() => setHasSeenOnboarding(true)} />
@@ -1394,7 +1394,7 @@ export default function App() {
                 <View style={[styles.dashboardHeroContent, { width: '100%' }]}>
                   <View style={[styles.flex, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }]}>
                     <View style={styles.dashboardHeroText}>
-                      <Text style={[styles.dashboardEyebrow, { fontSize: 14, color: '#64748B', textTransform: 'none', fontWeight: '500' }]}>👋 Bienvenue sur Campus-Bordes</Text>
+                      <Text style={[styles.dashboardEyebrow, { fontSize: 14, color: '#64748B', textTransform: 'none', fontWeight: '500' }]}>👋 Bienvenue sur Campus 3602</Text>
                       <Text style={[styles.dashboardTitle, { fontSize: 28, fontWeight: '800', marginTop: 4, marginBottom: 8 }]}>
                         {studentProfile?.name?.split(' ')[0] ?? 'Etudiant'}
                       </Text>
@@ -1512,7 +1512,7 @@ export default function App() {
                   </View>
                   <View style={styles.flex}>
                     <Text style={[styles.dashboardSectionTitle, { fontSize: 13, textTransform: 'none', color: '#64748B' }]}>Espace Compte</Text>
-                    <Text style={[styles.accountSurfaceTitle, { fontSize: 22, fontWeight: '700' }]}>{studentProfile?.name ?? 'Etudiant Campus-Bordes'}</Text>
+                    <Text style={[styles.accountSurfaceTitle, { fontSize: 22, fontWeight: '700' }]}>{studentProfile?.name ?? 'Etudiant Campus 3602'}</Text>
                     <Text style={[styles.dashboardInfoSub, { fontSize: 15, color: '#94A3B8' }]}>
                       {studentProfile?.email ?? studentSession.user.email ?? 'Connecte'}
                     </Text>
@@ -1856,7 +1856,7 @@ export default function App() {
             </View>
             <View style={styles.flex}>
               <Text style={styles.cardTitle}>
-                {studentProfile?.name ?? 'Etudiant Campus-Bordes'}
+                {studentProfile?.name ?? 'Etudiant Campus 3602'}
               </Text>
               <Text style={styles.bodyMuted}>
                 {`${studentProfile?.email ?? studentSession?.user.email ?? 'Connecte'}${syncingAccount ? ' - sync...' : ''}`}

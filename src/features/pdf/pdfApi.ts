@@ -118,7 +118,7 @@ const getStorage = () => {
 };
 
 const getAnalyticsSessionId = () => {
-  const key = 'campus-bordes.analytics-session';
+  const key = 'campus-3602.analytics-session';
   const storage = getStorage();
   const existing = storage?.getItem(key) ?? memoryAnalyticsSessionId;
   if (existing) return existing;
@@ -160,7 +160,7 @@ const mapDocumentRow = (row: SupabaseDocumentRow): CampusDocument => ({
   rating: Number(row.rating ?? 0),
   sales: row.sales_count,
   downloads: row.downloads_count,
-  uploaderName: 'Admin Campus-Bordes',
+  uploaderName: 'Admin Campus 3602',
   status: row.status,
   commissionRate: row.commission_rate,
   createdAt: new Date(row.created_at).toLocaleDateString('fr-FR'),

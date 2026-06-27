@@ -18,7 +18,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 const emailArg = process.argv[2];
-const title = process.argv[3] || 'Alerte Campus-Bordes';
+const title = process.argv[3] || 'Alerte Campus 3602';
 const body = process.argv[4] || 'Ceci est une notification test en temps réel ! 🚀';
 
 async function run() {
