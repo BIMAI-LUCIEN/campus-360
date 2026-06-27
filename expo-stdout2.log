@@ -1,0 +1,4 @@
+env: load .env.local
+env: export EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY EXPO_PUBLIC_AI_PROXY_URL EXPO_NO_DEPENDENCY_VALIDATION EXPO_PUBLIC_AUTH_URL EXPO_PUBLIC_AUTH_WEB_URL
+Starting project at C:\Users\migue\Desktop\mes projets\campus 360
+Starting Metro Bundler
