@@ -118,7 +118,7 @@ const getStorage = () => {
 };
 
 const getAnalyticsSessionId = () => {
-  const key = 'campus-3602.analytics-session';
+  const key = 'campus-360.analytics-session';
   const storage = getStorage();
   const existing = storage?.getItem(key) ?? memoryAnalyticsSessionId;
   if (existing) return existing;

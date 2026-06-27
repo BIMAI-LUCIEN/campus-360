@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Campus 3602",
-    "slug": "campus-3602",
-    "scheme": "campus-3602",
+    "name": "Campus 360",
+    "slug": "campus-360",
+    "scheme": "campus-360",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

@@ -89,7 +89,7 @@ const campus360PdfSupabase = (() => {
     rating: Number(row.rating || 0),
     sales: row.sales_count || 0,
     downloads: row.downloads_count || 0,
-    uploaderName: "Admin Campus 3602",
+    uploaderName: "Admin Campus 360",
     status: row.status,
     commissionRate: row.commission_rate,
     createdAt: new Date(row.created_at).toLocaleDateString("fr-FR"),

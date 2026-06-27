@@ -7,7 +7,7 @@ import { authClient } from '@/lib/auth-client';
 export function LoginClient() {
   const router = useRouter();
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
-  const [name, setName] = useState('Admin Campus 3602');
+  const [name, setName] = useState('Admin Campus 360');
   const [email, setEmail] = useState('admin@campus360.local');
   const [password, setPassword] = useState('Admin123456!');
   const [message, setMessage] = useState('');
@@ -82,7 +82,7 @@ export function LoginClient() {
         </svg>
       </div>
 
-      <h1>Campus 3602 Admin</h1>
+      <h1>Campus 360 Admin</h1>
       <p className="muted">Connexion dashboard PDF.</p>
 
       {mode === 'sign-up' ? (

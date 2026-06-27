@@ -20,7 +20,7 @@ const escapeHtml = (input: string) =>
 
 const isSafeScheme = (url: string): boolean => {
   // Only allow our mobile scheme to be used as the redirect target.
-  return /^campus-3602:\/\//.test(url);
+  return /^campus-360:\/\//.test(url);
 };
 
 export function GET(request: NextRequest) {
@@ -32,7 +32,7 @@ export function GET(request: NextRequest) {
   const tokenSafe = /^[A-Za-z0-9._\-]+$/.test(token) ? token : '';
   const errorSafe = /^[A-Za-z0-9._\- ]+$/.test(error) ? error : '';
 
-  let redirectUrl = 'campus-3602://reset-password';
+  let redirectUrl = 'campus-360://reset-password';
   if (tokenSafe) {
     redirectUrl += `?token=${encodeURIComponent(tokenSafe)}`;
   } else if (errorSafe) {
@@ -44,7 +44,7 @@ export function GET(request: NextRequest) {
   }
 
   // All user-controlled values go through escapeHtml before being placed in the
-  // HTML body. redirectUrl itself is already constrained to the campus-3602
+  // HTML body. redirectUrl itself is already constrained to the campus-360
   // scheme but we still escape it for belt-and-braces protection.
   const html = `
     <!DOCTYPE html>
@@ -81,7 +81,7 @@ export function GET(request: NextRequest) {
       </head>
       <body>
         <div class="card">
-          <h2>Redirection en cours vers Campus 3602...</h2>
+          <h2>Redirection en cours vers Campus 360...</h2>
           <p>Si vous n'etes pas redirige automatiquement, <a href="${escapeHtml(redirectUrl)}">cliquez ici</a>.</p>
         </div>
         <script>

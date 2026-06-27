@@ -113,8 +113,8 @@ export const authClient = createAuthClient({
       ? []
       : [
           expoClient({
-            scheme: 'campus-3602',
-            storagePrefix: 'campus-3602',
+            scheme: 'campus-360',
+            storagePrefix: 'campus-360',
             storage: authStorage,
           }),
         ]),
@@ -143,7 +143,7 @@ export const signInStudent = async (email: string, password: string) => {
 export const signInWithGoogle = async () => {
   const result = await authClient.signIn.social({
     provider: 'google',
-    callbackURL: 'campus-3602://',
+    callbackURL: 'campus-360://',
   });
   if (result?.error) throw new Error(errorMessage(result.error));
   return loadSession();
@@ -166,7 +166,7 @@ export const signUpStudent = async (
     password,
     name,
     ...extra,
-    callbackURL: 'campus-3602://',
+    callbackURL: 'campus-360://',
   } as any);
   if (result.error) throw new Error(errorMessage(result.error));
   return loadSession();
@@ -205,7 +205,7 @@ export const authFetch = async (path: string, init: RequestInit = {}) => {
   if (Platform.OS !== 'web') {
     const cookie = authClient.getCookie();
     if (cookie) headers.set('Cookie', cookie);
-    headers.set('Expo-Origin', 'campus-3602://');
+    headers.set('Expo-Origin', 'campus-360://');
   }
 
   const response = await fetch(`${authBaseUrl}${path}`, {

@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
             amount: input.amountCoins,
             currency: 'XAF',
             email: access.user.email,
-            description: `Recharge Campus 3602 - ${input.amountCoins} Coins`,
+            description: `Recharge Campus 360 - ${input.amountCoins} Coins`,
           }),
         });
 

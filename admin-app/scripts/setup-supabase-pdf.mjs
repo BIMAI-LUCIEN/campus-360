@@ -36,7 +36,7 @@ set public = excluded.public,
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text unique,
-  name text not null default 'Etudiant Campus 3602',
+  name text not null default 'Etudiant Campus 360',
   role text not null default 'student' check (role in ('student', 'admin', 'super_admin')),
   university text,
   faculty text,
@@ -243,7 +243,7 @@ set search_path = public
 as $$
 begin
   insert into public.profiles (id, email, name)
-  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'name', new.email, 'Etudiant Campus 3602'))
+  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'name', new.email, 'Etudiant Campus 360'))
   on conflict (id) do nothing;
 
   insert into public.wallets (user_id, balance_coins)

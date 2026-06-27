@@ -29,9 +29,9 @@ export const sendPasswordResetEmail = async ({
   });
 
   await transporter.sendMail({
-    from: process.env.SMTP_FROM ?? `Campus 3602 <${user}>`,
+    from: process.env.SMTP_FROM ?? `Campus 360 <${user}>`,
     to: email,
-    subject: 'Reinitialise ton mot de passe Campus 3602',
+    subject: 'Reinitialise ton mot de passe Campus 360',
     text: `Bonjour ${name},\n\nOuvre ce lien pour choisir un nouveau mot de passe:\n${url}\n\nCe lien est personnel.`,
     html: `<p>Bonjour ${name},</p><p>Ouvre le bouton ci-dessous pour choisir un nouveau mot de passe.</p><p><a href="${url}">Reinitialiser mon mot de passe</a></p><p>Ce lien est personnel.</p>`,
   });
@@ -68,9 +68,9 @@ export const sendVerificationEmail = async ({
 
     console.log("DEBUG: Attempting to send email via SMTP to:", email);
     const info = await transporter.sendMail({
-    from: process.env.SMTP_FROM ?? `Campus 3602 <${user}>`,
+    from: process.env.SMTP_FROM ?? `Campus 360 <${user}>`,
     to: email,
-    subject: 'Confirme ton adresse email - Campus 3602',
+    subject: 'Confirme ton adresse email - Campus 360',
       text: `Bonjour ${name},\n\nMerci de confirmer ton adresse email en ouvrant ce lien:\n${url}\n\nCe lien est valide pendant 1 heure.`,
       html: `<p>Bonjour ${name},</p><p>Merci de confirmer ton adresse email en cliquant sur le bouton ci-dessous.</p><p><a href="${url}">Confirmer mon email</a></p><p>Ce lien est valide pendant 1 heure.</p>`,
     });

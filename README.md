@@ -1,6 +1,6 @@
-# Campus 3602
+# Campus 360
 
-Campus 3602 est un MVP Expo SDK 54 / React Native centre sur un seul produit : une
+Campus 360 est un MVP Expo SDK 54 / React Native centre sur un seul produit : une
 bibliotheque de PDF academiques pour les etudiants.
 
 ## Objectif produit

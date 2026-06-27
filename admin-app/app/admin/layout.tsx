@@ -44,7 +44,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="menu-header">
           <div className="menu-brand">
             <GraduationCap size={24} className="brand-icon" />
-            <span>Campus 3602</span>
+            <span>Campus 360</span>
           </div>
         </div>
 

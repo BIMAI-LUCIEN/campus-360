@@ -6,7 +6,7 @@ import { PDFDocument, rgb, degrees, StandardFonts } from 'pdf-lib';
  */
 export async function generateWatermarkedPreview(
   pdfBuffer: Buffer,
-  watermarkText: string = 'Campus 3602 Preview'
+  watermarkText: string = 'Campus 360 Preview'
 ): Promise<Buffer> {
   // Load the full PDF document
   const srcDoc = await PDFDocument.load(pdfBuffer);
