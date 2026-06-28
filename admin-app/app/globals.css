@@ -80,6 +80,8 @@
   --animate-spin-slow: spin 1s linear infinite;
 }
 
+/* ─── Stitch cache bust: 2024-12-28 ──────────────────── */
+
 /* ─── Base reset ─────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
