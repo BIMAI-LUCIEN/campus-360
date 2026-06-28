@@ -118,13 +118,12 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
 
   const activeSection = sections.find((s) => s.id === activeSectionId);
 
-  // 2. Initialize TipTap Editor
+  // 2. Initialize TipTap Editor — create ONCE, mutate content on section change.
   const editor = useEditor({
     extensions: [StarterKit],
-    content: activeSection?.content_html || '',
+    content: '',
     onUpdate: ({ editor }) => {
       if (!activeSectionId) return;
-
       const html = editor.getHTML();
       const json = editor.getJSON();
 
@@ -139,16 +138,33 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
         saveSectionContent(activeSectionId, html, json);
       }, 1500);
     },
-  }, [activeSectionId]);
+    // No deps — we manage content sync manually in the effect below.
+  });
 
   // Load section content when active section changes
   useEffect(() => {
-    if (editor && activeSection && activeSection.id === activeSectionId) {
+    if (!editor || editor.isDestroyed) return;
+    if (!activeSection) return;
+    if (activeSection.id !== activeSectionId) return;
+    try {
       if (editor.getHTML() !== activeSection.content_html) {
-        editor.commands.setContent(activeSection.content_html);
+        editor.commands.setContent(activeSection.content_html || '');
       }
+    } catch {
+      // Editor not ready yet (TipTap schema still loading) — wait for next render.
     }
   }, [activeSectionId, editor, activeSection]);
+
+  // Safe wrapper for editor commands — guards against destroyed / null editor
+  // so toolbar buttons don't crash mid-render when sections are swapped quickly.
+  const safeEditorRun = (fn: () => void) => {
+    if (!editor || editor.isDestroyed) return;
+    try {
+      fn();
+    } catch {
+      // Swallow transient TipTap errors during section transitions.
+    }
+  };
 
   // Clean up timer
   useEffect(() => {
@@ -253,11 +269,15 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
   const runAiAssistant = async (action: 'draft' | 'improve') => {
     if (!aiPrompt.trim()) return;
     const sectionTitle = activeSection?.title || 'Section';
-    const textToImprove = action === 'improve' && editor ? editor.state.doc.textBetween(
-      editor.state.selection.from,
-      editor.state.selection.to,
-      ' '
-    ) : undefined;
+    let textToImprove: string | undefined = undefined;
+    if (action === 'improve' && editor && !editor.isDestroyed && editor.state?.doc) {
+      try {
+        const { from, to } = editor.state.selection;
+        textToImprove = editor.state.doc.textBetween(from, to, ' ');
+      } catch {
+        textToImprove = undefined;
+      }
+    }
 
     if (action === 'improve' && !textToImprove) {
       ssrAlert('Veuillez d\'abord surbriller ou sélectionner du texte dans l\'éditeur pour l\'améliorer.');
@@ -513,46 +533,46 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
           {/* Editor Header Toolbar (TipTap action) */}
           {activeSection && activeSection.title.toLowerCase() !== 'page de garde' && activeSection.title.toLowerCase() !== 'sommaire' && editor && (
             <div className="flex h-11 items-center gap-1 border-b border-slate-800 bg-slate-900/30 px-4">
-              <button 
-                onClick={() => editor.chain().focus().toggleBold().run()}
+              <button
+                onClick={() => safeEditorRun(() => editor.chain().focus().toggleBold().run())}
                 className={`p-1.5 rounded hover:bg-slate-800 text-slate-300 ${editor.isActive('bold') ? 'bg-slate-800 text-emerald-400' : ''}`}
               >
                 <Bold size={16} />
               </button>
-              <button 
-                onClick={() => editor.chain().focus().toggleItalic().run()}
+              <button
+                onClick={() => safeEditorRun(() => editor.chain().focus().toggleItalic().run())}
                 className={`p-1.5 rounded hover:bg-slate-800 text-slate-300 ${editor.isActive('italic') ? 'bg-slate-800 text-emerald-400' : ''}`}
               >
                 <Italic size={16} />
               </button>
               <span className="w-px h-5 bg-slate-800 mx-1"></span>
-              <button 
-                onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+              <button
+                onClick={() => safeEditorRun(() => editor.chain().focus().toggleHeading({ level: 1 }).run())}
                 className={`p-1.5 rounded hover:bg-slate-800 text-slate-300 ${editor.isActive('heading', { level: 1 }) ? 'bg-slate-800 text-emerald-400' : ''}`}
               >
                 <Heading1 size={16} />
               </button>
-              <button 
-                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+              <button
+                onClick={() => safeEditorRun(() => editor.chain().focus().toggleHeading({ level: 2 }).run())}
                 className={`p-1.5 rounded hover:bg-slate-800 text-slate-300 ${editor.isActive('heading', { level: 2 }) ? 'bg-slate-800 text-emerald-400' : ''}`}
               >
                 <Heading2 size={16} />
               </button>
-              <button 
-                onClick={() => editor.chain().focus().toggleBulletList().run()}
+              <button
+                onClick={() => safeEditorRun(() => editor.chain().focus().toggleBulletList().run())}
                 className={`p-1.5 rounded hover:bg-slate-800 text-slate-300 ${editor.isActive('bulletList') ? 'bg-slate-800 text-emerald-400' : ''}`}
               >
                 <List size={16} />
               </button>
               <span className="w-px h-5 bg-slate-800 mx-1"></span>
-              <button 
-                onClick={() => editor.chain().focus().undo().run()}
+              <button
+                onClick={() => safeEditorRun(() => editor.chain().focus().undo().run())}
                 className="p-1.5 rounded hover:bg-slate-800 text-slate-400"
               >
                 <Undo size={16} />
               </button>
-              <button 
-                onClick={() => editor.chain().focus().redo().run()}
+              <button
+                onClick={() => safeEditorRun(() => editor.chain().focus().redo().run())}
                 className="p-1.5 rounded hover:bg-slate-800 text-slate-400"
               >
                 <Redo size={16} />
