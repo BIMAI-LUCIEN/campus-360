@@ -31,6 +31,27 @@ const EVENT_LABELS: Record<string, string> = {
 const formatInt = (v: number) => new Intl.NumberFormat('fr-FR').format(v);
 const formatCoins = (v: number) => `${new Intl.NumberFormat('fr-FR').format(v)} C`;
 
+const badgeClass: Record<string, string> = {
+  purchase_success: 'bg-stitch-success-light text-stitch-success-dark',
+  purchase_failed:  'bg-stitch-error-light text-stitch-error',
+  reader_open:      'bg-stitch-primary-fixed text-stitch-primary',
+  assistant_question: 'bg-amber-50 text-amber-700',
+  default:          'bg-stitch-surface-container-high text-stitch-on-surface-variant',
+};
+
+const TrendUp = ({ value }: { value: string }) => (
+  <span className="inline-flex items-center gap-0.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-stitch-success-light text-stitch-success-dark">
+    <TrendingUp size={11} />
+    {value}
+  </span>
+);
+
+const TrendNeutral = ({ value }: { value: string }) => (
+  <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full bg-stitch-primary-fixed text-stitch-primary">
+    +{value}
+  </span>
+);
+
 export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
   const [data, setData] = useState<PdfAnalyticsSummary>(initialData);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -77,46 +98,39 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
     }
   };
 
-  // KPIs (Stitch: 4 cards: REVENUS, PDF PUBLIÉS, ÉTUDIANTS, ACHATS)
   const conversionRate = data.totals.previews > 0
     ? Math.round((data.totals.purchases / data.totals.previews) * 100)
     : 0;
 
-  const TrendUp = ({ value }: { value: string }) => (
-    <span className="stitch-kpi-trend up">
-      <TrendingUp size={11} />
-      {value}
-    </span>
-  );
-  const TrendNeutral = ({ value }: { value: string }) => (
-    <span className="stitch-kpi-trend neutral">+{value}</span>
-  );
-
   return (
     <>
       {/* ── Page header (greeting + actions) ─────────────── */}
-      <div className="stitch-page-header">
-        <div className="stitch-greeting">
-          <h2>Bonjour Lucien 👋</h2>
-          <p>Voici ce qui se passe sur Campus 360 aujourd&apos;hui.</p>
+      <div className="flex justify-between items-end gap-4 mb-8 flex-wrap">
+        <div>
+          <h2 className="font-stitch-headline text-[32px] font-bold text-stitch-on-surface tracking-tight m-0 mb-1">
+            Bonjour Lucien 👋
+          </h2>
+          <p className="text-[15px] text-stitch-on-surface-variant m-0">
+            Voici ce qui se passe sur Campus 360 aujourd&apos;hui.
+          </p>
           {fetchError ? (
-            <p style={{ fontSize: 12, color: 'var(--stitch-error)', marginTop: 6 }}>{fetchError}</p>
+            <p className="text-xs text-stitch-error mt-1.5">{fetchError}</p>
           ) : (
-            <p style={{ fontSize: 12, color: 'var(--stitch-on-surface-variant)', marginTop: 6 }}>
+            <p className="text-xs text-stitch-on-surface-variant mt-1.5">
               {isFetching ? 'Synchronisation…' : `Dernière mise à jour : ${lastUpdated.toLocaleTimeString('fr-FR')}`}
             </p>
           )}
         </div>
-        <div className="stitch-page-actions">
-          <button className="stitch-btn-date" type="button">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button className="flex items-center gap-2 bg-stitch-surface-lowest border border-stitch-outline-variant px-4 py-2 rounded-stitch text-[13px] font-medium text-stitch-on-surface hover:bg-stitch-surface-container transition-colors" type="button">
             <Calendar size={14} />
             <span>Cette semaine</span>
           </button>
-          <button className="stitch-btn stitch-btn--secondary" type="button" onClick={refresh}>
+          <button className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-stitch text-[13px] font-semibold border bg-stitch-surface-lowest text-stitch-on-surface border-stitch-outline-variant hover:bg-stitch-surface-container transition-colors" type="button" onClick={refresh}>
             <RefreshCw size={14} className={isFetching ? 'spin-anim' : ''} />
             Rafraîchir
           </button>
-          <button className="stitch-btn stitch-btn--primary" type="button">
+          <button className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-stitch text-[13px] font-semibold border border-transparent bg-stitch-primary text-stitch-on-primary hover:opacity-90 hover:shadow-stitch-md transition-all" type="button">
             <Download size={14} />
             Exporter
           </button>
@@ -125,69 +139,80 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
 
       {/* ── Config warning ─────────────────────────────────── */}
       {!data.configured ? (
-        <div className="stitch-card" style={{
-          borderColor: '#fde68a',
-          background: '#fffbeb',
-          color: '#b45309',
-          marginBottom: 24,
-        }}>
+        <div className="bg-amber-50 border border-amber-200 rounded-stitch px-6 py-4 text-amber-800 mb-6">
           <strong>Base de données non connectée.</strong> Les compteurs affichent
           des zéros. Renseignez <code>DATABASE_URL</code> dans{' '}
           <code>.env.local</code> pour activer les analyses.
         </div>
       ) : null}
 
-      {/* ── KPI Row (4 cards, Stitch style) ────────────────── */}
-      <div className="stitch-kpi-grid">
+      {/* ── KPI Row (4 cards) ─────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* REVENUS */}
-        <div className="stitch-kpi">
+        <div className="bg-stitch-surface-lowest border border-stitch-outline-variant rounded-stitch p-6 shadow-stitch-sm flex flex-col justify-between gap-3">
           <div>
-            <div className="stitch-kpi-label">REVENUS</div>
-            <div className="stitch-kpi-value-row">
-              <span className="stitch-kpi-value">{formatCoins(data.totals.revenue)}</span>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-stitch-on-surface-variant">
+              REVENUS
+            </div>
+            <div className="flex items-center justify-between gap-3 mt-2">
+              <span className="font-stitch-headline text-[32px] font-bold text-stitch-on-surface leading-none">
+                {formatCoins(data.totals.revenue)}
+              </span>
               <TrendUp value="+18%" />
             </div>
           </div>
-          <div className="stitch-kpi-sub">vs semaine dernière</div>
+          <div className="text-[13px] text-stitch-on-surface-variant mt-4">vs semaine dernière</div>
         </div>
 
         {/* PDF PUBLIÉS */}
-        <div className="stitch-kpi">
+        <div className="bg-stitch-surface-lowest border border-stitch-outline-variant rounded-stitch p-6 shadow-stitch-sm flex flex-col justify-between gap-3">
           <div>
-            <div className="stitch-kpi-label">PDF PUBLIÉS</div>
-            <div className="stitch-kpi-value-row">
-              <span className="stitch-kpi-value">{formatInt(data.topDocuments.length || 0)}</span>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-stitch-on-surface-variant">
+              PDF PUBLIÉS
+            </div>
+            <div className="flex items-center justify-between gap-3 mt-2">
+              <span className="font-stitch-headline text-[32px] font-bold text-stitch-on-surface leading-none">
+                {formatInt(data.topDocuments.length || 0)}
+              </span>
               <TrendNeutral value={String(Math.max(0, data.topDocuments.length - 5))} />
             </div>
           </div>
-          <div className="stitch-kpi-sub">Nouveaux cette semaine</div>
+          <div className="text-[13px] text-stitch-on-surface-variant mt-4">Nouveaux cette semaine</div>
         </div>
 
         {/* ÉTUDIANTS (sessions proxy) */}
-        <div className="stitch-kpi">
+        <div className="bg-stitch-surface-lowest border border-stitch-outline-variant rounded-stitch p-6 shadow-stitch-sm flex flex-col justify-between gap-3">
           <div>
-            <div className="stitch-kpi-label">ÉTUDIANTS</div>
-            <div className="stitch-kpi-value-row">
-              <span className="stitch-kpi-value">{formatInt(data.totals.sessions)}</span>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-stitch-on-surface-variant">
+              ÉTUDIANTS
+            </div>
+            <div className="flex items-center justify-between gap-3 mt-2">
+              <span className="font-stitch-headline text-[32px] font-bold text-stitch-on-surface leading-none">
+                {formatInt(data.totals.sessions)}
+              </span>
               <TrendUp value="+12%" />
             </div>
           </div>
-          <div className="stitch-kpi-sub">Sessions actives (30 j)</div>
+          <div className="text-[13px] text-stitch-on-surface-variant mt-4">Sessions actives (30 j)</div>
         </div>
 
         {/* ACHATS */}
-        <div className="stitch-kpi">
+        <div className="bg-stitch-surface-lowest border border-stitch-outline-variant rounded-stitch p-6 shadow-stitch-sm flex flex-col justify-between gap-3">
           <div>
-            <div className="stitch-kpi-label">ACHATS</div>
-            <div className="stitch-kpi-value-row">
-              <span className="stitch-kpi-value">{formatInt(data.totals.purchases)}</span>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-stitch-on-surface-variant">
+              ACHATS
+            </div>
+            <div className="flex items-center justify-between gap-3 mt-2">
+              <span className="font-stitch-headline text-[32px] font-bold text-stitch-on-surface leading-none">
+                {formatInt(data.totals.purchases)}
+              </span>
               <TrendUp value={`+${conversionRate}%`} />
             </div>
           </div>
-          <div className="stitch-kpi-sub">
+          <div className="text-[13px] text-stitch-on-surface-variant mt-4">
             Taux de conversion {conversionRate}%
             {data.totals.purchaseFailures > 0 ? (
-              <span style={{ color: 'var(--stitch-error-rose)', marginLeft: 8 }}>
+              <span className="text-stitch-error-rose ml-2">
                 · {data.totals.purchaseFailures} échecs
               </span>
             ) : null}
@@ -202,65 +227,79 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
       />
 
       {/* ── Top documents + Recent activity ────────────────── */}
-      <div className="stitch-grid-2-1">
-        <div className="stitch-card">
-          <div className="stitch-card-header">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-stitch-surface-lowest border border-stitch-outline-variant rounded-stitch p-6 shadow-stitch-sm">
+          <div className="flex justify-between items-center mb-5 gap-3">
             <div>
-              <div className="stitch-card-title">Documents les plus performants</div>
-              <div className="stitch-card-subtitle">Top 8 par nombre d&apos;achats sur 30 jours</div>
+              <div className="font-stitch-headline text-base font-bold text-stitch-on-surface tracking-tight">
+                Documents les plus performants
+              </div>
+              <div className="text-xs text-stitch-on-surface-variant mt-0.5">
+                Top 8 par nombre d&apos;achats sur 30 jours
+              </div>
             </div>
-            <Link href="/admin/pdf" className="stitch-btn stitch-btn--ghost stitch-btn--sm">
+            <Link href="/admin/pdf" className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-stitch-sm text-xs font-semibold border border-transparent bg-transparent text-stitch-on-surface-variant hover:bg-stitch-surface-container-high hover:text-stitch-on-surface transition-colors">
               Voir tout <ArrowRight size={13} />
             </Link>
           </div>
 
           {data.topDocuments.length === 0 ? (
-            <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--stitch-on-surface-variant)' }}>
-              <div style={{
-                width: 56, height: 56, margin: '0 auto 16px', borderRadius: 14,
-                background: 'var(--stitch-surface-container)', display: 'inline-flex',
-                alignItems: 'center', justifyContent: 'center',
-              }}>
+            <div className="py-12 px-6 text-center text-stitch-on-surface-variant">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-stitch flex items-center justify-center bg-stitch-surface-container">
                 <Loader2 size={22} />
               </div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--stitch-on-surface)', marginBottom: 6 }}>
+              <div className="text-base font-bold text-stitch-on-surface mb-1.5">
                 Aucune vente récente
               </div>
-              <p style={{ fontSize: 13, maxWidth: '36rem', margin: '0 auto', lineHeight: 1.5 }}>
+              <p className="text-[13px] max-w-md mx-auto leading-relaxed">
                 Les documents achetés apparaîtront ici dès les premières transactions.
               </p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="stitch-table">
+            <div className="overflow-x-auto">
+              <table className="w-full border-separate border-spacing-0">
                 <thead>
                   <tr>
-                    <th>Document</th>
-                    <th className="num">Aperçus</th>
-                    <th className="num">Achats</th>
-                    <th className="num">Lectures</th>
-                    <th className="num">Conv.</th>
+                    <th className="text-[11px] font-semibold uppercase tracking-wider text-stitch-on-surface-variant px-4 py-2.5 text-left bg-stitch-surface-container-low border-b border-stitch-outline-variant first:rounded-tl-stitch-sm last:rounded-tr-stitch-sm">
+                      Document
+                    </th>
+                    <th className="text-[11px] font-semibold uppercase tracking-wider text-stitch-on-surface-variant px-4 py-2.5 text-right bg-stitch-surface-container-low border-b border-stitch-outline-variant">
+                      Aperçus
+                    </th>
+                    <th className="text-[11px] font-semibold uppercase tracking-wider text-stitch-on-surface-variant px-4 py-2.5 text-right bg-stitch-surface-container-low border-b border-stitch-outline-variant">
+                      Achats
+                    </th>
+                    <th className="text-[11px] font-semibold uppercase tracking-wider text-stitch-on-surface-variant px-4 py-2.5 text-right bg-stitch-surface-container-low border-b border-stitch-outline-variant">
+                      Lectures
+                    </th>
+                    <th className="text-[11px] font-semibold uppercase tracking-wider text-stitch-on-surface-variant px-4 py-2.5 text-right bg-stitch-surface-container-low border-b border-stitch-outline-variant last:rounded-tr-stitch-sm">
+                      Conv.
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.topDocuments.slice(0, 8).map((doc) => (
-                    <tr key={doc.id}>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{doc.title}</div>
-                        <div style={{ fontSize: 12, color: 'var(--stitch-on-surface-variant)' }}>
-                          {doc.subject}
-                        </div>
+                    <tr key={doc.id} className="hover:bg-stitch-surface-container-low">
+                      <td className="px-4 py-3.5 text-sm text-stitch-on-surface border-b border-stitch-surface-container">
+                        <div className="font-semibold">{doc.title}</div>
+                        <div className="text-xs text-stitch-on-surface-variant">{doc.subject}</div>
                       </td>
-                      <td className="num">{formatInt(doc.previews)}</td>
-                      <td className="num">{formatInt(doc.purchases)}</td>
-                      <td className="num">{formatInt(doc.readers)}</td>
-                      <td className="num">
-                        <span className={`stitch-badge ${
+                      <td className="px-4 py-3.5 text-sm text-stitch-on-surface text-right tabular-nums border-b border-stitch-surface-container">
+                        {formatInt(doc.previews)}
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-stitch-on-surface text-right tabular-nums border-b border-stitch-surface-container">
+                        {formatInt(doc.purchases)}
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-stitch-on-surface text-right tabular-nums border-b border-stitch-surface-container">
+                        {formatInt(doc.readers)}
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-stitch-on-surface text-right border-b border-stitch-surface-container">
+                        <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-transparent ${
                           doc.conversionRate >= 20
-                            ? 'stitch-badge--success'
+                            ? 'bg-stitch-success-light text-stitch-success-dark'
                             : doc.conversionRate >= 5
-                              ? 'stitch-badge--brand'
-                              : 'stitch-badge--neutral'
+                              ? 'bg-stitch-primary-fixed text-stitch-primary'
+                              : 'bg-stitch-surface-container-high text-stitch-on-surface-variant'
                         }`}>
                           {doc.conversionRate}%
                         </span>
@@ -274,53 +313,47 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
         </div>
 
         {/* ── Recent activity ─────────────────────────────── */}
-        <div className="stitch-card">
-          <div className="stitch-card-header">
+        <div className="bg-stitch-surface-lowest border border-stitch-outline-variant rounded-stitch p-6 shadow-stitch-sm">
+          <div className="flex justify-between items-center mb-5 gap-3">
             <div>
-              <div className="stitch-card-title">Activité récente</div>
-              <div className="stitch-card-subtitle">20 derniers événements</div>
+              <div className="font-stitch-headline text-base font-bold text-stitch-on-surface tracking-tight">
+                Activité récente
+              </div>
+              <div className="text-xs text-stitch-on-surface-variant mt-0.5">
+                20 derniers événements
+              </div>
             </div>
-            <Link href="/admin/pdf" className="stitch-btn stitch-btn--ghost stitch-btn--sm">
+            <Link href="/admin/pdf" className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-stitch-sm text-xs font-semibold border border-transparent bg-transparent text-stitch-on-surface-variant hover:bg-stitch-surface-container-high hover:text-stitch-on-surface transition-colors">
               Voir tout <ArrowRight size={13} />
             </Link>
           </div>
 
           {data.recentEvents.length === 0 ? (
-            <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--stitch-on-surface-variant)' }}>
-              <div style={{
-                width: 56, height: 56, margin: '0 auto 16px', borderRadius: 14,
-                background: 'var(--stitch-surface-container)', display: 'inline-flex',
-                alignItems: 'center', justifyContent: 'center',
-              }}>
+            <div className="py-12 px-6 text-center text-stitch-on-surface-variant">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-stitch flex items-center justify-center bg-stitch-surface-container">
                 <Loader2 size={22} />
               </div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--stitch-on-surface)' }}>
+              <div className="text-base font-bold text-stitch-on-surface">
                 Pas encore d&apos;activité
               </div>
-              <p style={{ fontSize: 13, maxWidth: '24rem', margin: '8px auto 0', lineHeight: 1.5 }}>
+              <p className="text-[13px] max-w-sm mx-auto mt-2 leading-relaxed">
                 Les événements du catalogue apparaîtront ici.
               </p>
             </div>
           ) : (
-            <ul className="stitch-activity">
+            <ul className="list-none m-0 p-0 flex flex-col gap-1">
               {data.recentEvents.slice(0, 8).map((ev) => (
-                <li key={ev.id}>
-                  <span className={`stitch-badge ${
-                    ev.eventType === 'purchase_success'
-                      ? 'stitch-badge--success'
-                      : ev.eventType === 'purchase_failed'
-                        ? 'stitch-badge--danger'
-                        : ev.eventType === 'reader_open'
-                          ? 'stitch-badge--brand'
-                          : ev.eventType === 'assistant_question'
-                            ? 'stitch-badge--warning'
-                            : 'stitch-badge--neutral'
+                <li key={ev.id} className="flex items-start gap-3 py-3 border-b border-stitch-surface-container last:border-b-0">
+                  <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-transparent whitespace-nowrap shrink-0 mt-0.5 ${
+                    badgeClass[ev.eventType] ?? badgeClass.default
                   }`}>
                     {EVENT_LABELS[ev.eventType] ?? ev.eventType}
                   </span>
-                  <div className="stitch-activity-content">
-                    <div className="stitch-activity-title">{ev.documentTitle}</div>
-                    <div className="stitch-activity-meta">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-medium text-stitch-on-surface truncate mb-0.5">
+                      {ev.documentTitle}
+                    </div>
+                    <div className="text-[11px] text-stitch-on-surface-variant">
                       {ev.userEmail ?? 'Visiteur'} · {ev.createdAt}
                     </div>
                   </div>

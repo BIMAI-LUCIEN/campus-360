@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  GraduationCap,
   LogOut,
   Settings,
   Bell,
@@ -22,10 +21,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { authClient } from '@/lib/auth-client';
 
-const NAV_GROUPS: Array<{
-  label: string;
-  items: Array<{ href: string; icon: ReactNode; label: string }>;
-}> = [
+type NavItem = { href: string; icon: ReactNode; label: string };
+
+const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
   {
     label: 'PRINCIPAL',
     items: [
@@ -87,26 +85,28 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const userName = user?.name || 'Admin';
   const userInitial = userName.trim().slice(0, 1).toUpperCase();
 
+  // Stitch sidebar link classes (Tailwind utility composition)
+  const linkBase = 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150';
+  const linkIdle = 'text-stitch-on-surface-variant hover:bg-stitch-surface-container-high hover:text-stitch-on-surface';
+  const linkActive = 'bg-stitch-secondary-container text-stitch-on-primary border-l-4 border-stitch-primary pl-2 font-semibold';
+
   return (
-    <div className="stitch-layout">
+    <div className="block min-h-screen bg-stitch-bg text-stitch-on-surface font-stitch-body">
       {/* ── Sidebar (240px, fixed) ───────────────────────── */}
-      <aside className="stitch-sidebar">
-        <div className="stitch-sidebar-brand">
-          <h1>Campus 360 Admin</h1>
-          <p>University Management</p>
+      <aside className="fixed top-0 left-0 h-screen w-60 bg-stitch-surface border-r border-stitch-outline-variant flex flex-col py-6 z-50">
+        <div className="px-6 mb-8">
+          <h1 className="font-stitch-headline text-lg font-bold text-stitch-on-surface tracking-tight">
+            Campus 360 Admin
+          </h1>
+          <p className="text-xs text-stitch-on-surface-variant mt-0.5">
+            University Management
+          </p>
         </div>
 
-        <nav className="stitch-sidebar-nav">
+        <nav className="flex-1 flex flex-col gap-1 px-2 overflow-y-auto">
           {NAV_GROUPS.map((group) => (
-            <div key={group.label} style={{ marginBottom: 16 }}>
-              <div style={{
-                fontSize: 10,
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: 'var(--stitch-on-surface-variant)',
-                padding: '0 12px 8px',
-              }}>
+            <div key={group.label} className="mb-4">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-stitch-on-surface-variant px-3 py-2">
                 {group.label}
               </div>
               {group.items.map((item) => {
@@ -117,7 +117,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   <Link
                     key={item.href + item.label}
                     href={item.href}
-                    className={`stitch-sidebar-link${isActive ? ' is-active' : ''}`}
+                    className={`${linkBase} ${isActive ? linkActive : linkIdle}`}
                   >
                     {item.icon}
                     <span>{item.label}</span>
@@ -128,12 +128,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           ))}
         </nav>
 
-        <div className="stitch-sidebar-footer">
+        <div className="mt-auto px-2 pt-4 border-t border-stitch-outline-variant">
           <button
             type="button"
-            className="stitch-sidebar-link"
-            style={{ width: '100%', background: 'transparent', border: 'none', textAlign: 'left' }}
             onClick={handleLogout}
+            className={`${linkBase} ${linkIdle} w-full text-left bg-transparent border-0`}
           >
             <LogOut size={18} />
             <span>Déconnexion</span>
@@ -142,10 +141,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* ── Topbar (sticky, 64px) ──────────────────────────── */}
-      <header className="stitch-topbar">
-        <div className="stitch-topbar-left">
-          <div className="stitch-search">
-            <span className="stitch-search-icon">
+      <header className="sticky top-0 h-16 ml-60 flex items-center justify-between px-8 bg-stitch-surface shadow-stitch-sm z-40">
+        <div className="flex items-center gap-6">
+          <div className="relative">
+            <span className="absolute inset-y-0 left-3 flex items-center text-stitch-outline pointer-events-none">
               <SearchIcon size={16} />
             </span>
             <input
@@ -153,32 +152,33 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               placeholder="Rechercher..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-4 py-1.5 bg-stitch-surface-container-low border border-stitch-outline-variant rounded-full text-[13px] text-stitch-on-surface w-64 focus:outline-none focus:border-stitch-primary focus:ring-4 focus:ring-stitch-primary/15 transition-all placeholder-stitch-outline"
             />
           </div>
 
-          <div className="stitch-breadcrumb">
-            <span className="stitch-breadcrumb-item">{section}</span>
-            <span className="stitch-breadcrumb-sep">/</span>
-            <span className="stitch-breadcrumb-current">{sub}</span>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-stitch-primary font-bold">{section}</span>
+            <span className="text-stitch-outline-variant">/</span>
+            <span className="text-stitch-on-surface-variant">{sub}</span>
           </div>
         </div>
 
-        <div className="stitch-topbar-right">
-          <button className="stitch-topbar-icon" title="Notifications">
+        <div className="flex items-center gap-6">
+          <button className="w-9 h-9 inline-flex items-center justify-center text-stitch-on-surface-variant hover:text-stitch-primary hover:bg-stitch-surface-container-high rounded-full transition-colors" title="Notifications">
             <Bell size={18} />
           </button>
-          <button className="stitch-topbar-icon" title="Aide">
+          <button className="w-9 h-9 inline-flex items-center justify-center text-stitch-on-surface-variant hover:text-stitch-primary hover:bg-stitch-surface-container-high rounded-full transition-colors" title="Aide">
             <HelpCircle size={18} />
           </button>
 
           {isPending ? (
-            <div className="stitch-avatar" style={{ background: 'var(--stitch-surface-container)' }}>
+            <div className="w-10 h-10 rounded-full bg-stitch-surface-container flex items-center justify-center text-stitch-on-surface-variant">
               <Loader2 size={16} className="spin-anim" />
             </div>
           ) : (
-            <div className="stitch-avatar" title={userName}>
+            <div className="w-10 h-10 rounded-full bg-stitch-primary-container flex items-center justify-center text-stitch-on-primary-container font-bold border border-stitch-outline-variant overflow-hidden" title={userName}>
               {user?.image ? (
-                <img src={user.image} alt={userName} />
+                <img src={user.image} alt={userName} className="w-full h-full object-cover" />
               ) : (
                 userInitial
               )}
@@ -188,7 +188,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </header>
 
       {/* ── Main content ─────────────────────────────────── */}
-      <main className="stitch-main">{children}</main>
+      <main className="ml-60 p-8 max-w-[1600px]">
+        {children}
+      </main>
     </div>
   );
 }

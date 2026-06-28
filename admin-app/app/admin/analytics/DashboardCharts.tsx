@@ -13,7 +13,7 @@ interface DashboardChartsProps {
 
 const COLORS = ['#2563eb', '#10B981', '#f97316', '#8b5cf6', '#06b6d4', '#EC4899', '#6366f1', '#14B8A6'];
 
-/** Compute max for axis, rounded up to nearest 50 */
+/** Compute max for axis, rounded up to nearest power-of-2 step */
 const niceMax = (n: number) => {
   if (n <= 0) return 10;
   const pow = Math.pow(10, Math.floor(Math.log10(n)));
@@ -38,26 +38,30 @@ export function DashboardCharts({ dailyStats, categoryStats }: DashboardChartsPr
     : 50;
 
   return (
-    <div className="stitch-charts-grid">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
       {/* ── Bar chart: Ventes & Aperçus (14 jours) ──────── */}
-      <div className="stitch-card">
-        <div className="stitch-card-header">
+      <div className="lg:col-span-2 bg-stitch-surface-lowest border border-stitch-outline-variant rounded-stitch p-6 shadow-stitch-sm">
+        <div className="flex justify-between items-center mb-5 gap-3">
           <div>
-            <div className="stitch-card-title">Ventes & Aperçus</div>
-            <div className="stitch-card-subtitle">Activité des 14 derniers jours</div>
+            <div className="font-stitch-headline text-base font-bold text-stitch-on-surface tracking-tight">
+              Ventes & Aperçus
+            </div>
+            <div className="text-xs text-stitch-on-surface-variant mt-0.5">
+              Activité des 14 derniers jours
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--stitch-on-surface-variant)' }}>
-              <span style={{ width: 8, height: 8, borderRadius: 4, background: '#10B981' }} />
+          <div className="flex gap-3 text-xs">
+            <span className="inline-flex items-center gap-1 text-stitch-on-surface-variant">
+              <span className="w-2 h-2 rounded-sm bg-emerald-500" />
               Aperçus
             </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--stitch-on-surface-variant)' }}>
-              <span style={{ width: 8, height: 8, borderRadius: 4, background: '#2563eb' }} />
+            <span className="inline-flex items-center gap-1 text-stitch-on-surface-variant">
+              <span className="w-2 h-2 rounded-sm bg-stitch-primary-container" />
               Achats
             </span>
           </div>
         </div>
-        <div style={{ width: '100%', height: 280 }}>
+        <div className="w-full h-[280px]">
           {hasData ? (
             <ResponsiveContainer>
               <BarChart data={dailyStats} margin={{ top: 10, right: 10, left: -10, bottom: 0 }} barCategoryGap="20%">
@@ -85,48 +89,48 @@ export function DashboardCharts({ dailyStats, categoryStats }: DashboardChartsPr
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              height: '100%', color: 'var(--stitch-on-surface-variant)', fontSize: 13,
-            }}>
+            <div className="flex items-center justify-center h-full text-stitch-on-surface-variant text-[13px]">
               Pas encore de données
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Categories: horizontal bar list (Stitch style) */}
-      <div className="stitch-card">
-        <div className="stitch-card-header">
+      {/* ── Categories: horizontal bar list ────────────────── */}
+      <div className="bg-stitch-surface-lowest border border-stitch-outline-variant rounded-stitch p-6 shadow-stitch-sm">
+        <div className="flex justify-between items-center mb-5 gap-3">
           <div>
-            <div className="stitch-card-title">Ventes par matière</div>
-            <div className="stitch-card-subtitle">Top catégories</div>
+            <div className="font-stitch-headline text-base font-bold text-stitch-on-surface tracking-tight">
+              Ventes par matière
+            </div>
+            <div className="text-xs text-stitch-on-surface-variant mt-0.5">
+              Top catégories
+            </div>
           </div>
         </div>
         {categoryStats.length === 0 ? (
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            height: 200, color: 'var(--stitch-on-surface-variant)', fontSize: 13,
-          }}>
+          <div className="flex items-center justify-center h-[200px] text-stitch-on-surface-variant text-[13px]">
             Pas encore de données
           </div>
         ) : (
-          <div className="stitch-chart-bar-list">
+          <div className="flex flex-col gap-3.5 mt-3">
             {(() => {
               const total = categoryStats.reduce((sum, c) => sum + c.purchases, 0);
               const top = categoryStats.slice(0, 6);
               return top.map((cat, i) => {
                 const pct = total > 0 ? Math.round((cat.purchases / total) * 100) : 0;
                 return (
-                  <div key={cat.subject} className="stitch-chart-bar-row">
-                    <div className="stitch-chart-bar-label">{cat.subject}</div>
-                    <div className="stitch-chart-bar-track">
+                  <div key={cat.subject} className="grid grid-cols-[100px_1fr_50px] items-center gap-3 text-[13px]">
+                    <div className="text-stitch-on-surface font-medium truncate">{cat.subject}</div>
+                    <div className="h-2 bg-stitch-surface-container rounded-full overflow-hidden">
                       <div
-                        className="stitch-chart-bar-fill"
-                        style={{ width: `${pct}%`, background: COLORS[i % COLORS.length] }}
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }}
                       />
                     </div>
-                    <div className="stitch-chart-bar-value">{pct}%</div>
+                    <div className="text-stitch-on-surface-variant font-semibold text-right tabular-nums">
+                      {pct}%
+                    </div>
                   </div>
                 );
               });
