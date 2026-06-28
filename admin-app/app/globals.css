@@ -82,6 +82,23 @@
 
 /* ─── Stitch cache bust: 2024-12-28 ──────────────────── */
 
+/* ─── Legacy aliases (older pages still reference --color-flup-*) ─ */
+/* These map the old "flup" tokens to the new "stitch" tokens so pages
+   that haven't been migrated yet still render correctly. Safe to remove
+   once all pages are migrated to Tailwind. */
+:root {
+  --color-flup-bg: var(--color-stitch-bg);
+  --color-flup-surface: var(--color-stitch-surface-lowest);
+  --color-flup-surface-alt: var(--color-stitch-surface-container-low);
+  --color-flup-border: var(--color-stitch-outline-variant);
+  --color-flup-border-soft: var(--color-stitch-surface-container);
+  --color-flup-text-main: var(--color-stitch-on-surface);
+  --color-flup-text-muted: var(--color-stitch-on-surface-variant);
+  --color-flup-brand: var(--color-stitch-primary);
+  --color-flup-brand-light: var(--color-stitch-primary-fixed);
+  --color-flup-brand-hover: var(--color-stitch-primary-container);
+}
+
 /* ─── Base reset ─────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
