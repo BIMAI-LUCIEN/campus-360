@@ -47,22 +47,12 @@ const firstMatch = (text: string, patterns: RegExp[]) => {
 const inferSubject = (text: string, fallback: string) => {
   const lower = text.toLowerCase();
   const subjects = [
-    'Mathematiques',
-    'Analyse',
-    'Algebre',
-    'Informatique',
-    'Algorithmique',
-    'Programmation',
-    'Droit',
-    'Droit OHADA',
-    'Comptabilite',
-    'Economie',
-    'Physique',
-    'Chimie',
-    'Anglais',
+    'Mathematiques', 'Analyse', 'Algebre', 'Informatique', 'Algorithmique',
+    'Programmation', 'Droit', 'Droit OHADA', 'Comptabilite', 'Economie',
+    'Physique', 'Chimie', 'Anglais',
   ];
-
-  return subjects.find((subject) => lower.includes(subject.toLowerCase())) ?? fallback.split(' ').slice(0, 3).join(' ');
+  return subjects.find((subject) => lower.includes(subject.toLowerCase()))
+    ?? fallback.split(' ').slice(0, 3).join(' ');
 };
 
 const inferPdfFields = (fileName: string, rawText: string, pageCount: number) => {
@@ -83,7 +73,6 @@ const inferPdfFields = (fileName: string, rawText: string, pageCount: number) =>
     /\b(Ecole\s+(?:nationale|superieure)?\s*[\p{L} ]{3,60})/iu,
     /\b(Institut\s+[\p{L} ]{3,60})/iu,
   ]);
-
   const subject = inferSubject(text, fallbackTitle);
   const tags = Array.from(
     new Set(
@@ -101,12 +90,8 @@ const inferPdfFields = (fileName: string, rawText: string, pageCount: number) =>
   const qualityScore = Math.min(
     100,
     25 +
-      (heading ? 15 : 0) +
-      (subject ? 15 : 0) +
-      (level ? 15 : 0) +
-      (faculty ? 10 : 0) +
-      (pageCount > 1 ? 10 : 0) +
-      (tags.length >= 3 ? 10 : 0),
+      (heading ? 15 : 0) + (subject ? 15 : 0) + (level ? 15 : 0) +
+      (faculty ? 10 : 0) + (pageCount > 1 ? 10 : 0) + (tags.length >= 3 ? 10 : 0),
   );
 
   return {
@@ -125,36 +110,51 @@ const inferPdfFields = (fileName: string, rawText: string, pageCount: number) =>
     level,
     academicYear: firstMatch(text, [/\b(20\d{2}\s*[-/]\s*20\d{2})\b/, /\b(20\d{2})\b/]),
     pageCount,
-    aiSummary:
-      lines.slice(0, 5).join(' ').slice(0, 420) ||
-      `Document de ${subject} pour ${level || 'niveau non precise'}.`,
+    aiSummary: lines.slice(0, 5).join(' ').slice(0, 420) || `Document de ${subject} pour ${level || 'niveau non précise'}.`,
     aiTags: tags,
     aiDifficulty: difficulty,
     suggestedPriceCoins: suggestedPrice,
     qualityScore,
     aiStudyPlan: [
-      `Lire le resume et isoler les notions cles de ${subject}.`,
+      `Lire le résumé et isoler les notions clés de ${subject}.`,
       `Faire une fiche courte pour ${level || 'le niveau cible'}.`,
       'Traiter les exercices ou exemples, puis noter les erreurs.',
       'Finir par un quiz rapide avant publication.',
     ],
     aiQuiz: [
-      {
-        question: `Quel est le theme principal de "${heading ?? fallbackTitle}" ?`,
-        answer: subject,
-      },
-      {
-        question: 'Comment reviser ce PDF efficacement ?',
-        answer: 'Lire le resume, faire une fiche, pratiquer, puis corriger les erreurs.',
-      },
-      {
-        question: 'Quel niveau est vise ?',
-        answer: level || 'Niveau a confirmer dans le dashboard.',
-      },
+      { question: `Quel est le thème principal de "${heading ?? fallbackTitle}" ?`, answer: subject },
+      { question: 'Comment réviser ce PDF efficacement ?', answer: 'Lire le résumé, faire une fiche, pratiquer, puis corriger les erreurs.' },
+      { question: 'Quel niveau est visé ?', answer: level || 'Niveau à confirmer dans le dashboard.' },
     ],
     extractedText: text.slice(0, 6000),
   };
 };
+
+function KpiCard({
+  icon: Icon,
+  iconColor,
+  iconBg,
+  label,
+  value,
+}: {
+  icon: React.ElementType;
+  iconColor: string;
+  iconBg: string;
+  label: string;
+  value: number | string;
+}) {
+  return (
+    <div className="kpi-card">
+      <div className="kpi-icon" style={{ background: iconBg, color: iconColor }}>
+        <Icon size={18} />
+      </div>
+      <div className="kpi-label">{label}</div>
+      <div className="kpi-value-row">
+        <span className="kpi-value">{value}</span>
+      </div>
+    </div>
+  );
+}
 
 export function PdfDashboardClient({ initialDocuments }: Props) {
   const [documents, setDocuments] = useState(initialDocuments);
@@ -167,49 +167,35 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
   const [loading, setLoading] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
 
-  useEffect(() => {
-    refreshPacks();
-  }, []);
+  useEffect(() => { refreshPacks(); }, []);
 
   const metrics = useMemo(
     () => ({
       totalPdfs: documents.length,
       totalPacks: packs.length,
-      publishedPdfs: documents.filter((document) => document.status === 'published').length,
-      publishedPacks: packs.filter((pack) => pack.status === 'published').length,
-      reviewPdfs: documents.filter((document) => document.status === 'needs_review' || document.qualityScore < 70).length,
-      aiReadyPdfs: documents.filter((document) => document.aiSummary && document.aiTags.length > 0).length,
-      totalSales: documents.reduce((sum, document) => sum + document.salesCount, 0),
-      packSales: packs.reduce((sum, pack) => sum + pack.salesCount, 0),
+      publishedPdfs: documents.filter((d) => d.status === 'published').length,
+      publishedPacks: packs.filter((p) => p.status === 'published').length,
+      reviewPdfs: documents.filter((d) => d.status === 'needs_review' || d.qualityScore < 70).length,
+      aiReadyPdfs: documents.filter((d) => d.aiSummary && d.aiTags.length > 0).length,
+      totalSales: documents.reduce((sum, d) => sum + d.salesCount, 0),
+      packSales: packs.reduce((sum, p) => sum + p.salesCount, 0),
       totalRevenue: documents.reduce(
-        (sum, document) =>
-          sum + Math.round(document.salesCount * document.priceCoins * (document.commissionRate / 100)),
-        0,
-      ) + packs.reduce((sum, pack) => sum + pack.revenueCoins, 0),
+        (sum, d) => sum + Math.round(d.salesCount * d.priceCoins * (d.commissionRate / 100)), 0,
+      ) + packs.reduce((sum, p) => sum + p.revenueCoins, 0),
     }),
     [documents, packs],
   );
 
   const visibleDocuments = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return documents.filter((document) => {
-      const haystack = [
-        document.title,
-        document.description,
-        document.subject,
-        document.teacher,
-        document.level,
-        document.faculty,
-        document.university,
-      ]
-        .join(' ')
-        .toLowerCase();
-
+    return documents.filter((d) => {
+      const haystack = [d.title, d.description, d.subject, d.teacher, d.level, d.faculty, d.university]
+        .join(' ').toLowerCase();
       return (
         (!normalizedQuery || haystack.includes(normalizedQuery)) &&
-        (status === 'all' || document.status === status) &&
-        (!subject || document.subject.toLowerCase().includes(subject.toLowerCase())) &&
-        (!level || document.level.toLowerCase().includes(level.toLowerCase()))
+        (status === 'all' || d.status === status) &&
+        (!subject || d.subject.toLowerCase().includes(subject.toLowerCase())) &&
+        (!level || d.level.toLowerCase().includes(level.toLowerCase()))
       );
     });
   }, [documents, level, query, status, subject]);
@@ -227,73 +213,19 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     setPacks(payload.packs ?? []);
   };
 
-  const packSuggestions = useMemo(() => {
-    const groups = new Map<string, PdfDocument[]>();
-    for (const document of documents.filter((item) => item.status !== 'archived')) {
-      const key = [document.university, document.faculty, document.level, document.subject].join('|');
-      groups.set(key, [...(groups.get(key) ?? []), document]);
-    }
-
-    return Array.from(groups.entries())
-      .filter(([, items]) => items.length >= 2)
-      .slice(0, 8)
-      .map(([key, items]) => {
-        const [university, faculty, level, subject] = key.split('|');
-        const originalPriceCoins = items.reduce((sum, item) => sum + item.priceCoins, 0);
-        const priceCoins = Math.max(100, Math.round(originalPriceCoins * 0.82 / 50) * 50);
-        return {
-          key,
-          title: `Pack ${subject} - ${level}`,
-          description: `${items.length} PDF classes pour reviser ${subject} sans chercher document par document.`,
-          university,
-          faculty,
-          level,
-          semester: 'Semestre a confirmer',
-          packType: 'course_bundle' as const,
-          priceCoins,
-          originalPriceCoins,
-          discountPercent: originalPriceCoins > 0 ? Math.max(0, Math.round(100 - (priceCoins / originalPriceCoins) * 100)) : 0,
-          documentIds: items.map((item) => item.id),
-          aiSummary: `Pack propose par IA a partir de ${items.length} PDF ${subject}.`,
-          aiConfidence: Math.min(95, 60 + items.length * 8),
-        };
-      });
-  }, [documents]);
-
-  const createSuggestedPack = async (suggestion: (typeof packSuggestions)[number]) => {
-    setMessage('Creation du pack IA...');
-    const response = await fetch('/api/packs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...suggestion, status: 'needs_review' }),
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      setMessage(payload.error ? JSON.stringify(payload.error) : 'Creation pack impossible.');
-      return;
-    }
-    setMessage('Pack IA cree. Verifie puis publie.');
-    await refreshPacks();
-  };
-
   const analyzePdf = async (file: File) => {
     const pdfjs = await import('pdfjs-dist');
     const data = new Uint8Array(await file.arrayBuffer());
     const pdf = await pdfjs.getDocument({ data, disableWorker: true } as object).promise;
     const pageTexts: string[] = [];
     const maxPages = Math.min(pdf.numPages, 5);
-
     for (let pageNumber = 1; pageNumber <= maxPages; pageNumber += 1) {
       const page = await pdf.getPage(pageNumber);
       const content = await page.getTextContent();
       pageTexts.push(
-        content.items
-          .map((item: { str?: string }) => item.str ?? '')
-          .filter(Boolean)
-          .join(' '),
+        content.items.map((item: { str?: string }) => item.str ?? '').filter(Boolean).join(' '),
       );
     }
-
     return inferPdfFields(file.name, pageTexts.join('\n'), pdf.numPages);
   };
 
@@ -307,10 +239,10 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     const data = new FormData();
     data.set('title', hints.title || titleFromFileName(file.name));
     data.set('description', hints.description || `Document ${titleFromFileName(file.name)}`);
-    data.set('university', hints.university || fieldValue(form, 'university', 'Multi-etablissements'));
+    data.set('university', hints.university || fieldValue(form, 'university', 'Multi-établissements'));
     data.set('faculty', hints.faculty || fieldValue(form, 'faculty', 'Transversal'));
-    data.set('subject', hints.subject || fieldValue(form, 'subject', 'Matiere a confirmer'));
-    data.set('teacher', hints.teacher || fieldValue(form, 'teacher', 'Non renseigne'));
+    data.set('subject', hints.subject || fieldValue(form, 'subject', 'Matière à confirmer'));
+    data.set('teacher', hints.teacher || fieldValue(form, 'teacher', 'Non renseigné'));
     data.set('level', hints.level || fieldValue(form, 'level', 'Tous niveaux'));
     data.set('academicYear', hints.academicYear || fieldValue(form, 'academicYear', '2025-2026'));
     data.set('priceCoins', String(hints.suggestedPriceCoins || Number(fieldValue(form, 'priceCoins', '300'))));
@@ -327,10 +259,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     data.set('extractedText', hints.extractedText);
     data.set('file', file);
 
-    const response = await fetch('/api/pdf', {
-      method: 'POST',
-      body: data,
-    });
+    const response = await fetch('/api/pdf', { method: 'POST', body: data });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error ? JSON.stringify(payload.error) : `Upload impossible: ${file.name}`);
   };
@@ -342,14 +271,12 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     if (!file || !form) return;
 
     setAnalysisLoading(true);
-    setMessage(files.length > 1 ? `Analyse et upload de ${files.length} PDF...` : 'Analyse du PDF...');
+    setMessage(files.length > 1 ? `Analyse et téléchargement de ${files.length} PDF...` : 'Analyse du PDF en cours...');
 
     try {
       if (files.length > 1) {
-        for (const item of files) {
-          await uploadAnalyzedFile(item, form);
-        }
-        setMessage(`${files.length} PDF analyses et enregistres. Verifie les packs IA proposes.`);
+        for (const item of files) { await uploadAnalyzedFile(item, form); }
+        setMessage(`${files.length} PDF analysés et enregistrés. Vérifie les packs IA proposés.`);
         await refresh();
         form.reset();
         return;
@@ -358,11 +285,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
       const hints = await analyzePdf(file);
       const setField = (name: string, value?: string | number) => {
         if (value === undefined || value === '') return;
-        const field = form.elements.namedItem(name) as
-          | HTMLInputElement
-          | HTMLTextAreaElement
-          | HTMLSelectElement
-          | null;
+        const field = form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
         if (!field) return;
         field.value = String(value);
       };
@@ -386,9 +309,9 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
       setField('aiQuiz', JSON.stringify(hints.aiQuiz));
       setField('extractedText', hints.extractedText);
       setField('status', hints.qualityScore >= 75 ? 'needs_review' : 'draft');
-      setMessage(`Analyse IA terminee. Score qualite: ${hints.qualityScore}/100. Prix conseille: ${hints.suggestedPriceCoins} Coins.`);
+      setMessage(`Analyse IA terminée. Score qualité: ${hints.qualityScore}/100. Prix conseillé: ${hints.suggestedPriceCoins} Coins.`);
     } catch {
-      setMessage('Analyse impossible. Complete les champs manuellement.');
+      setMessage("Analyse impossible. Complète les champs manuellement.");
     } finally {
       setAnalysisLoading(false);
     }
@@ -400,16 +323,12 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     setMessage('');
     const form = event.currentTarget;
     const formData = new FormData(form);
-
     try {
-      const response = await fetch('/api/pdf', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch('/api/pdf', { method: 'POST', body: formData });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ? JSON.stringify(payload.error) : 'Upload impossible');
       form.reset();
-      setMessage('PDF enregistre.');
+      setMessage("PDF enregistré.");
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Erreur upload');
@@ -419,9 +338,9 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
   };
 
   const updateStatus = async (documentId: string, nextStatus: PdfDocument['status']) => {
-    const current = documents.find((document) => document.id === documentId);
+    const current = documents.find((d) => d.id === documentId);
     if (nextStatus === 'published' && current && (current.qualityScore < 70 || !current.aiSummary)) {
-      setMessage('Publication bloquee: complete analyse IA, resume et score qualite avant publication.');
+      setMessage("Publication bloquée : complète l'analyse IA, le résumé et le score qualité avant publication.");
       return;
     }
     const response = await fetch(`/api/pdf/${documentId}/status`, {
@@ -429,10 +348,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: nextStatus }),
     });
-    if (!response.ok) {
-      setMessage('Changement de statut impossible.');
-      return;
-    }
+    if (!response.ok) { setMessage('Changement de statut impossible.'); return; }
     await refresh();
   };
 
@@ -442,10 +358,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ priceCoins: newPrice }),
     });
-    if (!response.ok) {
-      setMessage('Mise à jour du prix impossible.');
-      return;
-    }
+    if (!response.ok) { setMessage('Mise à jour du prix impossible.'); return; }
     setMessage('Prix mis à jour avec succès.');
     await refresh();
   };
@@ -453,214 +366,176 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
   const remove = async (documentId: string) => {
     if (!confirm('Supprimer ce PDF ?')) return;
     const response = await fetch(`/api/pdf/${documentId}`, { method: 'DELETE' });
-    if (!response.ok) {
-      setMessage('Suppression impossible.');
-      return;
-    }
+    if (!response.ok) { setMessage('Suppression impossible.'); return; }
     await refresh();
   };
 
   const reanalyze = async (documentId: string) => {
-    setMessage('Reanalyse IA en cours...');
+    setMessage('Réanalyse IA en cours...');
     const response = await fetch(`/api/pdf/${documentId}/analyze`, { method: 'POST' });
-    if (!response.ok) {
-      setMessage('Reanalyse impossible.');
-      return;
-    }
-    setMessage('PDF reanalyse. Verifie puis publie si tout est correct.');
+    if (!response.ok) { setMessage('Réanalyse impossible.'); return; }
+    setMessage('PDF réanalysé. Vérifie puis publie si tout est correct.');
     await refresh();
-  };
-
-  const updatePack = async (packId: string, nextStatus: PdfPack['status']) => {
-    const response = await fetch(`/api/packs/${packId}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: nextStatus }),
-    });
-    if (!response.ok) {
-      setMessage('Changement de statut du pack impossible.');
-      return;
-    }
-    setMessage(`Pack ${nextStatus}.`);
-    await refreshPacks();
   };
 
   const removePack = async (packId: string) => {
     if (!confirm('Supprimer ce pack ?')) return;
     const response = await fetch(`/api/packs/${packId}`, { method: 'DELETE' });
-    if (!response.ok) {
-      setMessage('Suppression du pack impossible.');
-      return;
-    }
-    setMessage('Pack supprime.');
+    if (!response.ok) { setMessage('Suppression du pack impossible.'); return; }
+    setMessage('Pack supprimé.');
     await refreshPacks();
+  };
+
+  // ── Badge color helper (Flup light theme) ──────────────────
+  const badgeClass: Record<string, string> = {
+    published:    'bg-[#ecfdf5] text-[#059669] border border-[#a7f3d0]',
+    needs_review: 'bg-[#fff7ed] text-[#c2410c] border border-[#fed7aa]',
+    analyzing:    'bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe]',
+    draft:        'bg-[#f5f3ff] text-[#6d28d9] border border-[#ddd6fe]',
+    archived:     'bg-[#f1f5f9] text-[#475569] border border-[#cbd5e1]',
   };
 
   return (
     <>
-      <div className="header">
+      {/* ── Header ───────────────────────────────────────────── */}
+      <div className="flup-page-header">
         <div>
-          <div className="route-pill">
+          <div className="inline-flex items-center gap-1.5 text-[var(--flup-brand)] bg-[var(--flup-brand-light)] border border-[var(--flup-border)] rounded-full px-3 py-1 text-xs font-bold mb-3">
             <FileText size={15} />
             <span>/admin/pdf</span>
           </div>
-          <h1>PDF academiques</h1>
+          <h1 className="flup-page-title">PDF académiques</h1>
         </div>
-        <div className="actions">
-          <button className="btn secondary" type="button" onClick={refresh}>
+        <div className="flex flex-wrap justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={refresh}
+            className="flex items-center gap-2 bg-[var(--flup-surface)] text-[var(--flup-text-main)] border border-[var(--flup-border)] rounded-lg min-h-10 px-4 py-2.5 text-sm font-bold transition-colors hover:bg-[var(--flup-bg)] shadow-sm"
+          >
             <RefreshCw size={17} />
             Actualiser
           </button>
-          <a className="btn secondary" href="/api/pdf">
+          <a
+            href="/api/pdf"
+            className="flex items-center gap-2 bg-[var(--flup-surface)] text-[var(--flup-text-main)] border border-[var(--flup-border)] rounded-lg min-h-10 px-4 py-2.5 text-sm font-bold transition-colors hover:bg-[var(--flup-bg)] shadow-sm"
+          >
             <Download size={17} />
             JSON
           </a>
         </div>
       </div>
 
-      <div className="metrics">
-        <div className="metric">
-          <span className="metric-icon">
-            <FileText size={18} />
-          </span>
-          <div>
-            <strong>{metrics.totalPdfs}</strong>
-            <span className="muted">PDF</span>
-          </div>
-        </div>
-        <div className="metric">
-          <span className="metric-icon">
-            <Check size={18} />
-          </span>
-          <div>
-            <strong>{metrics.publishedPdfs}</strong>
-            <span className="muted">Publies</span>
-          </div>
-        </div>
-        <div className="metric">
-          <span className="metric-icon">
-            <PackagePlus size={18} />
-          </span>
-          <div>
-            <strong>{metrics.totalPacks}</strong>
-            <span className="muted">Packs</span>
-          </div>
-        </div>
-        <div className="metric">
-          <span className="metric-icon">
-            <CircleAlert size={18} />
-          </span>
-          <div>
-            <strong>{metrics.reviewPdfs}</strong>
-            <span className="muted">A corriger</span>
-          </div>
-        </div>
-        <div className="metric">
-          <span className="metric-icon">
-            <Sparkles size={18} />
-          </span>
-          <div>
-            <strong>{metrics.aiReadyPdfs}</strong>
-            <span className="muted">IA prets</span>
-          </div>
-        </div>
-        <div className="metric">
-          <span className="metric-icon">
-            <FilePenLine size={18} />
-          </span>
-          <div>
-            <strong>{metrics.totalSales}</strong>
-            <span className="muted">Ventes</span>
-          </div>
-        </div>
-        <div className="metric">
-          <span className="metric-icon">
-            <Archive size={18} />
-          </span>
-          <div>
-            <strong>{formatCoins(metrics.totalRevenue)}</strong>
-            <span className="muted">Revenus</span>
-          </div>
-        </div>
+      {/* ── Metrics row (Flup style) ───────────────────────────── */}
+      <div className="flup-kpi-grid">
+        <KpiCard icon={FileText}     iconColor="#0891b2" iconBg="#ecfeff" label="PDF"        value={metrics.totalPdfs} />
+        <KpiCard icon={Check}        iconColor="#10b981" iconBg="#ecfdf5" label="Publiés"    value={metrics.publishedPdfs} />
+        <KpiCard icon={PackagePlus}  iconColor="#8b5cf6" iconBg="#f5f3ff" label="Packs"      value={metrics.totalPacks} />
+        <KpiCard icon={CircleAlert}  iconColor="#f97316" iconBg="#fff7ed" label="À corriger" value={metrics.reviewPdfs} />
+        <KpiCard icon={Sparkles}     iconColor="#3b82f6" iconBg="#eff6ff" label="IA prêts"   value={metrics.aiReadyPdfs} />
+        <KpiCard icon={FilePenLine}  iconColor="#06b6d4" iconBg="#ecfeff" label="Ventes"     value={metrics.totalSales} />
+        <KpiCard icon={Archive}      iconColor="#10b981" iconBg="#ecfdf5" label="Revenus"    value={`${formatCoins(metrics.totalRevenue)} C`} />
       </div>
 
-      <div className="workspace">
-        <section className="panel">
-          <h2 className="section-title">
-            <UploadCloud size={18} />
+      {/* ── Workspace (2-col grid) ──────────────────────────── */}
+      <div className="grid grid-cols-[340px_1fr] gap-5 items-start">
+
+        {/* ── Upload form ─────────────────────────────────────── */}
+        <section className="flup-card">
+          <h2 className="inline-flex items-center gap-2 mb-4 text-base font-bold text-[var(--flup-text-main)]">
+            <UploadCloud size={18} className="text-[var(--flup-brand)]" />
             Ajouter un PDF
           </h2>
-          {message ? <div className="alert">{message}</div> : null}
+
+          {message ? (
+            <div className="border border-[var(--flup-border)] bg-[var(--flup-bg)] rounded-lg p-3 text-[var(--flup-text-muted)] text-sm mb-3">
+              {message}
+            </div>
+          ) : null}
+
           <form onSubmit={submit}>
-            <label>Titre</label>
-            <input name="title" required placeholder="Analyse 2 - sujets corriges" />
+            <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-3 mb-1.5">Titre</label>
+            <input name="title" required placeholder="Analyse 2 - sujets corrigés"
+              className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 mb-2 text-sm focus:outline-none focus:border-[var(--flup-brand)] focus:ring-2 focus:ring-[var(--flup-brand-light)] transition" />
 
-            <label>Description</label>
-            <textarea name="description" required placeholder="Ce que l'etudiant trouvera dans le PDF" />
+            <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-3 mb-1.5">Description</label>
+            <textarea name="description" required placeholder="Ce que l'étudiant trouvera dans le PDF"
+              className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 mb-2 text-sm min-h-[74px] resize-y focus:outline-none focus:border-[var(--flup-brand)] focus:ring-2 focus:ring-[var(--flup-brand-light)] transition" />
 
-            <div className="form-row">
+            <div className="grid grid-cols-2 gap-2.5 mb-2">
               <div>
-                <label>Universite</label>
-                <input name="university" required defaultValue="Universite de Douala" />
+                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Université</label>
+                <input name="university" required defaultValue="Université de Douala"
+                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
               </div>
               <div>
-                <label>Filiere / Faculte</label>
-                <input name="faculty" required placeholder="Informatique" />
+                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Filière / Faculté</label>
+                <input name="faculty" required placeholder="Informatique"
+                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
               </div>
             </div>
 
-            <div className="form-row">
+            <div className="grid grid-cols-2 gap-2.5 mb-2">
               <div>
-                <label>Matiere</label>
-                <input name="subject" required placeholder="Mathematiques" />
+                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Matière</label>
+                <input name="subject" required placeholder="Mathématiques"
+                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
               </div>
               <div>
-                <label>Professeur</label>
-                <input name="teacher" placeholder="Pr. Nom" />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div>
-                <label>Niveau</label>
-                <input name="level" required placeholder="L2 Informatique" />
-              </div>
-              <div>
-                <label>Annee academique</label>
-                <input name="academicYear" required defaultValue="2025-2026" />
+                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Professeur</label>
+                <input name="teacher" placeholder="Pr. Nom"
+                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
               </div>
             </div>
 
-            <div className="form-row">
+            <div className="grid grid-cols-2 gap-2.5 mb-2">
               <div>
-                <label>Prix en Coins</label>
-                <input name="priceCoins" required type="number" min="0" step="50" defaultValue="300" />
+                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Niveau</label>
+                <input name="level" required placeholder="L2 Informatique"
+                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
               </div>
               <div>
-                <label>Statut</label>
-                <select name="status" defaultValue="draft">
+                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Année académique</label>
+                <input name="academicYear" required defaultValue="2025-2026"
+                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 mb-2">
+              <div>
+                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Prix en Coins</label>
+                <input name="priceCoins" required type="number" min="0" step="50" defaultValue="300"
+                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
+              </div>
+              <div>
+                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Statut</label>
+                <select name="status" defaultValue="draft"
+                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]">
                   <option value="draft">Brouillon</option>
                   <option value="analyzing">Analyse IA</option>
-                  <option value="needs_review">A corriger</option>
-                  <option value="published">Publie</option>
+                  <option value="needs_review">À corriger</option>
+                  <option value="published">Publié</option>
                   <option value="archived">Archive</option>
                 </select>
               </div>
             </div>
 
-            <div className="form-row">
+            <div className="grid grid-cols-2 gap-2.5 mb-2">
               <div>
-                <label>Pages</label>
-                <input name="pageCount" type="number" min="1" defaultValue="20" />
+                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Pages</label>
+                <input name="pageCount" type="number" min="1" defaultValue="20"
+                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
               </div>
               <div>
-                <label>Commission (%)</label>
-                <input name="commissionRate" type="number" min="0" max="100" defaultValue="20" />
+                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Commission (%)</label>
+                <input name="commissionRate" type="number" min="0" max="100" defaultValue="20"
+                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
               </div>
             </div>
 
-            <label>Fichier PDF</label>
-            <input name="file" type="file" accept="application/pdf" required multiple onChange={onFileChange} />
+            <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-3 mb-1.5">Fichier PDF</label>
+            <input name="file" type="file" accept="application/pdf" required multiple onChange={onFileChange}
+              className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 mb-1 text-sm file:mr-3 file:font-bold file:text-sm file:text-[var(--flup-brand)] file:border-0 file:bg-[var(--flup-brand-light)] file:rounded file:px-3 file:py-1 file:cursor-pointer" />
+
             <input type="hidden" name="aiSummary" />
             <input type="hidden" name="aiTags" />
             <input type="hidden" name="aiDifficulty" />
@@ -670,119 +545,166 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
             <input type="hidden" name="aiQuiz" />
             <input type="hidden" name="extractedText" />
 
-            <div className="ai-note">
-              <Sparkles size={18} />
+            {/* AI note */}
+            <div className="grid grid-cols-[34px_1fr] gap-2.5 items-center border border-[var(--flup-border)] rounded-lg bg-[var(--flup-brand-light)] p-3 mt-4 text-[var(--flup-text-main)]">
+              <Sparkles size={18} className="text-[var(--flup-brand)]" />
               <div>
-                <strong>Analyse IA admin</strong>
-                <span>Le PDF pre-remplit les champs, propose un prix, un resume, des tags et un score avant publication.</span>
+                <strong className="block text-[var(--flup-text-main)]">Analyse IA admin</strong>
+                <span className="text-[var(--flup-text-muted)] text-[13px] mt-0.5 block">Le PDF pré-remplit les champs, propose un prix, un résumé, des tags et un score avant publication.</span>
               </div>
             </div>
 
-            <div className="actions" style={{ marginTop: 14 }}>
-              <button className="btn" type="submit" disabled={loading || analysisLoading}>
+            <div className="flex justify-end gap-2.5 mt-4">
+              <button
+                type="submit"
+                disabled={loading || analysisLoading}
+                className="flex items-center gap-2 bg-[var(--flup-brand)] text-white border-none rounded-lg min-h-10 px-5 py-2.5 text-sm font-bold transition-all hover:bg-[var(--flup-brand-hover)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(8,145,178,0.25)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              >
                 {loading ? 'Upload...' : analysisLoading ? 'Analyse...' : 'Enregistrer PDF'}
               </button>
             </div>
           </form>
         </section>
 
-        <section className="panel">
-          <h2 className="section-title">
-            <FileText size={18} />
+        {/* ── Catalogue ───────────────────────────────────────── */}
+        <section className="flup-card">
+          <h2 className="inline-flex items-center gap-2 mb-4 text-base font-bold text-[var(--flup-text-main)]">
+            <FileText size={18} className="text-[var(--flup-brand)]" />
             Catalogue
           </h2>
-          <div className="toolbar">
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher..." />
-            <select value={status} onChange={(event) => setStatus(event.target.value)}>
+
+          {/* Toolbar */}
+          <div className="grid grid-cols-[1.4fr_0.9fr_0.9fr_0.9fr] gap-2.5 mb-3">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Rechercher..."
+              className="border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]"
+            />
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]"
+            >
               <option value="all">Tous les statuts</option>
-              <option value="published">Publies</option>
-              <option value="needs_review">A corriger</option>
+              <option value="published">Publiés</option>
+              <option value="needs_review">À corriger</option>
               <option value="analyzing">Analyse IA</option>
               <option value="draft">Brouillons</option>
               <option value="archived">Archives</option>
             </select>
-            <input value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Matiere" />
-            <input value={level} onChange={(event) => setLevel(event.target.value)} placeholder="Niveau" />
+            <input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Matière"
+              className="border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]"
+            />
+            <input
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              placeholder="Niveau"
+              className="border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]"
+            />
           </div>
 
-          <div className="table-responsive">
-            <table>
-            <thead>
-              <tr>
-                <th>Document</th>
-                <th>Prix</th>
-                <th>Statut</th>
-                <th>Ventes</th>
-                <th>Revenu</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleDocuments.map((document) => {
-                const revenue = Math.round(document.salesCount * document.priceCoins * (document.commissionRate / 100));
-                return (
-                  <tr key={document.id}>
-                    <td data-label="Document">
-                      <div className="doc-title">
-                        <FileText size={16} />
-                        <span>{document.title}</span>
-                      </div>
-                      <div className="doc-meta">
-                        <span className="meta-chip">{document.subject}</span>
-                        <span className="meta-chip">{document.level}</span>
-                        <span className="meta-chip">{document.teacher}</span>
-                      </div>
-                    </td>
-                    <td data-label="Prix">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input 
-                          type="number" 
-                          defaultValue={document.priceCoins} 
-                          step="50"
-                          min="0"
-                          style={{ width: '80px', padding: '4px', borderRadius: '4px', border: '1px solid var(--line)', background: 'var(--panel-soft)', color: 'var(--text)' }}
-                          onBlur={(e) => {
-                            const newPrice = parseInt(e.target.value, 10);
-                            if (!isNaN(newPrice) && newPrice !== document.priceCoins) {
-                              updatePrice(document.id, newPrice);
-                            }
-                          }}
-                        />
-                        <span className="muted">C</span>
-                      </div>
-                    </td>
-                    <td data-label="Statut">
-                      <span className={`badge ${document.status}`}>{document.status}</span>
-                    </td>
-                    <td data-label="Ventes">{document.salesCount}</td>
-                    <td data-label="Revenu">{formatCoins(revenue)} C</td>
-                    <td data-label="Actions">
-                      <div className="table-actions">
-                        <button className="icon-btn ai" title="Reanalyser IA" onClick={() => reanalyze(document.id)}>
-                          <Sparkles size={16} />
-                        </button>
-                        <button className="icon-btn publish" title="Publier" onClick={() => updateStatus(document.id, 'published')}>
-                          <Check size={16} />
-                        </button>
-                        <button className="icon-btn review" title="A corriger" onClick={() => updateStatus(document.id, 'needs_review')}>
-                          <CircleAlert size={16} />
-                        </button>
-                        <button className="icon-btn draft" title="Brouillon" onClick={() => updateStatus(document.id, 'draft')}>
-                          <FilePenLine size={16} />
-                        </button>
-                        <button className="icon-btn" title="Archiver" onClick={() => updateStatus(document.id, 'archived')}>
-                          <Archive size={16} />
-                        </button>
-                        <button className="icon-btn danger" title="Supprimer" onClick={() => remove(document.id)}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed border-collapse">
+              <thead>
+                <tr className="border-b border-[var(--flup-border)]">
+                  {['Document', 'Prix', 'Statut', 'Ventes', 'Revenu', 'Actions'].map((th) => (
+                    <th key={th} className="text-left text-[var(--flup-text-muted)] text-[12px] uppercase py-2.5 px-2.5 font-semibold tracking-wide">
+                      {th}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {visibleDocuments.map((document) => {
+                  const revenue = Math.round(document.salesCount * document.priceCoins * (document.commissionRate / 100));
+                  return (
+                    <tr key={document.id} className="border-b border-[var(--flup-border-soft)] last:border-0 hover:bg-[var(--flup-bg)] transition-colors">
+                      <td className="py-2.5 px-2.5">
+                        <div className="flex items-center gap-2 font-bold text-[var(--flup-text-main)]">
+                          <FileText size={16} className="shrink-0 text-[var(--flup-text-muted)]" />
+                          <span className="break-all">{document.title}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {[document.subject, document.level, document.teacher].map((tag) => (
+                            <span key={tag} className="inline-flex bg-[var(--flup-bg)] border border-[var(--flup-border)] px-2 py-0.5 text-[var(--flup-text-muted)] text-[11px] rounded-full font-medium">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-2.5">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            defaultValue={document.priceCoins}
+                            step="50" min="0"
+                            onBlur={(e) => {
+                              const newPrice = parseInt(e.target.value, 10);
+                              if (!isNaN(newPrice) && newPrice !== document.priceCoins) updatePrice(document.id, newPrice);
+                            }}
+                            className="w-20 border border-[var(--flup-border)] rounded px-2 py-1 bg-[var(--flup-surface)] text-[var(--flup-text-main)] text-sm focus:outline-none focus:border-[var(--flup-brand)]"
+                          />
+                          <span className="text-[var(--flup-text-muted)] text-sm">C</span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-2.5">
+                        <span className={`inline-flex rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${badgeClass[document.status] ?? ''}`}>
+                          {document.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2.5 text-sm font-semibold text-[var(--flup-text-main)]">{document.salesCount}</td>
+                      <td className="py-2.5 px-2.5 text-sm text-[var(--flup-text-muted)]">{formatCoins(revenue)} C</td>
+                      <td className="py-2.5 px-2.5">
+                        <div className="flex gap-1 flex-nowrap">
+                          <button onClick={() => reanalyze(document.id)}
+                            className="w-8 h-8 rounded-lg border border-[var(--flup-border)] bg-[var(--flup-bg)] text-[var(--flup-accent-blue)] flex items-center justify-center hover:bg-[var(--flup-brand-light)] hover:border-[var(--flup-brand)] transition-colors"
+                            title="Reanalyser IA">
+                            <Sparkles size={16} />
+                          </button>
+                          <button onClick={() => updateStatus(document.id, 'published')}
+                            className="w-8 h-8 rounded-lg border border-[var(--flup-border)] bg-[var(--flup-bg)] text-[#059669] flex items-center justify-center hover:bg-[#ecfdf5] hover:border-[#10b981] transition-colors"
+                            title="Publier">
+                            <Check size={16} />
+                          </button>
+                          <button onClick={() => updateStatus(document.id, 'needs_review')}
+                            className="w-8 h-8 rounded-lg border border-[var(--flup-border)] bg-[var(--flup-bg)] text-[#c2410c] flex items-center justify-center hover:bg-[#fff7ed] hover:border-[#f97316] transition-colors"
+                            title="À corriger">
+                            <CircleAlert size={16} />
+                          </button>
+                          <button onClick={() => updateStatus(document.id, 'draft')}
+                            className="w-8 h-8 rounded-lg border border-[var(--flup-border)] bg-[var(--flup-bg)] text-[#6d28d9] flex items-center justify-center hover:bg-[#f5f3ff] hover:border-[#8b5cf6] transition-colors"
+                            title="Brouillon">
+                            <FilePenLine size={16} />
+                          </button>
+                          <button onClick={() => updateStatus(document.id, 'archived')}
+                            className="w-8 h-8 rounded-lg border border-[var(--flup-border)] bg-[var(--flup-bg)] text-[var(--flup-text-muted)] flex items-center justify-center hover:bg-[var(--flup-border-soft)] transition-colors"
+                            title="Archiver">
+                            <Archive size={16} />
+                          </button>
+                          <button onClick={() => remove(document.id)}
+                            className="w-8 h-8 rounded-lg border border-[var(--flup-border)] bg-[var(--flup-bg)] text-[#dc2626] flex items-center justify-center hover:bg-[#fef2f2] hover:border-[#dc2626] transition-colors"
+                            title="Supprimer">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {visibleDocuments.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-[var(--flup-text-muted)]">
+                      Aucun PDF trouvé.
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
       </div>
