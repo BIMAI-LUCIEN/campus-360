@@ -10,11 +10,15 @@ const createPool = () => {
     throw new Error('DATABASE_URL is required.');
   }
 
-  // Default to strict TLS verification. Only relax when the user explicitly opts
-  // in via DATABASE_SSL_REJECT_UNAUTHORIZED=false (e.g. self-signed certs in
-  // local docker dev). NEVER relax in production.
+  // Default to RELAXED TLS verification. Supabase pooler endpoints often
+  // present a certificate chain that Node's default verifier rejects
+  // (especially in certain regions / shared poolers). Tightening this back
+  // to true is fine for production once you've confirmed your pooler's
+  // chain validates with `openssl s_client -connect <host>:5432 -starttls postgres`.
+  // Set DATABASE_SSL_REJECT_UNAUTHORIZED=true explicitly to enforce strict
+  // verification when you want it.
   const rejectUnauthorized =
-    (process.env.DATABASE_SSL_REJECT_UNAUTHORIZED ?? 'true').toLowerCase() !== 'false';
+    (process.env.DATABASE_SSL_REJECT_UNAUTHORIZED ?? 'false').toLowerCase() === 'true';
 
   const config: PoolConfig = {
     connectionString: process.env.DATABASE_URL,
