@@ -80,7 +80,7 @@
   --animate-spin-slow: spin 1s linear infinite;
 }
 
-/* ─── Stitch cache bust: 2024-12-28 ──────────────────── */
+/* ─── Stitch cache bust: 2024-12-28-v3 ──────────────────── */
 
 /* ─── Legacy aliases (older pages still reference --color-flup-*) ─ */
 /* These map the old "flup" tokens to the new "stitch" tokens so pages
