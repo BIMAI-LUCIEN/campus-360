@@ -42,7 +42,13 @@ export async function GET() {
       const result = await databasePool.query('SELECT 1 as ok');
       checks.db_connect = `OK (result: ${JSON.stringify(result.rows)})`;
     } catch (dbErr) {
+      const dbUrl = process.env.DATABASE_URL ?? '';
       checks.db_connect = `FAILED: ${(dbErr as Error).message}`;
+      checks.db_url = {
+        host: (() => { try { return new URL(dbUrl.replace('postgresql://', 'http://')).host; } catch { return 'parse-error'; } })(),
+        hasSSL: dbUrl.includes('sslmode=require'),
+        sslmodeParam: (dbUrl.match(/sslmode=([^&]+)/) ?? [])[1] ?? 'not set',
+      };
     }
   } catch (authErr) {
     checks.auth_init = `FAILED: ${(authErr as Error).message}\nStack: ${(authErr as Error).stack}`;

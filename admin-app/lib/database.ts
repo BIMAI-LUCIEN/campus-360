@@ -10,13 +10,10 @@ const createPool = () => {
     throw new Error('DATABASE_URL is required.');
   }
 
-  // Default to RELAXED TLS verification. Supabase pooler endpoints often
-  // present a certificate chain that Node's default verifier rejects
-  // (especially in certain regions / shared poolers). Tightening this back
-  // to true is fine for production once you've confirmed your pooler's
-  // chain validates with `openssl s_client -connect <host>:5432 -starttls postgres`.
-  // Set DATABASE_SSL_REJECT_UNAUTHORIZED=true explicitly to enforce strict
-  // verification when you want it.
+  // Force the ssl block to be present even when env var is missing — many
+  // Supabase pooler connections fail TLS verification with default certs.
+  // We default to relaxed (rejectUnauthorized=false) so the app boots; the
+  // user can opt into strict via DATABASE_SSL_REJECT_UNAUTHORIZED=true.
   const rejectUnauthorized =
     (process.env.DATABASE_SSL_REJECT_UNAUTHORIZED ?? 'false').toLowerCase() === 'true';
 
@@ -28,9 +25,9 @@ const createPool = () => {
     keepAlive: true,
   };
 
-  // Only attach ssl when we have a non-localhost connection string to avoid
-  // pg warnings during local dev. Localhost (`localhost` / `127.0.0.1`) is
-  // never SSL-protected anyway.
+  // Always attach ssl for non-localhost connections — but use relaxed
+  // verification by default so Supabase shared pooler certs don't break us.
+  // Localhost (`localhost` / `127.0.0.1`) is never SSL-protected anyway.
   const isLocal = /localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL);
   if (!isLocal) {
     config.ssl = { rejectUnauthorized };
