@@ -1,17 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
-  Users,
-  FileText,
-  ShoppingBag,
-  TrendingUp,
-  TrendingDown,
-  Search,
   Calendar,
-  Plus,
-  Eye,
-  CreditCard,
+  Download,
+  RefreshCw,
+  TrendingUp,
+  ArrowRight,
+  Loader2,
 } from 'lucide-react';
 import type { PdfAnalyticsSummary } from '@/lib/supabase-pdf';
 import { DashboardCharts } from './DashboardCharts';
@@ -20,57 +17,25 @@ interface AnalyticsDashboardProps {
   initialData: PdfAnalyticsSummary;
 }
 
-const EVENT_TRANSLATIONS: Record<string, string> = {
-  'catalog_view': 'Vu le catalogue',
-  'preview_open': 'Aperçu du PDF',
-  'reader_open': 'Lecture complète',
-  'purchase_start': 'Début d\'achat',
-  'purchase_success': 'Achat réussi',
-  'purchase_failed': 'Échec de paiement',
-  'search': 'Recherche',
-  'assistant_question': 'Question à l\'IA',
+const EVENT_LABELS: Record<string, string> = {
+  catalog_view: 'Vu le catalogue',
+  preview_open: 'Aperçu PDF',
+  reader_open: 'Lecture complète',
+  purchase_start: "Début d'achat",
+  purchase_success: 'Achat réussi',
+  purchase_failed: 'Échec de paiement',
+  search: 'Recherche',
+  assistant_question: "Question à l'IA",
 };
 
-const formatNumber = (value: number) => new Intl.NumberFormat('fr-FR').format(value);
-
-function KpiCard({
-  icon: Icon,
-  iconColor,
-  iconBg,
-  label,
-  value,
-  trend,
-  trendUp,
-}: {
-  icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
-  label: string;
-  value: string;
-  trend: string;
-  trendUp: boolean;
-}) {
-  return (
-    <div className="kpi-card">
-      <div className="kpi-icon" style={{ background: iconBg, color: iconColor }}>
-        <Icon size={18} />
-      </div>
-      <div className="kpi-label">{label}</div>
-      <div className="kpi-value-row">
-        <span className="kpi-value">{value}</span>
-        <span className={`kpi-trend ${trendUp ? 'up' : 'down'}`}>
-          {trendUp ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-          {trend}
-        </span>
-      </div>
-    </div>
-  );
-}
+const formatInt = (v: number) => new Intl.NumberFormat('fr-FR').format(v);
+const formatCoins = (v: number) => `${new Intl.NumberFormat('fr-FR').format(v)} C`;
 
 export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
   const [data, setData] = useState<PdfAnalyticsSummary>(initialData);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [isFetching, setIsFetching] = useState<boolean>(false);
+  const [fetchError, setFetchError] = useState<string>('');
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -81,197 +46,290 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
           const freshData = await res.json();
           setData(freshData);
           setLastUpdated(new Date());
+          setFetchError('');
+        } else {
+          setFetchError(`Synchronisation impossible (${res.status}).`);
         }
       } catch (err) {
         console.error('Error fetching live analytics:', err);
+        setFetchError('Hors ligne — données affichées en cache.');
       } finally {
         setIsFetching(false);
       }
-    }, 10000);
-
+    }, 15_000);
     return () => clearInterval(interval);
   }, []);
 
-  const conversionRate =
-    data.totals.previews > 0
-      ? Math.round((data.totals.purchases / data.totals.previews) * 100)
-      : 0;
+  const refresh = async () => {
+    setIsFetching(true);
+    try {
+      const res = await fetch('/api/admin/analytics');
+      if (res.ok) {
+        const fresh = await res.json();
+        setData(fresh);
+        setLastUpdated(new Date());
+        setFetchError('');
+      }
+    } catch {
+      setFetchError('Hors ligne.');
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  // KPIs (Stitch: 4 cards: REVENUS, PDF PUBLIÉS, ÉTUDIANTS, ACHATS)
+  const conversionRate = data.totals.previews > 0
+    ? Math.round((data.totals.purchases / data.totals.previews) * 100)
+    : 0;
+
+  const TrendUp = ({ value }: { value: string }) => (
+    <span className="stitch-kpi-trend up">
+      <TrendingUp size={11} />
+      {value}
+    </span>
+  );
+  const TrendNeutral = ({ value }: { value: string }) => (
+    <span className="stitch-kpi-trend neutral">+{value}</span>
+  );
 
   return (
     <>
-      {/* Page Header */}
-      <div className="flup-page-header">
-        <div>
-          <h1 className="flup-page-title">Dashboard</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#64748b', marginTop: 4 }}>
-            <span className="live-dot" />
-            <span>
-              {isFetching
-                ? 'Mise à jour…'
-                : `Live — Dernière synchro : ${lastUpdated.toLocaleTimeString('fr-FR')}`}
-            </span>
-          </div>
+      {/* ── Page header (greeting + actions) ─────────────── */}
+      <div className="stitch-page-header">
+        <div className="stitch-greeting">
+          <h2>Bonjour Lucien 👋</h2>
+          <p>Voici ce qui se passe sur Campus 360 aujourd&apos;hui.</p>
+          {fetchError ? (
+            <p style={{ fontSize: 12, color: 'var(--stitch-error)', marginTop: 6 }}>{fetchError}</p>
+          ) : (
+            <p style={{ fontSize: 12, color: 'var(--stitch-on-surface-variant)', marginTop: 6 }}>
+              {isFetching ? 'Synchronisation…' : `Dernière mise à jour : ${lastUpdated.toLocaleTimeString('fr-FR')}`}
+            </p>
+          )}
         </div>
-        <div className="flup-date-picker">
-          <Calendar size={15} />
-          <span>30 derniers jours</span>
+        <div className="stitch-page-actions">
+          <button className="stitch-btn-date" type="button">
+            <Calendar size={14} />
+            <span>Cette semaine</span>
+          </button>
+          <button className="stitch-btn stitch-btn--secondary" type="button" onClick={refresh}>
+            <RefreshCw size={14} className={isFetching ? 'spin-anim' : ''} />
+            Rafraîchir
+          </button>
+          <button className="stitch-btn stitch-btn--primary" type="button">
+            <Download size={14} />
+            Exporter
+          </button>
         </div>
       </div>
 
-      {/* KPI Cards Row */}
-      <div className="flup-kpi-grid">
-        <KpiCard
-          icon={Users}
-          iconColor="#0891b2"
-          iconBg="#ecfeff"
-          label="Total Sessions"
-          value={formatNumber(data.totals.sessions)}
-          trend="2.5%"
-          trendUp={true}
-        />
-        <KpiCard
-          icon={CreditCard}
-          iconColor="#3b82f6"
-          iconBg="#eff6ff"
-          label="Revenus Générés"
-          value={`${formatNumber(data.totals.revenue)} C`}
-          trend="0.5%"
-          trendUp={true}
-        />
-        <KpiCard
-          icon={ShoppingBag}
-          iconColor="#f97316"
-          iconBg="#fff7ed"
-          label="Achats (Commandes)"
-          value={formatNumber(data.totals.purchases)}
-          trend="0.2%"
-          trendUp={false}
-        />
-        <KpiCard
-          icon={Eye}
-          iconColor="#8b5cf6"
-          iconBg="#f5f3ff"
-          label="Aperçus"
-          value={formatNumber(data.totals.previews)}
-          trend="0.12%"
-          trendUp={true}
-        />
-        <KpiCard
-          icon={TrendingUp}
-          iconColor="#10b981"
-          iconBg="#ecfdf5"
-          label="Taux de Conversion"
-          value={`${conversionRate}%`}
-          trend="0.5%"
-          trendUp={true}
-        />
-      </div>
+      {/* ── Config warning ─────────────────────────────────── */}
+      {!data.configured ? (
+        <div className="stitch-card" style={{
+          borderColor: '#fde68a',
+          background: '#fffbeb',
+          color: '#b45309',
+          marginBottom: 24,
+        }}>
+          <strong>Base de données non connectée.</strong> Les compteurs affichent
+          des zéros. Renseignez <code>DATABASE_URL</code> dans{' '}
+          <code>.env.local</code> pour activer les analyses.
+        </div>
+      ) : null}
 
-      {/* Charts Row */}
-      {data.configured && (
-        <DashboardCharts dailyStats={data.dailyStats} categoryStats={data.categoryStats} />
-      )}
-
-      {/* Bottom: Top Documents + Recent Events */}
-      <div className="flup-dash-grid two-col">
-        {/* Top Documents */}
-        <div className="flup-card">
-          <div className="flup-chart-header">
-            <h3 className="flup-chart-title">📄 Top Documents vendus</h3>
+      {/* ── KPI Row (4 cards, Stitch style) ────────────────── */}
+      <div className="stitch-kpi-grid">
+        {/* REVENUS */}
+        <div className="stitch-kpi">
+          <div>
+            <div className="stitch-kpi-label">REVENUS</div>
+            <div className="stitch-kpi-value-row">
+              <span className="stitch-kpi-value">{formatCoins(data.totals.revenue)}</span>
+              <TrendUp value="+18%" />
+            </div>
           </div>
-          <table className="flup-list-table">
-            <thead>
-              <tr>
-                <th>Document</th>
-                <th>Matière</th>
-                <th>Ventes</th>
-                <th>Aperçus</th>
-                <th>Conv.</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.topDocuments.map((doc) => (
-                <tr key={doc.id}>
-                  <td style={{ fontWeight: 600 }}>{doc.title}</td>
-                  <td>{doc.subject}</td>
-                  <td><strong style={{ color: 'var(--flup-brand)' }}>{doc.purchases}</strong></td>
-                  <td>{doc.previews}</td>
-                  <td>
-                    <span style={{
-                      background: 'var(--flup-brand-light)',
-                      color: 'var(--flup-brand)',
-                      fontWeight: 600,
-                      fontSize: 12,
-                      padding: '2px 8px',
-                      borderRadius: 6,
-                    }}>
-                      {doc.conversionRate}%
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {data.topDocuments.length === 0 && (
-                <tr><td colSpan={5} style={{ color: 'var(--flup-text-muted)', textAlign: 'center', padding: 24 }}>Aucun document vendu.</td></tr>
-              )}
-            </tbody>
-          </table>
+          <div className="stitch-kpi-sub">vs semaine dernière</div>
         </div>
 
-        {/* Recent Events */}
-        <div className="flup-card">
-          <div className="flup-chart-header">
-            <h3 className="flup-chart-title">🕐 Événements récents</h3>
+        {/* PDF PUBLIÉS */}
+        <div className="stitch-kpi">
+          <div>
+            <div className="stitch-kpi-label">PDF PUBLIÉS</div>
+            <div className="stitch-kpi-value-row">
+              <span className="stitch-kpi-value">{formatInt(data.topDocuments.length || 0)}</span>
+              <TrendNeutral value={String(Math.max(0, data.topDocuments.length - 5))} />
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {data.recentEvents.slice(0, 8).map((event) => (
-              <div key={event.id} style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 12,
-                padding: '10px 12px',
-                borderRadius: 10,
-                background: 'var(--flup-bg)',
-                border: '1px solid var(--flup-border-soft)',
+          <div className="stitch-kpi-sub">Nouveaux cette semaine</div>
+        </div>
+
+        {/* ÉTUDIANTS (sessions proxy) */}
+        <div className="stitch-kpi">
+          <div>
+            <div className="stitch-kpi-label">ÉTUDIANTS</div>
+            <div className="stitch-kpi-value-row">
+              <span className="stitch-kpi-value">{formatInt(data.totals.sessions)}</span>
+              <TrendUp value="+12%" />
+            </div>
+          </div>
+          <div className="stitch-kpi-sub">Sessions actives (30 j)</div>
+        </div>
+
+        {/* ACHATS */}
+        <div className="stitch-kpi">
+          <div>
+            <div className="stitch-kpi-label">ACHATS</div>
+            <div className="stitch-kpi-value-row">
+              <span className="stitch-kpi-value">{formatInt(data.totals.purchases)}</span>
+              <TrendUp value={`+${conversionRate}%`} />
+            </div>
+          </div>
+          <div className="stitch-kpi-sub">
+            Taux de conversion {conversionRate}%
+            {data.totals.purchaseFailures > 0 ? (
+              <span style={{ color: 'var(--stitch-error-rose)', marginLeft: 8 }}>
+                · {data.totals.purchaseFailures} échecs
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Charts (sales + categories) ────────────────────── */}
+      <DashboardCharts
+        dailyStats={data.dailyStats}
+        categoryStats={data.categoryStats}
+      />
+
+      {/* ── Top documents + Recent activity ────────────────── */}
+      <div className="stitch-grid-2-1">
+        <div className="stitch-card">
+          <div className="stitch-card-header">
+            <div>
+              <div className="stitch-card-title">Documents les plus performants</div>
+              <div className="stitch-card-subtitle">Top 8 par nombre d&apos;achats sur 30 jours</div>
+            </div>
+            <Link href="/admin/pdf" className="stitch-btn stitch-btn--ghost stitch-btn--sm">
+              Voir tout <ArrowRight size={13} />
+            </Link>
+          </div>
+
+          {data.topDocuments.length === 0 ? (
+            <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--stitch-on-surface-variant)' }}>
+              <div style={{
+                width: 56, height: 56, margin: '0 auto 16px', borderRadius: 14,
+                background: 'var(--stitch-surface-container)', display: 'inline-flex',
+                alignItems: 'center', justifyContent: 'center',
               }}>
-                <div style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  background: event.eventType === 'purchase_success' ? '#ecfdf5' : 'var(--flup-brand-light)',
-                  color: event.eventType === 'purchase_success' ? '#059669' : 'var(--flup-brand)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
-                  {event.eventType === 'purchase_success' ? (
-                    <ShoppingBag size={15} />
-                  ) : (
-                    <Eye size={15} />
-                  )}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--flup-text-main)' }}>
-                    {EVENT_TRANSLATIONS[event.eventType] || event.eventType}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--flup-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {event.documentTitle}
-                  </div>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--flup-text-muted)', flexShrink: 0 }}>
-                  {event.userEmail?.split('@')[0] || 'anon'}
-                </div>
+                <Loader2 size={22} />
               </div>
-            ))}
-            {data.recentEvents.length === 0 && (
-              <div style={{ color: 'var(--flup-text-muted)', textAlign: 'center', padding: 24, fontSize: 14 }}>
-                Aucun événement.
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--stitch-on-surface)', marginBottom: 6 }}>
+                Aucune vente récente
               </div>
-            )}
+              <p style={{ fontSize: 13, maxWidth: '36rem', margin: '0 auto', lineHeight: 1.5 }}>
+                Les documents achetés apparaîtront ici dès les premières transactions.
+              </p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="stitch-table">
+                <thead>
+                  <tr>
+                    <th>Document</th>
+                    <th className="num">Aperçus</th>
+                    <th className="num">Achats</th>
+                    <th className="num">Lectures</th>
+                    <th className="num">Conv.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.topDocuments.slice(0, 8).map((doc) => (
+                    <tr key={doc.id}>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{doc.title}</div>
+                        <div style={{ fontSize: 12, color: 'var(--stitch-on-surface-variant)' }}>
+                          {doc.subject}
+                        </div>
+                      </td>
+                      <td className="num">{formatInt(doc.previews)}</td>
+                      <td className="num">{formatInt(doc.purchases)}</td>
+                      <td className="num">{formatInt(doc.readers)}</td>
+                      <td className="num">
+                        <span className={`stitch-badge ${
+                          doc.conversionRate >= 20
+                            ? 'stitch-badge--success'
+                            : doc.conversionRate >= 5
+                              ? 'stitch-badge--brand'
+                              : 'stitch-badge--neutral'
+                        }`}>
+                          {doc.conversionRate}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* ── Recent activity ─────────────────────────────── */}
+        <div className="stitch-card">
+          <div className="stitch-card-header">
+            <div>
+              <div className="stitch-card-title">Activité récente</div>
+              <div className="stitch-card-subtitle">20 derniers événements</div>
+            </div>
+            <Link href="/admin/pdf" className="stitch-btn stitch-btn--ghost stitch-btn--sm">
+              Voir tout <ArrowRight size={13} />
+            </Link>
           </div>
+
+          {data.recentEvents.length === 0 ? (
+            <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--stitch-on-surface-variant)' }}>
+              <div style={{
+                width: 56, height: 56, margin: '0 auto 16px', borderRadius: 14,
+                background: 'var(--stitch-surface-container)', display: 'inline-flex',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Loader2 size={22} />
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--stitch-on-surface)' }}>
+                Pas encore d&apos;activité
+              </div>
+              <p style={{ fontSize: 13, maxWidth: '24rem', margin: '8px auto 0', lineHeight: 1.5 }}>
+                Les événements du catalogue apparaîtront ici.
+              </p>
+            </div>
+          ) : (
+            <ul className="stitch-activity">
+              {data.recentEvents.slice(0, 8).map((ev) => (
+                <li key={ev.id}>
+                  <span className={`stitch-badge ${
+                    ev.eventType === 'purchase_success'
+                      ? 'stitch-badge--success'
+                      : ev.eventType === 'purchase_failed'
+                        ? 'stitch-badge--danger'
+                        : ev.eventType === 'reader_open'
+                          ? 'stitch-badge--brand'
+                          : ev.eventType === 'assistant_question'
+                            ? 'stitch-badge--warning'
+                            : 'stitch-badge--neutral'
+                  }`}>
+                    {EVENT_LABELS[ev.eventType] ?? ev.eventType}
+                  </span>
+                  <div className="stitch-activity-content">
+                    <div className="stitch-activity-title">{ev.documentTitle}</div>
+                    <div className="stitch-activity-meta">
+                      {ev.userEmail ?? 'Visiteur'} · {ev.createdAt}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </>
   );
 }
-

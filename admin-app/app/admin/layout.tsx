@@ -3,48 +3,75 @@
 import {
   GraduationCap,
   LogOut,
-  Folder,
-  Users,
+  Settings,
+  Bell,
+  HelpCircle,
+  Search as SearchIcon,
+  Calendar,
+  Download,
   LayoutDashboard,
   BookOpen,
+  Package,
+  Users,
+  BarChart3,
+  FileText,
   Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useState, type ReactNode } from 'react';
 import { authClient } from '@/lib/auth-client';
 
-import './flup.css';
-
-type NavItem = { href: string; icon: React.ElementType; label: string };
-type NavSection = { label: string; items: NavItem[] };
-
-const NAV_SECTIONS: NavSection[] = [
+const NAV_GROUPS: Array<{
+  label: string;
+  items: Array<{ href: string; icon: ReactNode; label: string }>;
+}> = [
   {
-    label: 'Tableau de bord',
+    label: 'PRINCIPAL',
     items: [
-      { href: '/admin/analytics', icon: LayoutDashboard, label: 'Dashboard' },
-      { href: '/admin/reports', icon: BookOpen, label: 'Rapports' },
+      { href: '/admin/analytics', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+      { href: '/admin/pdf',       icon: <BookOpen size={18} />,       label: 'PDF Catalogue' },
+      { href: '#',                icon: <Package size={18} />,       label: 'Packs' },
+      { href: '/admin/users',     icon: <Users size={18} />,          label: 'Étudiants' },
     ],
   },
   {
-    label: 'Catalogue',
+    label: 'ANALYTICS',
     items: [
-      { href: '/admin/pdf', icon: Folder, label: 'Documents PDF' },
-      { href: '/admin/users', icon: Users, label: 'Utilisateurs' },
+      { href: '#', icon: <BarChart3 size={18} />, label: 'Analytics' },
+      { href: '/admin/reports', icon: <FileText size={18} />, label: 'Rapports' },
+    ],
+  },
+  {
+    label: 'SYSTÈME',
+    items: [
+      { href: '#', icon: <Settings size={18} />, label: 'Configuration' },
     ],
   },
 ];
 
-const ROLE_LABELS: Record<string, string> = {
-  super_admin: 'Super Admin',
-  admin: 'Administrateur',
-};
+const pageTitleMap: Array<[RegExp, string, string]> = [
+  [/^\/admin\/analytics$/, 'Dashboard', 'Overview'],
+  [/^\/admin\/pdf/, 'PDF', 'Catalogue'],
+  [/^\/admin\/users/, 'Dashboard', 'Utilisateurs'],
+  [/^\/admin\/reports\/new/, 'Dashboard', 'Nouveau rapport'],
+  [/^\/admin\/reports/, 'Dashboard', 'Overview'],
+];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+function resolveBreadcrumb(pathname: string): { section: string; sub: string } {
+  for (const [re, section, sub] of pageTitleMap) {
+    if (re.test(pathname)) return { section, sub };
+  }
+  return { section: 'Dashboard', sub: 'Overview' };
+}
+
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname() ?? '';
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
   const user = session?.user;
+
+  const [search, setSearch] = useState('');
 
   const handleLogout = async () => {
     try {
@@ -52,131 +79,116 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.push('/admin/login');
       router.refresh();
     } catch (err) {
-      console.error('Error logging out:', err);
+      console.error('Logout error', err);
     }
   };
 
-  const roleLabel = user?.role ? ROLE_LABELS[user.role] ?? 'Étudiant' : '';
+  const { section, sub } = resolveBreadcrumb(pathname);
+  const userName = user?.name || 'Admin';
+  const userInitial = userName.trim().slice(0, 1).toUpperCase();
 
   return (
-    <div className="flup-layout flex min-h-screen w-full bg-[var(--color-flup-bg)] font-sans">
-      {/* ── 1. Nav Rail (thin icon sidebar) ─────────────── */}
-      <aside className="w-[72px] bg-[var(--color-flup-surface)] border-r border-[var(--color-flup-border)] flex flex-col items-center py-5 z-20 sticky top-0 h-screen shrink-0">
-        <div className="mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-flup-brand)] to-cyan-700 text-white flex items-center justify-center shadow-[0_2px_8px_rgba(8,145,178,0.35)]">
-            <GraduationCap size={20} />
-          </div>
+    <div className="stitch-layout">
+      {/* ── Sidebar (240px, fixed) ───────────────────────── */}
+      <aside className="stitch-sidebar">
+        <div className="stitch-sidebar-brand">
+          <h1>Campus 360 Admin</h1>
+          <p>University Management</p>
         </div>
 
-        <div className="flex flex-col gap-1.5 flex-1">
-          {NAV_SECTIONS.flatMap((section) =>
-            section.items.map(({ href, icon: Icon, label }) => {
-              const isActive =
-                pathname === href || pathname.startsWith(`${href}/`);
-              return (
-                <Link key={href} href={href}>
-                  <button
-                    className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 relative ${
-                      isActive
-                        ? 'bg-[var(--color-flup-brand-light)] text-[var(--color-flup-brand)]'
-                        : 'text-[var(--color-flup-text-muted)] hover:bg-[var(--color-flup-surface-alt)] hover:text-[var(--color-flup-text-main)]'
-                    }`}
-                    title={label}
-                  >
-                    {isActive && (
-                      <span className="absolute left-[-14px] top-1/2 -translate-y-1/2 w-1 h-6 bg-[var(--color-flup-brand)] rounded-r" />
-                    )}
-                    <Icon size={20} />
-                  </button>
-                </Link>
-              );
-            }),
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1.5 items-center mt-auto">
-          <button
-            onClick={handleLogout}
-            className="w-11 h-11 rounded-xl text-[var(--color-flup-text-muted)] hover:bg-[var(--color-flup-surface-alt)] hover:text-[var(--color-flup-text-main)] flex items-center justify-center transition-all duration-200"
-            title="Déconnexion"
-          >
-            <LogOut size={20} />
-          </button>
-        </div>
-      </aside>
-
-      {/* ── 2. Inner Sidebar (expanded menu) ──────────── */}
-      <aside className="w-[248px] bg-[var(--color-flup-surface)] border-r border-[var(--color-flup-border)] flex flex-col py-6 px-4 z-10 sticky top-0 h-screen shrink-0">
-        <div className="mb-8">
-          <div className="flex items-center gap-2.5 text-[18px] font-bold text-[var(--color-flup-text-main)]">
-            <GraduationCap size={22} className="text-[var(--color-flup-brand)]" />
-            <span>Campus 360</span>
-          </div>
-          <div className="text-[11px] text-[var(--color-flup-text-muted)] mt-0.5 pl-[34px]">
-            Admin Console
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-6 flex-1">
-          {NAV_SECTIONS.map((section) => (
-            <div key={section.label} className="flex flex-col gap-0.5">
-              <div className="flup-nav-section-label">{section.label}</div>
-              {section.items.map((item) => {
+        <nav className="stitch-sidebar-nav">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} style={{ marginBottom: 16 }}>
+              <div style={{
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: 'var(--stitch-on-surface-variant)',
+                padding: '0 12px 8px',
+              }}>
+                {group.label}
+              </div>
+              {group.items.map((item) => {
                 const isActive =
-                  pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  item.href !== '#' &&
+                  (pathname === item.href || pathname.startsWith(item.href + '/'));
                 return (
                   <Link
-                    key={item.href}
+                    key={item.href + item.label}
                     href={item.href}
-                    className={`flup-nav-link ${isActive ? 'is-active' : ''}`}
+                    className={`stitch-sidebar-link${isActive ? ' is-active' : ''}`}
                   >
-                    <item.icon size={18} />
+                    {item.icon}
                     <span>{item.label}</span>
                   </Link>
                 );
               })}
             </div>
           ))}
-        </div>
+        </nav>
 
-        {/* Footer user card */}
-        <div className="mt-auto pt-5 border-t border-[var(--color-flup-border)] flex items-center gap-2.5">
-          {isPending ? (
-            <div className="flex items-center gap-2 p-1">
-              <Loader2 size={16} className="animate-spin text-[var(--color-flup-text-muted)]" />
-              <span className="text-[12px] text-[var(--color-flup-text-muted)]">Chargement...</span>
-            </div>
-          ) : (
-            <>
-              <div className="w-9 h-9 rounded-full border-2 border-[var(--color-flup-border)] overflow-hidden shadow-sm shrink-0">
-                <img
-                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Admin')}&background=0891b2&color=fff`}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-semibold text-[var(--color-flup-text-main)] truncate">
-                  {user?.name || 'Admin'}
-                </div>
-                <div className="text-[11px] text-[var(--color-flup-text-muted)]">{roleLabel}</div>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="w-8 h-8 rounded-lg text-[var(--color-flup-text-muted)] hover:bg-[var(--color-flup-surface-alt)] hover:text-[var(--color-flup-text-main)] flex items-center justify-center transition-all duration-200"
-                title="Déconnexion"
-              >
-                <LogOut size={16} />
-              </button>
-            </>
-          )}
+        <div className="stitch-sidebar-footer">
+          <button
+            type="button"
+            className="stitch-sidebar-link"
+            style={{ width: '100%', background: 'transparent', border: 'none', textAlign: 'left' }}
+            onClick={handleLogout}
+          >
+            <LogOut size={18} />
+            <span>Déconnexion</span>
+          </button>
         </div>
       </aside>
 
-      {/* ── 3. Main Content ─────────────────────────────── */}
-      <main className="flex-1 p-7 overflow-y-auto min-w-0">
-        <div className="flup-page">{children}</div>
-      </main>
+      {/* ── Topbar (sticky, 64px) ──────────────────────────── */}
+      <header className="stitch-topbar">
+        <div className="stitch-topbar-left">
+          <div className="stitch-search">
+            <span className="stitch-search-icon">
+              <SearchIcon size={16} />
+            </span>
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="stitch-breadcrumb">
+            <span className="stitch-breadcrumb-item">{section}</span>
+            <span className="stitch-breadcrumb-sep">/</span>
+            <span className="stitch-breadcrumb-current">{sub}</span>
+          </div>
+        </div>
+
+        <div className="stitch-topbar-right">
+          <button className="stitch-topbar-icon" title="Notifications">
+            <Bell size={18} />
+          </button>
+          <button className="stitch-topbar-icon" title="Aide">
+            <HelpCircle size={18} />
+          </button>
+
+          {isPending ? (
+            <div className="stitch-avatar" style={{ background: 'var(--stitch-surface-container)' }}>
+              <Loader2 size={16} className="spin-anim" />
+            </div>
+          ) : (
+            <div className="stitch-avatar" title={userName}>
+              {user?.image ? (
+                <img src={user.image} alt={userName} />
+              ) : (
+                userInitial
+              )}
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* ── Main content ─────────────────────────────────── */}
+      <main className="stitch-main">{children}</main>
     </div>
   );
 }
