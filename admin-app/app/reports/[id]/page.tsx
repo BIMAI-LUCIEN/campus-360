@@ -13,6 +13,17 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } from 'd
 
 import { authClient } from '@/lib/auth-client';
 
+// SSR-safe alert/confirm — `window.alert` / `window.confirm` don't exist
+// during server rendering. We silently no-op on the server; the user will
+// see the message on the client.
+const ssrAlert = (message: string) => {
+  if (typeof window !== 'undefined') window.alert(message);
+};
+const ssrConfirm = (message: string): boolean => {
+  if (typeof window === 'undefined') return true;
+  return window.confirm(message);
+};
+
 type Report = {
   id: string;
   title: string;
@@ -66,7 +77,11 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
   useEffect(() => {
     if (sessionLoading) return;
     if (!session) {
-      if (!isMobileMode) router.push('/login');
+      // Not authenticated — send users to the admin login (mobile mode
+      // is launched from the WebView with a session cookie already, so
+      // a missing session there means the cookie expired).
+      if (!isMobileMode) router.push('/admin/login');
+      setLoading(false);
       return;
     }
 
@@ -74,7 +89,17 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
       try {
         setLoading(true);
         const res = await fetch(`/api/mobile/reports/${reportId}`);
-        if (!res.ok) throw new Error('Impossible de charger le rapport.');
+        if (!res.ok) {
+          // 404 means the report doesn't exist yet — likely a /new hit.
+          // Surface a friendly error instead of looping on the loader.
+          if (res.status === 404) {
+            setError(`Rapport "${reportId}" introuvable. Il a peut-être été supprimé, ou l'identifiant est invalide.`);
+          } else {
+            const errBody = await res.json().catch(() => ({}));
+            throw new Error(errBody.error || `Impossible de charger le rapport (HTTP ${res.status}).`);
+          }
+          return;
+        }
         const data = await res.json();
         setReport(data.report);
         setSections(data.sections);
@@ -189,7 +214,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
       setNewSectionTitle('');
       setShowAddSection(false);
     } catch (err: any) {
-      alert(err.message);
+      ssrAlert(err.message);
     } finally {
       setSaving(false);
     }
@@ -200,11 +225,11 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
     const section = sections.find(s => s.id === sectionId);
     if (!section) return;
     if (section.is_system) {
-      alert('Cette section est obligatoire pour le modèle et ne peut pas être supprimée.');
+      ssrAlert('Cette section est obligatoire pour le modèle et ne peut pas être supprimée.');
       return;
     }
 
-    if (!confirm(`Supprimer la section "${section.title}" ?`)) return;
+    if (!ssrConfirm(`Supprimer la section "${section.title}" ?`)) return;
 
     try {
       setSaving(true);
@@ -218,7 +243,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
         setActiveSectionId(newSections[0].id);
       }
     } catch {
-      alert('Impossible de supprimer la section.');
+      ssrAlert('Impossible de supprimer la section.');
     } finally {
       setSaving(false);
     }
@@ -235,7 +260,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
     ) : undefined;
 
     if (action === 'improve' && !textToImprove) {
-      alert('Veuillez d\'abord surbriller ou sélectionner du texte dans l\'éditeur pour l\'améliorer.');
+      ssrAlert('Veuillez d\'abord surbriller ou sélectionner du texte dans l\'éditeur pour l\'améliorer.');
       return;
     }
 
@@ -267,9 +292,9 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
       }
 
       setAiPrompt('');
-      alert('IA : Contenu inséré avec succès ! (1 crédit IA déduit)');
+      ssrAlert('IA : Contenu inséré avec succès ! (1 crédit IA déduit)');
     } catch (err: any) {
-      alert(err.message);
+      ssrAlert(err.message);
     } finally {
       setAiLoading(false);
     }
@@ -349,7 +374,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
       a.download = `Rapport_${report.title.replace(/\s+/g, '_')}.docx`;
       a.click();
     } catch (err: any) {
-      alert(`Erreur d'export Word : ${err.message}`);
+      ssrAlert(`Erreur d'export Word : ${err.message}`);
     }
   };
 
@@ -374,8 +399,8 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
       <div className="flex h-screen items-center justify-center bg-slate-900 text-slate-200">
         <div className="max-w-md text-center">
           <p className="text-red-400 font-bold mb-4">Erreur : {error || 'Rapport introuvable.'}</p>
-          <button 
-            onClick={() => router.push('/dashboard')}
+          <button
+            onClick={() => router.push('/admin/analytics')}
             className="rounded bg-slate-800 px-4 py-2 text-sm hover:bg-slate-700 transition"
           >
             Retour au Tableau de bord
