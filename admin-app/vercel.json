@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install --prefer-offline --no-audit --no-fund",
+  "build": {
+    "timeout": 600
+  },
+  "framework": "nextjs"
+}
