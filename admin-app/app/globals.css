@@ -6,11 +6,15 @@
  * CSS bundle is processed with a different effective root, so the
  * scanner sees zero files and produces only the theme/reset CSS —
  * none of the utility classes (bg-stitch-*, flex, px-6, …) get emitted.
- * Forcing the source paths here makes the scan deterministic across
- * local dev and Vercel builds.
+ *
+ * @source globs are relative to THIS CSS file, not to the build cwd.
+ * globals.css lives at admin-app/app/globals.css, so the .ts/.tsx files
+ * (which sit in admin-app/app/...) are reachable via "./..." (same
+ * directory), not "../app/..." which would resolve to a non-existent
+ * admin-app/app/app/.
  */
-@source "../app/**/*.{ts,tsx}";
-@source "../components/**/*.{ts,tsx}";
+@source "./**/*.ts";
+@source "./**/*.tsx";
 
 /*
  * ─── Fonts (loaded via <link> tags in app/layout.tsx, see below) ───
