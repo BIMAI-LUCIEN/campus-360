@@ -1,20 +1,16 @@
 @import "tailwindcss";
+@config "../../tailwind.config.ts";
 
 /*
- * Tailwind v4 auto-scans app/, components/, src/ relative to the cwd.
- * On Vercel the build cwd is /vercel/path0/admin-app but PostCSS for the
- * CSS bundle is processed with a different effective root, so the
- * scanner sees zero files and produces only the theme/reset CSS —
- * none of the utility classes (bg-stitch-*, flex, px-6, …) get emitted.
- *
- * @source globs are relative to THIS CSS file, not to the build cwd.
- * globals.css lives at admin-app/app/globals.css, so the .ts/.tsx files
- * (which sit in admin-app/app/...) are reachable via "./..." (same
- * directory), not "../app/..." which would resolve to a non-existent
- * admin-app/app/app/.
+ * Tailwind v4 prefers content-scanning via @source paths in CSS, but on
+ * Vercel the effective cwd of the PostCSS step is unpredictable and the
+ * scanner reliably finds zero .ts/.tsx files, leaving the dashboard
+ * unstyled on production (verified: the deployed CSS bundle contained
+ * only @theme + reset, no utility classes). The legacy tailwind.config
+ * with explicit `content` paths works regardless of cwd because Vercel
+ * resolves them relative to the repo root (or the root directory
+ * configured in the project settings), which is stable.
  */
-@source "./**/*.ts";
-@source "./**/*.tsx";
 
 /*
  * ─── Fonts (loaded via <link> tags in app/layout.tsx, see below) ───
