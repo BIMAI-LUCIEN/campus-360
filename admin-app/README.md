@@ -74,8 +74,7 @@ SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-SMTP_USER=
-SMTP_PASSWORD=
+RESEND_API_KEY=
 ```
 
 Pour le budget reduit, Supabase stocke PostgreSQL et les PDF. Better Auth reste l'unique source
@@ -109,6 +108,11 @@ https://ton-domaine.com/api/auth/callback/google
 
 ## Recuperation de mot de passe
 
-Le flux mobile revient dans l'application avec `campus-bordes://reset-password`. Pour envoyer les
-emails avec Gmail a cout nul, active la validation en deux etapes Google puis cree un mot de passe
-d'application. Configure ensuite `SMTP_USER`, `SMTP_PASSWORD` et `SMTP_FROM` dans `.env.local`.
+Le flux mobile revient dans l'application avec `campus-bordes://reset-password`. Les emails
+transactionnels (verification d'inscription + reset de mot de passe) sont envoyes via **Resend**.
+Inscris-toi sur https://resend.com, cree une cle API, et mets-la dans `admin-app/.env.local`
+sous `RESEND_API_KEY`. Plan gratuit : 3000 mails/mois, 100 mails/jour.
+
+Sur le plan gratuit tu ne peux envoyer **qu'a ton adresse sign-up** depuis
+`onboarding@resend.dev`. Pour envoyer a de vrais etudiants, verifie un domaine custom dans le
+dashboard Resend puis mets `MAIL_FROM=Campus-Bordes <no-reply@ton-domaine.com>` dans `.env.local`.
