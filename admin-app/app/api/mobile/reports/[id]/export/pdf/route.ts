@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
+// Puppeteer is intentionally a dynamic import: it pulls native Chromium
+// bindings that must not be traced by webpack on Vercel. Combined with
+// `serverExternalPackages: ['puppeteer']` in next.config.ts this avoids
+// the `Module not found` webpack error during page data collection.
 
 import { requireMobileUser, mobileErrorResponse } from '@/lib/mobile-access';
 import { getReportById, getReportSections } from '@/lib/reports-db';
@@ -363,6 +366,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
     `;
 
     console.log('[PDF Export] Launching Puppeteer', { reportId: id, userId: access.user.id });
+
+    // Dynamic import — see top of file. Keeps puppeteer out of the webpack
+    // bundle and lets Next.js resolve it at runtime on the serverless image.
+    const { default: puppeteer } = await import('puppeteer');
 
     const browser = await puppeteer.launch({
       headless: true,

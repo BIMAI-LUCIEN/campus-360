@@ -2,6 +2,14 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: process.cwd(),
+  // Puppeteer pulls in a deep tree of platform-specific code (Chromium
+  // bindings, native .node loaders, post-install scripts). Letting webpack
+  // trace it on Vercel causes the `finishWithoutResolve` / "module not
+  // found" webpack error during page data collection because those native
+  // files are absent from the serverless image. Marking it as a server
+  // external package tells Next to `require` it at runtime instead of
+  // bundling it. Routes that need it use a dynamic `import()`.
+  serverExternalPackages: ['puppeteer'],
   // Note: serverActions was disabled as part of build-time optimization.
   // The admin dashboard does not yet use any Next.js Server Actions
   // (forms post to /api/* routes directly), so removing the experimental
