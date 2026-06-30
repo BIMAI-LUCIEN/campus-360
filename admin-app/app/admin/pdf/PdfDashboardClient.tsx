@@ -13,6 +13,10 @@ import {
   RefreshCw,
   Trash2,
   UploadCloud,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import type { PdfDocument, PdfPack } from '@/lib/course-db';
 
@@ -21,6 +25,7 @@ type Props = {
 };
 
 const formatCoins = (value: number) => new Intl.NumberFormat('fr-CM').format(value);
+const ITEMS_PER_PAGE = 15;
 
 const titleFromFileName = (fileName: string) =>
   fileName
@@ -166,6 +171,8 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   useEffect(() => { refreshPacks(); }, []);
 
@@ -199,6 +206,16 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
       );
     });
   }, [documents, level, query, status, subject]);
+
+  // Pagination
+  const totalPages = Math.ceil(visibleDocuments.length / ITEMS_PER_PAGE);
+  const paginatedDocuments = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return visibleDocuments.slice(start, start + ITEMS_PER_PAGE);
+  }, [visibleDocuments, currentPage]);
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [query, status, subject, level]);
 
   const refresh = async () => {
     const response = await fetch('/api/pdf', { cache: 'no-store' });
@@ -398,26 +415,27 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
   return (
     <>
       {/* ── Header ───────────────────────────────────────────── */}
-      <div className="flup-page-header">
+      <div className="flex justify-between items-start gap-4 mb-8 flex-wrap">
         <div>
-          <div className="inline-flex items-center gap-1.5 text-[var(--flup-brand)] bg-[var(--flup-brand-light)] border border-[var(--flup-border)] rounded-full px-3 py-1 text-xs font-bold mb-3">
+          <div className="inline-flex items-center gap-1.5 text-stitch-primary bg-stitch-primary-fixed border border-stitch-outline-variant rounded-full px-3 py-1 text-xs font-bold mb-3">
             <FileText size={15} />
             <span>/admin/pdf</span>
           </div>
-          <h1 className="flup-page-title">PDF académiques</h1>
+          <h1 className="font-stitch-headline text-3xl font-bold text-stitch-on-surface tracking-tight m-0">PDF académiques</h1>
         </div>
         <div className="flex flex-wrap justify-end gap-2.5">
           <button
             type="button"
             onClick={refresh}
-            className="flex items-center gap-2 bg-[var(--flup-surface)] text-[var(--flup-text-main)] border border-[var(--flup-border)] rounded-lg min-h-10 px-4 py-2.5 text-sm font-bold transition-colors hover:bg-[var(--flup-bg)] shadow-sm"
+            aria-label="Actualiser"
+            className="flex items-center gap-2 bg-stitch-surface-lowest text-stitch-on-surface border border-stitch-outline-variant rounded-stitch min-h-10 px-4 py-2.5 text-sm font-bold transition-colors hover:bg-stitch-surface-container shadow-stitch-sm"
           >
             <RefreshCw size={17} />
             Actualiser
           </button>
           <a
             href="/api/pdf"
-            className="flex items-center gap-2 bg-[var(--flup-surface)] text-[var(--flup-text-main)] border border-[var(--flup-border)] rounded-lg min-h-10 px-4 py-2.5 text-sm font-bold transition-colors hover:bg-[var(--flup-bg)] shadow-sm"
+            className="flex items-center gap-2 bg-stitch-surface-lowest text-stitch-on-surface border border-stitch-outline-variant rounded-stitch min-h-10 px-4 py-2.5 text-sm font-bold transition-colors hover:bg-stitch-surface-container shadow-stitch-sm"
           >
             <Download size={17} />
             JSON
@@ -425,8 +443,8 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
         </div>
       </div>
 
-      {/* ── Metrics row (Flup style) ───────────────────────────── */}
-      <div className="flup-kpi-grid">
+      {/* ── Metrics row ───────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
         <KpiCard icon={FileText}     iconColor="#0891b2" iconBg="#ecfeff" label="PDF"        value={metrics.totalPdfs} />
         <KpiCard icon={Check}        iconColor="#10b981" iconBg="#ecfdf5" label="Publiés"    value={metrics.publishedPdfs} />
         <KpiCard icon={PackagePlus}  iconColor="#8b5cf6" iconBg="#f5f3ff" label="Packs"      value={metrics.totalPacks} />
@@ -440,101 +458,121 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
       <div className="grid grid-cols-[340px_1fr] gap-5 items-start">
 
         {/* ── Upload form ─────────────────────────────────────── */}
-        <section className="flup-card">
-          <h2 className="inline-flex items-center gap-2 mb-4 text-base font-bold text-[var(--flup-text-main)]">
-            <UploadCloud size={18} className="text-[var(--flup-brand)]" />
+        <section className="bg-stitch-surface-lowest border border-stitch-outline-variant rounded-stitch p-6 shadow-stitch-sm">
+          <h2 className="inline-flex items-center gap-2 mb-4 text-base font-bold text-stitch-on-surface">
+            <UploadCloud size={18} className="text-stitch-primary" />
             Ajouter un PDF
           </h2>
 
           {message ? (
-            <div className="border border-[var(--flup-border)] bg-[var(--flup-bg)] rounded-lg p-3 text-[var(--flup-text-muted)] text-sm mb-3">
+            <div className="border border-stitch-outline-variant bg-stitch-surface rounded-stitch p-3 text-stitch-on-surface-variant text-sm mb-3">
               {message}
             </div>
           ) : null}
 
           <form onSubmit={submit}>
-            <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-3 mb-1.5">Titre</label>
+            <label className="block text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-3 mb-1.5">Titre</label>
             <input name="title" required placeholder="Analyse 2 - sujets corrigés"
-              className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 mb-2 text-sm focus:outline-none focus:border-[var(--flup-brand)] focus:ring-2 focus:ring-[var(--flup-brand-light)] transition" />
+              className="w-full border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 mb-2 text-sm focus:outline-none focus:border-stitch-primary focus:ring-2 focus:ring-stitch-primary/15 transition" />
 
-            <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-3 mb-1.5">Description</label>
+            <label className="block text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-3 mb-1.5">Description</label>
             <textarea name="description" required placeholder="Ce que l'étudiant trouvera dans le PDF"
-              className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 mb-2 text-sm min-h-[74px] resize-y focus:outline-none focus:border-[var(--flup-brand)] focus:ring-2 focus:ring-[var(--flup-brand-light)] transition" />
+              className="w-full border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 mb-2 text-sm min-h-[74px] resize-y focus:outline-none focus:border-stitch-primary focus:ring-2 focus:ring-stitch-primary/15 transition" />
 
             <div className="grid grid-cols-2 gap-2.5 mb-2">
               <div>
-                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Université</label>
+                <label className="block text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Université</label>
                 <input name="university" required defaultValue="Université de Douala"
-                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
+                  className="w-full border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary" />
               </div>
               <div>
-                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Filière / Faculté</label>
+                <label className="block text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Filière / Faculté</label>
                 <input name="faculty" required placeholder="Informatique"
-                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
+                  className="w-full border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5 mb-2">
               <div>
-                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Matière</label>
+                <label className="block text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Matière</label>
                 <input name="subject" required placeholder="Mathématiques"
-                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
+                  className="w-full border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary" />
               </div>
               <div>
-                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Professeur</label>
+                <label className="block text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Professeur</label>
                 <input name="teacher" placeholder="Pr. Nom"
-                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
+                  className="w-full border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5 mb-2">
               <div>
-                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Niveau</label>
+                <label className="block text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Niveau</label>
                 <input name="level" required placeholder="L2 Informatique"
-                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
+                  className="w-full border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary" />
               </div>
               <div>
-                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Année académique</label>
+                <label className="block text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Année académique</label>
                 <input name="academicYear" required defaultValue="2025-2026"
-                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
+                  className="w-full border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary" />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5 mb-2">
-              <div>
-                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Prix en Coins</label>
-                <input name="priceCoins" required type="number" min="0" step="50" defaultValue="300"
-                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
-              </div>
-              <div>
-                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Statut</label>
-                <select name="status" defaultValue="draft"
-                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]">
-                  <option value="draft">Brouillon</option>
-                  <option value="analyzing">Analyse IA</option>
-                  <option value="needs_review">À corriger</option>
-                  <option value="published">Publié</option>
-                  <option value="archived">Archive</option>
-                </select>
-              </div>
-            </div>
+            {/* Collapsible advanced section */}
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen(!advancedOpen)}
+              className="flex items-center gap-2 w-full text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-3 mb-2 hover:text-stitch-on-surface transition-colors"
+            >
+              {advancedOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              {advancedOpen ? 'Masquer les options' : 'Options avancées'}
+            </button>
 
-            <div className="grid grid-cols-2 gap-2.5 mb-2">
-              <div>
-                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Pages</label>
-                <input name="pageCount" type="number" min="1" defaultValue="20"
-                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
+            {advancedOpen && (
+              <div className="grid grid-cols-2 gap-2.5 mb-2">
+                <div>
+                  <label className="block text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Prix en Coins</label>
+                  <input name="priceCoins" type="number" min="0" step="50" defaultValue="300"
+                    className="w-full border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary" />
+                </div>
+                <div>
+                  <label className="block text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Statut</label>
+                  <select name="status" defaultValue="draft"
+                    className="w-full border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary">
+                    <option value="draft">Brouillon</option>
+                    <option value="analyzing">Analyse IA</option>
+                    <option value="needs_review">À corriger</option>
+                    <option value="published">Publié</option>
+                    <option value="archived">Archive</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Commission (%)</label>
-                <input name="commissionRate" type="number" min="0" max="100" defaultValue="20"
-                  className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]" />
-              </div>
-            </div>
+            )}
 
-            <label className="block text-[var(--flup-text-muted)] text-[12px] font-semibold uppercase tracking-wide mt-3 mb-1.5">Fichier PDF</label>
+            {!advancedOpen && (
+              <div className="grid grid-cols-2 gap-2.5 mb-2">
+                <div>
+                  <label className="block text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Prix en Coins</label>
+                  <input name="priceCoins" type="number" min="0" step="50" defaultValue="300"
+                    className="w-full border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary" />
+                </div>
+                <div>
+                  <label className="block text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-1 mb-1.5">Statut</label>
+                  <select name="status" defaultValue="draft"
+                    className="w-full border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary">
+                    <option value="draft">Brouillon</option>
+                    <option value="analyzing">Analyse IA</option>
+                    <option value="needs_review">À corriger</option>
+                    <option value="published">Publié</option>
+                    <option value="archived">Archive</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            <label className="block text-stitch-on-surface-variant text-[12px] font-semibold uppercase tracking-wide mt-3 mb-1.5">Fichier PDF</label>
             <input name="file" type="file" accept="application/pdf" required multiple onChange={onFileChange}
-              className="w-full border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 mb-1 text-sm file:mr-3 file:font-bold file:text-sm file:text-[var(--flup-brand)] file:border-0 file:bg-[var(--flup-brand-light)] file:rounded file:px-3 file:py-1 file:cursor-pointer" />
+              className="w-full border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 mb-1 text-sm file:mr-3 file:font-bold file:text-sm file:text-stitch-primary file:border-0 file:bg-stitch-primary-fixed file:rounded file:px-3 file:py-1 file:cursor-pointer" />
 
             <input type="hidden" name="aiSummary" />
             <input type="hidden" name="aiTags" />
@@ -546,11 +584,11 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
             <input type="hidden" name="extractedText" />
 
             {/* AI note */}
-            <div className="grid grid-cols-[34px_1fr] gap-2.5 items-center border border-[var(--flup-border)] rounded-lg bg-[var(--flup-brand-light)] p-3 mt-4 text-[var(--flup-text-main)]">
-              <Sparkles size={18} className="text-[var(--flup-brand)]" />
+            <div className="grid grid-cols-[34px_1fr] gap-2.5 items-center border border-stitch-outline-variant rounded-stitch bg-stitch-primary-fixed p-3 mt-4 text-stitch-on-surface">
+              <Sparkles size={18} className="text-stitch-primary" />
               <div>
-                <strong className="block text-[var(--flup-text-main)]">Analyse IA admin</strong>
-                <span className="text-[var(--flup-text-muted)] text-[13px] mt-0.5 block">Le PDF pré-remplit les champs, propose un prix, un résumé, des tags et un score avant publication.</span>
+                <strong className="block text-stitch-on-surface">Analyse IA admin</strong>
+                <span className="text-stitch-on-surface-variant text-[13px] mt-0.5 block">Le PDF pré-remplit les champs, propose un prix, un résumé, des tags et un score avant publication.</span>
               </div>
             </div>
 
@@ -558,7 +596,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
               <button
                 type="submit"
                 disabled={loading || analysisLoading}
-                className="flex items-center gap-2 bg-[var(--flup-brand)] text-white border-none rounded-lg min-h-10 px-5 py-2.5 text-sm font-bold transition-all hover:bg-[var(--flup-brand-hover)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(8,145,178,0.25)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                className="flex items-center gap-2 bg-stitch-primary text-stitch-on-primary border-none rounded-stitch min-h-10 px-5 py-2.5 text-sm font-bold transition-all hover:opacity-90 hover:shadow-stitch-md disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? 'Upload...' : analysisLoading ? 'Analyse...' : 'Enregistrer PDF'}
               </button>
@@ -567,9 +605,9 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
         </section>
 
         {/* ── Catalogue ───────────────────────────────────────── */}
-        <section className="flup-card">
-          <h2 className="inline-flex items-center gap-2 mb-4 text-base font-bold text-[var(--flup-text-main)]">
-            <FileText size={18} className="text-[var(--flup-brand)]" />
+        <section className="bg-stitch-surface-lowest border border-stitch-outline-variant rounded-stitch p-6 shadow-stitch-sm">
+          <h2 className="inline-flex items-center gap-2 mb-4 text-base font-bold text-stitch-on-surface">
+            <FileText size={18} className="text-stitch-primary" />
             Catalogue
           </h2>
 
@@ -579,12 +617,14 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher..."
-              className="border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]"
+              aria-label="Rechercher dans le catalogue"
+              className="border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary"
             />
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]"
+              aria-label="Filtrer par statut"
+              className="border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary"
             >
               <option value="all">Tous les statuts</option>
               <option value="published">Publiés</option>
@@ -597,13 +637,15 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Matière"
-              className="border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]"
+              aria-label="Filtrer par matière"
+              className="border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary"
             />
             <input
               value={level}
               onChange={(e) => setLevel(e.target.value)}
               placeholder="Niveau"
-              className="border border-[var(--flup-border)] rounded-lg bg-[var(--flup-surface)] text-[var(--flup-text-main)] px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--flup-brand)]"
+              aria-label="Filtrer par niveau"
+              className="border border-stitch-outline-variant rounded-stitch bg-stitch-surface text-stitch-on-surface px-3 py-2.5 text-sm focus:outline-none focus:border-stitch-primary"
             />
           </div>
 
@@ -611,27 +653,27 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
           <div className="overflow-x-auto">
             <table className="w-full table-fixed border-collapse">
               <thead>
-                <tr className="border-b border-[var(--flup-border)]">
+                <tr className="border-b border-stitch-outline-variant">
                   {['Document', 'Prix', 'Statut', 'Ventes', 'Revenu', 'Actions'].map((th) => (
-                    <th key={th} className="text-left text-[var(--flup-text-muted)] text-[12px] uppercase py-2.5 px-2.5 font-semibold tracking-wide">
+                    <th key={th} scope="col" className="text-left text-stitch-on-surface-variant text-[12px] uppercase py-2.5 px-2.5 font-semibold tracking-wide">
                       {th}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {visibleDocuments.map((document) => {
+                {paginatedDocuments.map((document) => {
                   const revenue = Math.round(document.salesCount * document.priceCoins * (document.commissionRate / 100));
                   return (
-                    <tr key={document.id} className="border-b border-[var(--flup-border-soft)] last:border-0 hover:bg-[var(--flup-bg)] transition-colors">
+                    <tr key={document.id} className="border-b border-stitch-surface-container last:border-0 hover:bg-stitch-surface-container-low transition-colors">
                       <td className="py-2.5 px-2.5">
-                        <div className="flex items-center gap-2 font-bold text-[var(--flup-text-main)]">
-                          <FileText size={16} className="shrink-0 text-[var(--flup-text-muted)]" />
+                        <div className="flex items-center gap-2 font-bold text-stitch-on-surface">
+                          <FileText size={16} className="shrink-0 text-stitch-on-surface-variant" />
                           <span className="break-all">{document.title}</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5 mt-1.5">
                           {[document.subject, document.level, document.teacher].map((tag) => (
-                            <span key={tag} className="inline-flex bg-[var(--flup-bg)] border border-[var(--flup-border)] px-2 py-0.5 text-[var(--flup-text-muted)] text-[11px] rounded-full font-medium">
+                            <span key={tag} className="inline-flex bg-stitch-surface-container border border-stitch-outline-variant px-2 py-0.5 text-stitch-on-surface-variant text-[11px] rounded-full font-medium">
                               {tag}
                             </span>
                           ))}
@@ -643,13 +685,14 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
                             type="number"
                             defaultValue={document.priceCoins}
                             step="50" min="0"
+                            aria-label={`Prix de ${document.title}`}
                             onBlur={(e) => {
                               const newPrice = parseInt(e.target.value, 10);
                               if (!isNaN(newPrice) && newPrice !== document.priceCoins) updatePrice(document.id, newPrice);
                             }}
-                            className="w-20 border border-[var(--flup-border)] rounded px-2 py-1 bg-[var(--flup-surface)] text-[var(--flup-text-main)] text-sm focus:outline-none focus:border-[var(--flup-brand)]"
+                            className="w-20 border border-stitch-outline-variant rounded px-2 py-1 bg-stitch-surface text-stitch-on-surface text-sm focus:outline-none focus:border-stitch-primary"
                           />
-                          <span className="text-[var(--flup-text-muted)] text-sm">C</span>
+                          <span className="text-stitch-on-surface-variant text-sm">C</span>
                         </div>
                       </td>
                       <td className="py-2.5 px-2.5">
@@ -657,38 +700,44 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
                           {document.status.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="py-2.5 px-2.5 text-sm font-semibold text-[var(--flup-text-main)]">{document.salesCount}</td>
-                      <td className="py-2.5 px-2.5 text-sm text-[var(--flup-text-muted)]">{formatCoins(revenue)} C</td>
+                      <td className="py-2.5 px-2.5 text-sm font-semibold text-stitch-on-surface">{document.salesCount}</td>
+                      <td className="py-2.5 px-2.5 text-sm text-stitch-on-surface-variant">{formatCoins(revenue)} C</td>
                       <td className="py-2.5 px-2.5">
                         <div className="flex gap-1 flex-nowrap">
                           <button onClick={() => reanalyze(document.id)}
-                            className="w-8 h-8 rounded-lg border border-[var(--flup-border)] bg-[var(--flup-bg)] text-[var(--flup-accent-blue)] flex items-center justify-center hover:bg-[var(--flup-brand-light)] hover:border-[var(--flup-brand)] transition-colors"
-                            title="Reanalyser IA">
+                            aria-label="Reanalyser avec IA"
+                            className="w-8 h-8 rounded-lg border border-stitch-outline-variant bg-stitch-surface text-stitch-primary flex items-center justify-center hover:bg-stitch-primary-fixed hover:border-stitch-primary transition-colors"
+                          >
                             <Sparkles size={16} />
                           </button>
                           <button onClick={() => updateStatus(document.id, 'published')}
-                            className="w-8 h-8 rounded-lg border border-[var(--flup-border)] bg-[var(--flup-bg)] text-[#059669] flex items-center justify-center hover:bg-[#ecfdf5] hover:border-[#10b981] transition-colors"
-                            title="Publier">
+                            aria-label="Publier"
+                            className="w-8 h-8 rounded-lg border border-stitch-outline-variant bg-stitch-surface text-stitch-success flex items-center justify-center hover:bg-stitch-success-light hover:border-stitch-success transition-colors"
+                          >
                             <Check size={16} />
                           </button>
                           <button onClick={() => updateStatus(document.id, 'needs_review')}
-                            className="w-8 h-8 rounded-lg border border-[var(--flup-border)] bg-[var(--flup-bg)] text-[#c2410c] flex items-center justify-center hover:bg-[#fff7ed] hover:border-[#f97316] transition-colors"
-                            title="À corriger">
+                            aria-label="Marquer à corriger"
+                            className="w-8 h-8 rounded-lg border border-stitch-outline-variant bg-stitch-surface text-[#c2410c] flex items-center justify-center hover:bg-[#fff7ed] hover:border-[#f97316] transition-colors"
+                          >
                             <CircleAlert size={16} />
                           </button>
                           <button onClick={() => updateStatus(document.id, 'draft')}
-                            className="w-8 h-8 rounded-lg border border-[var(--flup-border)] bg-[var(--flup-bg)] text-[#6d28d9] flex items-center justify-center hover:bg-[#f5f3ff] hover:border-[#8b5cf6] transition-colors"
-                            title="Brouillon">
+                            aria-label="Mettre en brouillon"
+                            className="w-8 h-8 rounded-lg border border-stitch-outline-variant bg-stitch-surface text-[#6d28d9] flex items-center justify-center hover:bg-[#f5f3ff] hover:border-[#8b5cf6] transition-colors"
+                          >
                             <FilePenLine size={16} />
                           </button>
                           <button onClick={() => updateStatus(document.id, 'archived')}
-                            className="w-8 h-8 rounded-lg border border-[var(--flup-border)] bg-[var(--flup-bg)] text-[var(--flup-text-muted)] flex items-center justify-center hover:bg-[var(--flup-border-soft)] transition-colors"
-                            title="Archiver">
+                            aria-label="Archiver"
+                            className="w-8 h-8 rounded-lg border border-stitch-outline-variant bg-stitch-surface text-stitch-on-surface-variant flex items-center justify-center hover:bg-stitch-surface-container transition-colors"
+                          >
                             <Archive size={16} />
                           </button>
                           <button onClick={() => remove(document.id)}
-                            className="w-8 h-8 rounded-lg border border-[var(--flup-border)] bg-[var(--flup-bg)] text-[#dc2626] flex items-center justify-center hover:bg-[#fef2f2] hover:border-[#dc2626] transition-colors"
-                            title="Supprimer">
+                            aria-label="Supprimer"
+                            className="w-8 h-8 rounded-lg border border-stitch-outline-variant bg-stitch-surface text-stitch-error flex items-center justify-center hover:bg-stitch-error-light hover:border-stitch-error transition-colors"
+                          >
                             <Trash2 size={16} />
                           </button>
                         </div>
@@ -696,9 +745,9 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
                     </tr>
                   );
                 })}
-                {visibleDocuments.length === 0 && (
+                {paginatedDocuments.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-[var(--flup-text-muted)]">
+                    <td colSpan={6} className="py-12 text-center text-stitch-on-surface-variant">
                       Aucun PDF trouvé.
                     </td>
                   </tr>
@@ -706,6 +755,60 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-stitch-outline-variant mt-4">
+              <span className="text-[13px] text-stitch-on-surface-variant">
+                {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, visibleDocuments.length)} sur {visibleDocuments.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  aria-label="Page précédente"
+                  className="w-8 h-8 flex items-center justify-center rounded-stitch-sm text-stitch-on-surface-variant hover:bg-stitch-surface-container hover:text-stitch-on-surface disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let page: number;
+                  if (totalPages <= 5) {
+                    page = i + 1;
+                  } else if (currentPage <= 3) {
+                    page = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    page = totalPages - 4 + i;
+                  } else {
+                    page = currentPage - 2 + i;
+                  }
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      aria-label={`Page ${page}`}
+                      aria-current={currentPage === page ? 'page' : undefined}
+                      className={`w-8 h-8 flex items-center justify-center rounded-stitch-sm text-[13px] font-medium transition-colors ${
+                        currentPage === page
+                          ? 'bg-stitch-primary text-stitch-on-primary'
+                          : 'text-stitch-on-surface-variant hover:bg-stitch-surface-container hover:text-stitch-on-surface'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  aria-label="Page suivante"
+                  className="w-8 h-8 flex items-center justify-center rounded-stitch-sm text-stitch-on-surface-variant hover:bg-stitch-surface-container hover:text-stitch-on-surface disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       </div>
     </>

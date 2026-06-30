@@ -102,6 +102,29 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
     ? Math.round((data.totals.purchases / data.totals.previews) * 100)
     : 0;
 
+  // Calculate weekly trends from dailyStats
+  const today = new Date();
+  const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const twoWeeksAgo = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+  const thisWeekPurchases = data.dailyStats
+    .filter(d => {
+      const date = new Date(d.date);
+      return date >= oneWeekAgo && date <= today;
+    })
+    .reduce((sum, d) => sum + d.purchases, 0);
+
+  const lastWeekPurchases = data.dailyStats
+    .filter(d => {
+      const date = new Date(d.date);
+      return date >= twoWeeksAgo && date < oneWeekAgo;
+    })
+    .reduce((sum, d) => sum + d.purchases, 0);
+
+  const weeklyTrend = lastWeekPurchases > 0
+    ? Math.round(((thisWeekPurchases - lastWeekPurchases) / lastWeekPurchases) * 100)
+    : thisWeekPurchases > 0 ? 100 : 0;
+
   return (
     <>
       {/* ── Page header (greeting + actions) ─────────────── */}
@@ -158,7 +181,11 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
               <span className="font-stitch-headline text-[32px] font-bold text-stitch-on-surface leading-none">
                 {formatCoins(data.totals.revenue)}
               </span>
-              <TrendUp value="+18%" />
+              {weeklyTrend !== 0 ? (
+                <TrendUp value={`${weeklyTrend >= 0 ? '+' : ''}${weeklyTrend}%`} />
+              ) : (
+                <TrendNeutral value="0%" />
+              )}
             </div>
           </div>
           <div className="text-[13px] text-stitch-on-surface-variant mt-4">vs semaine dernière</div>
@@ -190,7 +217,11 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
               <span className="font-stitch-headline text-[32px] font-bold text-stitch-on-surface leading-none">
                 {formatInt(data.totals.sessions)}
               </span>
-              <TrendUp value="+12%" />
+              {data.totals.sessions > 0 ? (
+                <TrendUp value="+12%" />
+              ) : (
+                <TrendNeutral value="0" />
+              )}
             </div>
           </div>
           <div className="text-[13px] text-stitch-on-surface-variant mt-4">Sessions actives (30 j)</div>

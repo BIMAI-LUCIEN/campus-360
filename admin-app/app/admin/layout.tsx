@@ -29,21 +29,21 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     items: [
       { href: '/admin/analytics', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
       { href: '/admin/pdf',       icon: <BookOpen size={18} />,       label: 'PDF Catalogue' },
-      { href: '#',                icon: <Package size={18} />,       label: 'Packs' },
+      { href: '/admin/packs',     icon: <Package size={18} />,        label: 'Packs' },
       { href: '/admin/users',     icon: <Users size={18} />,          label: 'Étudiants' },
     ],
   },
   {
     label: 'ANALYTICS',
     items: [
-      { href: '#', icon: <BarChart3 size={18} />, label: 'Analytics' },
-      { href: '/admin/reports', icon: <FileText size={18} />, label: 'Rapports' },
+      { href: '/admin/analytics', icon: <BarChart3 size={18} />, label: 'Analytics' },
+      { href: '/admin/reports',    icon: <FileText size={18} />,  label: 'Rapports' },
     ],
   },
   {
     label: 'SYSTÈME',
     items: [
-      { href: '#', icon: <Settings size={18} />, label: 'Configuration' },
+      { href: '/admin/settings', icon: <Settings size={18} />, label: 'Configuration' },
     ],
   },
 ];
@@ -117,6 +117,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   <Link
                     key={item.href + item.label}
                     href={item.href}
+                    aria-current={isActive ? 'page' : undefined}
                     className={`${linkBase} ${isActive ? linkActive : linkIdle}`}
                   >
                     {item.icon}
