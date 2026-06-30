@@ -5,9 +5,8 @@
   "scripts": {
     "css:build": "node scripts/prebuild-css.mjs",
     "predev": "npm run css:build",
-    "prebuild": "npm run css:build",
+    "build": "npm run css:build && next build",
     "dev": "next dev -p 3001",
-    "build": "next build",
     "start": "next start -p 3001",
     "typecheck": "tsc --noEmit",
     "auth:migrate": "auth migrate",
