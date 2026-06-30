@@ -1,0 +1,16 @@
+fix(admin): commit prebuilt globals.compiled.css to bypass Vercel buildCommand
+
+With framework nextjs in vercel.json, Vercels Next.js builder runs
+next build directly and doesnt honor the custom buildCommand chain
+(npm run css:build && npm run build). Result: webpack tries to
+resolve ./globals.compiled.css from globals.css and fails because
+the css:build step never ran.
+
+Committing the prebuilt CSS to the repo makes it available at checkout
+time regardless of how Vercel invokes the build pipeline. The css:build
+script (run via predev hook locally) still regenerates it during local
+development when source CSS changes -- devs then re-commit the compiled
+output. This trades a 66 KB file in git for a build that succeeds on
+first try.
+
+Removed the corresponding line from .gitignore.
