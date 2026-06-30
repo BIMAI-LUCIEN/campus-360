@@ -1,20 +1,15 @@
 @import "tailwindcss";
-@config "../tailwind.config.ts";
 
 /*
- * Tailwind v4 prefers content-scanning via @source paths in CSS, but on
- * Vercel the effective cwd of the PostCSS step is unpredictable and the
- * scanner reliably finds zero .ts/.tsx files, leaving the dashboard
- * unstyled on production (verified: the deployed CSS bundle contained
- * only @theme + reset, no utility classes, even after multiple @source
- * and @config attempts with various relative paths).
- *
- * If Vercel is stripping the @config directive entirely (in which case
- * Tailwind defaults to its cwd-relative scan and finds nothing in the
- * monorepo layout), the only reliable fix is to set the project's
- * "Root Directory" to "admin-app" in Vercel project settings. The
- * tailwind.config.ts lives next to app/ for exactly that reason.
+ * Tailwind v4 content-scanning — explicit @source paths ensure the
+ * scanner finds the .tsx files regardless of cwd (critical for monorepo
+ * builds on Vercel where the PostCSS cwd is unpredictable). Previous
+ * attempts used @config "../tailwind.config.ts" which Vercel silently
+ * strips, leaving the bundle with only @theme + reset.
  */
+@source "../app/**/*.{ts,tsx}";
+@source "../lib/**/*.{ts,tsx}";
+@source "../middleware.ts";
 
 /*
  * ─── Fonts (loaded via <link> tags in app/layout.tsx, see below) ───
