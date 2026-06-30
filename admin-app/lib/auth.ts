@@ -114,8 +114,6 @@ const sessionCookieConfig = {
 // Build the Better Auth config. We conditionally add Google so a missing
 // Google config doesn't break the whole auth system.
 const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
-  // Resolve and validate BETTER_AUTH_SECRET here so the throw only fires
-  // when the auth instance is actually needed — never at module load.
   const authSecret = process.env.BETTER_AUTH_SECRET?.trim();
   if (!authSecret) {
     if (isProd) {
@@ -290,30 +288,35 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
   return config;
 };
 
-// Lazy `auth` instance: Next.js evaluates modules during "Collecting page data"
-// at build time. Instantiating Better Auth eagerly requires BETTER_AUTH_SECRET
-// (and would connect to the DB through the lazy `databasePool`). Deferring
-// instantiation to the first property access (`auth.handler(...)`,
-// `auth.api.signInEmail(...)`, etc.) keeps the build green even when those
-// env vars aren't exposed during builds on Vercel. The exported `auth` object
-// is a Proxy, so all existing call sites (`auth.handler`, `auth.api.*`,
-// `auth.options`) keep working without changes.
-let _authInstance: ReturnType<typeof betterAuth> | undefined;
-const initAuth = (): ReturnType<typeof betterAuth> => {
-  if (!_authInstance) {
-    _authInstance = betterAuth(buildBetterAuthConfig());
-  }
-  return _authInstance;
-};
+// Initialize Better Auth at module load, but DON'T throw if env vars are
+// missing. Vercel builds (and local dev without .env) won't have
+// BETTER_AUTH_SECRET / DATABASE_URL set, and we don't want module-load
+// errors to break the build. When init fails, the exported `auth` is a
+// throwing Proxy that surfaces a clear error on first use.
+//
+// Previous version used a forward-Proxy that lazy-initialized the auth
+// instance on first property access. better-auth's internals (Symbol
+// keys, `for in`, property assignment) didn't behave correctly through
+// the Proxy and caused runtime 500s even when env vars were set.
+let _authInstance: ReturnType<typeof betterAuth> | null = null;
+try {
+  _authInstance = betterAuth(buildBetterAuthConfig());
+} catch (err) {
+  // BETTER_AUTH_SECRET / DATABASE_URL missing or invalid — leave the
+  // instance null. The throwing Proxy below will surface a clear error
+  // if/when auth is actually used.
+  console.warn(`[auth] Better Auth not initialized at module load: ${(err as Error).message}`);
+}
 
-type AuthShape = ReturnType<typeof betterAuth>;
-export const auth = new Proxy({} as AuthShape, {
-  get(_target, prop) {
-    const inst = initAuth();
-    const value = (inst as unknown as Record<PropertyKey, unknown>)[prop];
-    return typeof value === 'function' ? (value as Function).bind(inst) : value;
+const notConfiguredAuth = new Proxy({} as ReturnType<typeof betterAuth>, {
+  get() {
+    throw new Error(
+      'Better Auth is not configured (check BETTER_AUTH_SECRET, DATABASE_URL, etc.)',
+    );
   },
 });
+
+export const auth = (_authInstance ?? notConfiguredAuth) as ReturnType<typeof betterAuth>;
 
 export const AUTH_LIMITS = {
   ...LOGIN_THROTTLE_LIMITS,

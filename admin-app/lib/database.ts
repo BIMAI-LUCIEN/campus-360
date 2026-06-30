@@ -5,7 +5,7 @@ declare global {
   var campusDatabasePool: Pool | undefined;
 }
 
-const createPool = () => {
+const createPool = (): Pool => {
   if (!process.env.DATABASE_URL) {
     throw new Error('DATABASE_URL is required.');
   }
@@ -36,31 +36,38 @@ const createPool = () => {
   return new Pool(config);
 };
 
-// Lazy pool: Next.js evaluates route modules during "Collecting page data"
-// at build time, and Vercel does NOT expose DATABASE_URL during builds.
-// Creating the Pool eagerly here would throw and break the build, even
-// though the connection is only ever needed at request time. We expose a
-// Proxy that resolves to the real Pool on first property access (e.g.
-// `databasePool.query(...)`). The existing call sites are unchanged.
-let _databasePool: Pool | undefined;
-const getDatabasePool = (): Pool => {
-  if (!_databasePool) {
-    const pool = globalThis.campusDatabasePool ?? createPool();
-    pool.on('error', (error) => {
-      console.error('PostgreSQL idle connection was discarded.', error.message);
-    });
-    if (process.env.NODE_ENV !== 'production') {
-      globalThis.campusDatabasePool = pool;
-    }
-    _databasePool = pool;
+// Initialize the pool at module load, but DON'T throw if DATABASE_URL is
+// missing. Vercel builds (and local dev without .env) won't have the env
+// var set, and we don't want module-load errors to break the build. When
+// the env var IS missing, the exported `databasePool` is a throwing
+// Proxy that surfaces a clear error on first use, instead of a real
+// Pool that better-auth's introspection might break.
+//
+// Previous version used a forward-Proxy that lazy-created the Pool on
+// first property access. better-auth's internals (Symbol keys, `for in`,
+// property assignment) didn't behave correctly through the Proxy and
+// caused runtime 500s even when env vars were set.
+let _databasePool: Pool | null = null;
+try {
+  _databasePool = globalThis.campusDatabasePool ?? createPool();
+  _databasePool.on('error', (error) => {
+    console.error('PostgreSQL idle connection was discarded.', error.message);
+  });
+  if (process.env.NODE_ENV !== 'production' && _databasePool) {
+    globalThis.campusDatabasePool = _databasePool;
   }
-  return _databasePool;
-};
+} catch (err) {
+  // DATABASE_URL missing — leave _databasePool null. The throwing Proxy
+  // below will surface a clear error if/when the pool is actually used.
+  console.warn(
+    `[database] Pool not initialized at module load: ${(err as Error).message}`,
+  );
+}
 
-export const databasePool: Pool = new Proxy({} as Pool, {
-  get(_target, prop) {
-    const pool = getDatabasePool();
-    const value = (pool as unknown as Record<PropertyKey, unknown>)[prop];
-    return typeof value === 'function' ? (value as Function).bind(pool) : value;
+const notConfiguredPool = new Proxy({} as Pool, {
+  get() {
+    throw new Error('DATABASE_URL is required.');
   },
 });
+
+export const databasePool: Pool = _databasePool ?? notConfiguredPool;
