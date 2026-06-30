@@ -36,6 +36,7 @@ expo-start*.log
 .env*.local
 admin-app/.env.local
 admin-app/.next/
+admin-app/app/globals.compiled.css
 admin-app/*.sqlite
 admin-app/*.sqlite-*
 admin-app/public/uploads/pdfs/*
