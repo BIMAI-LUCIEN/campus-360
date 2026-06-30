@@ -36,12 +36,31 @@ const createPool = () => {
   return new Pool(config);
 };
 
-export const databasePool = globalThis.campusDatabasePool ?? createPool();
+// Lazy pool: Next.js evaluates route modules during "Collecting page data"
+// at build time, and Vercel does NOT expose DATABASE_URL during builds.
+// Creating the Pool eagerly here would throw and break the build, even
+// though the connection is only ever needed at request time. We expose a
+// Proxy that resolves to the real Pool on first property access (e.g.
+// `databasePool.query(...)`). The existing call sites are unchanged.
+let _databasePool: Pool | undefined;
+const getDatabasePool = (): Pool => {
+  if (!_databasePool) {
+    const pool = globalThis.campusDatabasePool ?? createPool();
+    pool.on('error', (error) => {
+      console.error('PostgreSQL idle connection was discarded.', error.message);
+    });
+    if (process.env.NODE_ENV !== 'production') {
+      globalThis.campusDatabasePool = pool;
+    }
+    _databasePool = pool;
+  }
+  return _databasePool;
+};
 
-databasePool.on('error', (error) => {
-  console.error('PostgreSQL idle connection was discarded.', error.message);
+export const databasePool: Pool = new Proxy({} as Pool, {
+  get(_target, prop) {
+    const pool = getDatabasePool();
+    const value = (pool as unknown as Record<PropertyKey, unknown>)[prop];
+    return typeof value === 'function' ? (value as Function).bind(pool) : value;
+  },
 });
-
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.campusDatabasePool = databasePool;
-}
