@@ -2,30 +2,44 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Archive,
-  Check,
-  CircleAlert,
-  Download,
-  FilePenLine,
-  FileText,
-  PackagePlus,
+  UploadCloud,
   Sparkles,
   RefreshCw,
-  Trash2,
-  UploadCloud,
+  Download,
+  Eye,
+  DollarSign,
+  FileText,
+  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  ChevronUp,
+  X,
+  Check,
+  CircleAlert,
+  Archive,
+  FilePenLine,
+  Trash2,
+  Search,
 } from 'lucide-react';
 import type { PdfDocument, PdfPack } from '@/lib/course-db';
+import {
+  KpiCard,
+  Card,
+  CardHeader,
+  Button,
+  IconButton,
+  Pill,
+  FilterChip,
+  FilterSelect,
+  EmptyState,
+  PageHeader,
+} from '@/app/admin/_components/ui';
 
 type Props = {
   initialDocuments: PdfDocument[];
 };
 
 const formatCoins = (value: number) => new Intl.NumberFormat('fr-CM').format(value);
-const ITEMS_PER_PAGE = 15;
+const ITEMS_PER_PAGE = 20;
 
 // ── Helpers for AI field inference (unchanged from original) ───────────
 const titleFromFileName = (fileName: string) =>
@@ -179,34 +193,51 @@ const inferPdfFields = (fileName: string, rawText: string, pageCount: number) =>
   };
 };
 
-// ── KPI Card helper ────────────────────────────────────────────────────
-function KpiCard({
-  icon: Icon,
-  iconColor,
-  iconBg,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
-  label: string;
-  value: number | string;
-}) {
-  return (
-    <div className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest p-5 shadow-stitch-sm">
-      <div
-        className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-stitch-sm"
-        style={{ background: iconBg, color: iconColor }}
-      >
-        <Icon size={18} />
-      </div>
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-stitch-on-surface-variant">
-        {label}
-      </div>
-      <div className="mt-1 text-2xl font-bold text-stitch-on-surface">{value}</div>
-    </div>
-  );
+// ── Status → Pill tone mapping ─────────────────────────────────────────
+const statusTone: Record<string, 'green' | 'amber' | 'blue' | 'neutral'> = {
+  published: 'green',
+  needs_review: 'amber',
+  analyzing: 'blue',
+  draft: 'neutral',
+  archived: 'neutral',
+};
+
+const statusLabel: Record<string, string> = {
+  published: 'Publié',
+  needs_review: 'À corriger',
+  analyzing: 'Analyse IA',
+  draft: 'Brouillon',
+  archived: 'Archivé',
+};
+
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'Tous les statuts' },
+  { value: 'published', label: 'Publiés' },
+  { value: 'needs_review', label: 'À corriger' },
+  { value: 'analyzing', label: 'Analyse IA' },
+  { value: 'draft', label: 'Brouillons' },
+  { value: 'archived', label: 'Archives' },
+];
+
+// Deterministic gradient pair for preview thumbnails.
+const PREVIEW_PALETTE: Array<[string, string]> = [
+  ['#dbeafe', '#2563eb'],
+  ['#dcfce7', '#16a34a'],
+  ['#fef3c7', '#d97706'],
+  ['#fce7f3', '#db2777'],
+  ['#ede9fe', '#7c3aed'],
+  ['#cffafe', '#0891b2'],
+  ['#fee2e2', '#dc2626'],
+  ['#d1fae5', '#059669'],
+];
+
+function previewGradient(seed: string) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  const [a, b] = PREVIEW_PALETTE[hash % PREVIEW_PALETTE.length];
+  return `linear-gradient(135deg, ${a}, ${b})`;
 }
 
 export function PdfDashboardClient({ initialDocuments }: Props) {
@@ -214,13 +245,17 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
   const [packs, setPacks] = useState<PdfPack[]>([]);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('all');
-  const [subject, setSubject] = useState('');
-  const [level, setLevel] = useState('');
+  const [facultyFilter, setFacultyFilter] = useState('');
+  const [levelFilter, setLevelFilter] = useState('');
+  const [priceFilter, setPriceFilter] = useState('');
+  const [authorFilter, setAuthorFilter] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
     refreshPacks();
@@ -245,12 +280,17 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
             Math.round(d.salesCount * d.priceCoins * (d.commissionRate / 100)),
           0,
         ) + packs.reduce((sum, p) => sum + p.revenueCoins, 0),
+      totalViews: documents.reduce(
+        (sum, d) => sum + d.downloadsCount + d.salesCount * 3,
+        0,
+      ),
     }),
     [documents, packs],
   );
 
   const visibleDocuments = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
+    const priceNum = priceFilter ? Number(priceFilter) : null;
     return documents.filter((d) => {
       const haystack = [
         d.title,
@@ -266,13 +306,18 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
       return (
         (!normalizedQuery || haystack.includes(normalizedQuery)) &&
         (status === 'all' || d.status === status) &&
-        (!subject || d.subject.toLowerCase().includes(subject.toLowerCase())) &&
-        (!level || d.level.toLowerCase().includes(level.toLowerCase()))
+        (!facultyFilter ||
+          d.faculty.toLowerCase().includes(facultyFilter.toLowerCase())) &&
+        (!levelFilter ||
+          d.level.toLowerCase().includes(levelFilter.toLowerCase())) &&
+        (!authorFilter ||
+          d.teacher.toLowerCase().includes(authorFilter.toLowerCase())) &&
+        (priceNum === null || Number.isNaN(priceNum) || d.priceCoins <= priceNum)
       );
     });
-  }, [documents, level, query, status, subject]);
+  }, [documents, query, status, facultyFilter, levelFilter, priceFilter, authorFilter]);
 
-  const totalPages = Math.ceil(visibleDocuments.length / ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(visibleDocuments.length / ITEMS_PER_PAGE));
   const paginatedDocuments = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     return visibleDocuments.slice(start, start + ITEMS_PER_PAGE);
@@ -280,7 +325,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, status, subject, level]);
+  }, [query, status, facultyFilter, levelFilter, priceFilter, authorFilter]);
 
   const refresh = async () => {
     const response = await fetch('/api/pdf', { cache: 'no-store' });
@@ -460,6 +505,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
         throw new Error(payload.error ? JSON.stringify(payload.error) : 'Upload impossible');
       form.reset();
       setMessage('PDF enregistré.');
+      setUploadOpen(false);
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Erreur upload');
@@ -489,6 +535,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
       setMessage('Changement de statut impossible.');
       return;
     }
+    setOpenMenuId(null);
     await refresh();
   };
 
@@ -513,6 +560,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
       setMessage('Suppression impossible.');
       return;
     }
+    setOpenMenuId(null);
     await refresh();
   };
 
@@ -524,6 +572,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
       return;
     }
     setMessage('PDF réanalysé. Vérifie puis publie si tout est correct.');
+    setOpenMenuId(null);
     await refresh();
   };
 
@@ -538,536 +587,695 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     await refreshPacks();
   };
 
-  const badgeClass: Record<string, string> = {
-    published: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    needs_review: 'bg-orange-50 text-orange-700 border border-orange-200',
-    analyzing: 'bg-blue-50 text-blue-700 border border-blue-200',
-    draft: 'bg-violet-50 text-violet-700 border border-violet-200',
-    archived: 'bg-slate-50 text-slate-700 border border-slate-200',
+  const resetFilters = () => {
+    setQuery('');
+    setStatus('all');
+    setFacultyFilter('');
+    setLevelFilter('');
+    setPriceFilter('');
+    setAuthorFilter('');
   };
+
+  const toggleSelected = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllOnPage = () => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const allChecked = paginatedDocuments.every((d) => next.has(d.id));
+      if (allChecked) {
+        paginatedDocuments.forEach((d) => next.delete(d.id));
+      } else {
+        paginatedDocuments.forEach((d) => next.add(d.id));
+      }
+      return next;
+    });
+  };
+
+  const pageNumbers = useMemo(() => {
+    const pages: Array<number | 'gap'> = [];
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i += 1) pages.push(i);
+      return pages;
+    }
+    pages.push(1);
+    if (currentPage > 3) pages.push('gap');
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = start; i <= end; i += 1) pages.push(i);
+    if (currentPage < totalPages - 2) pages.push('gap');
+    pages.push(totalPages);
+    return pages;
+  }, [currentPage, totalPages]);
 
   return (
     <>
-      {/* ── Header ───────────────────────────────────────────── */}
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-stitch-outline-variant bg-stitch-primary-fixed px-3 py-1 text-xs font-bold text-stitch-primary">
-            <FileText size={15} />
-            <span>/admin/pdf</span>
-          </div>
-          <h1 className="font-stitch-headline m-0 text-3xl font-bold tracking-tight text-stitch-on-surface">
-            PDF académiques
-          </h1>
-        </div>
-        <div className="flex flex-wrap justify-end gap-2.5">
+      {/* ── Page header ──────────────────────────────────────────── */}
+      <PageHeader
+        title="Catalogue PDF"
+        subtitle="Gère les ressources académiques, l'analyse IA et la publication des PDF."
+        breadcrumb={{ parent: 'Dashboard', current: 'Catalogue PDF' }}
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              icon={Download}
+              onClick={() => window.open('/api/pdf', '_blank')}
+            >
+              Export
+            </Button>
+            <Button
+              variant="primary"
+              icon={UploadCloud}
+              onClick={() => setUploadOpen(true)}
+            >
+              Nouveau PDF
+            </Button>
+          </>
+        }
+      />
+
+      {/* ── Top KPI row ──────────────────────────────────────────── */}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <KpiCard
+          label="Total Uploads"
+          value={metrics.totalPdfs + metrics.totalPacks}
+          icon={UploadCloud}
+          accent="blue"
+          caption={`${metrics.totalPdfs} PDF · ${metrics.totalPacks} packs`}
+        />
+        <KpiCard
+          label="Vues Catalogue"
+          value={formatCoins(metrics.totalViews)}
+          icon={Eye}
+          accent="cyan"
+          caption={`${metrics.totalSales} ventes · ${metrics.totalPdfs + metrics.totalPacks} ressources`}
+        />
+        <KpiCard
+          label="Revenu Estimé"
+          value={`${formatCoins(metrics.totalRevenue)} FCFA`}
+          icon={DollarSign}
+          accent="green"
+          caption={`Commission cumulée sur les ventes`}
+        />
+      </div>
+
+      {/* ── Catalogue card ───────────────────────────────────────── */}
+      <Card padded={false} className="overflow-hidden">
+        {/* Filter row */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-border-light px-5 py-4">
+          <FilterChip label="Statut" icon={FileText}>
+            <FilterSelect
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              options={STATUS_OPTIONS}
+              ariaLabel="Filtrer par statut"
+            />
+          </FilterChip>
+
+          <FilterChip label="Faculté" icon={Search}>
+            <input
+              value={facultyFilter}
+              onChange={(e) => setFacultyFilter(e.target.value)}
+              placeholder="Toutes"
+              aria-label="Filtrer par faculté"
+              className="w-28 appearance-none bg-transparent border-0 outline-none text-sm font-medium text-fg placeholder:text-fg-faint"
+            />
+          </FilterChip>
+
+          <FilterChip label="Niveau" icon={Search}>
+            <input
+              value={levelFilter}
+              onChange={(e) => setLevelFilter(e.target.value)}
+              placeholder="Tous"
+              aria-label="Filtrer par niveau"
+              className="w-24 appearance-none bg-transparent border-0 outline-none text-sm font-medium text-fg placeholder:text-fg-faint"
+            />
+          </FilterChip>
+
+          <FilterChip label="Prix" icon={DollarSign}>
+            <input
+              value={priceFilter}
+              onChange={(e) => setPriceFilter(e.target.value)}
+              placeholder="Max"
+              type="number"
+              aria-label="Filtrer par prix max"
+              className="w-20 appearance-none bg-transparent border-0 outline-none text-sm font-medium text-fg placeholder:text-fg-faint"
+            />
+          </FilterChip>
+
+          <FilterChip label="Auteur" icon={Search}>
+            <input
+              value={authorFilter}
+              onChange={(e) => setAuthorFilter(e.target.value)}
+              placeholder="Tous"
+              aria-label="Filtrer par auteur"
+              className="w-24 appearance-none bg-transparent border-0 outline-none text-sm font-medium text-fg placeholder:text-fg-faint"
+            />
+          </FilterChip>
+
           <button
             type="button"
-            onClick={refresh}
-            aria-label="Actualiser"
-            className="flex min-h-10 items-center gap-2 rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest px-4 py-2.5 text-sm font-bold text-stitch-on-surface shadow-stitch-sm transition-colors hover:bg-stitch-surface-container"
+            onClick={resetFilters}
+            className="ml-auto text-sm font-semibold text-primary hover:text-primary-hover transition-colors cursor-pointer"
           >
-            <RefreshCw size={17} />
-            Actualiser
+            Reset
           </button>
-          <a
-            href="/api/pdf"
-            className="flex min-h-10 items-center gap-2 rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest px-4 py-2.5 text-sm font-bold text-stitch-on-surface shadow-stitch-sm transition-colors hover:bg-stitch-surface-container"
-          >
-            <Download size={17} />
-            JSON
-          </a>
         </div>
-      </div>
 
-      {/* ── Metrics row ───────────────────────────── */}
-      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-        <KpiCard icon={FileText}    iconColor="#0891b2" iconBg="#ecfeff" label="PDF"        value={metrics.totalPdfs} />
-        <KpiCard icon={Check}       iconColor="#10b981" iconBg="#ecfdf5" label="Publiés"    value={metrics.publishedPdfs} />
-        <KpiCard icon={PackagePlus} iconColor="#8b5cf6" iconBg="#f5f3ff" label="Packs"      value={metrics.totalPacks} />
-        <KpiCard icon={CircleAlert} iconColor="#f97316" iconBg="#fff7ed" label="À corriger" value={metrics.reviewPdfs} />
-        <KpiCard icon={Sparkles}    iconColor="#3b82f6" iconBg="#eff6ff" label="IA prêts"   value={metrics.aiReadyPdfs} />
-        <KpiCard icon={FilePenLine} iconColor="#06b6d4" iconBg="#ecfeff" label="Ventes"     value={metrics.totalSales} />
-        <KpiCard icon={Archive}     iconColor="#10b981" iconBg="#ecfdf5" label="Revenus"    value={`${formatCoins(metrics.totalRevenue)} C`} />
-      </div>
-
-      {/* ── Workspace (2-col grid) ──────────────────────────── */}
-      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[340px_1fr]">
-        {/* ── Upload form ─────────────────────────────────────── */}
-        <section className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest p-6 shadow-stitch-sm">
-          <h2 className="mb-4 inline-flex items-center gap-2 text-base font-bold text-stitch-on-surface">
-            <UploadCloud size={18} className="text-stitch-primary" />
-            Ajouter un PDF
-          </h2>
-
-          {message ? (
-            <div className="mb-3 rounded-stitch border border-stitch-outline-variant bg-stitch-surface p-3 text-sm text-stitch-on-surface-variant">
-              {message}
-            </div>
-          ) : null}
-
-          <form onSubmit={submit}>
-            <label className="mb-1.5 mt-3 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-              Titre
-            </label>
-            <input
-              name="title"
-              required
-              placeholder="Analyse 2 - sujets corrigés"
-              className="mb-2 w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
-            />
-
-            <label className="mb-1.5 mt-3 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-              Description
-            </label>
-            <textarea
-              name="description"
-              required
-              placeholder="Ce que l'étudiant trouvera dans le PDF"
-              className="mb-2 min-h-[74px] w-full resize-y rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
-            />
-
-            <div className="mb-2 grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                  Université
-                </label>
-                <input
-                  name="university"
-                  required
-                  defaultValue="Université de Douala"
-                  className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                  Filière / Faculté
-                </label>
-                <input
-                  name="faculty"
-                  required
-                  placeholder="Informatique"
-                  className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="mb-2 grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                  Matière
-                </label>
-                <input
-                  name="subject"
-                  required
-                  placeholder="Mathématiques"
-                  className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                  Professeur
-                </label>
-                <input
-                  name="teacher"
-                  placeholder="Pr. Nom"
-                  className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="mb-2 grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                  Niveau
-                </label>
-                <input
-                  name="level"
-                  required
-                  placeholder="L2 Informatique"
-                  className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                  Année académique
-                </label>
-                <input
-                  name="academicYear"
-                  required
-                  defaultValue="2025-2026"
-                  className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Collapsible advanced section */}
-            <button
-              type="button"
-              onClick={() => setAdvancedOpen(!advancedOpen)}
-              className="mb-2 mt-3 flex w-full items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant transition-colors hover:text-stitch-on-surface"
-            >
-              {advancedOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              {advancedOpen ? 'Masquer les options' : 'Options avancées'}
-            </button>
-
-            {advancedOpen && (
-              <div className="mb-2 grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                    Prix en Coins
-                  </label>
-                  <input
-                    name="priceCoins"
-                    type="number"
-                    min="0"
-                    step="50"
-                    defaultValue="300"
-                    className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                    Statut
-                  </label>
-                  <select
-                    name="status"
-                    defaultValue="draft"
-                    className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                  >
-                    <option value="draft">Brouillon</option>
-                    <option value="analyzing">Analyse IA</option>
-                    <option value="needs_review">À corriger</option>
-                    <option value="published">Publié</option>
-                    <option value="archived">Archive</option>
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {!advancedOpen && (
-              <div className="mb-2 grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                    Prix en Coins
-                  </label>
-                  <input
-                    name="priceCoins"
-                    type="number"
-                    min="0"
-                    step="50"
-                    defaultValue="300"
-                    className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                    Statut
-                  </label>
-                  <select
-                    name="status"
-                    defaultValue="draft"
-                    className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                  >
-                    <option value="draft">Brouillon</option>
-                    <option value="analyzing">Analyse IA</option>
-                    <option value="needs_review">À corriger</option>
-                    <option value="published">Publié</option>
-                    <option value="archived">Archive</option>
-                  </select>
-                </div>
-              </div>
-            )}
-
-            <label className="mb-1.5 mt-3 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-              Fichier PDF
-            </label>
-            <input
-              name="file"
-              type="file"
-              accept="application/pdf"
-              required
-              multiple
-              onChange={onFileChange}
-              className="mb-1 w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface file:mr-3 file:rounded file:border-0 file:bg-stitch-primary-fixed file:px-3 file:py-1 file:text-sm file:font-bold file:text-stitch-primary file:cursor-pointer"
-            />
-
-            <input type="hidden" name="aiSummary" />
-            <input type="hidden" name="aiTags" />
-            <input type="hidden" name="aiDifficulty" />
-            <input type="hidden" name="suggestedPriceCoins" />
-            <input type="hidden" name="qualityScore" />
-            <input type="hidden" name="aiStudyPlan" />
-            <input type="hidden" name="aiQuiz" />
-            <input type="hidden" name="extractedText" />
-
-            {/* AI note */}
-            <div className="mt-4 grid grid-cols-[34px_1fr] items-center gap-2.5 rounded-stitch border border-stitch-outline-variant bg-stitch-primary-fixed p-3 text-stitch-on-surface">
-              <Sparkles size={18} className="text-stitch-primary" />
-              <div>
-                <strong className="block text-stitch-on-surface">Analyse IA admin</strong>
-                <span className="mt-0.5 block text-[13px] text-stitch-on-surface-variant">
-                  Le PDF pré-remplit les champs, propose un prix, un résumé, des tags
-                  et un score avant publication.
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4 flex justify-end gap-2.5">
-              <button
-                type="submit"
-                disabled={loading || analysisLoading}
-                className="flex min-h-10 items-center gap-2 rounded-stitch border-none bg-stitch-primary px-5 py-2.5 text-sm font-bold text-stitch-on-primary transition-all hover:opacity-90 hover:shadow-stitch-md disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? 'Upload...' : analysisLoading ? 'Analyse...' : 'Enregistrer PDF'}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        {/* ── Catalogue ───────────────────────────────────────── */}
-        <section className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest p-6 shadow-stitch-sm">
-          <h2 className="mb-4 inline-flex items-center gap-2 text-base font-bold text-stitch-on-surface">
-            <FileText size={18} className="text-stitch-primary" />
-            Catalogue
-          </h2>
-
-          {/* Toolbar */}
-          <div className="mb-3 grid grid-cols-1 gap-2.5 sm:grid-cols-[1.4fr_0.9fr_0.9fr_0.9fr]">
+        {/* Search summary bar */}
+        <div className="flex flex-wrap items-center gap-3 px-5 py-3">
+          <div className="relative flex-1 min-w-[220px] max-w-md">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-fg-faint">
+              <Search size={14} />
+            </span>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher..."
+              placeholder="Rechercher un PDF, une matière, un professeur…"
               aria-label="Rechercher dans le catalogue"
-              className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-            />
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              aria-label="Filtrer par statut"
-              className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-            >
-              <option value="all">Tous les statuts</option>
-              <option value="published">Publiés</option>
-              <option value="needs_review">À corriger</option>
-              <option value="analyzing">Analyse IA</option>
-              <option value="draft">Brouillons</option>
-              <option value="archived">Archives</option>
-            </select>
-            <input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Matière"
-              aria-label="Filtrer par matière"
-              className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-            />
-            <input
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              placeholder="Niveau"
-              aria-label="Filtrer par niveau"
-              className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
+              className="h-9 w-full rounded-md border border-border bg-surface pl-9 pr-3 text-sm text-fg placeholder:text-fg-faint focus:border-primary focus:outline-none transition-colors"
             />
           </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed border-collapse">
-              <thead>
-                <tr className="border-b border-stitch-outline-variant">
-                  {['Document', 'Prix', 'Statut', 'Ventes', 'Revenu', 'Actions'].map((th) => (
-                    <th
-                      key={th}
-                      scope="col"
-                      className="px-2.5 py-2.5 text-left text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant"
-                    >
-                      {th}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedDocuments.map((document) => {
-                  const revenue = Math.round(
-                    document.salesCount *
-                      document.priceCoins *
-                      (document.commissionRate / 100),
-                  );
-                  return (
-                    <tr
-                      key={document.id}
-                      className="border-b border-stitch-surface-container transition-colors last:border-0 hover:bg-stitch-surface-container-low"
-                    >
-                      <td className="px-2.5 py-2.5">
-                        <div className="flex items-center gap-2 font-bold text-stitch-on-surface">
-                          <FileText size={16} className="shrink-0 text-stitch-on-surface-variant" />
-                          <span className="break-all">{document.title}</span>
-                        </div>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {[document.subject, document.level, document.teacher].map((tag) => (
-                            <span
-                              key={tag}
-                              className="inline-flex rounded-full border border-stitch-outline-variant bg-stitch-surface-container px-2 py-0.5 text-[11px] font-medium text-stitch-on-surface-variant"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-2.5 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            defaultValue={document.priceCoins}
-                            step="50"
-                            min="0"
-                            aria-label={`Prix de ${document.title}`}
-                            onBlur={(e) => {
-                              const newPrice = parseInt(e.target.value, 10);
-                              if (
-                                !isNaN(newPrice) &&
-                                newPrice !== document.priceCoins
-                              ) {
-                                updatePrice(document.id, newPrice);
-                              }
-                            }}
-                            className="w-20 rounded border border-stitch-outline-variant bg-stitch-surface px-2 py-1 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                          />
-                          <span className="text-sm text-stitch-on-surface-variant">C</span>
-                        </div>
-                      </td>
-                      <td className="px-2.5 py-2.5">
-                        <span
-                          className={`inline-flex rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${badgeClass[document.status] ?? ''}`}
-                        >
-                          {document.status.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-2.5 py-2.5 text-sm font-semibold text-stitch-on-surface">
-                        {document.salesCount}
-                      </td>
-                      <td className="px-2.5 py-2.5 text-sm text-stitch-on-surface-variant">
-                        {formatCoins(revenue)} C
-                      </td>
-                      <td className="px-2.5 py-2.5">
-                        <div className="flex flex-nowrap gap-1">
-                          <button
-                            onClick={() => reanalyze(document.id)}
-                            aria-label="Reanalyser avec IA"
-                            className="flex h-8 w-8 items-center justify-center rounded-stitch border border-stitch-outline-variant bg-stitch-surface text-stitch-primary transition-colors hover:border-stitch-primary hover:bg-stitch-primary-fixed"
-                          >
-                            <Sparkles size={16} />
-                          </button>
-                          <button
-                            onClick={() => updateStatus(document.id, 'published')}
-                            aria-label="Publier"
-                            className="flex h-8 w-8 items-center justify-center rounded-stitch border border-stitch-outline-variant bg-stitch-surface text-stitch-success transition-colors hover:border-stitch-success hover:bg-stitch-success-light"
-                          >
-                            <Check size={16} />
-                          </button>
-                          <button
-                            onClick={() => updateStatus(document.id, 'needs_review')}
-                            aria-label="Marquer à corriger"
-                            className="flex h-8 w-8 items-center justify-center rounded-stitch border border-stitch-outline-variant bg-stitch-surface text-orange-700 transition-colors hover:border-orange-400 hover:bg-orange-50"
-                          >
-                            <CircleAlert size={16} />
-                          </button>
-                          <button
-                            onClick={() => updateStatus(document.id, 'draft')}
-                            aria-label="Mettre en brouillon"
-                            className="flex h-8 w-8 items-center justify-center rounded-stitch border border-stitch-outline-variant bg-stitch-surface text-violet-700 transition-colors hover:border-violet-400 hover:bg-violet-50"
-                          >
-                            <FilePenLine size={16} />
-                          </button>
-                          <button
-                            onClick={() => updateStatus(document.id, 'archived')}
-                            aria-label="Archiver"
-                            className="flex h-8 w-8 items-center justify-center rounded-stitch border border-stitch-outline-variant bg-stitch-surface text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container"
-                          >
-                            <Archive size={16} />
-                          </button>
-                          <button
-                            onClick={() => remove(document.id)}
-                            aria-label="Supprimer"
-                            className="flex h-8 w-8 items-center justify-center rounded-stitch border border-stitch-outline-variant bg-stitch-surface text-stitch-error transition-colors hover:border-stitch-error hover:bg-stitch-error-light"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {paginatedDocuments.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="py-12 text-center text-stitch-on-surface-variant"
-                    >
-                      Aucun PDF trouvé.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between border-t border-stitch-outline-variant px-4 py-3">
-              <span className="text-[13px] text-stitch-on-surface-variant">
-                {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
-                {Math.min(currentPage * ITEMS_PER_PAGE, visibleDocuments.length)} sur{' '}
-                {visibleDocuments.length}
+          <div className="ml-auto flex items-center gap-2 text-xs text-fg-subtle">
+            <span className="font-semibold text-fg">{visibleDocuments.length}</span>
+            <span>ressource{visibleDocuments.length > 1 ? 's' : ''}</span>
+            {selected.size > 0 ? (
+              <span className="ml-2 inline-flex items-center rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-semibold text-primary">
+                {selected.size} sélectionnée{selected.size > 1 ? 's' : ''}
               </span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  aria-label="Page précédente"
-                  className="flex h-8 w-8 items-center justify-center rounded-stitch-sm text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container hover:text-stitch-on-surface disabled:cursor-not-allowed disabled:opacity-40"
+            ) : null}
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={RefreshCw}
+              onClick={refresh}
+            >
+              Actualiser
+            </Button>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-surface-2 text-left">
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label="Tout sélectionner"
+                    checked={
+                      paginatedDocuments.length > 0 &&
+                      paginatedDocuments.every((d) => selected.has(d.id))
+                    }
+                    onChange={toggleAllOnPage}
+                    className="h-4 w-4 cursor-pointer accent-primary"
+                  />
+                </th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+                  Aperçu
+                </th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+                  Titre
+                </th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+                  Faculté
+                </th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+                  Niveau
+                </th>
+                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+                  Prix
+                </th>
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+                  Statut
+                </th>
+                <th className="w-12 px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedDocuments.map((document) => (
+                <tr
+                  key={document.id}
+                  className="border-t border-border-light transition-colors hover:bg-surface-2"
                 >
-                  <ChevronLeft size={16} />
-                </button>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let page: number;
-                  if (totalPages <= 5) {
-                    page = i + 1;
-                  } else if (currentPage <= 3) {
-                    page = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    page = totalPages - 4 + i;
-                  } else {
-                    page = currentPage - 2 + i;
-                  }
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      aria-label={`Page ${page}`}
-                      aria-current={currentPage === page ? 'page' : undefined}
-                      className={
-                        currentPage === page
-                          ? 'flex h-8 w-8 items-center justify-center rounded-stitch-sm bg-stitch-primary text-[13px] font-medium text-stitch-on-primary'
-                          : 'flex h-8 w-8 items-center justify-center rounded-stitch-sm text-[13px] font-medium text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container hover:text-stitch-on-surface'
-                      }
+                  <td className="px-4 py-3 align-middle">
+                    <input
+                      type="checkbox"
+                      aria-label={`Sélectionner ${document.title}`}
+                      checked={selected.has(document.id)}
+                      onChange={() => toggleSelected(document.id)}
+                      className="h-4 w-4 cursor-pointer accent-primary"
+                    />
+                  </td>
+                  <td className="px-4 py-3 align-middle">
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white"
+                      style={{ background: previewGradient(document.id) }}
                     >
-                      {page}
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  aria-label="Page suivante"
-                  className="flex h-8 w-8 items-center justify-center rounded-stitch-sm text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container hover:text-stitch-on-surface disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
+                      <FileText size={16} />
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 align-middle">
+                    <div className="font-semibold text-fg line-clamp-1">
+                      {document.title}
+                    </div>
+                    <div className="mt-0.5 text-xs text-fg-subtle line-clamp-1">
+                      {document.subject || 'Matière non renseignée'}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 align-middle text-sm text-fg-muted">
+                    {document.faculty || '—'}
+                  </td>
+                  <td className="px-4 py-3 align-middle text-sm text-fg-muted">
+                    {document.level || '—'}
+                  </td>
+                  <td className="px-4 py-3 align-middle text-right">
+                    <div className="inline-flex items-baseline gap-1 font-display font-bold text-fg tabular-nums">
+                      {formatCoins(document.priceCoins)}
+                      <span className="text-[11px] font-medium text-fg-subtle">C</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 align-middle">
+                    <Pill tone={statusTone[document.status] ?? 'neutral'}>
+                      {statusLabel[document.status] ?? document.status}
+                    </Pill>
+                  </td>
+                  <td className="relative px-4 py-3 align-middle">
+                    <IconButton
+                      icon={MoreHorizontal}
+                      label={`Actions pour ${document.title}`}
+                      onClick={() =>
+                        setOpenMenuId((prev) => (prev === document.id ? null : document.id))
+                      }
+                    />
+                    {openMenuId === document.id ? (
+                      <div
+                        className="absolute right-4 top-12 z-20 w-52 rounded-lg border border-border bg-surface p-1 shadow-popover"
+                        onMouseLeave={() => setOpenMenuId(null)}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => reanalyze(document.id)}
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-fg hover:bg-surface-2 cursor-pointer"
+                        >
+                          <Sparkles size={14} className="text-primary" />
+                          Réanalyser IA
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateStatus(document.id, 'published')}
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-fg hover:bg-surface-2 cursor-pointer"
+                        >
+                          <Check size={14} className="text-success" />
+                          Publier
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateStatus(document.id, 'needs_review')}
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-fg hover:bg-surface-2 cursor-pointer"
+                        >
+                          <CircleAlert size={14} className="text-warning" />
+                          Marquer à corriger
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateStatus(document.id, 'draft')}
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-fg hover:bg-surface-2 cursor-pointer"
+                        >
+                          <FilePenLine size={14} className="text-fg-muted" />
+                          Mettre en brouillon
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateStatus(document.id, 'archived')}
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-fg hover:bg-surface-2 cursor-pointer"
+                        >
+                          <Archive size={14} className="text-fg-muted" />
+                          Archiver
+                        </button>
+                        <div className="my-1 border-t border-border-light" />
+                        <button
+                          type="button"
+                          onClick={() => remove(document.id)}
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-danger hover:bg-danger-bg cursor-pointer"
+                        >
+                          <Trash2 size={14} />
+                          Supprimer
+                        </button>
+                      </div>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+              {paginatedDocuments.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-0">
+                    <EmptyState
+                      icon={FileText}
+                      title="Aucun PDF trouvé"
+                      description="Ajuste tes filtres ou importe un nouveau PDF pour démarrer."
+                      action={
+                        <Button
+                          variant="primary"
+                          icon={UploadCloud}
+                          onClick={() => setUploadOpen(true)}
+                        >
+                          Nouveau PDF
+                        </Button>
+                      }
+                    />
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination footer */}
+        {visibleDocuments.length > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-light px-5 py-3">
+            <div className="text-xs text-fg-muted">
+              <span className="font-semibold text-fg">{visibleDocuments.length}</span>{' '}
+              PDF
             </div>
-          )}
-        </section>
+            <div className="flex items-center gap-1">
+              <IconButton
+                icon={ChevronLeft}
+                label="Page précédente"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className={currentPage === 1 ? 'opacity-40 cursor-not-allowed' : ''}
+              />
+              {pageNumbers.map((page, idx) =>
+                page === 'gap' ? (
+                  <span
+                    key={`gap-${idx}`}
+                    className="px-2 text-xs text-fg-faint"
+                  >
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    aria-label={`Page ${page}`}
+                    aria-current={currentPage === page ? 'page' : undefined}
+                    className={[
+                      'inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm font-medium transition-colors cursor-pointer',
+                      currentPage === page
+                        ? 'bg-primary text-on-primary'
+                        : 'text-fg-muted hover:bg-surface-2 hover:text-fg',
+                    ].join(' ')}
+                  >
+                    {page}
+                  </button>
+                ),
+              )}
+              <IconButton
+                icon={ChevronRight}
+                label="Page suivante"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className={
+                  currentPage === totalPages ? 'opacity-40 cursor-not-allowed' : ''
+                }
+              />
+            </div>
+            <div className="text-xs text-fg-muted">
+              Afficher:{' '}
+              <span className="font-semibold text-fg">{ITEMS_PER_PAGE}</span> / page
+            </div>
+          </div>
+        ) : null}
+      </Card>
+
+      {/* ── Bottom recap row ─────────────────────────────────────── */}
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <KpiCard
+          label="Total Uploads"
+          value={metrics.totalPdfs + metrics.totalPacks}
+          icon={UploadCloud}
+          accent="blue"
+        />
+        <KpiCard
+          label="Vues Catalogue"
+          value={formatCoins(metrics.totalViews)}
+          icon={Eye}
+          accent="cyan"
+        />
+        <KpiCard
+          label="Revenu Estimé"
+          value={`${formatCoins(metrics.totalRevenue)} FCFA`}
+          icon={DollarSign}
+          accent="green"
+        />
       </div>
+
+      {/* ── Upload modal ─────────────────────────────────────────── */}
+      {uploadOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-fg/30 backdrop-blur-sm p-4"
+          onClick={() => setUploadOpen(false)}
+        >
+          <div
+            className="w-full max-w-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Card padded={false} className="max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-border-light px-6 py-4">
+                <div>
+                  <h2 className="font-display text-lg font-bold text-fg">
+                    Ajouter un PDF
+                  </h2>
+                  <p className="mt-0.5 text-xs text-fg-subtle">
+                    L'IA pré-remplit les champs et propose un score qualité.
+                  </p>
+                </div>
+                <IconButton
+                  icon={X}
+                  label="Fermer"
+                  onClick={() => setUploadOpen(false)}
+                />
+              </div>
+
+              {message ? (
+                <div className="mx-6 mt-4 rounded-md border border-border bg-primary-softer p-3 text-sm text-primary">
+                  {message}
+                </div>
+              ) : null}
+
+              <form onSubmit={submit} className="px-6 py-5">
+                <Field label="Titre" required>
+                  <input
+                    name="title"
+                    required
+                    placeholder="Analyse 2 - sujets corrigés"
+                    className="form-input"
+                  />
+                </Field>
+
+                <Field label="Description" required>
+                  <textarea
+                    name="description"
+                    required
+                    rows={3}
+                    placeholder="Ce que l'étudiant trouvera dans le PDF"
+                    className="form-input resize-y"
+                  />
+                </Field>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Field label="Université" required>
+                    <input
+                      name="university"
+                      required
+                      defaultValue="Université de Douala"
+                      className="form-input"
+                    />
+                  </Field>
+                  <Field label="Filière / Faculté" required>
+                    <input
+                      name="faculty"
+                      required
+                      placeholder="Informatique"
+                      className="form-input"
+                    />
+                  </Field>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Field label="Matière" required>
+                    <input
+                      name="subject"
+                      required
+                      placeholder="Mathématiques"
+                      className="form-input"
+                    />
+                  </Field>
+                  <Field label="Professeur">
+                    <input
+                      name="teacher"
+                      placeholder="Pr. Nom"
+                      className="form-input"
+                    />
+                  </Field>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Field label="Niveau" required>
+                    <input
+                      name="level"
+                      required
+                      placeholder="L2 Informatique"
+                      className="form-input"
+                    />
+                  </Field>
+                  <Field label="Année académique" required>
+                    <input
+                      name="academicYear"
+                      required
+                      defaultValue="2025-2026"
+                      className="form-input"
+                    />
+                  </Field>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Field label="Prix (Coins)">
+                    <input
+                      name="priceCoins"
+                      type="number"
+                      min="0"
+                      step="50"
+                      defaultValue="300"
+                      className="form-input"
+                    />
+                  </Field>
+                  <Field label="Statut">
+                    <select name="status" defaultValue="draft" className="form-input">
+                      <option value="draft">Brouillon</option>
+                      <option value="analyzing">Analyse IA</option>
+                      <option value="needs_review">À corriger</option>
+                      <option value="published">Publié</option>
+                      <option value="archived">Archive</option>
+                    </select>
+                  </Field>
+                </div>
+
+                <Field label="Fichier PDF" required className="mt-4">
+                  <input
+                    name="file"
+                    type="file"
+                    accept="application/pdf"
+                    required
+                    multiple
+                    onChange={onFileChange}
+                    className="form-input file:mr-3 file:rounded-md file:border-0 file:bg-primary-soft file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-primary file:cursor-pointer"
+                  />
+                </Field>
+
+                <input type="hidden" name="aiSummary" />
+                <input type="hidden" name="aiTags" />
+                <input type="hidden" name="aiDifficulty" />
+                <input type="hidden" name="suggestedPriceCoins" />
+                <input type="hidden" name="qualityScore" />
+                <input type="hidden" name="aiStudyPlan" />
+                <input type="hidden" name="aiQuiz" />
+                <input type="hidden" name="extractedText" />
+
+                <div className="mt-4 flex items-start gap-3 rounded-md border border-border bg-primary-softer p-3 text-fg">
+                  <Sparkles size={16} className="mt-0.5 text-primary" />
+                  <div>
+                    <strong className="block text-sm text-fg">Analyse IA admin</strong>
+                    <span className="mt-0.5 block text-xs text-fg-muted">
+                      Le PDF pré-remplit les champs, propose un prix, un résumé,
+                      des tags et un score avant publication.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex items-center justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setUploadOpen(false)}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    icon={UploadCloud}
+                    loading={loading || analysisLoading}
+                  >
+                    {loading
+                      ? 'Upload…'
+                      : analysisLoading
+                        ? 'Analyse…'
+                        : 'Enregistrer PDF'}
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Local form input styling using Tailwind tokens. */}
+      <style jsx global>{`
+        .form-input {
+          width: 100%;
+          border-radius: 0.5rem;
+          border: 1px solid var(--color-border);
+          background: var(--color-surface);
+          padding: 0.625rem 0.75rem;
+          font-size: 0.875rem;
+          color: var(--color-fg);
+          transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .form-input::placeholder {
+          color: var(--color-fg-faint);
+        }
+        .form-input:focus {
+          outline: none;
+          border-color: var(--color-primary);
+          box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12);
+        }
+      `}</style>
     </>
+  );
+}
+
+// ── Local field wrapper for the modal form ────────────────────────────
+function Field({
+  label,
+  required,
+  children,
+  className = '',
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+        {label}
+        {required ? <span className="ml-1 text-danger">*</span> : null}
+      </label>
+      {children}
+    </div>
   );
 }

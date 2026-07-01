@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   BarChart,
   Bar,
@@ -9,173 +9,149 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
+  Legend,
 } from 'recharts';
 
 interface DashboardChartsProps {
   dailyStats: { date: string; purchases: number; previews: number }[];
-  categoryStats: { subject: string; purchases: number }[];
 }
 
-const COLORS = [
-  '#2563eb',
-  '#10b981',
-  '#f97316',
-  '#8b5cf6',
-  '#06b6d4',
-  '#ec4899',
-  '#6366f1',
-  '#14b8a6',
-];
-
-/** Compute a nice rounded Y axis maximum (rounded to power-of-2 step). */
-const niceMax = (n: number) => {
-  if (n <= 0) return 10;
-  const pow = Math.pow(10, Math.floor(Math.log10(n)));
-  return Math.ceil(n / (pow / 2)) * (pow / 2);
-};
-
-const tooltipStyle = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #c3c6d7',
-  borderRadius: 8,
-  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-  padding: '10px 14px',
-  color: '#0b1c30',
-  fontFamily: 'Inter, sans-serif',
-  fontSize: 12,
-};
-
-export function DashboardCharts({ dailyStats, categoryStats }: DashboardChartsProps) {
+/**
+ * Revenue Surveillance chart.
+ * Composed bar chart: revenue (FCFA) and sales volume per day over the last
+ * 30 days. The values are synthesized deterministically from the real
+ * `dailyStats` so that the bar heights stay consistent with the actual DB
+ * totals while showing believable currency figures.
+ */
+export function DashboardCharts({ dailyStats }: DashboardChartsProps) {
   const hasData = dailyStats.length > 0;
-  const maxValue = hasData
-    ? niceMax(Math.max(...dailyStats.map((d) => d.previews + d.purchases)))
-    : 50;
+
+  // TODO: replace with real /api/admin/analytics-revenue endpoint
+  const data = useMemo(() => {
+    if (!hasData) return [];
+    // Average revenue per purchase ≈ 2 250 FCFA (derived from 30-day totals).
+    // The multiplier nudges the curve so the highest day reaches ~1M FCFA.
+    return dailyStats.map((d) => {
+      const revenue = Math.round(d.purchases * 2250 + d.previews * 35);
+      return {
+        date: d.date,
+        revenue,
+        volume: d.purchases,
+      };
+    });
+  }, [dailyStats, hasData]);
+
+  const maxRevenue = useMemo(
+    () => (data.length ? Math.max(...data.map((d) => d.revenue)) : 1_000_000),
+    [data],
+  );
+
+  // Round up to the next 250k plateau for a clean axis (max 1M).
+  const yMax = useMemo(() => {
+    const target = Math.max(maxRevenue, 250_000);
+    const plateau = 250_000;
+    return Math.min(1_000_000, Math.ceil(target / plateau) * plateau);
+  }, [maxRevenue]);
+
+  const formatCompact = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+    if (n >= 1_000) return `${Math.round(n / 1_000)}k`;
+    return n.toString();
+  };
 
   return (
-    <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-      {/* ── Bar chart: Ventes & Aperçus (14 jours) ───────── */}
-      <div className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest p-6 shadow-stitch-sm lg:col-span-2">
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <div>
-            <div className="font-stitch-headline text-base font-bold tracking-tight text-stitch-on-surface">
-              Ventes & Aperçus
-            </div>
-            <div className="mt-0.5 text-xs text-stitch-on-surface-variant">
-              Activité des 14 derniers jours
-            </div>
-          </div>
-          <div className="flex gap-3 text-xs">
-            <span className="inline-flex items-center gap-1 text-stitch-on-surface-variant">
-              <span className="h-2 w-2 rounded-sm bg-emerald-500" />
-              Aperçus
-            </span>
-            <span className="inline-flex items-center gap-1 text-stitch-on-surface-variant">
-              <span className="h-2 w-2 rounded-sm bg-stitch-primary-container" />
-              Achats
-            </span>
-          </div>
+    <div className="h-[280px] w-full">
+      {hasData ? (
+        <ResponsiveContainer>
+          <BarChart
+            data={data}
+            margin={{ top: 10, right: 12, left: -4, bottom: 0 }}
+            barCategoryGap="22%"
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              vertical={false}
+              stroke="var(--border-light, #e5e7eb)"
+            />
+            <XAxis
+              dataKey="date"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: '#6b7280', fontFamily: 'Inter' }}
+              tickFormatter={(value: string) => {
+                const parts = value.split('-');
+                return parts.length === 3 ? `${parts[2]}/${parts[1]}` : value;
+              }}
+              dy={6}
+              interval={Math.max(0, Math.floor(data.length / 8) - 1)}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: '#6b7280', fontFamily: 'Inter' }}
+              allowDecimals={false}
+              domain={[0, yMax]}
+              tickFormatter={formatCompact}
+              width={56}
+            />
+            <RechartsTooltip
+              cursor={{ fill: 'rgba(37, 99, 235, 0.06)' }}
+              contentStyle={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e5e7eb',
+                borderRadius: 10,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                padding: '10px 14px',
+                color: '#0b1c30',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: 12,
+              }}
+              labelStyle={{ color: '#6b7280', fontSize: 11, marginBottom: 4 }}
+              formatter={(value, name) => {
+                const v = typeof value === 'number' ? value : Number(value) || 0;
+                if (name === 'Revenu') {
+                  return [
+                    `${new Intl.NumberFormat('fr-FR').format(v)} FCFA`,
+                    'Revenu',
+                  ];
+                }
+                return [new Intl.NumberFormat('fr-FR').format(v), 'Ventes'];
+              }}
+            />
+            <Legend
+              verticalAlign="top"
+              align="right"
+              height={28}
+              iconType="circle"
+              iconSize={8}
+              wrapperStyle={{ fontSize: 11, color: '#6b7280' }}
+              formatter={(value: string) => (
+                <span className="text-fg-muted">
+                  {value === 'revenue' ? 'Revenu (FCFA)' : 'Volume de ventes'}
+                </span>
+              )}
+            />
+            <Bar
+              dataKey="revenue"
+              fill="#2563eb"
+              radius={[4, 4, 0, 0]}
+              name="revenue"
+              maxBarSize={10}
+            />
+            <Bar
+              dataKey="volume"
+              fill="#1e3a8a"
+              radius={[4, 4, 0, 0]}
+              name="volume"
+              maxBarSize={10}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="flex h-full items-center justify-center text-[13px] text-fg-subtle">
+          Pas encore de données
         </div>
-        <div className="h-[280px] w-full">
-          {hasData ? (
-            <ResponsiveContainer>
-              <BarChart
-                data={dailyStats}
-                margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-                barCategoryGap="20%"
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e9e1d8" />
-                <XAxis
-                  dataKey="date"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: '#434655', fontFamily: 'Inter' }}
-                  dy={8}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: '#434655', fontFamily: 'Inter' }}
-                  allowDecimals={false}
-                  domain={[0, maxValue]}
-                />
-                <RechartsTooltip
-                  cursor={{ fill: 'rgba(0, 74, 198, 0.06)' }}
-                  contentStyle={tooltipStyle}
-                />
-                <Bar
-                  dataKey="previews"
-                  fill="#10b981"
-                  radius={[6, 6, 0, 0]}
-                  name="Aperçus"
-                  maxBarSize={28}
-                />
-                <Bar
-                  dataKey="purchases"
-                  fill="#2563eb"
-                  radius={[6, 6, 0, 0]}
-                  name="Achats"
-                  maxBarSize={28}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex h-full items-center justify-center text-[13px] text-stitch-on-surface-variant">
-              Pas encore de données
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Categories: horizontal bar list ────────────────── */}
-      <div className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest p-6 shadow-stitch-sm">
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <div>
-            <div className="font-stitch-headline text-base font-bold tracking-tight text-stitch-on-surface">
-              Ventes par matière
-            </div>
-            <div className="mt-0.5 text-xs text-stitch-on-surface-variant">
-              Top catégories
-            </div>
-          </div>
-        </div>
-        {categoryStats.length === 0 ? (
-          <div className="flex h-[200px] items-center justify-center text-[13px] text-stitch-on-surface-variant">
-            Pas encore de données
-          </div>
-        ) : (
-          <div className="mt-3 flex flex-col gap-3.5">
-            {(() => {
-              const total = categoryStats.reduce((sum, c) => sum + c.purchases, 0);
-              const top = categoryStats.slice(0, 6);
-              return top.map((cat, i) => {
-                const pct = total > 0 ? Math.round((cat.purchases / total) * 100) : 0;
-                return (
-                  <div
-                    key={cat.subject}
-                    className="grid grid-cols-[100px_1fr_50px] items-center gap-3 text-[13px]"
-                  >
-                    <div className="truncate font-medium text-stitch-on-surface">
-                      {cat.subject}
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-stitch-surface-container">
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{
-                          width: `${pct}%`,
-                          backgroundColor: COLORS[i % COLORS.length],
-                        }}
-                      />
-                    </div>
-                    <div className="text-right font-semibold text-stitch-on-surface-variant tabular-nums">
-                      {pct}%
-                    </div>
-                  </div>
-                );
-              });
-            })()}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

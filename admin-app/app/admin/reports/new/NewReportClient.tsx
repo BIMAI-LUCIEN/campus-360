@@ -9,7 +9,9 @@ import {
   ArrowLeft,
   Sparkles,
   BookOpen,
+  CheckCircle2,
 } from 'lucide-react';
+import { Button } from '../../_components/ui';
 
 type Template = 'stage' | 'memoire' | 'blank';
 
@@ -40,6 +42,14 @@ const TEMPLATES: TemplateMeta[] = [
     icon: Sparkles,
   },
 ];
+
+const inputClass =
+  'w-full h-11 rounded-md border border-border bg-surface px-3 text-sm text-fg placeholder:text-fg-faint outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary-soft';
+
+const textareaClass =
+  'w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-faint outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary-soft';
+
+const labelClass = 'mb-1.5 block text-xs font-semibold text-fg-muted';
 
 export default function NewReportPage() {
   const router = useRouter();
@@ -84,46 +94,50 @@ export default function NewReportPage() {
   };
 
   return (
-    <div className="flup-page" style={{ maxWidth: 880, width: '100%', margin: '0 auto' }}>
+    <div className="mx-auto w-full max-w-[880px]">
       {/* Back link */}
       <button
         type="button"
         onClick={() => router.push('/admin/reports')}
-        className="flup-btn flup-btn--ghost flup-btn--sm"
-        style={{ alignSelf: 'flex-start' }}
+        className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-fg-muted transition-colors hover:text-fg"
       >
         <ArrowLeft size={15} />
         Retour à la liste des rapports
       </button>
 
-      {/* Header card */}
-      <div className="flup-card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
-          <span className="kpi-icon teal">
+      {/* Main card */}
+      <div className="rounded-xl border border-border bg-surface p-6 shadow-card">
+        {/* Header */}
+        <div className="mb-6 flex items-center gap-3.5">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary-soft text-primary">
             <Plus size={20} />
           </span>
           <div>
-            <h1 className="flup-page-title" style={{ fontSize: 22 }}>
+            <h1 className="font-display text-[22px] font-bold leading-tight text-fg">
               Nouveau rapport
             </h1>
-            <p className="flup-page-subtitle">
+            <p className="mt-0.5 text-sm text-fg-subtle">
               Choisissez un modèle, donnez un titre, et l&apos;éditeur s&apos;ouvrira
               automatiquement avec les sections pré-remplies.
             </p>
           </div>
         </div>
 
+        {/* Error */}
         {error ? (
-          <div className="flup-alert flup-alert--danger" style={{ marginBottom: 16 }}>
-            {error}
+          <div
+            role="alert"
+            className="mb-4 flex items-center justify-between gap-3 rounded-md border border-danger-soft bg-danger-bg p-3 text-sm text-danger"
+          >
+            <span className="font-medium">{error}</span>
           </div>
         ) : null}
 
-        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <form onSubmit={submit} className="flex flex-col gap-5">
           {/* Title */}
           <div>
-            <label className="flup-label">
-              Titre du document <span style={{ color: 'var(--color-flup-accent-orange)' }}>*</span>
+            <label className={labelClass}>
+              Titre du document <span className="text-primary">*</span>
             </label>
             <input
               type="text"
@@ -132,27 +146,26 @@ export default function NewReportPage() {
               required
               autoFocus
               placeholder="Ex: Rapport de stage — Miguel Melago"
-              className="flup-input"
+              className={inputClass}
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="flup-label">Description (facultatif)</label>
+            <label className={labelClass}>Description (facultatif)</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Ex: Stage de fin d'études chez NextGen Tech..."
               rows={3}
-              className="flup-input"
-              style={{ resize: 'vertical', minHeight: 88 }}
+              className={`${textareaClass} min-h-24 resize-y`}
             />
           </div>
 
           {/* Template chooser */}
           <div>
-            <label className="flup-label">Modèle de structure</label>
-            <div className="flup-grid-3">
+            <label className={labelClass}>Modèle de structure</label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {TEMPLATES.map(({ key, label, desc, icon: Icon }) => {
                 const selected = template === key;
                 return (
@@ -160,48 +173,35 @@ export default function NewReportPage() {
                     key={key}
                     type="button"
                     onClick={() => setTemplate(key)}
-                    className="flup-card flup-card--hover"
-                    style={{
-                      textAlign: 'left',
-                      padding: 16,
-                      cursor: 'pointer',
-                      borderColor: selected
-                        ? 'var(--color-flup-brand)'
-                        : 'var(--color-flup-border)',
-                      borderWidth: selected ? 2 : 1,
-                      background: selected
-                        ? 'var(--color-flup-brand-light)'
-                        : 'var(--color-flup-surface)',
-                      boxShadow: selected
-                        ? '0 0 0 4px rgba(8, 145, 178, 0.10)'
-                        : undefined,
-                    }}
+                    className={[
+                      'relative flex flex-col gap-2 rounded-xl p-4 text-left transition-colors',
+                      selected
+                        ? 'border-2 border-primary bg-primary-softer'
+                        : 'border-2 border-border bg-surface hover:border-border-strong',
+                    ].join(' ')}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                    {selected ? (
+                      <CheckCircle2
+                        size={18}
+                        className="absolute right-3 top-3 text-primary"
+                      />
+                    ) : null}
+                    <div className="flex items-center gap-2.5">
                       <span
-                        className={selected ? 'kpi-icon teal' : 'kpi-icon slate'}
-                        style={{ width: 32, height: 32 }}
+                        className={[
+                          'inline-flex h-8 w-8 items-center justify-center rounded-lg',
+                          selected
+                            ? 'bg-primary text-on-primary'
+                            : 'bg-surface-2 text-fg-muted',
+                        ].join(' ')}
                       >
                         <Icon size={16} />
                       </span>
-                      <span
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 700,
-                          color: 'var(--color-flup-text-main)',
-                        }}
-                      >
+                      <span className="font-display text-[14px] font-bold text-fg">
                         {label}
                       </span>
                     </div>
-                    <p
-                      style={{
-                        fontSize: 12,
-                        color: 'var(--color-flup-text-muted)',
-                        margin: 0,
-                        lineHeight: 1.5,
-                      }}
-                    >
+                    <p className="text-sm leading-relaxed text-fg-subtle">
                       {desc}
                     </p>
                   </button>
@@ -211,40 +211,24 @@ export default function NewReportPage() {
           </div>
 
           {/* Footer actions */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 10,
-              paddingTop: 16,
-              borderTop: '1px solid var(--color-flup-border-soft)',
-            }}
-          >
-            <button
+          <div className="flex justify-end gap-2 border-t border-border-light pt-5">
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => router.push('/admin/reports')}
               disabled={submitting}
-              className="flup-btn flup-btn--secondary"
             >
               Annuler
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="primary"
+              icon={submitting ? undefined : Plus}
+              loading={submitting}
               disabled={submitting}
-              className="flup-btn flup-btn--primary"
             >
-              {submitting ? (
-                <>
-                  <Loader2 size={16} className="spin-anim" />
-                  Création...
-                </>
-              ) : (
-                <>
-                  <Plus size={16} />
-                  Créer et ouvrir l&apos;éditeur
-                </>
-              )}
-            </button>
+              Créer et ouvrir l&apos;éditeur
+            </Button>
           </div>
         </form>
       </div>

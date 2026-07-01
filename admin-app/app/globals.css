@@ -18,6 +18,131 @@
  *   - https://tailwindcss.com/docs/installation/using-postcss
  *   - https://github.com/tailwindlabs/tailwindcss/issues/13500
  */
-@import "./globals.compiled.css";
 
-/* Fonts loaded via <link> in app/layout.tsx (Google Fonts). */
+/* ============================================================================
+ * Campus 360 Admin — Design System v2 (Modern SaaS, blue + neutral)
+ *
+ * Palette : SaaS Business (Trust blue + neutral slate). Cards on white,
+ *           subtle borders, generous whitespace, linear/vercel feel.
+ * Type    : Plus Jakarta Sans (display) + Inter (body)
+ * Status  : Replaces the legacy `stitch-*` Material-3 cream tokens.
+ * ============================================================================ */
+
+@import "tailwindcss";
+
+@theme {
+  /* ── Brand / Primary ──────────────────────────────────────────────── */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-soft: #dbeafe;
+  --color-primary-softer: #eff6ff;
+  --color-on-primary: #ffffff;
+
+  /* ── Surfaces ─────────────────────────────────────────────────────── */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-2: #f8fafc;
+  --color-surface-3: #f1f5f9;
+
+  /* ── Borders ──────────────────────────────────────────────────────── */
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+  --color-border-strong: #cbd5e1;
+
+  /* ── Foreground (text) ────────────────────────────────────────────── */
+  --color-fg: #0f172a;
+  --color-fg-muted: #475569;
+  --color-fg-subtle: #64748b;
+  --color-fg-faint: #94a3b8;
+
+  /* ── Status ───────────────────────────────────────────────────────── */
+  --color-success: #16a34a;
+  --color-success-soft: #dcfce7;
+  --color-success-bg: #f0fdf4;
+  --color-warning: #d97706;
+  --color-warning-soft: #fef3c7;
+  --color-warning-bg: #fffbeb;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fee2e2;
+  --color-danger-bg: #fef2f2;
+  --color-info: #0284c7;
+  --color-info-soft: #e0f2fe;
+
+  /* ── Sidebar / Topbar ─────────────────────────────────────────────── */
+  --color-sidebar: #ffffff;
+  --color-sidebar-fg: #0f172a;
+  --color-sidebar-fg-muted: #64748b;
+  --color-sidebar-active-bg: #eff6ff;
+  --color-sidebar-active-fg: #2563eb;
+  --color-sidebar-border: #e2e8f0;
+
+  /* ── Typography ───────────────────────────────────────────────────── */
+  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* ── Radius ───────────────────────────────────────────────────────── */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  /* ── Spacing (layout chrome) ───────────────────────────────────────── */
+  --spacing-sidebar: 240px;
+  --spacing-topbar: 64px;
+
+  /* ── Shadows ──────────────────────────────────────────────────────── */
+  --shadow-card: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-card-hover: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --shadow-popover: 0 10px 30px -5px rgba(15, 23, 42, 0.12), 0 4px 8px -4px rgba(15, 23, 42, 0.06);
+  --shadow-topbar: 0 1px 0 0 rgba(15, 23, 42, 0.06);
+}
+
+/* ============================================================================
+ * Base layer overrides
+ * ============================================================================ */
+
+@layer base {
+  html, body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  /* Disable the legacy `spin-anim` if any component still uses it */
+  .spin-anim {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  /* Standardized focus ring (WCAG) */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
