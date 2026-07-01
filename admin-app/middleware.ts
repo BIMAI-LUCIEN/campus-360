@@ -26,7 +26,17 @@ const isAllowedOrigin = (origin: string) => {
 // ─────────────────────────────────────────────────────────────────────────
 
 const ADMIN_PUBLIC_PATHS = new Set<string>(['/admin/login', '/admin/forbidden']);
-const SESSION_COOKIE_NAMES = ['better-auth.session_token'];
+
+// Better Auth's session cookie name. In production (Secure=true) Better Auth
+// prefixes the cookie with `__Secure-` to prevent it from being set over an
+// insecure connection, so we check both variants. There's also a
+// `session_data` companion cookie that holds the cached session payload.
+const SESSION_COOKIE_NAMES = [
+  'better-auth.session_token',
+  '__Secure-better-auth.session_token',
+  'better-auth.session_data',
+  '__Secure-better-auth.session_data',
+];
 
 const isAdminPath = (pathname: string) =>
   pathname === '/admin' || pathname.startsWith('/admin/') || pathname.startsWith('/admin');
