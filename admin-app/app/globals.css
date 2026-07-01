@@ -32,6 +32,14 @@
 
 @import "tailwindcss";
 
+/* Explicit source globs — Tailwind v4's auto-detection misses these in
+ * monorepo / git-worktree setups, so without @source the build ships an
+ * essentially empty stylesheet. Point at the app + lib + types folders
+ * so all `.tsx` / `.ts` are scanned for utility class usage.
+ */
+@source "../**/*.{ts,tsx}";
+@source "./**/*.{ts,tsx}";
+
 @theme {
   /* ── Brand / Primary (Emerald green, Flup-style) ─────────────────── */
   --color-primary: #10b981;
