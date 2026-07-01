@@ -24,6 +24,7 @@ export interface PdfAnalyticsSummary {
   catalog: {
     totalUsers: number;
     studentUsers: number;
+    adminUsers: number;
     newUsersThisWeek: number;
     totalPdfs: number;
     publishedPdfs: number;
@@ -93,6 +94,7 @@ export const emptyAnalytics = (configured: boolean): PdfAnalyticsSummary => ({
   catalog: {
     totalUsers: 0,
     studentUsers: 0,
+    adminUsers: 0,
     newUsersThisWeek: 0,
     totalPdfs: 0,
     publishedPdfs: 0,
@@ -412,17 +414,21 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
       `),
       // Catalog snapshot — direct counts from the canonical tables, not
       // event-derived (so a doc with no recent activity still shows up).
+      // Note: schema uses public.profiles (not the Better Auth internal
+      // public."user" table which is empty) and public.pdf_packs (not
+      // public.packs). All timestamp columns are created_at (snake_case).
       db.query(`
         select
-          (select count(*) from public."user")::int as total_users,
-          (select count(*) from public."user" where role = 'student')::int as student_users,
-          (select count(*) from public."user" where "createdAt" >= now() - interval '7 days')::int as new_users_week,
+          (select count(*) from public.profiles)::int as total_users,
+          (select count(*) from public.profiles where role = 'student')::int as student_users,
+          (select count(*) from public.profiles where role in ('admin', 'super_admin'))::int as admin_users,
+          (select count(*) from public.profiles where created_at >= now() - interval '7 days')::int as new_users_week,
           (select count(*) from public.documents)::int as total_pdfs,
           (select count(*) from public.documents where status = 'published')::int as published_pdfs,
-          (select count(*) from public.documents where "createdAt" >= now() - interval '7 days')::int as new_pdfs_week,
-          (select count(*) from public.packs)::int as total_packs,
-          (select count(*) from public.packs where status = 'published')::int as published_packs,
-          (select count(*) from public.packs where "createdAt" >= now() - interval '7 days')::int as new_packs_week
+          (select count(*) from public.documents where created_at >= now() - interval '7 days')::int as new_pdfs_week,
+          (select count(*) from public.pdf_packs)::int as total_packs,
+          (select count(*) from public.pdf_packs where status = 'published')::int as published_packs,
+          (select count(*) from public.pdf_packs where created_at >= now() - interval '7 days')::int as new_packs_week
       `)
     ]);
 
@@ -447,6 +453,7 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
         return {
           totalUsers: Number(r.total_users ?? 0),
           studentUsers: Number(r.student_users ?? 0),
+          adminUsers: Number(r.admin_users ?? 0),
           newUsersThisWeek: Number(r.new_users_week ?? 0),
           totalPdfs: Number(r.total_pdfs ?? 0),
           publishedPdfs: Number(r.published_pdfs ?? 0),

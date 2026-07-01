@@ -461,8 +461,8 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
           caption={
             catalog.newUsersThisWeek > 0
               ? `+${catalog.newUsersThisWeek} cette semaine`
-              : catalog.totalUsers > 0
-                ? `${catalog.totalUsers - catalog.studentUsers} admin${catalog.totalUsers - catalog.studentUsers > 1 ? 's' : ''}`
+              : catalog.adminUsers > 0
+                ? `${catalog.adminUsers} admin${catalog.adminUsers > 1 ? 's' : ''}`
                 : 'Aucun utilisateur'
           }
         />
@@ -505,8 +505,8 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
           label="Étudiants"
           total={catalog.studentUsers}
           breakdown={
-            catalog.totalUsers > catalog.studentUsers
-              ? `${catalog.totalUsers - catalog.studentUsers} admin${catalog.totalUsers - catalog.studentUsers > 1 ? 's' : ''} sur ${catalog.totalUsers}`
+            catalog.adminUsers > 0
+              ? `${catalog.adminUsers} admin${catalog.adminUsers > 1 ? 's' : ''} sur ${catalog.totalUsers}`
               : `${catalog.totalUsers} compte${catalog.totalUsers > 1 ? 's' : ''}`
           }
           accent="cyan"
