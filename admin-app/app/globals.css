@@ -20,61 +20,88 @@
  */
 
 /* ============================================================================
- * Campus 360 Admin — Design System v2 (Modern SaaS, blue + neutral)
+ * Campus 360 Admin — Design System v3 (Flup-inspired, green + multi-chart)
  *
- * Palette : SaaS Business (Trust blue + neutral slate). Cards on white,
- *           subtle borders, generous whitespace, linear/vercel feel.
- * Type    : Plus Jakarta Sans (display) + Inter (body)
- * Status  : Replaces the legacy `stitch-*` Material-3 cream tokens.
+ * Reference : Flup admin dashboard — modern SaaS, white surfaces, generous
+ *             whitespace, green primary accent, colorful chart palette
+ *             (blue / orange / purple / pink / cyan / green).
+ * Type      : Plus Jakarta Sans (display) + Inter (body)
+ * Sidebar   : Two-layer (collapsed icon strip + expanded sidebar with
+ *             MARKETING / PAYMENTS / SYSTEM sections).
  * ============================================================================ */
 
 @import "tailwindcss";
 
 @theme {
-  /* ── Brand / Primary ──────────────────────────────────────────────── */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-soft: #dbeafe;
-  --color-primary-softer: #eff6ff;
+  /* ── Brand / Primary (Emerald green, Flup-style) ─────────────────── */
+  --color-primary: #10b981;
+  --color-primary-hover: #059669;
+  --color-primary-active: #047857;
+  --color-primary-soft: #d1fae5;
+  --color-primary-softer: #ecfdf5;
+  --color-primary-tint: #f0fdf4;
   --color-on-primary: #ffffff;
 
-  /* ── Surfaces ─────────────────────────────────────────────────────── */
-  --color-bg: #f8fafc;
+  /* ── Surfaces (Flup: pure white sidebar, near-white bg) ───────────── */
+  --color-bg: #f5f7fa;
   --color-surface: #ffffff;
   --color-surface-2: #f8fafc;
   --color-surface-3: #f1f5f9;
+  --color-surface-soft: #fafafa;
 
   /* ── Borders ──────────────────────────────────────────────────────── */
-  --color-border: #e2e8f0;
-  --color-border-light: #f1f5f9;
-  --color-border-strong: #cbd5e1;
+  --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
+  --color-border-strong: #d1d5db;
 
   /* ── Foreground (text) ────────────────────────────────────────────── */
-  --color-fg: #0f172a;
-  --color-fg-muted: #475569;
-  --color-fg-subtle: #64748b;
-  --color-fg-faint: #94a3b8;
+  --color-fg: #111827;
+  --color-fg-muted: #4b5563;
+  --color-fg-subtle: #6b7280;
+  --color-fg-faint: #9ca3af;
 
   /* ── Status ───────────────────────────────────────────────────────── */
-  --color-success: #16a34a;
-  --color-success-soft: #dcfce7;
+  --color-success: #10b981;
+  --color-success-soft: #d1fae5;
   --color-success-bg: #f0fdf4;
-  --color-warning: #d97706;
+  --color-warning: #f59e0b;
   --color-warning-soft: #fef3c7;
   --color-warning-bg: #fffbeb;
-  --color-danger: #dc2626;
+  --color-danger: #ef4444;
   --color-danger-soft: #fee2e2;
   --color-danger-bg: #fef2f2;
-  --color-info: #0284c7;
+  --color-info: #0ea5e9;
   --color-info-soft: #e0f2fe;
 
-  /* ── Sidebar / Topbar ─────────────────────────────────────────────── */
+  /* ── Sidebar / Topbar (two-layer, white) ──────────────────────────── */
   --color-sidebar: #ffffff;
-  --color-sidebar-fg: #0f172a;
-  --color-sidebar-fg-muted: #64748b;
-  --color-sidebar-active-bg: #eff6ff;
-  --color-sidebar-active-fg: #2563eb;
-  --color-sidebar-border: #e2e8f0;
+  --color-sidebar-strip: #ffffff;
+  --color-sidebar-fg: #111827;
+  --color-sidebar-fg-muted: #6b7280;
+  --color-sidebar-active-bg: #ecfdf5;
+  --color-sidebar-active-fg: #10b981;
+  --color-sidebar-border: #e5e7eb;
+  --color-sidebar-divider: #f3f4f6;
+
+  /* ── Chart palette (Flup-style multi-color) ───────────────────────── */
+  --color-chart-blue: #3b82f6;
+  --color-chart-blue-soft: #dbeafe;
+  --color-chart-orange: #fb923c;
+  --color-chart-orange-soft: #ffedd5;
+  --color-chart-purple: #8b5cf6;
+  --color-chart-purple-soft: #ede9fe;
+  --color-chart-pink: #ec4899;
+  --color-chart-pink-soft: #fce7f3;
+  --color-chart-green: #10b981;
+  --color-chart-green-soft: #d1fae5;
+  --color-chart-cyan: #06b6d4;
+  --color-chart-cyan-soft: #cffafe;
+  --color-chart-amber: #f59e0b;
+  --color-chart-amber-soft: #fef3c7;
+  --color-chart-rose: #f43f5e;
+  --color-chart-rose-soft: #ffe4e6;
+  --color-chart-indigo: #6366f1;
+  --color-chart-indigo-soft: #e0e7ff;
 
   /* ── Typography ───────────────────────────────────────────────────── */
   --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
@@ -89,15 +116,17 @@
   --radius-xl: 16px;
   --radius-2xl: 20px;
 
-  /* ── Spacing (layout chrome) ───────────────────────────────────────── */
+  /* ── Spacing (layout chrome — two-layer sidebar) ───────────────────── */
+  --spacing-sidebar-strip: 68px;
   --spacing-sidebar: 240px;
   --spacing-topbar: 64px;
 
-  /* ── Shadows ──────────────────────────────────────────────────────── */
-  --shadow-card: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
-  --shadow-card-hover: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
-  --shadow-popover: 0 10px 30px -5px rgba(15, 23, 42, 0.12), 0 4px 8px -4px rgba(15, 23, 42, 0.06);
-  --shadow-topbar: 0 1px 0 0 rgba(15, 23, 42, 0.06);
+  /* ── Shadows (Flup: very subtle) ──────────────────────────────────── */
+  --shadow-card: 0 1px 2px 0 rgba(17, 24, 39, 0.04);
+  --shadow-card-hover: 0 4px 12px -2px rgba(17, 24, 39, 0.06), 0 2px 4px -2px rgba(17, 24, 39, 0.03);
+  --shadow-popover: 0 12px 32px -8px rgba(17, 24, 39, 0.12), 0 4px 8px -4px rgba(17, 24, 39, 0.06);
+  --shadow-topbar: 0 1px 0 0 rgba(17, 24, 39, 0.05);
+  --shadow-sidebar: 1px 0 0 0 rgba(17, 24, 39, 0.05);
 }
 
 /* ============================================================================

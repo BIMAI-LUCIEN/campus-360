@@ -154,15 +154,18 @@ export function IconButton({
  *   caption. Optional accent icon in a soft pastel background.
  * ──────────────────────────────────────────────────────────────────────── */
 
-type KpiAccent = 'blue' | 'green' | 'amber' | 'purple' | 'rose' | 'cyan';
+type KpiAccent = 'blue' | 'green' | 'amber' | 'purple' | 'rose' | 'cyan' | 'pink' | 'orange' | 'indigo';
 
 const kpiAccentBg: Record<KpiAccent, string> = {
-  blue: 'bg-primary-soft text-primary',
-  green: 'bg-success-bg text-success',
-  amber: 'bg-warning-bg text-warning',
-  purple: 'bg-violet-50 text-violet-600',
-  rose: 'bg-rose-50 text-rose-600',
-  cyan: 'bg-cyan-50 text-cyan-700',
+  blue: 'bg-chart-blue-soft text-chart-blue',
+  green: 'bg-chart-green-soft text-chart-green',
+  amber: 'bg-chart-amber-soft text-chart-amber',
+  purple: 'bg-chart-purple-soft text-chart-purple',
+  rose: 'bg-chart-rose-soft text-chart-rose',
+  cyan: 'bg-chart-cyan-soft text-chart-cyan',
+  pink: 'bg-chart-pink-soft text-chart-pink',
+  orange: 'bg-chart-orange-soft text-chart-orange',
+  indigo: 'bg-chart-indigo-soft text-chart-indigo',
 };
 
 export function KpiCard({
@@ -291,16 +294,19 @@ export function FilterSelect({
  * Pill — inline status pill (e.g. PUBLISHED, DRAFT, Active).
  * ──────────────────────────────────────────────────────────────────────── */
 
-type PillTone = 'neutral' | 'blue' | 'green' | 'amber' | 'rose' | 'violet' | 'cyan';
+type PillTone = 'neutral' | 'blue' | 'green' | 'amber' | 'rose' | 'violet' | 'cyan' | 'pink' | 'orange' | 'indigo';
 
 const pillToneStyles: Record<PillTone, string> = {
   neutral: 'bg-surface-3 text-fg-muted',
-  blue: 'bg-primary-softer text-primary',
-  green: 'bg-success-bg text-success',
-  amber: 'bg-warning-bg text-warning',
-  rose: 'bg-danger-bg text-danger',
-  violet: 'bg-violet-50 text-violet-700',
-  cyan: 'bg-cyan-50 text-cyan-700',
+  blue: 'bg-chart-blue-soft text-chart-blue',
+  green: 'bg-chart-green-soft text-chart-green',
+  amber: 'bg-chart-amber-soft text-chart-amber',
+  rose: 'bg-chart-rose-soft text-chart-rose',
+  violet: 'bg-chart-purple-soft text-chart-purple',
+  cyan: 'bg-chart-cyan-soft text-chart-cyan',
+  pink: 'bg-chart-pink-soft text-chart-pink',
+  orange: 'bg-chart-orange-soft text-chart-orange',
+  indigo: 'bg-chart-indigo-soft text-chart-indigo',
 };
 
 export function Pill({
@@ -346,14 +352,17 @@ export function Avatar({
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('') || '?';
-  // Soft deterministic gradient palette by name hash.
+  // Soft deterministic gradient palette by name hash (Flup-style multi-color).
   const palette = [
-    ['#dbeafe', '#2563eb'],
-    ['#dcfce7', '#16a34a'],
-    ['#fef3c7', '#d97706'],
-    ['#fce7f3', '#db2777'],
-    ['#ede9fe', '#7c3aed'],
-    ['#cffafe', '#0891b2'],
+    ['#dbeafe', '#3b82f6'], // blue
+    ['#d1fae5', '#10b981'], // green
+    ['#fef3c7', '#f59e0b'], // amber
+    ['#fce7f3', '#ec4899'], // pink
+    ['#ede9fe', '#8b5cf6'], // purple
+    ['#cffafe', '#06b6d4'], // cyan
+    ['#ffedd5', '#fb923c'], // orange
+    ['#ffe4e6', '#f43f5e'], // rose
+    ['#e0e7ff', '#6366f1'], // indigo
   ];
   const idx = (name.charCodeAt(0) + (name.charCodeAt(1) || 0)) % palette.length;
   const [bg, fg] = palette[idx];

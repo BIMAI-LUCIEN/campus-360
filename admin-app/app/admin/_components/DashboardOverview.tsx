@@ -329,7 +329,7 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
           label="REVENUS"
           value={formatCoins(totals.revenue)}
           icon={Wallet}
-          accent="blue"
+          accent="green"
           trend={revenueTrend}
           caption="vs semaine dernière"
         />
@@ -348,7 +348,7 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
           label="ÉTUDIANTS"
           value={formatInt(totals.sessions)}
           icon={Users}
-          accent="green"
+          accent="blue"
           trend={
             totals.sessions > 0
               ? { value: '+12%', direction: 'up' }
@@ -360,7 +360,7 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
           label="CONVERSION"
           value={`${conversionRate}%`}
           icon={TrendingUp}
-          accent="amber"
+          accent="orange"
           trend={{
             value:
               totals.previews > 0
@@ -392,7 +392,7 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
                 <span className="inline-flex items-center gap-1.5 text-fg-muted">
                   <span
                     className="inline-block h-2 w-2 rounded-full"
-                    style={{ backgroundColor: '#2563eb' }}
+                    style={{ backgroundColor: '#10b981' }}
                   />
                   Revenus totaux
                 </span>
@@ -427,12 +427,12 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
                     >
                       <stop
                         offset="0%"
-                        stopColor="#2563eb"
+                        stopColor="#10b981"
                         stopOpacity={0.22}
                       />
                       <stop
                         offset="100%"
-                        stopColor="#2563eb"
+                        stopColor="#10b981"
                         stopOpacity={0}
                       />
                     </linearGradient>
@@ -460,7 +460,7 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
                   />
                   <Tooltip
                     cursor={{
-                      stroke: '#2563eb',
+                      stroke: '#10b981',
                       strokeOpacity: 0.25,
                       strokeWidth: 1,
                     }}
@@ -494,12 +494,12 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
                   <Area
                     type="monotone"
                     dataKey="revenue"
-                    stroke="#2563eb"
+                    stroke="#10b981"
                     strokeWidth={2.5}
                     fill="url(#revenueAreaFill)"
                     activeDot={{
                       r: 5,
-                      fill: '#2563eb',
+                      fill: '#10b981',
                       stroke: '#ffffff',
                       strokeWidth: 2,
                     }}
