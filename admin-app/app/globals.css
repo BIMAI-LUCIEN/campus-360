@@ -32,6 +32,29 @@
 
 @import "tailwindcss";
 
+/* ============================================================================
+ * Load the prebuilt Tailwind output.
+ *
+ * `scripts/prebuild-css.mjs` runs as part of `npm run build` (wired through
+ * `prebuild` in package.json) and writes the fully-compiled CSS to
+ * `globals.compiled.css`. This indirection exists because Next.js's
+ * built-in PostCSS integration drops `@source` globs in monorepo /
+ * git-worktree setups — verified repeatedly in this repo. Pre-compiling
+ * under our own Node cwd sidesteps that bug.
+ *
+ * Refs:
+ *   - https://github.com/tailwindlabs/tailwindcss/issues/13500
+ * ============================================================================ */
+@import "./globals.compiled.css";
+
+/* ============================================================================
+ * The block below is the SOURCE — it gets compiled by the prebuild step.
+ * Any `@source` directives here are read by prebuild-css.mjs to know
+ * which files to scan for utility-class usage. They are NOT used by
+ * Next.js's PostCSS at request time (that's the bug we're working
+ * around).
+ * ============================================================================ */
+
 /* Explicit source globs — Tailwind v4's auto-detection misses these in
  * monorepo / git-worktree setups, so without @source the build ships an
  * essentially empty stylesheet. Point at the app + lib + types folders
