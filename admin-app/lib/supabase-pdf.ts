@@ -20,6 +20,18 @@ export interface PdfAnalyticsSummary {
     assistantQuestions: number;
     revenue: number;
   };
+  /** Counts of catalog entities (live snapshot, not event-derived). */
+  catalog: {
+    totalUsers: number;
+    studentUsers: number;
+    newUsersThisWeek: number;
+    totalPdfs: number;
+    publishedPdfs: number;
+    newPdfsThisWeek: number;
+    totalPacks: number;
+    publishedPacks: number;
+    newPacksThisWeek: number;
+  };
   dailyStats: {
     date: string;
     purchases: number;
@@ -77,6 +89,17 @@ export const emptyAnalytics = (configured: boolean): PdfAnalyticsSummary => ({
     readers: 0,
     assistantQuestions: 0,
     revenue: 0,
+  },
+  catalog: {
+    totalUsers: 0,
+    studentUsers: 0,
+    newUsersThisWeek: 0,
+    totalPdfs: 0,
+    publishedPdfs: 0,
+    newPdfsThisWeek: 0,
+    totalPacks: 0,
+    publishedPacks: 0,
+    newPacksThisWeek: 0,
   },
   topDocuments: [],
   dailyStats: [],
@@ -319,7 +342,7 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
   if (!db) return emptyAnalytics(false);
 
   try {
-    const [totalsResult, topDocumentsResult, recentEventsResult, dailyStatsResult, categoryStatsResult] = await Promise.all([
+    const [totalsResult, topDocumentsResult, recentEventsResult, dailyStatsResult, categoryStatsResult, catalogResult] = await Promise.all([
       db.query(`
         select
           count(distinct e.session_id)::int as sessions,
@@ -386,6 +409,20 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
         group by coalesce(d.subject, 'Autre')
         having count(*) filter (where e.event_type = 'purchase_success') > 0
         order by purchases desc
+      `),
+      // Catalog snapshot — direct counts from the canonical tables, not
+      // event-derived (so a doc with no recent activity still shows up).
+      db.query(`
+        select
+          (select count(*) from public."user")::int as total_users,
+          (select count(*) from public."user" where role = 'student')::int as student_users,
+          (select count(*) from public."user" where "createdAt" >= now() - interval '7 days')::int as new_users_week,
+          (select count(*) from public.documents)::int as total_pdfs,
+          (select count(*) from public.documents where status = 'published')::int as published_pdfs,
+          (select count(*) from public.documents where "createdAt" >= now() - interval '7 days')::int as new_pdfs_week,
+          (select count(*) from public.packs)::int as total_packs,
+          (select count(*) from public.packs where status = 'published')::int as published_packs,
+          (select count(*) from public.packs where "createdAt" >= now() - interval '7 days')::int as new_packs_week
       `)
     ]);
 
@@ -405,6 +442,20 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
     return {
       configured: true,
       totals,
+      catalog: (() => {
+        const r = catalogResult.rows[0] ?? {};
+        return {
+          totalUsers: Number(r.total_users ?? 0),
+          studentUsers: Number(r.student_users ?? 0),
+          newUsersThisWeek: Number(r.new_users_week ?? 0),
+          totalPdfs: Number(r.total_pdfs ?? 0),
+          publishedPdfs: Number(r.published_pdfs ?? 0),
+          newPdfsThisWeek: Number(r.new_pdfs_week ?? 0),
+          totalPacks: Number(r.total_packs ?? 0),
+          publishedPacks: Number(r.published_packs ?? 0),
+          newPacksThisWeek: Number(r.new_packs_week ?? 0),
+        };
+      })(),
       dailyStats: dailyStatsResult.rows.map((row) => ({
         date: String(row.date),
         purchases: Number(row.purchases ?? 0),

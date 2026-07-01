@@ -13,11 +13,17 @@ import {
 } from 'recharts';
 import {
   ArrowRight,
+  BookOpen,
   Calendar,
   ChevronDown,
   Download,
+  Eye,
   FileText,
+  GraduationCap,
   Loader2,
+  Package,
+  Search,
+  ShoppingCart,
   TrendingUp,
   Users,
   Wallet,
@@ -88,6 +94,68 @@ function trendFromDelta(delta: number, hasBaseline: boolean): {
 /* ─────────────────────────────────────────────────────────────────────────
  * Component
  * ──────────────────────────────────────────────────────────────────────── */
+
+// Compact secondary KPI for the catalog snapshot row.
+function SnapshotCard({
+  label,
+  total,
+  breakdown,
+  accent,
+}: {
+  label: string;
+  total: number;
+  breakdown: string;
+  accent: 'purple' | 'blue' | 'cyan' | 'rose';
+}) {
+  const accentBg: Record<typeof accent, string> = {
+    purple: 'bg-chart-purple-soft text-chart-purple',
+    blue: 'bg-chart-blue-soft text-chart-blue',
+    cyan: 'bg-chart-cyan-soft text-chart-cyan',
+    rose: 'bg-chart-rose-soft text-chart-rose',
+  };
+  return (
+    <div className="bg-surface border border-border rounded-xl p-4 shadow-card">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+          {label}
+        </span>
+        <span
+          className={`inline-flex h-7 w-7 items-center justify-center rounded-md ${accentBg[accent]}`}
+        >
+          <FileText size={13} />
+        </span>
+      </div>
+      <div className="mt-2 font-display text-[22px] font-bold leading-none text-fg tabular-nums">
+        {total.toLocaleString('fr-FR')}
+      </div>
+      <div className="mt-1.5 text-[11px] text-fg-subtle">{breakdown}</div>
+    </div>
+  );
+}
+
+// Map an event_type to a friendly French label + Lucide icon.
+const EVENT_META: Record<
+  string,
+  { label: string; tone: string; Icon: typeof Eye }
+> = {
+  catalog_view: { label: 'Vue catalogue', tone: 'bg-chart-blue-soft text-chart-blue', Icon: BookOpen },
+  preview_open: { label: 'Aperçu ouvert', tone: 'bg-chart-cyan-soft text-chart-cyan', Icon: Eye },
+  search: { label: 'Recherche', tone: 'bg-chart-amber-soft text-chart-amber', Icon: Search },
+  purchase_start: { label: 'Panier créé', tone: 'bg-chart-pink-soft text-chart-pink', Icon: ShoppingCart },
+  purchase_success: { label: 'Achat validé', tone: 'bg-chart-green-soft text-chart-green', Icon: ShoppingCart },
+  purchase_failed: { label: 'Achat échoué', tone: 'bg-chart-rose-soft text-chart-rose', Icon: ShoppingCart },
+  reader_open: { label: 'Lecture ouverte', tone: 'bg-chart-indigo-soft text-chart-indigo', Icon: BookOpen },
+  assistant_question: { label: 'Question IA', tone: 'bg-chart-purple-soft text-chart-purple', Icon: GraduationCap },
+};
+const DEFAULT_EVENT_META = {
+  label: 'Activité',
+  tone: 'bg-surface-3 text-fg-muted',
+  Icon: FileText,
+} as const;
+
+function getEventMeta(type: string) {
+  return EVENT_META[type] ?? DEFAULT_EVENT_META;
+}
 
 interface DashboardOverviewProps {
   initialData: PdfAnalyticsSummary;
@@ -230,7 +298,35 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
     };
   }, [data.dailyStats, dailyForTrend, totals.revenue]);
 
-  const newPdfsThisWeek = Math.max(0, data.topDocuments.length - 5);
+  // ── Catalog snapshot (live from DB, not event-derived) ─────────────
+  const catalog = data.catalog;
+
+  // Real trend for the PDFs KPI: compare publishedPdfs to (publishedPdfs - newPdfsThisWeek).
+  // Falls back to "+1" placeholder if data is stale or counts are zero.
+  const pdfsTrend = useMemo(() => {
+    const prev = Math.max(0, catalog.publishedPdfs - catalog.newPdfsThisWeek);
+    if (prev === 0 && catalog.publishedPdfs === 0) {
+      return { value: '0%', direction: 'stable' as const };
+    }
+    if (prev === 0) {
+      return { value: `+${catalog.newPdfsThisWeek}`, direction: 'up' as const };
+    }
+    const delta = Math.round(((catalog.publishedPdfs - prev) / prev) * 100);
+    return trendFromDelta(delta, true);
+  }, [catalog.publishedPdfs, catalog.newPdfsThisWeek]);
+
+  // Real trend for the students KPI: compare studentUsers to (studentUsers - newUsersThisWeek).
+  const studentsTrend = useMemo(() => {
+    const prev = Math.max(0, catalog.studentUsers - catalog.newUsersThisWeek);
+    if (prev === 0 && catalog.studentUsers === 0) {
+      return { value: '0%', direction: 'stable' as const };
+    }
+    if (prev === 0) {
+      return { value: `+${catalog.newUsersThisWeek}`, direction: 'up' as const };
+    }
+    const delta = Math.round(((catalog.studentUsers - prev) / prev) * 100);
+    return trendFromDelta(delta, true);
+  }, [catalog.studentUsers, catalog.newUsersThisWeek]);
 
   // ── Chart data — use whatever dailyStats we have (last 30d ideally) ──
   const chartData = useMemo(
@@ -250,8 +346,13 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
     [data.dailyStats, weeklyRevenue],
   );
 
-  const totalDocs = data.topDocuments.length;
   const totalChartPoints = chartData.length;
+  const hasAnyData =
+    data.configured &&
+    (catalog.publishedPdfs > 0 ||
+      catalog.studentUsers > 0 ||
+      totals.purchases > 0 ||
+      totals.revenue > 0);
 
   return (
     <div className="flex flex-col gap-8">
@@ -331,30 +432,39 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
           icon={Wallet}
           accent="green"
           trend={revenueTrend}
-          caption="vs semaine dernière"
+          caption={
+            weeklyPurchases > 0
+              ? `${weeklyPurchases} vente${weeklyPurchases > 1 ? 's' : ''} sur 7j`
+              : 'Aucune vente sur 7j'
+          }
         />
         <KpiCard
           label="PDF PUBLIÉS"
-          value={formatInt(totalDocs)}
+          value={formatInt(catalog.publishedPdfs)}
           icon={FileText}
           accent="purple"
-          trend={{
-            value: `+${newPdfsThisWeek}`,
-            direction: 'up',
-          }}
-          caption="Nouveaux cette semaine"
+          trend={pdfsTrend}
+          caption={
+            catalog.newPdfsThisWeek > 0
+              ? `+${catalog.newPdfsThisWeek} cette semaine`
+              : catalog.totalPdfs > 0
+                ? `${catalog.totalPdfs - catalog.publishedPdfs} brouillon${catalog.totalPdfs - catalog.publishedPdfs > 1 ? 's' : ''}`
+                : 'Aucun document'
+          }
         />
         <KpiCard
           label="ÉTUDIANTS"
-          value={formatInt(totals.sessions)}
+          value={formatInt(catalog.studentUsers)}
           icon={Users}
           accent="blue"
-          trend={
-            totals.sessions > 0
-              ? { value: '+12%', direction: 'up' }
-              : { value: '0%', direction: 'stable' }
+          trend={studentsTrend}
+          caption={
+            catalog.newUsersThisWeek > 0
+              ? `+${catalog.newUsersThisWeek} cette semaine`
+              : catalog.totalUsers > 0
+                ? `${catalog.totalUsers - catalog.studentUsers} admin${catalog.totalUsers - catalog.studentUsers > 1 ? 's' : ''}`
+                : 'Aucun utilisateur'
           }
-          caption="Inscrits cette semaine"
         />
         <KpiCard
           label="CONVERSION"
@@ -373,7 +483,39 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
                   ? 'stable'
                   : 'down',
           }}
-          caption="Aperçus → Achats"
+          caption={`${totals.purchases} vente${totals.purchases > 1 ? 's' : ''} sur ${totals.previews} aperçus`}
+        />
+      </div>
+
+      {/* ── Catalog snapshot (secondary KPI row) ─────────────────────── */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <SnapshotCard
+          label="Documents"
+          total={catalog.totalPdfs}
+          breakdown={`${catalog.publishedPdfs} publiés · ${catalog.totalPdfs - catalog.publishedPdfs} brouillons`}
+          accent="purple"
+        />
+        <SnapshotCard
+          label="Packs"
+          total={catalog.totalPacks}
+          breakdown={`${catalog.publishedPacks} publiés · ${catalog.totalPacks - catalog.publishedPacks} brouillons`}
+          accent="blue"
+        />
+        <SnapshotCard
+          label="Étudiants"
+          total={catalog.studentUsers}
+          breakdown={
+            catalog.totalUsers > catalog.studentUsers
+              ? `${catalog.totalUsers - catalog.studentUsers} admin${catalog.totalUsers - catalog.studentUsers > 1 ? 's' : ''} sur ${catalog.totalUsers}`
+              : `${catalog.totalUsers} compte${catalog.totalUsers > 1 ? 's' : ''}`
+          }
+          accent="cyan"
+        />
+        <SnapshotCard
+          label="Aperçus (30j)"
+          total={totals.previews}
+          breakdown={`${totals.purchaseStarts} paniers · ${totals.purchases} achats`}
+          accent="rose"
         />
       </div>
 
@@ -575,6 +717,120 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
           </div>
         </Card>
       ) : null}
+
+      {/* ── Two-column row: recent activity + category breakdown ──────── */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        {/* Recent activity */}
+        <Card className="lg:col-span-2" padded={false}>
+          <div className="px-6 pt-6">
+            <CardHeader
+              title="Activité récente"
+              subtitle="20 derniers événements (live)"
+              action={
+                <Link
+                  href="/admin/analytics"
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors"
+                >
+                  Analytics <ArrowRight size={13} />
+                </Link>
+              }
+            />
+          </div>
+
+          {data.recentEvents.length === 0 ? (
+            <div className="px-6 pb-6">
+              <EmptyState
+                icon={TrendingUp}
+                title="Aucune activité enregistrée"
+                description="Les premiers événements (vues, aperçus, achats) apparaîtront ici dès qu'un étudiant interagit avec le catalogue."
+              />
+            </div>
+          ) : (
+            <ul className="divide-y divide-border-light">
+              {data.recentEvents.slice(0, 10).map((event) => {
+                const meta = getEventMeta(event.eventType);
+                const Icon = meta.Icon;
+                return (
+                  <li key={event.id} className="flex items-start gap-3 px-6 py-3">
+                    <span
+                      className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${meta.tone}`}
+                    >
+                      <Icon size={14} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                        <span className="text-sm font-semibold text-fg">
+                          {meta.label}
+                        </span>
+                        <span className="truncate text-sm text-fg-muted">
+                          · {event.documentTitle || 'Catalogue'}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-[11px] text-fg-subtle">
+                        <span>{event.createdAt}</span>
+                        {event.userEmail ? (
+                          <span className="truncate">{event.userEmail}</span>
+                        ) : event.sessionId ? (
+                          <span className="truncate">session {event.sessionId.slice(-8)}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+
+        {/* Category breakdown */}
+        <Card padded={false}>
+          <div className="px-6 pt-6">
+            <CardHeader
+              title="Ventes par matière"
+              subtitle="30 derniers jours"
+            />
+          </div>
+          {data.categoryStats.length === 0 ? (
+            <div className="px-6 pb-6">
+              <EmptyState
+                icon={FileText}
+                title="Aucune vente"
+                description="Les ventes par matière apparaîtront dès qu'un étudiant achètera un document."
+              />
+            </div>
+          ) : (
+            <ul className="px-6 pb-6 space-y-3">
+              {(() => {
+                const total = data.categoryStats.reduce(
+                  (acc, c) => acc + c.purchases,
+                  0,
+                );
+                return data.categoryStats.slice(0, 6).map((cat) => {
+                  const pct = total > 0 ? Math.round((cat.purchases / total) * 100) : 0;
+                  return (
+                    <li key={cat.subject}>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="truncate font-medium text-fg">
+                          {cat.subject}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-fg-muted">
+                          {cat.purchases} · {pct}%
+                        </span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
+                        <div
+                          className="h-full rounded-full bg-primary"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </li>
+                  );
+                });
+              })()}
+            </ul>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
