@@ -47,3 +47,5 @@ admin-app/public/uploads/pdfs/*
 # generated native folders
 /ios
 /android
+.vercel
+.env*
