@@ -100,8 +100,11 @@ jobs:
             exit 1
           fi
           echo "Polling build $BUILD_ID"
+          # eas build:view prints a "- Fetching..." spinner line before the JSON.
+          # We strip any non-JSON line so jq sees a clean payload.
+          jsonify() { grep -E '^\s*[\{\[]' || cat; }
           for i in $(seq 1 60); do
-            STATUS=$(npx --yes eas-cli@latest build:view "$BUILD_ID" --json --non-interactive | jq -r '.status // "UNKNOWN"')
+            STATUS=$(npx --yes eas-cli@latest build:view "$BUILD_ID" --json 2>/dev/null | jsonify | jq -r 'if type=="array" then .[0].status else .status end // "UNKNOWN"')
             echo "Iteration $i: $STATUS"
             case "$STATUS" in
               FINISHED) ;;
@@ -117,8 +120,8 @@ jobs:
             break
           done
 
-          npx --yes eas-cli@latest build:view "$BUILD_ID" --json --non-interactive > /tmp/eas-result.json
-          ARTIFACT_URL=$(jq -r '.artifacts.buildUrl // .artifacts.applicationArchiveUrl // empty' /tmp/eas-result.json)
+          npx --yes eas-cli@latest build:view "$BUILD_ID" --json 2>/dev/null | jsonify > /tmp/eas-result.json
+          ARTIFACT_URL=$(jq -r 'if type=="array" then .[0].artifacts.buildUrl // .[0].artifacts.applicationArchiveUrl else .artifacts.buildUrl // .artifacts.applicationArchiveUrl end // empty' /tmp/eas-result.json)
           if [ -z "$ARTIFACT_URL" ]; then
             echo "::error::EAS finished but no artifact URL exposed"
             cat /tmp/eas-result.json
