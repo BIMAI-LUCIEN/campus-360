@@ -45,7 +45,7 @@ import {
 import { OnboardingScreen } from './src/features/onboarding/OnboardingScreen';
 import { PdfStudentSection } from './src/features/pdf/PdfStudentSection';
 import { ReportsScreen } from './src/features/reports/ReportsScreen';
-import { ReportEditorWebView } from './src/features/reports/ReportEditorWebView';
+import { ReportEditorScreen } from './src/features/reports/ReportEditorScreen';
 import {
   buildSuggestedPacks,
   listPublishedPdfDocuments,
@@ -1340,7 +1340,7 @@ export default function App() {
 
   if (editingReportId) {
     return (
-      <ReportEditorWebView
+      <ReportEditorScreen
         reportId={editingReportId}
         onClose={() => setEditingReportId(null)}
       />
