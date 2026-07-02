@@ -495,10 +495,12 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
       // array_agg + lateral joins. Avoids Postgres operator precedence
       // pitfalls with `int || text` casts in lateral contexts.
       // Real table name is public.app_wallet_transactions (mobile app).
+      // Spend rows are stored as negative coins; abs() so the totals are
+      // positive on the dashboard.
       db.query(`
         select
           coalesce(sum(case when type = 'topup' then amount_coins else 0 end), 0)::int as total_recharge,
-          coalesce(sum(case when type in ('purchase', 'subscription', 'ia_pack') then amount_coins else 0 end), 0)::int as total_spend
+          coalesce(sum(case when type in ('purchase', 'subscription', 'ia_pack') then abs(amount_coins) else 0 end), 0)::int as total_spend
         from public.app_wallet_transactions
       `),
       // 4 weeks of recharge (oldest → newest).
