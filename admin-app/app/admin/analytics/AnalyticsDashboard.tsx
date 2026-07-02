@@ -240,9 +240,36 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
   const ia = data.ia;
   const maxIaRequests = Math.max(1, ...(ia.byFaculty ?? []).map((f) => f.requests));
 
-  // ── Cohorts ──────────────────────────────────────────────
-  const cohorts = data.cohorts ?? [];
+  // ── Cohorts — compute weekly retention in JS from the sparse
+  // (user, week_idx) timeline the API returns. ──────────────────
+  const cohortMonths = data.cohortMonths ?? [];
+  const cohortRetention = data.cohortRetention ?? [];
   const cohortLabels = ['Sem.0', 'Sem.1', 'Sem.2', 'Sem.3'];
+
+  const cohorts = useMemo(() => {
+    return cohortMonths.map((c) => {
+      // Find all (user, week_idx) rows for this cohort month
+      const usersInCohort = cohortRetention
+        .filter((r) => r.cohortMonthIso === c.monthIso)
+        // Distinct userIds per week index (a user with multiple events in
+        // the same week is counted once)
+        .reduce<Record<number, Set<string>>>((acc, r) => {
+          if (!acc[r.weekIdx]) acc[r.weekIdx] = new Set();
+          acc[r.weekIdx].add(r.userId);
+          return acc;
+        }, {});
+      const retentionPct = [0, 1, 2, 3].map((w) =>
+        c.users > 0
+          ? Math.round(((usersInCohort[w]?.size ?? 0) / c.users) * 100)
+          : 0,
+      );
+      return {
+        label: c.label,
+        users: c.users,
+        retentionPct,
+      };
+    });
+  }, [cohortMonths, cohortRetention]);
 
   const hasAnyData = data.configured && (
     data.totals.sessions > 0 ||

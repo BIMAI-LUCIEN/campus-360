@@ -74,12 +74,12 @@ export interface PdfAnalyticsSummary {
     totalQuestions: number;
     byFaculty: { faculty: string; requests: number }[];
   };
-  /** Retention by signup month (last 6 months, oldest → newest). */
-  cohorts: {
-    label: string;
-    users: number;
-    retentionPct: number[]; // % retained at week 1, 2, 3, 4
-  }[];
+  /** Retention by signup month (last 6 months, oldest → newest).
+   * `cohortRetention` is a sparse list of (user, week_idx) pairs — the
+   * dashboard joins this with `cohortMonths` to compute per-week %.
+   */
+  cohortMonths: { label: string; monthIso: string; users: number }[];
+  cohortRetention: { userId: string; cohortMonthIso: string; weekIdx: number }[];
   /** Funnel computed from document_events. */
   funnel: {
     visitors: number;     // distinct session_id
@@ -144,7 +144,8 @@ export const emptyAnalytics = (configured: boolean): PdfAnalyticsSummary => ({
     totalQuestions: 0,
     byFaculty: [],
   },
-  cohorts: [],
+  cohortMonths: [],
+  cohortRetention: [],
   funnel: {
     visitors: 0,
     searchers: 0,
@@ -397,9 +398,12 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
       categoryStatsResult,
       catalogResult,
       walletResult,
+      walletRechargeResult,
+      walletSpendResult,
       iaResult,
       funnelResult,
-      cohortsResult,
+      cohortMonthsResult,
+      cohortRetentionResult,
     ] = await Promise.all([
       db.query(`
         select
@@ -487,35 +491,32 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
           (select count(*) from public.pdf_packs where created_at >= now() - interval '7 days')::int as new_packs_week
       `),
       // Wallet: total recharge/spend + weekly series (4 buckets: S-3 → S0).
+      // Simpler approach: 6 small queries instead of one mega-query with
+      // array_agg + lateral joins. Avoids Postgres operator precedence
+      // pitfalls with `int || text` casts in lateral contexts.
       db.query(`
-        with weeks as (
-          select generate_series(0, 3) as w
-        )
         select
           coalesce(sum(case when type = 'topup' then amount_coins else 0 end), 0)::int as total_recharge,
-          coalesce(sum(case when type in ('purchase', 'subscription', 'ia_pack') then amount_coins else 0 end), 0)::int as total_spend,
-          (
-            select coalesce(array_agg(coalesce(s, 0) order by w), '{}'::int[])
-            from weeks
-            left join lateral (
-              select sum(amount_coins) as s
-              from public.wallet_transactions
-              where type = 'topup'
-                and created_at >= now() - ((weeks.w + 1) * 7 || ' days')::interval
-                and created_at <  now() - (weeks.w * 7 || ' days')::interval
-            ) t on true
-          ) as weekly_recharge,
-          (
-            select coalesce(array_agg(coalesce(s, 0) order by w), '{}'::int[])
-            from weeks
-            left join lateral (
-              select abs(sum(amount_coins)) as s
-              from public.wallet_transactions
-              where type in ('purchase', 'subscription', 'ia_pack')
-                and created_at >= now() - ((weeks.w + 1) * 7 || ' days')::interval
-                and created_at <  now() - (weeks.w * 7 || ' days')::interval
-            ) t on true
-          ) as weekly_spend
+          coalesce(sum(case when type in ('purchase', 'subscription', 'ia_pack') then amount_coins else 0 end), 0)::int as total_spend
+        from public.wallet_transactions
+      `),
+      // 4 weeks of recharge (oldest → newest).
+      db.query(`
+        select
+          coalesce(sum(case when created_at >= now() - interval '28 days' and created_at <  now() - interval '21 days' and type = 'topup' then amount_coins else 0 end), 0)::int as w0,
+          coalesce(sum(case when created_at >= now() - interval '21 days' and created_at <  now() - interval '14 days' and type = 'topup' then amount_coins else 0 end), 0)::int as w1,
+          coalesce(sum(case when created_at >= now() - interval '14 days' and created_at <  now() - interval '7 days'  and type = 'topup' then amount_coins else 0 end), 0)::int as w2,
+          coalesce(sum(case when created_at >= now() - interval '7 days'  and type = 'topup' then amount_coins else 0 end), 0)::int as w3
+        from public.wallet_transactions
+      `),
+      // 4 weeks of spend (oldest → newest, absolute value).
+      db.query(`
+        select
+          coalesce(sum(case when created_at >= now() - interval '28 days' and created_at <  now() - interval '21 days' and type in ('purchase', 'subscription', 'ia_pack') then abs(amount_coins) else 0 end), 0)::int as w0,
+          coalesce(sum(case when created_at >= now() - interval '21 days' and created_at <  now() - interval '14 days' and type in ('purchase', 'subscription', 'ia_pack') then abs(amount_coins) else 0 end), 0)::int as w1,
+          coalesce(sum(case when created_at >= now() - interval '14 days' and created_at <  now() - interval '7 days'  and type in ('purchase', 'subscription', 'ia_pack') then abs(amount_coins) else 0 end), 0)::int as w2,
+          coalesce(sum(case when created_at >= now() - interval '7 days'  and type in ('purchase', 'subscription', 'ia_pack') then abs(amount_coins) else 0 end), 0)::int as w3
+        from public.wallet_transactions
       `),
       // IA usage: total + per-faculty breakdown (last 30 days).
       db.query(`
@@ -549,43 +550,34 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
         from public.document_events
         where created_at >= now() - interval '30 days'
       `),
-      // Cohorts: signup month × weekly retention (last 6 months).
-      // A user is "retained" in week N if they had any document_event
-      // 7N–7N+7 days after their created_at.
+      // Cohort signup months (6 last months) — retention computed in JS
+      // on the dashboard side; SQL just returns the labels and user counts.
       db.query(`
-        with cohorts as (
-          select
-            to_char(date_trunc('month', created_at), 'Mon YYYY') as label,
-            date_trunc('month', created_at) as month,
-            count(*)::int as users
-          from public.profiles
-          where created_at >= now() - interval '6 months'
-            and role = 'student'
-          group by 1, 2
-        )
         select
-          c.label,
-          c.users,
-          (
-            select array_agg(
-              case
-                when c.users = 0 then 0
-                else round(
-                  100.0 * (
-                    select count(distinct p2.id)
-                    from public.profiles p2
-                    join public.document_events e on e.user_id = p2.id
-                    where date_trunc('month', p2.created_at) = c.month
-                      and e.created_at >= p2.created_at + (n * 7 || ' days')::interval
-                      and e.created_at <  p2.created_at + ((n + 1) * 7 || ' days')::interval
-                  ) / c.users
-              end
-              order by n
-            )
-            from generate_series(0, 3) as n
-          ) as retention_pct
-        from cohorts c
-        order by c.month
+          to_char(date_trunc('month', created_at), 'Mon YYYY') as label,
+          date_trunc('month', created_at) as month,
+          count(*)::int as users
+        from public.profiles
+        where created_at >= now() - interval '6 months'
+          and role = 'student'
+        group by 1, 2
+        order by date_trunc('month', created_at)
+      `),
+      // Per-user activity timeline (used by the dashboard to compute
+      // weekly retention). One row per (user, week_bucket) for the last 6
+      // months — small, easy to group in JS.
+      db.query(`
+        select
+          p.id as user_id,
+          date_trunc('month', p.created_at) as cohort_month,
+          extract(week from e.created_at - p.created_at)::int / 7 as week_idx
+        from public.profiles p
+        join public.document_events e on e.user_id = p.id
+        where p.created_at >= now() - interval '6 months'
+          and p.role = 'student'
+          and e.created_at >= p.created_at
+          and e.created_at <  p.created_at + interval '28 days'
+        group by p.id, p.created_at, e.created_at
       `)
     ]);
 
@@ -659,16 +651,23 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
       })),
       wallet: (() => {
         const r = walletResult.rows[0] ?? {};
+        const rechargeRow = walletRechargeResult.rows[0] ?? {};
+        const spendRow = walletSpendResult.rows[0] ?? {};
         return {
           totalRecharge: Number(r.total_recharge ?? 0),
           totalSpend: Number(r.total_spend ?? 0),
-          // pg returns arrays as parsed JS arrays already, but be defensive
-          weeklyRecharge: Array.isArray(r.weekly_recharge)
-            ? r.weekly_recharge.map((n: unknown) => Number(n ?? 0))
-            : [0, 0, 0, 0],
-          weeklySpend: Array.isArray(r.weekly_spend)
-            ? r.weekly_spend.map((n: unknown) => Number(n ?? 0))
-            : [0, 0, 0, 0],
+          weeklyRecharge: [
+            Number(rechargeRow.w0 ?? 0),
+            Number(rechargeRow.w1 ?? 0),
+            Number(rechargeRow.w2 ?? 0),
+            Number(rechargeRow.w3 ?? 0),
+          ],
+          weeklySpend: [
+            Number(spendRow.w0 ?? 0),
+            Number(spendRow.w1 ?? 0),
+            Number(spendRow.w2 ?? 0),
+            Number(spendRow.w3 ?? 0),
+          ],
         };
       })(),
       ia: (() => {
@@ -692,23 +691,18 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
           readers: Number(r.readers ?? 0),
         };
       })(),
-      cohorts: cohortsResult.rows.map((row: { label: string; users: number | string; retention_pct: number[] | string }) => {
-        let retention: number[] = [];
-        if (Array.isArray(row.retention_pct)) {
-          retention = row.retention_pct.map((n: unknown) => Number(n ?? 0));
-        } else if (typeof row.retention_pct === 'string') {
-          // pg returns int[] as '{a,b,c}' in some drivers — parse defensively
-          retention = row.retention_pct
-            .replace(/[{}]/g, '')
-            .split(',')
-            .map((s) => Number(s.trim()) || 0);
-        }
-        return {
-          label: String(row.label),
-          users: Number(row.users ?? 0),
-          retentionPct: retention,
-        };
-      }),
+      cohortMonths: cohortMonthsResult.rows.map((row: { label: string; month: Date | string; users: number | string }) => ({
+        label: String(row.label ?? ''),
+        monthIso: row.month instanceof Date ? row.month.toISOString() : String(row.month ?? ''),
+        users: Number(row.users ?? 0),
+      })),
+      cohortRetention: cohortRetentionResult.rows.map(
+        (row: { user_id: string; cohort_month: Date | string; week_idx: number | string }) => ({
+          userId: String(row.user_id ?? ''),
+          cohortMonthIso: row.cohort_month instanceof Date ? row.cohort_month.toISOString() : String(row.cohort_month ?? ''),
+          weekIdx: Number(row.week_idx ?? 0),
+        }),
+      ),
     };
   } catch {
     return emptyAnalytics(true);
