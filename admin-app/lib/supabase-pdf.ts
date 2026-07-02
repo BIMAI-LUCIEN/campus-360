@@ -61,6 +61,33 @@ export interface PdfAnalyticsSummary {
     userEmail?: string;
     createdAt: string;
   }[];
+  /** Wallet totals from public.wallet_transactions. */
+  wallet: {
+    totalRecharge: number;
+    totalSpend: number;
+    /** Per-week totals for the last 4 weeks (oldest → newest). */
+    weeklyRecharge: number[];
+    weeklySpend: number[];
+  };
+  /** IA usage breakdown from public.ia_usage_logs. */
+  ia: {
+    totalQuestions: number;
+    byFaculty: { faculty: string; requests: number }[];
+  };
+  /** Retention by signup month (last 6 months, oldest → newest). */
+  cohorts: {
+    label: string;
+    users: number;
+    retentionPct: number[]; // % retained at week 1, 2, 3, 4
+  }[];
+  /** Funnel computed from document_events. */
+  funnel: {
+    visitors: number;     // distinct session_id
+    searchers: number;    // did at least one search
+    previewers: number;   // opened at least one preview
+    buyers: number;       // completed at least one purchase
+    readers: number;      // opened at least one reader
+  };
 }
 
 export const getPool = () => {
@@ -107,6 +134,24 @@ export const emptyAnalytics = (configured: boolean): PdfAnalyticsSummary => ({
   dailyStats: [],
   categoryStats: [],
   recentEvents: [],
+  wallet: {
+    totalRecharge: 0,
+    totalSpend: 0,
+    weeklyRecharge: [0, 0, 0, 0],
+    weeklySpend: [0, 0, 0, 0],
+  },
+  ia: {
+    totalQuestions: 0,
+    byFaculty: [],
+  },
+  cohorts: [],
+  funnel: {
+    visitors: 0,
+    searchers: 0,
+    previewers: 0,
+    buyers: 0,
+    readers: 0,
+  },
 });
 
 export const uploadSupabasePdfBytes = async (filePath: string, bytes: Buffer, bucket: string = 'documents') => {
@@ -344,7 +389,18 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
   if (!db) return emptyAnalytics(false);
 
   try {
-    const [totalsResult, topDocumentsResult, recentEventsResult, dailyStatsResult, categoryStatsResult, catalogResult] = await Promise.all([
+    const [
+      totalsResult,
+      topDocumentsResult,
+      recentEventsResult,
+      dailyStatsResult,
+      categoryStatsResult,
+      catalogResult,
+      walletResult,
+      iaResult,
+      funnelResult,
+      cohortsResult,
+    ] = await Promise.all([
       db.query(`
         select
           count(distinct e.session_id)::int as sessions,
@@ -429,6 +485,107 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
           (select count(*) from public.pdf_packs)::int as total_packs,
           (select count(*) from public.pdf_packs where status = 'published')::int as published_packs,
           (select count(*) from public.pdf_packs where created_at >= now() - interval '7 days')::int as new_packs_week
+      `),
+      // Wallet: total recharge/spend + weekly series (4 buckets: S-3 → S0).
+      db.query(`
+        with weeks as (
+          select generate_series(0, 3) as w
+        )
+        select
+          coalesce(sum(case when type = 'topup' then amount_coins else 0 end), 0)::int as total_recharge,
+          coalesce(sum(case when type in ('purchase', 'subscription', 'ia_pack') then amount_coins else 0 end), 0)::int as total_spend,
+          (
+            select coalesce(array_agg(coalesce(s, 0) order by w), '{}'::int[])
+            from weeks
+            left join lateral (
+              select sum(amount_coins) as s
+              from public.wallet_transactions
+              where type = 'topup'
+                and created_at >= now() - ((weeks.w + 1) * 7 || ' days')::interval
+                and created_at <  now() - (weeks.w * 7 || ' days')::interval
+            ) t on true
+          ) as weekly_recharge,
+          (
+            select coalesce(array_agg(coalesce(s, 0) order by w), '{}'::int[])
+            from weeks
+            left join lateral (
+              select abs(sum(amount_coins)) as s
+              from public.wallet_transactions
+              where type in ('purchase', 'subscription', 'ia_pack')
+                and created_at >= now() - ((weeks.w + 1) * 7 || ' days')::interval
+                and created_at <  now() - (weeks.w * 7 || ' days')::interval
+            ) t on true
+          ) as weekly_spend
+      `),
+      // IA usage: total + per-faculty breakdown (last 30 days).
+      db.query(`
+        select
+          count(*)::int as total,
+          coalesce(
+            (
+              select jsonb_agg(row_to_json(t) order by t.requests desc)
+              from (
+                select coalesce(p.faculty, 'Non renseigné') as faculty,
+                       count(*) as requests
+                from public.ia_usage_logs l
+                left join public.profiles p on p.id = l.user_id
+                where l.created_at >= now() - interval '30 days'
+                group by coalesce(p.faculty, 'Non renseigné')
+                order by requests desc
+                limit 8
+              ) t
+            ),
+            '[]'::jsonb
+          ) as by_faculty
+      `),
+      // Funnel from document_events.
+      db.query(`
+        select
+          count(distinct session_id)::int as visitors,
+          count(distinct session_id) filter (where event_type = 'search')::int as searchers,
+          count(distinct session_id) filter (where event_type = 'preview_open')::int as previewers,
+          count(distinct session_id) filter (where event_type = 'purchase_success')::int as buyers,
+          count(distinct session_id) filter (where event_type = 'reader_open')::int as readers
+        from public.document_events
+        where created_at >= now() - interval '30 days'
+      `),
+      // Cohorts: signup month × weekly retention (last 6 months).
+      // A user is "retained" in week N if they had any document_event
+      // 7N–7N+7 days after their created_at.
+      db.query(`
+        with cohorts as (
+          select
+            to_char(date_trunc('month', created_at), 'Mon YYYY') as label,
+            date_trunc('month', created_at) as month,
+            count(*)::int as users
+          from public.profiles
+          where created_at >= now() - interval '6 months'
+            and role = 'student'
+          group by 1, 2
+        )
+        select
+          c.label,
+          c.users,
+          (
+            select array_agg(
+              case
+                when c.users = 0 then 0
+                else round(
+                  100.0 * (
+                    select count(distinct p2.id)
+                    from public.profiles p2
+                    join public.document_events e on e.user_id = p2.id
+                    where date_trunc('month', p2.created_at) = c.month
+                      and e.created_at >= p2.created_at + (n * 7 || ' days')::interval
+                      and e.created_at <  p2.created_at + ((n + 1) * 7 || ' days')::interval
+                  ) / c.users
+              end
+              order by n
+            )
+            from generate_series(0, 3) as n
+          ) as retention_pct
+        from cohorts c
+        order by c.month
       `)
     ]);
 
@@ -500,6 +657,58 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
           minute: '2-digit',
         }),
       })),
+      wallet: (() => {
+        const r = walletResult.rows[0] ?? {};
+        return {
+          totalRecharge: Number(r.total_recharge ?? 0),
+          totalSpend: Number(r.total_spend ?? 0),
+          // pg returns arrays as parsed JS arrays already, but be defensive
+          weeklyRecharge: Array.isArray(r.weekly_recharge)
+            ? r.weekly_recharge.map((n: unknown) => Number(n ?? 0))
+            : [0, 0, 0, 0],
+          weeklySpend: Array.isArray(r.weekly_spend)
+            ? r.weekly_spend.map((n: unknown) => Number(n ?? 0))
+            : [0, 0, 0, 0],
+        };
+      })(),
+      ia: (() => {
+        const r = iaResult.rows[0] ?? {};
+        const faculties = Array.isArray(r.by_faculty) ? r.by_faculty : [];
+        return {
+          totalQuestions: Number(r.total ?? 0),
+          byFaculty: faculties.map((row: { faculty: string; requests: number | string }) => ({
+            faculty: String(row.faculty ?? 'Non renseigné'),
+            requests: Number(row.requests ?? 0),
+          })),
+        };
+      })(),
+      funnel: (() => {
+        const r = funnelResult.rows[0] ?? {};
+        return {
+          visitors: Number(r.visitors ?? 0),
+          searchers: Number(r.searchers ?? 0),
+          previewers: Number(r.previewers ?? 0),
+          buyers: Number(r.buyers ?? 0),
+          readers: Number(r.readers ?? 0),
+        };
+      })(),
+      cohorts: cohortsResult.rows.map((row: { label: string; users: number | string; retention_pct: number[] | string }) => {
+        let retention: number[] = [];
+        if (Array.isArray(row.retention_pct)) {
+          retention = row.retention_pct.map((n: unknown) => Number(n ?? 0));
+        } else if (typeof row.retention_pct === 'string') {
+          // pg returns int[] as '{a,b,c}' in some drivers — parse defensively
+          retention = row.retention_pct
+            .replace(/[{}]/g, '')
+            .split(',')
+            .map((s) => Number(s.trim()) || 0);
+        }
+        return {
+          label: String(row.label),
+          users: Number(row.users ?? 0),
+          retentionPct: retention,
+        };
+      }),
     };
   } catch {
     return emptyAnalytics(true);
