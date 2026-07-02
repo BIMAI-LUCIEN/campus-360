@@ -37,14 +37,14 @@ export type StudentProfileUpdateInput = {
 
 export type StudentAccount = {
   user: StudentProfile;
-  wallet: { balanceCoins: number; iaCredits: number };
+  wallet: { balanceCoins: number; iaCredits: number; reportCredits: number };
   subscription: { tier: 'free' | 'basic' | 'premium'; expiresAt: string | null };
   purchasedDocumentIds: string[];
   purchasedPackIds: string[];
   transactions: Array<{
     id: string;
     amount_coins: number;
-    type: 'topup' | 'purchase' | 'withdrawal' | 'commission';
+    type: 'topup' | 'purchase' | 'withdrawal' | 'commission' | 'report';
     status: 'success' | 'pending' | 'failed';
     reference_id?: string | null;
     reference_title?: string | null;

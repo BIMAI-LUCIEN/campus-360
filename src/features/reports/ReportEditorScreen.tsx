@@ -6,8 +6,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   StyleSheet, View, Text, Pressable, SafeAreaView, ScrollView,
-  TextInput, ActivityIndicator, Alert, Modal, KeyboardAvoidingView,
-  Platform, Dimensions, Linking
+  TextInput, ActivityIndicator, Alert, Modal,
+  Platform, Linking, Keyboard, TouchableWithoutFeedback
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { authFetch, authBaseUrl } from '../auth/betterAuth';
@@ -937,9 +937,11 @@ export function ReportEditorScreen({ reportId, onClose }: ReportEditorScreenProp
               );
             }
           }}
-          scrollEnabled={false}
+          scrollEnabled={true}
           showsVerticalScrollIndicator={false}
           textZoom={100}
+          keyboardDisplayRequiresUserAction={false}
+          hideKeyboardAccessoryView={false}
         />
       </View>
 

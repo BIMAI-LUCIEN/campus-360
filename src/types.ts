@@ -2,7 +2,7 @@ export type Transaction = {
   id: string;
   label: string;
   amount: number;
-  type: 'topup' | 'purchase' | 'withdrawal' | 'commission';
+  type: 'topup' | 'purchase' | 'withdrawal' | 'commission' | 'report';
   status: 'success' | 'pending' | 'failed';
   date: string;
 };

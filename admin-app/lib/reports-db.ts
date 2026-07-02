@@ -92,15 +92,21 @@ export async function getReportSections(reportId: string): Promise<ReportSection
   return res.rows;
 }
 
+type DbClient = import('pg').PoolClient;
+
 export async function createReport(
   userId: string,
   title: string,
   description: string,
-  templateType: string
+  templateType: string,
+  client?: DbClient
 ): Promise<Report> {
-  const client = await databasePool.connect();
+  const shouldRelease = !client;
+  if (!client) {
+    client = await databasePool.connect();
+  }
   try {
-    await client.query('begin');
+    if (shouldRelease) await client.query('begin');
 
     // 1. Insert report
     const reportRes = await client.query(
@@ -123,16 +129,16 @@ export async function createReport(
       );
     }
 
-    await client.query('commit');
+    if (shouldRelease) await client.query('commit');
     return {
       ...report,
       line_spacing: Number(report.line_spacing),
     };
   } catch (error) {
-    await client.query('rollback');
+    if (shouldRelease) await client.query('rollback');
     throw error;
   } finally {
-    client.release();
+    if (shouldRelease) client.release();
   }
 }
 

@@ -281,6 +281,7 @@ export default function App() {
   const [supportModalVisible, setSupportModalVisible] = useState(false);
   const [balance, setBalance] = useState(0);
   const [iaCredits, setIaCredits] = useState(0);
+  const [reportCredits, setReportCredits] = useState(0);
   const [subscriptionTier, setSubscriptionTier] = useState<'free'|'basic'|'premium'>('free');
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -530,6 +531,7 @@ export default function App() {
       setStudentProfile(account.user);
       setBalance(account.wallet.balanceCoins);
       setIaCredits(account.wallet.iaCredits);
+      setReportCredits(account.wallet.reportCredits ?? 0);
       setSubscriptionTier(account.subscription.tier);
       setSubscriptionExpiresAt(account.subscription.expiresAt);
       setPurchasedDocuments(account.purchasedDocumentIds);
@@ -546,7 +548,9 @@ export default function App() {
                 ? 'Recharge wallet PDF'
                 : row.type === 'withdrawal'
                   ? 'Retrait wallet'
-                  : 'Commission PDF',
+                  : row.type === 'report'
+                    ? `Rapport (${row.reference_id ?? 'rapport'})`
+                    : 'Commission PDF',
           amount: row.amount_coins,
           type: row.type,
           status: row.status,
@@ -1802,7 +1806,13 @@ export default function App() {
               </View>
             </View>
           ) : activeSection === 'reports' ? (
-            <ReportsScreen onEditReport={(id) => setEditingReportId(id)} />
+            <ReportsScreen
+              onEditReport={(id) => setEditingReportId(id)}
+              balance={balance}
+              reportCredits={reportCredits}
+              subscriptionTier={subscriptionTier}
+              onRefreshAccount={() => syncStudentAccount(studentSession ?? undefined)}
+            />
           ) : activeSection === 'home' ? null : (
             <PdfStudentSection
               documents={pdfDocuments}

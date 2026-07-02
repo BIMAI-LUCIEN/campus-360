@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
         `update public.app_wallets
          set balance_coins = balance_coins - $2,
              ia_credits = ia_credits + $3,
+             report_credits = coalesce(report_credits, 0) + 3,
              updated_at = now()
          where user_id = $1`,
         [access.user.id, price, iaCredits]
