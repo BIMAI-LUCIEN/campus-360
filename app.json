@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Campus-Bordes",
-    "slug": "campus-bordes",
+    "slug": "campus",
     "scheme": "campus-bordes",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -30,8 +30,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "00000000-0000-0000-0000-000000000000"
+        "projectId": "098589af-cd81-41d3-8c74-173bd02396a5"
       }
-    }
+    },
+    "owner": "campus360s-team"
   }
 }
