@@ -704,7 +704,12 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
         }),
       ),
     };
-  } catch {
+  } catch (err) {
+    console.error('[analytics] getSupabasePdfAnalytics failed:', err);
+    if (err && typeof err === 'object') {
+      console.error('[analytics] err.message:', (err as Error).message);
+      console.error('[analytics] err.stack:', (err as Error).stack);
+    }
     return emptyAnalytics(true);
   }
 };
