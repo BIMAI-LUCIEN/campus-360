@@ -1,16 +1,18 @@
 {
   "expo": {
     "name": "Campus-Bordes",
-    "slug": "campus-bordes",
+    "slug": "campus",
     "scheme": "campus-bordes",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.campus360b.app"
     },
     "android": {
+      "package": "com.campus360b.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -25,6 +27,12 @@
     "plugins": [
       "expo-secure-store",
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "098589af-cd81-41d3-8c74-173bd02396a5"
+      }
+    },
+    "owner": "campus360s-team"
   }
 }
