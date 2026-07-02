@@ -494,11 +494,12 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
       // Simpler approach: 6 small queries instead of one mega-query with
       // array_agg + lateral joins. Avoids Postgres operator precedence
       // pitfalls with `int || text` casts in lateral contexts.
+      // Real table name is public.app_wallet_transactions (mobile app).
       db.query(`
         select
           coalesce(sum(case when type = 'topup' then amount_coins else 0 end), 0)::int as total_recharge,
           coalesce(sum(case when type in ('purchase', 'subscription', 'ia_pack') then amount_coins else 0 end), 0)::int as total_spend
-        from public.wallet_transactions
+        from public.app_wallet_transactions
       `),
       // 4 weeks of recharge (oldest → newest).
       db.query(`
@@ -507,7 +508,7 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
           coalesce(sum(case when created_at >= now() - interval '21 days' and created_at <  now() - interval '14 days' and type = 'topup' then amount_coins else 0 end), 0)::int as w1,
           coalesce(sum(case when created_at >= now() - interval '14 days' and created_at <  now() - interval '7 days'  and type = 'topup' then amount_coins else 0 end), 0)::int as w2,
           coalesce(sum(case when created_at >= now() - interval '7 days'  and type = 'topup' then amount_coins else 0 end), 0)::int as w3
-        from public.wallet_transactions
+        from public.app_wallet_transactions
       `),
       // 4 weeks of spend (oldest → newest, absolute value).
       db.query(`
@@ -516,9 +517,10 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
           coalesce(sum(case when created_at >= now() - interval '21 days' and created_at <  now() - interval '14 days' and type in ('purchase', 'subscription', 'ia_pack') then abs(amount_coins) else 0 end), 0)::int as w1,
           coalesce(sum(case when created_at >= now() - interval '14 days' and created_at <  now() - interval '7 days'  and type in ('purchase', 'subscription', 'ia_pack') then abs(amount_coins) else 0 end), 0)::int as w2,
           coalesce(sum(case when created_at >= now() - interval '7 days'  and type in ('purchase', 'subscription', 'ia_pack') then abs(amount_coins) else 0 end), 0)::int as w3
-        from public.wallet_transactions
+        from public.app_wallet_transactions
       `),
       // IA usage: total + per-faculty breakdown (last 30 days).
+      // Real table name is public.app_ia_usage_logs (mobile app schema).
       db.query(`
         select
           count(*)::int as total,
@@ -528,7 +530,7 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
               from (
                 select coalesce(p.faculty, 'Non renseigné') as faculty,
                        count(*) as requests
-                from public.ia_usage_logs l
+                from public.app_ia_usage_logs l
                 left join public.profiles p on p.id = l.user_id
                 where l.created_at >= now() - interval '30 days'
                 group by coalesce(p.faculty, 'Non renseigné')
@@ -705,13 +707,9 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
       ),
     };
   } catch (err) {
-    console.error('[analytics] getSupabasePdfAnalytics failed:', err);
-    if (err && typeof err === 'object') {
-      console.error('[analytics] err.message:', (err as Error).message);
-      console.error('[analytics] err.stack:', (err as Error).stack);
-    }
     // Re-throw so the route handler can surface the real error to the
     // client — without this the dashboard silently renders all zeros.
+    console.error('[analytics] getSupabasePdfAnalytics failed:', err);
     throw err;
   }
 };

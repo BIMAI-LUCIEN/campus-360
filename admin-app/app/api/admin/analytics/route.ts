@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdminApi } from '@/lib/access';
-import { getSupabasePdfAnalytics } from '@/lib/supabase-pdf';
+import { getSupabasePdfAnalytics, emptyAnalytics } from '@/lib/supabase-pdf';
 
 export const runtime = 'nodejs';
 
@@ -8,17 +8,17 @@ export async function GET() {
   const { response } = await requireAdminApi();
   if (response) return response;
 
+  // Top-level guard: getSupabasePdfAnalytics now re-throws on subquery
+  // failure (see lib/supabase-pdf.ts) so we never silently return zeros
+  // when the DB is reachable but a query is broken.
   try {
     const analytics = await getSupabasePdfAnalytics();
     return NextResponse.json(analytics);
   } catch (err) {
-    console.error('[analytics-api] top-level error:', err);
+    console.error('[analytics-api] getSupabasePdfAnalytics threw:', err);
+    const fallback = emptyAnalytics(true);
     return NextResponse.json(
-      {
-        configured: false,
-        error: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      },
+      { ...fallback, error: err instanceof Error ? err.message : String(err) },
       { status: 500 },
     );
   }
