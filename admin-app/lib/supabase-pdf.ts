@@ -710,6 +710,8 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
       console.error('[analytics] err.message:', (err as Error).message);
       console.error('[analytics] err.stack:', (err as Error).stack);
     }
-    return emptyAnalytics(true);
+    // Re-throw so the route handler can surface the real error to the
+    // client — without this the dashboard silently renders all zeros.
+    throw err;
   }
 };
