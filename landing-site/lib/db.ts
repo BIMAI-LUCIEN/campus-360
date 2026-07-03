@@ -7,35 +7,44 @@ declare global {
   var __landingDbPool: Pool | undefined;
 }
 
-function createPool(): Pool {
+function createPool(): Pool | null {
   const url = process.env.DATABASE_URL;
   if (!url) {
-    throw new Error(
-      "DATABASE_URL is required for Campus 360 landing auth. Set it in Vercel project settings or .env.local.",
-    );
+    console.warn("[db] DATABASE_URL not set — auth will be disabled.");
+    return null;
   }
-  const rejectUnauthorized =
-    (process.env.DATABASE_SSL_REJECT_UNAUTHORIZED ?? "false").toLowerCase() === "true";
 
-  const config: PoolConfig = {
-    connectionString: url,
-    max: 5,
-    connectionTimeoutMillis: 20_000,
-    idleTimeoutMillis: 30_000,
-    keepAlive: true,
-  };
+  try {
+    const rejectUnauthorized =
+      (process.env.DATABASE_SSL_REJECT_UNAUTHORIZED ?? "false").toLowerCase() === "true";
 
-  const isLocal = /localhost|127\.0\.0\.1/.test(url);
-  if (!isLocal) {
-    config.ssl = { rejectUnauthorized };
+    const config: PoolConfig = {
+      connectionString: url,
+      max: 5,
+      connectionTimeoutMillis: 20_000,
+      idleTimeoutMillis: 30_000,
+      keepAlive: true,
+    };
+
+    const isLocal = /localhost|127\.0\.0\.1/.test(url);
+    if (!isLocal) {
+      config.ssl = { rejectUnauthorized };
+    }
+
+    const pool = new Pool(config);
+    pool.on("error", (err) => {
+      console.error("[db] idle pg connection error:", err.message);
+    });
+    return pool;
+  } catch (err) {
+    console.error("[db] Failed to create pool:", err);
+    return null;
   }
-  return new Pool(config);
 }
 
-export const databasePool: Pool =
-  globalThis.__landingDbPool ?? (globalThis.__landingDbPool = createPool());
+const pool = globalThis.__landingDbPool ?? createPool();
+if (pool) {
+  globalThis.__landingDbPool = pool;
+}
 
-databasePool.on("error", (err) => {
-  // Logged once on idle-connection errors — Vercel will rotate the instance.
-  console.error("[db] idle pg connection error:", err.message);
-});
+export const databasePool = pool;

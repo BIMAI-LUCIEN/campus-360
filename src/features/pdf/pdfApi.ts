@@ -97,7 +97,8 @@ export type PdfAnalyticsEventType =
   | 'purchase_success'
   | 'purchase_failed'
   | 'reader_open'
-  | 'assistant_question';
+  | 'assistant_question'
+  | 'free_pdf_claim';
 
 type PdfAnalyticsInput = {
   eventType: PdfAnalyticsEventType;

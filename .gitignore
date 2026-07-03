@@ -34,6 +34,8 @@ expo-start*.log
 # local env files
 .env
 .env*.local
+.env.production
+.env.production.*
 admin-app/.env.local
 admin-app/.next/
 admin-app/*.sqlite
@@ -47,3 +49,7 @@ admin-app/public/uploads/pdfs/*
 # generated native folders
 /ios
 /android
+
+# Git worktrees
+.worktrees/
+

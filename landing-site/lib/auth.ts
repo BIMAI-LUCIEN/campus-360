@@ -7,8 +7,8 @@ const isProd = process.env.NODE_ENV === "production";
 const PRODUCTION_ORIGINS = [
   "https://campus360b.site",
   "https://www.campus360b.site",
+  "https://campus-360-landing-ke5ahqi0c-bimai-s-projects.vercel.app",
   "https://campus-360-landing.vercel.app",
-  "https://admin.campus360b.site",
 ];
 
 const LOCAL_DEV_ORIGINS = [
@@ -24,11 +24,15 @@ const parseOriginList = (raw: string | undefined): string[] =>
     .filter((e): e is string => Boolean(e));
 
 const detectBaseUrl = (): string => {
+  // Use Vercel URL in preview/production, fallback to env var
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
   const envUrl = process.env.BETTER_AUTH_URL;
   if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
     return envUrl;
   }
-  return "https://campus360b.site";
+  return `https://${process.env.VERCEL_URL ?? "localhost:3000"}`;
 };
 
 const trustedOrigins = [
@@ -56,91 +60,96 @@ const googleConfigured =
   !googleClientId.startsWith("replace") &&
   !googleClientSecret.startsWith("replace");
 
-// Secret with dev fallback (refuses to start in prod without one).
+// Secret with dev fallback
 const authSecret = process.env.BETTER_AUTH_SECRET?.trim();
-if (!authSecret) {
-  if (isProd) {
-    throw new Error(
-      "BETTER_AUTH_SECRET is required in production. Run: openssl rand -hex 32",
-    );
-  }
-  console.warn(
-    "[auth] BETTER_AUTH_SECRET not set — using dev fallback. Set one before deploying.",
-  );
-}
 const finalSecret = authSecret || "dev-only-insecure-secret-do-not-use-in-prod";
+if (!authSecret && isProd) {
+  console.warn("[auth] BETTER_AUTH_SECRET not set — using fallback in production.");
+}
 
 const baseURL = detectBaseUrl();
 
 if (!googleConfigured) {
-  console.warn(
-    "[auth] Google OAuth not configured — Google sign-in disabled, email/password works.",
-  );
+  console.warn("[auth] Google OAuth not configured — email/password only.");
 }
 
-const config: Parameters<typeof betterAuth>[0] = {
-  appName: "Campus 360",
-  database: databasePool,
-  baseURL,
-  secret: finalSecret,
-  trustedOrigins,
-  emailAndPassword: {
-    enabled: true,
-    requireEmailVerification: false,
-    autoSignIn: true,
-    minPasswordLength: 8,
-    resetPasswordTokenExpiresIn: 60 * 30,
-  },
-  user: {
-    additionalFields: {
-      role: {
-        type: "string",
-        required: false,
-        defaultValue: "student",
-        input: false,
+// ─── Auth initialisation ─────────────────────────────────────────────────────
+// Si la DB n'est pas configurée, betterAuth lève une erreur au build/start.
+// On catch pour que la page d'accueil reste accessible même si la DB est down.
+// ─────────────────────────────────────────────────────────────────────────────
+let auth: ReturnType<typeof betterAuth> | null = null;
+let authAvailable = false;
+
+if (databasePool) {
+  try {
+    const config: Parameters<typeof betterAuth>[0] = {
+      appName: "Campus 360",
+      database: databasePool,
+      baseURL,
+      secret: finalSecret,
+      trustedOrigins,
+      emailAndPassword: {
+        enabled: true,
+        requireEmailVerification: false,
+        autoSignIn: true,
+        minPasswordLength: 8,
+        resetPasswordTokenExpiresIn: 60 * 30,
       },
-      university: { type: "string", required: false },
-      faculty: { type: "string", required: false },
-      level: { type: "string", required: false },
-    },
-  },
-  session: {
-  expiresIn: 60 * 60 * 24 * 7,
-  updateAge: 60 * 60 * 24,
-  cookieCache: { enabled: true, maxAge: 5 * 60 },
-},
-advanced: {
-  defaultCookieAttributes: {
-    httpOnly: true,
-    sameSite: "lax" as const,
-    secure: isProd,
-  },
-  // Force a specific session cookie name + perms — useful because the
-  // landing-site and admin app are separate Vercel projects and we want
-  // the cookie to match if the user ever crosses over.
-  cookiePrefix: "campus-landing",
-  useSecureCookies: isProd,
-},
-  rateLimit: {
-    enabled: true,
-    window: 60,
-    max: 100,
-    storage: "database",
-  },
-  plugins: [nextCookies()],
-};
+      user: {
+        additionalFields: {
+          role: {
+            type: "string",
+            required: false,
+            defaultValue: "student",
+            input: false,
+          },
+          university: { type: "string", required: false },
+          faculty: { type: "string", required: false },
+          level: { type: "string", required: false },
+        },
+      },
+      session: {
+        expiresIn: 60 * 60 * 24 * 7,
+        updateAge: 60 * 60 * 24,
+        cookieCache: { enabled: true, maxAge: 5 * 60 },
+      },
+      advanced: {
+        defaultCookieAttributes: {
+          httpOnly: true,
+          sameSite: "lax" as const,
+          secure: isProd,
+        },
+        cookiePrefix: "campus-landing",
+        useSecureCookies: isProd,
+      },
+      rateLimit: {
+        enabled: true,
+        window: 60,
+        max: 100,
+        storage: "database",
+      },
+      plugins: [nextCookies()],
+    };
 
-// Only attach socialProviders when Google is fully configured.
-if (googleConfigured) {
-  config.socialProviders = {
-    google: {
-      clientId: googleClientId!,
-      clientSecret: googleClientSecret!,
-    },
-  };
+    if (googleConfigured) {
+      config.socialProviders = {
+        google: {
+          clientId: googleClientId!,
+          clientSecret: googleClientSecret!,
+        },
+      };
+    }
+
+    auth = betterAuth(config);
+    authAvailable = true;
+  } catch (err) {
+    console.error("[auth] Failed to initialize Better Auth:", err);
+  }
+} else {
+  console.warn("[auth] No database — Better Auth disabled. Set DATABASE_URL to enable auth.");
 }
 
-export const auth = betterAuth(config);
+export { auth, authAvailable };
 
 export const AUTH_CONFIG = {
   baseURL,

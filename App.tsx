@@ -43,6 +43,7 @@ import {
   updateStudentProfile,
 } from './src/features/auth/betterAuth';
 import { OnboardingScreen } from './src/features/onboarding/OnboardingScreen';
+import { FreePdfSelector } from './src/features/onboarding/FreePdfSelector';
 import { PdfStudentSection } from './src/features/pdf/PdfStudentSection';
 import { ReportsScreen } from './src/features/reports/ReportsScreen';
 import { ReportEditorWebView } from './src/features/reports/ReportEditorWebView';
@@ -317,6 +318,7 @@ export default function App() {
   const [authCapabilities, setAuthCapabilities] = useState({ passwordReset: false, google: false });
   const [resetToken, setResetToken] = useState('');
   const [onboardingVisible, setOnboardingVisible] = useState(false);
+  const [freePdfSelectorVisible, setFreePdfSelectorVisible] = useState(false);
   const [onboardingIndex, setOnboardingIndex] = useState(0);
   const [studentSession, setStudentSession] = useState<StudentSession | null>(null);
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
@@ -663,7 +665,12 @@ export default function App() {
       await syncStudentAccount(session);
       setAuthVisible(false);
       setActiveSection('home');
-      Alert.alert('Connecte', 'Tes achats PDF et ton wallet sont synchronises.');
+      // Trigger free PDF selector for new sign-ups
+      if (authMode === 'sign-up') {
+        setFreePdfSelectorVisible(true);
+      } else {
+        Alert.alert('Connecte', 'Tes achats PDF et ton wallet sont synchronises.');
+      }
     } catch (error) {
       console.error('submitAuth error:', error);
       Alert.alert('Connexion impossible', error instanceof Error ? error.message : 'Reessaie dans un instant.');
@@ -825,8 +832,8 @@ export default function App() {
 
   const rechargeWallet = async () => {
     const amount = Number.parseInt(rechargeAmount, 10);
-    if (!Number.isFinite(amount) || amount < 100) {
-      Alert.alert('Montant invalide', 'Le minimum de recharge est 100 FCFA.');
+    if (!Number.isFinite(amount) || amount < 500) {
+      Alert.alert('Montant invalide', 'Le minimum de recharge est 500 FCFA.');
       return;
     }
 
@@ -1422,6 +1429,32 @@ export default function App() {
                 </View>
               </View>
 
+              {/* Welcome perks strip */}
+              <View style={{ marginTop: 16, marginHorizontal: 16, backgroundColor: '#0F172A', borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, overflow: 'hidden', position: 'relative' }}>
+                <View style={{ position: 'absolute', top: -30, right: -30, width: 100, height: 100, borderRadius: 50, backgroundColor: '#2563EB', opacity: 0.08 }} />
+                <View style={{ position: 'absolute', bottom: -20, left: 40, width: 60, height: 60, borderRadius: 30, backgroundColor: '#059669', opacity: 0.08 }} />
+                
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontSize: 22 }}>🎁</Text>
+                  <Text style={{ color: '#F8FAFC', fontSize: 11, fontWeight: '800', marginTop: 4, textAlign: 'center', lineHeight: 14 }}>3 PDFs{'\n'}gratuits</Text>
+                </View>
+                <View style={{ width: 1, height: 40, backgroundColor: '#1E293B' }} />
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontSize: 22 }}>🤖</Text>
+                  <Text style={{ color: '#F8FAFC', fontSize: 11, fontWeight: '800', marginTop: 4, textAlign: 'center', lineHeight: 14 }}>5 requêtes{'\n'}IA / jour</Text>
+                </View>
+                <View style={{ width: 1, height: 40, backgroundColor: '#1E293B' }} />
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontSize: 22 }}>📥</Text>
+                  <Text style={{ color: '#F8FAFC', fontSize: 11, fontWeight: '800', marginTop: 4, textAlign: 'center', lineHeight: 14 }}>Mode{'\n'}hors-ligne</Text>
+                </View>
+                <View style={{ width: 1, height: 40, backgroundColor: '#1E293B' }} />
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontSize: 22 }}>📱</Text>
+                  <Text style={{ color: '#F8FAFC', fontSize: 11, fontWeight: '800', marginTop: 4, textAlign: 'center', lineHeight: 14 }}>Sync{'\n'}multi-devices</Text>
+                </View>
+              </View>
+
               <View style={styles.homeMainStack}>
                 <View style={[styles.homeLeadCard, { borderRadius: 24, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 }]}>
                   <View style={styles.dashboardFeatureRow}>
@@ -1593,6 +1626,28 @@ export default function App() {
                     <Text style={[styles.accountSummaryValue, { fontSize: 24 }]}>{hasSubscription ? 'Illimite' : purchasedDocuments.length}</Text>
                     <Text style={[styles.dashboardInfoSub, { marginTop: 8, fontSize: 13, color: '#94A3B8' }]}>{hasSubscription ? 'Abonnement actif.' : 'PDF debloques.'}</Text>
                   </View>
+                </View>
+
+                {/* Perks / Advantages dashboard */}
+                <View style={{ marginTop: 24, gap: 10 }}>
+                  <Text style={[styles.dashboardSectionTitle, { fontSize: 16, textTransform: 'none', color: '#1E293B', marginBottom: 4 }]}>✨ Tes avantages Campus-Bordes</Text>
+                  
+                  {[
+                    { icon: '🎁', title: '3 PDFs gratuits', desc: 'Choisis tes premiers cours dans le catalogue', color: '#F59E0B', bg: '#FFFBEB' },
+                    { icon: '📚', title: '3 500+ PDFs disponibles', desc: 'Acces a tout le catalogue Universites & Filieres', color: '#2563EB', bg: '#EFF6FF' },
+                    { icon: '🤖', title: '5 requetes IA/jour', desc: 'Fiches, resumes et quiz sur tes PDF', color: '#7C3AED', bg: '#F5F3FF' },
+                    { icon: '💳', title: 'Wallet des 500 FCFA', desc: 'Recharge via MTN MoMo ou Orange Money', color: '#059669', bg: '#ECFDF5' },
+                    { icon: '📱', title: 'Sync multi-appareils', desc: 'Ton compte et tes achats synchronises', color: '#0891B2', bg: '#ECFEFF' },
+                    { icon: '📥', title: 'Mode hors-ligne', desc: 'Lis tes PDF sans connexion apres telechargement', color: '#DC2626', bg: '#FEF2F2' },
+                  ].map((perk) => (
+                    <View key={perk.title} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: perk.bg, borderRadius: 14, padding: 12, gap: 12 }}>
+                      <Text style={{ fontSize: 24 }}>{perk.icon}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E293B' }}>{perk.title}</Text>
+                        <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{perk.desc}</Text>
+                      </View>
+                    </View>
+                  ))}
                 </View>
 
                 <View style={[styles.accountActionStack, { marginTop: 32 }]}>
@@ -1933,7 +1988,15 @@ export default function App() {
             <Text style={styles.walletAmount}>{formatCoins(balance)} C</Text>
           </View>
 
-          <View style={styles.authFormCard}>
+            <View style={styles.authFormCard}>
+            {/* Min amount callout */}
+            <View style={{ backgroundColor: '#ECFDF5', borderRadius: 12, padding: 10, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 16 }}>💡</Text>
+              <Text style={{ fontSize: 13, color: '#065F46', fontWeight: '600', flex: 1, lineHeight: 18 }}>
+                Wallet rechargeable des <Text style={{ fontWeight: '900', color: '#059669' }}>500 FCFA minimum</Text>
+              </Text>
+            </View>
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Montant a ajouter</Text>
               <TextInput keyboardType="numeric" value={rechargeAmount} onChangeText={setRechargeAmount} style={styles.input} />
@@ -1942,14 +2005,23 @@ export default function App() {
             <View style={styles.rechargePresetRow}>
               {[500, 1000, 2500].map((amount) => {
                 const active = rechargeAmount === String(amount);
+                const isMin = amount === 500;
                 return (
                   <Pressable
                     key={amount}
-                    style={[styles.rechargePreset, active && styles.rechargePresetActive]}
+                    style={[
+                      styles.rechargePreset,
+                      active && styles.rechargePresetActive,
+                      isMin && { backgroundColor: '#ECFDF5', borderColor: '#059669', borderWidth: 2 }
+                    ]}
                     onPress={() => setRechargeAmount(String(amount))}
                   >
-                    <Text style={[styles.rechargePresetText, active && styles.rechargePresetTextActive]}>
-                      {formatCoins(amount)} C
+                    <Text style={[
+                      styles.rechargePresetText,
+                      active && styles.rechargePresetTextActive,
+                      isMin && { color: '#059669', fontWeight: '800' }
+                    ]}>
+                      {isMin ? '✨ ' : ''}{formatCoins(amount)} C{isMin ? ' min' : ''}
                     </Text>
                   </Pressable>
                 );
@@ -2106,6 +2178,20 @@ export default function App() {
           </View>
         </ModalCard>
       </Modal>
+
+      <FreePdfSelector
+        visible={freePdfSelectorVisible}
+        documents={pdfDocuments}
+        onComplete={() => {
+          setFreePdfSelectorVisible(false);
+          Alert.alert('Bienvenue ! 🎉', 'Tu as réclamé tes PDFs gratuits. Bonne révision !');
+          syncStudentAccount(studentSession ?? undefined);
+        }}
+        onClose={() => {
+          setFreePdfSelectorVisible(false);
+        }}
+        studentSession={studentSession}
+      />
 
       <Modal transparent animationType="fade" visible={insufficientVisible}>
         <ModalCard>
