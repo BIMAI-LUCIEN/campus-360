@@ -24,15 +24,18 @@ const parseOriginList = (raw: string | undefined): string[] =>
     .filter((e): e is string => Boolean(e));
 
 const detectBaseUrl = (): string => {
-  // Use Vercel URL in preview/production, fallback to env var
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
+  // Prefer the explicit BETTER_AUTH_URL (custom domain). This MUST match the
+  // redirect_uri registered in Google Cloud Console for OAuth to succeed.
+  // VERCEL_URL is a per-deployment hash like campus-360-landing-go1egq3bm-...
+  // and won't be in the OAuth client's authorized redirect URIs.
   const envUrl = process.env.BETTER_AUTH_URL;
   if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
     return envUrl;
   }
-  return `https://${process.env.VERCEL_URL ?? "localhost:3000"}`;
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return "http://localhost:3000";
 };
 
 const trustedOrigins = [
