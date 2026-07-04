@@ -17,6 +17,7 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
+  Plus,
 } from 'lucide-react';
 import type { PdfDocument, PdfPack } from '@/lib/course-db';
 
@@ -194,17 +195,17 @@ function KpiCard({
   value: number | string;
 }) {
   return (
-    <div className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest p-5 shadow-stitch-sm">
+    <div className="flex items-center gap-4 rounded-xl border border-stitch-outline-variant bg-stitch-surface-lowest p-6 shadow-sm">
       <div
-        className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-stitch-sm"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
         style={{ background: iconBg, color: iconColor }}
       >
-        <Icon size={18} />
+        <Icon size={22} />
       </div>
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-stitch-on-surface-variant">
-        {label}
+      <div>
+        <p className="font-label-md text-stitch-on-surface-variant">{label}</p>
+        <h4 className="font-stitch-headline text-stitch-on-surface">{value}</h4>
       </div>
-      <div className="mt-1 text-2xl font-bold text-stitch-on-surface">{value}</div>
     </div>
   );
 }
@@ -221,6 +222,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   useEffect(() => {
     refreshPacks();
@@ -538,536 +540,582 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     await refreshPacks();
   };
 
+  const resetFilters = () => {
+    setQuery('');
+    setStatus('all');
+    setSubject('');
+    setLevel('');
+  };
+
   const badgeClass: Record<string, string> = {
-    published: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    needs_review: 'bg-orange-50 text-orange-700 border border-orange-200',
+    published: 'bg-stitch-primary-fixed text-stitch-on-primary-fixed-variant border-stitch-primary/20',
+    needs_review: 'bg-amber-50 text-amber-700 border border-amber-200',
     analyzing: 'bg-blue-50 text-blue-700 border border-blue-200',
-    draft: 'bg-violet-50 text-violet-700 border border-violet-200',
+    draft: 'bg-stitch-secondary-container text-stitch-on-surface-variant border border-stitch-outline-variant',
     archived: 'bg-slate-50 text-slate-700 border border-slate-200',
   };
 
   return (
     <>
-      {/* ── Header ───────────────────────────────────────────── */}
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-stitch-outline-variant bg-stitch-primary-fixed px-3 py-1 text-xs font-bold text-stitch-primary">
-            <FileText size={15} />
-            <span>/admin/pdf</span>
-          </div>
-          <h1 className="font-stitch-headline m-0 text-3xl font-bold tracking-tight text-stitch-on-surface">
-            PDF académiques
+      {/* ── Page Header ─────────────────────────────────────────── */}
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="font-stitch-headline text-stitch-on-surface m-0 text-3xl font-bold tracking-tight">
+            Catalogue PDF
           </h1>
+          <p className="text-sm text-stitch-on-surface-variant">
+            Gère tes PDF académiques : upload, prévisualise et publie.
+          </p>
         </div>
-        <div className="flex flex-wrap justify-end gap-2.5">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={refresh}
             aria-label="Actualiser"
-            className="flex min-h-10 items-center gap-2 rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest px-4 py-2.5 text-sm font-bold text-stitch-on-surface shadow-stitch-sm transition-colors hover:bg-stitch-surface-container"
+            className="flex items-center gap-2 px-4 py-2 border border-stitch-outline-variant text-stitch-on-surface font-label-md rounded-lg hover:bg-stitch-surface-container transition-colors"
           >
-            <RefreshCw size={17} />
-            Actualiser
+            <Download size={18} />
+            Export
           </button>
-          <a
-            href="/api/pdf"
-            className="flex min-h-10 items-center gap-2 rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest px-4 py-2.5 text-sm font-bold text-stitch-on-surface shadow-stitch-sm transition-colors hover:bg-stitch-surface-container"
+          <button
+            type="button"
+            onClick={() => setUploadOpen(true)}
+            className="flex items-center gap-2 px-6 py-2 bg-stitch-primary text-stitch-on-primary font-label-md rounded-lg hover:opacity-90 transition-all shadow-sm"
           >
-            <Download size={17} />
-            JSON
-          </a>
+            <Plus size={18} />
+            Nouveau PDF
+          </button>
         </div>
       </div>
 
-      {/* ── Metrics row ───────────────────────────── */}
-      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-        <KpiCard icon={FileText}    iconColor="#0891b2" iconBg="#ecfeff" label="PDF"        value={metrics.totalPdfs} />
-        <KpiCard icon={Check}       iconColor="#10b981" iconBg="#ecfdf5" label="Publiés"    value={metrics.publishedPdfs} />
-        <KpiCard icon={PackagePlus} iconColor="#8b5cf6" iconBg="#f5f3ff" label="Packs"      value={metrics.totalPacks} />
-        <KpiCard icon={CircleAlert} iconColor="#f97316" iconBg="#fff7ed" label="À corriger" value={metrics.reviewPdfs} />
-        <KpiCard icon={Sparkles}    iconColor="#3b82f6" iconBg="#eff6ff" label="IA prêts"   value={metrics.aiReadyPdfs} />
-        <KpiCard icon={FilePenLine} iconColor="#06b6d4" iconBg="#ecfeff" label="Ventes"     value={metrics.totalSales} />
-        <KpiCard icon={Archive}     iconColor="#10b981" iconBg="#ecfdf5" label="Revenus"    value={`${formatCoins(metrics.totalRevenue)} C`} />
+      {/* ── Filter Bar ──────────────────────────────────────────── */}
+      <div className="mb-6 bg-white rounded-xl border border-stitch-outline-variant shadow-sm p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setStatus(status === 'all' ? 'published' : status)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-stitch-surface-container-high text-stitch-on-surface font-label-md hover:bg-stitch-surface-container-high transition-colors"
+          >
+            Statut
+            <span className="text-stitch-on-surface-variant">{status === 'all' ? '' : `: ${status}`}</span>
+            <ChevronDown size={14} />
+          </button>
+          <button
+            onClick={() => setSubject(subject === '' ? 'Mathématiques' : subject)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-stitch-surface-container-high text-stitch-on-surface font-label-md hover:bg-stitch-surface-container-high transition-colors"
+          >
+            Matière
+            {subject && <span className="text-stitch-on-surface-variant">: {subject}</span>}
+            <ChevronDown size={14} />
+          </button>
+          <button
+            onClick={() => setLevel(level === '' ? 'L2' : level)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-stitch-surface-container-high text-stitch-on-surface font-label-md hover:bg-stitch-surface-container-high transition-colors"
+          >
+            Niveau
+            {level && <span className="text-stitch-on-surface-variant">: {level}</span>}
+            <ChevronDown size={14} />
+          </button>
+          <button
+            onClick={() => setQuery(query === '' ? 'math' : query)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-stitch-surface-container-high text-stitch-on-surface font-label-md hover:bg-stitch-surface-container-high transition-colors"
+          >
+            Recherche
+            {query && <span className="text-stitch-on-surface-variant">: {query}</span>}
+            <ChevronDown size={14} />
+          </button>
+          <div className="h-6 w-px bg-stitch-outline-variant mx-2" />
+          <button
+            onClick={resetFilters}
+            className="text-stitch-primary font-label-md hover:underline decoration-2 underline-offset-4 px-2"
+          >
+            Reset
+          </button>
+        </div>
       </div>
 
-      {/* ── Workspace (2-col grid) ──────────────────────────── */}
-      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[340px_1fr]">
-        {/* ── Upload form ─────────────────────────────────────── */}
-        <section className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest p-6 shadow-stitch-sm">
-          <h2 className="mb-4 inline-flex items-center gap-2 text-base font-bold text-stitch-on-surface">
-            <UploadCloud size={18} className="text-stitch-primary" />
-            Ajouter un PDF
-          </h2>
+      {/* ── Table Card ──────────────────────────────────────────── */}
+      <div className="mb-6 bg-white rounded-xl border border-stitch-outline-variant shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-stitch-outline-variant bg-stitch-surface-container-low">
+                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase w-10">
+                  <input className="rounded border-stitch-outline-variant text-stitch-primary focus:ring-stitch-primary/15" type="checkbox" />
+                </th>
+                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase">Aperçu</th>
+                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase">Titre</th>
+                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase">Faculté</th>
+                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase">Niveau</th>
+                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase">Prix</th>
+                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase">Statut</th>
+                <th className="p-4 w-10" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stitch-outline-variant">
+              {paginatedDocuments.map((document) => (
+                <tr
+                  key={document.id}
+                  className="hover:bg-stitch-surface-container-low transition-colors group"
+                >
+                  <td className="p-4">
+                    <input className="rounded border-stitch-outline-variant text-stitch-primary focus:ring-stitch-primary/15" type="checkbox" />
+                  </td>
+                  <td className="p-4">
+                    <div className="w-12 h-16 bg-stitch-surface-container-high rounded border border-stitch-outline-variant flex items-center justify-center overflow-hidden">
+                      <FileText size={20} className="text-stitch-on-surface-variant" />
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="font-semibold text-stitch-on-surface">{document.title}</div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {[document.subject, document.level, document.teacher].filter(Boolean).map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex rounded-full border border-stitch-outline-variant bg-stitch-surface-container px-2 py-0.5 text-[11px] font-medium text-stitch-on-surface-variant"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="p-4 text-sm text-stitch-on-surface-variant">{document.faculty}</td>
+                  <td className="p-4 text-sm text-stitch-on-surface-variant">{document.level}</td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        defaultValue={document.priceCoins}
+                        step="50"
+                        min="0"
+                        aria-label={`Prix de ${document.title}`}
+                        onBlur={(e) => {
+                          const newPrice = parseInt(e.target.value, 10);
+                          if (!isNaN(newPrice) && newPrice !== document.priceCoins) {
+                            updatePrice(document.id, newPrice);
+                          }
+                        }}
+                        className="w-20 rounded border border-stitch-outline-variant bg-stitch-surface px-2 py-1 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
+                      />
+                      <span className="text-sm text-stitch-on-surface-variant">C</span>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ${badgeClass[document.status] ?? ''}`}
+                    >
+                      {document.status.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="p-4 text-right">
+                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => reanalyze(document.id)}
+                        aria-label="Reanalyser avec IA"
+                        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stitch-surface-container-high text-stitch-primary transition-colors"
+                        title="Réanalyser IA"
+                      >
+                        <Sparkles size={15} />
+                      </button>
+                      <button
+                        onClick={() => updateStatus(document.id, 'published')}
+                        aria-label="Publier"
+                        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stitch-surface-container-high text-stitch-success transition-colors"
+                        title="Publier"
+                      >
+                        <Check size={15} />
+                      </button>
+                      <button
+                        onClick={() => updateStatus(document.id, 'needs_review')}
+                        aria-label="Marquer à corriger"
+                        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stitch-surface-container-high text-orange-700 transition-colors"
+                        title="À corriger"
+                      >
+                        <CircleAlert size={15} />
+                      </button>
+                      <button
+                        onClick={() => updateStatus(document.id, 'archived')}
+                        aria-label="Archiver"
+                        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stitch-surface-container-high text-stitch-on-surface-variant transition-colors"
+                        title="Archiver"
+                      >
+                        <Archive size={15} />
+                      </button>
+                      <button
+                        onClick={() => remove(document.id)}
+                        aria-label="Supprimer"
+                        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stitch-error-light text-stitch-error transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                    {/* Always-visible more menu */}
+                    <button
+                      className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stitch-surface-container-high text-stitch-on-surface-variant"
+                      aria-label="Plus d'actions"
+                    >
+                      <FilePenLine size={15} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {paginatedDocuments.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-stitch-on-surface-variant">
+                    Aucun PDF trouvé.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-          {message ? (
-            <div className="mb-3 rounded-stitch border border-stitch-outline-variant bg-stitch-surface p-3 text-sm text-stitch-on-surface-variant">
-              {message}
-            </div>
-          ) : null}
-
-          <form onSubmit={submit}>
-            <label className="mb-1.5 mt-3 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-              Titre
-            </label>
-            <input
-              name="title"
-              required
-              placeholder="Analyse 2 - sujets corrigés"
-              className="mb-2 w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
-            />
-
-            <label className="mb-1.5 mt-3 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-              Description
-            </label>
-            <textarea
-              name="description"
-              required
-              placeholder="Ce que l'étudiant trouvera dans le PDF"
-              className="mb-2 min-h-[74px] w-full resize-y rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
-            />
-
-            <div className="mb-2 grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                  Université
-                </label>
-                <input
-                  name="university"
-                  required
-                  defaultValue="Université de Douala"
-                  className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                  Filière / Faculté
-                </label>
-                <input
-                  name="faculty"
-                  required
-                  placeholder="Informatique"
-                  className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="mb-2 grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                  Matière
-                </label>
-                <input
-                  name="subject"
-                  required
-                  placeholder="Mathématiques"
-                  className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                  Professeur
-                </label>
-                <input
-                  name="teacher"
-                  placeholder="Pr. Nom"
-                  className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="mb-2 grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                  Niveau
-                </label>
-                <input
-                  name="level"
-                  required
-                  placeholder="L2 Informatique"
-                  className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                  Année académique
-                </label>
-                <input
-                  name="academicYear"
-                  required
-                  defaultValue="2025-2026"
-                  className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Collapsible advanced section */}
+        {/* ── Pagination ─────────────────────────────────────────── */}
+        <div className="p-4 border-t border-stitch-outline-variant flex items-center justify-between bg-stitch-surface">
+          <div className="font-label-md text-stitch-on-surface-variant">
+            {visibleDocuments.length} PDF
+          </div>
+          <div className="flex items-center gap-1">
             <button
-              type="button"
-              onClick={() => setAdvancedOpen(!advancedOpen)}
-              className="mb-2 mt-3 flex w-full items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant transition-colors hover:text-stitch-on-surface"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              aria-label="Page précédente"
+              className="flex h-8 w-8 items-center justify-center rounded hover:bg-stitch-surface-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-stitch-on-surface-variant"
             >
-              {advancedOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              {advancedOpen ? 'Masquer les options' : 'Options avancées'}
+              <ChevronLeft size={18} />
             </button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let page: number;
+              if (totalPages <= 5) {
+                page = i + 1;
+              } else if (currentPage <= 3) {
+                page = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                page = totalPages - 4 + i;
+              } else {
+                page = currentPage - 2 + i;
+              }
+              return (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  aria-label={`Page ${page}`}
+                  aria-current={currentPage === page ? 'page' : undefined}
+                  className={
+                    currentPage === page
+                      ? 'flex h-8 w-8 items-center justify-center rounded bg-stitch-primary text-stitch-on-primary font-label-md'
+                      : 'flex h-8 w-8 items-center justify-center rounded hover:bg-stitch-surface-container font-label-md text-stitch-on-surface-variant transition-colors'
+                  }
+                >
+                  {page}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              aria-label="Page suivante"
+              className="flex h-8 w-8 items-center justify-center rounded hover:bg-stitch-surface-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-stitch-on-surface-variant"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+          <div className="flex items-center gap-2 font-label-md text-stitch-on-surface-variant">
+            <span>Afficher:</span>
+            <select className="bg-transparent border-none focus:ring-0 cursor-pointer pr-8 py-0 font-label-md">
+              <option>{ITEMS_PER_PAGE} / page</option>
+              <option>20 / page</option>
+              <option>50 / page</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
-            {advancedOpen && (
-              <div className="mb-2 grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                    Prix en Coins
-                  </label>
-                  <input
-                    name="priceCoins"
-                    type="number"
-                    min="0"
-                    step="50"
-                    defaultValue="300"
-                    className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                    Statut
-                  </label>
-                  <select
-                    name="status"
-                    defaultValue="draft"
-                    className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                  >
-                    <option value="draft">Brouillon</option>
-                    <option value="analyzing">Analyse IA</option>
-                    <option value="needs_review">À corriger</option>
-                    <option value="published">Publié</option>
-                    <option value="archived">Archive</option>
-                  </select>
-                </div>
+      {/* ── Stats Cards ─────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <KpiCard
+          icon={FileText}
+          iconColor="#004ac6"
+          iconBg="#dbe1ff"
+          label="Total PDFs"
+          value={formatCoins(metrics.totalPdfs)}
+        />
+        <KpiCard
+          icon={Check}
+          iconColor="#10b981"
+          iconBg="#ecfdf5"
+          label="Publiés"
+          value={formatCoins(metrics.publishedPdfs)}
+        />
+        <KpiCard
+          icon={Archive}
+          iconColor="#004ac6"
+          iconBg="#dbe1ff"
+          label="Revenu Estimé"
+          value={`${formatCoins(metrics.totalRevenue)} C`}
+        />
+      </div>
+
+      {/* ── Upload Modal ────────────────────────────────────────── */}
+      {uploadOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setUploadOpen(false);
+          }}
+        >
+          <div className="bg-stitch-surface-lowest rounded-xl border border-stitch-outline-variant shadow-stitch-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-stitch-outline-variant">
+              <div className="flex items-center gap-3">
+                <UploadCloud size={20} className="text-stitch-primary" />
+                <h2 className="font-stitch-headline text-stitch-on-surface text-lg font-bold">
+                  Ajouter un PDF
+                </h2>
               </div>
-            )}
-
-            {!advancedOpen && (
-              <div className="mb-2 grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                    Prix en Coins
-                  </label>
-                  <input
-                    name="priceCoins"
-                    type="number"
-                    min="0"
-                    step="50"
-                    defaultValue="300"
-                    className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 mt-1 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                    Statut
-                  </label>
-                  <select
-                    name="status"
-                    defaultValue="draft"
-                    className="w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                  >
-                    <option value="draft">Brouillon</option>
-                    <option value="analyzing">Analyse IA</option>
-                    <option value="needs_review">À corriger</option>
-                    <option value="published">Publié</option>
-                    <option value="archived">Archive</option>
-                  </select>
-                </div>
-              </div>
-            )}
-
-            <label className="mb-1.5 mt-3 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-              Fichier PDF
-            </label>
-            <input
-              name="file"
-              type="file"
-              accept="application/pdf"
-              required
-              multiple
-              onChange={onFileChange}
-              className="mb-1 w-full rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface file:mr-3 file:rounded file:border-0 file:bg-stitch-primary-fixed file:px-3 file:py-1 file:text-sm file:font-bold file:text-stitch-primary file:cursor-pointer"
-            />
-
-            <input type="hidden" name="aiSummary" />
-            <input type="hidden" name="aiTags" />
-            <input type="hidden" name="aiDifficulty" />
-            <input type="hidden" name="suggestedPriceCoins" />
-            <input type="hidden" name="qualityScore" />
-            <input type="hidden" name="aiStudyPlan" />
-            <input type="hidden" name="aiQuiz" />
-            <input type="hidden" name="extractedText" />
-
-            {/* AI note */}
-            <div className="mt-4 grid grid-cols-[34px_1fr] items-center gap-2.5 rounded-stitch border border-stitch-outline-variant bg-stitch-primary-fixed p-3 text-stitch-on-surface">
-              <Sparkles size={18} className="text-stitch-primary" />
-              <div>
-                <strong className="block text-stitch-on-surface">Analyse IA admin</strong>
-                <span className="mt-0.5 block text-[13px] text-stitch-on-surface-variant">
-                  Le PDF pré-remplit les champs, propose un prix, un résumé, des tags
-                  et un score avant publication.
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4 flex justify-end gap-2.5">
               <button
-                type="submit"
-                disabled={loading || analysisLoading}
-                className="flex min-h-10 items-center gap-2 rounded-stitch border-none bg-stitch-primary px-5 py-2.5 text-sm font-bold text-stitch-on-primary transition-all hover:opacity-90 hover:shadow-stitch-md disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => setUploadOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stitch-surface-container text-stitch-on-surface-variant transition-colors"
+                aria-label="Fermer"
               >
-                {loading ? 'Upload...' : analysisLoading ? 'Analyse...' : 'Enregistrer PDF'}
+                <span className="text-lg">&times;</span>
               </button>
             </div>
-          </form>
-        </section>
 
-        {/* ── Catalogue ───────────────────────────────────────── */}
-        <section className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest p-6 shadow-stitch-sm">
-          <h2 className="mb-4 inline-flex items-center gap-2 text-base font-bold text-stitch-on-surface">
-            <FileText size={18} className="text-stitch-primary" />
-            Catalogue
-          </h2>
+            {/* Modal Body */}
+            <form onSubmit={submit} className="p-6">
+              {message ? (
+                <div className="mb-4 rounded-xl border border-stitch-outline-variant bg-stitch-surface-container-low p-3 text-sm text-stitch-on-surface">
+                  {message}
+                </div>
+              ) : null}
 
-          {/* Toolbar */}
-          <div className="mb-3 grid grid-cols-1 gap-2.5 sm:grid-cols-[1.4fr_0.9fr_0.9fr_0.9fr]">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher..."
-              aria-label="Rechercher dans le catalogue"
-              className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-            />
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              aria-label="Filtrer par statut"
-              className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-            >
-              <option value="all">Tous les statuts</option>
-              <option value="published">Publiés</option>
-              <option value="needs_review">À corriger</option>
-              <option value="analyzing">Analyse IA</option>
-              <option value="draft">Brouillons</option>
-              <option value="archived">Archives</option>
-            </select>
-            <input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Matière"
-              aria-label="Filtrer par matière"
-              className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-            />
-            <input
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              placeholder="Niveau"
-              aria-label="Filtrer par niveau"
-              className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-            />
-          </div>
+              <label className="mb-1.5 mt-3 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                Titre
+              </label>
+              <input
+                name="title"
+                required
+                placeholder="Analyse 2 - sujets corrigés"
+                className="mb-3 w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
+              />
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed border-collapse">
-              <thead>
-                <tr className="border-b border-stitch-outline-variant">
-                  {['Document', 'Prix', 'Statut', 'Ventes', 'Revenu', 'Actions'].map((th) => (
-                    <th
-                      key={th}
-                      scope="col"
-                      className="px-2.5 py-2.5 text-left text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant"
+              <label className="mb-1.5 mt-3 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                Description
+              </label>
+              <textarea
+                name="description"
+                required
+                placeholder="Ce que l'étudiant trouvera dans le PDF"
+                className="mb-3 min-h-[74px] w-full resize-y rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
+              />
+
+              <div className="mb-3 grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                    Université
+                  </label>
+                  <input
+                    name="university"
+                    required
+                    defaultValue="Université de Douala"
+                    className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                    Filière / Faculté
+                  </label>
+                  <input
+                    name="faculty"
+                    required
+                    placeholder="Informatique"
+                    className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-3 grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                    Matière
+                  </label>
+                  <input
+                    name="subject"
+                    required
+                    placeholder="Mathématiques"
+                    className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                    Professeur
+                  </label>
+                  <input
+                    name="teacher"
+                    placeholder="Pr. Nom"
+                    className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-3 grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                    Niveau
+                  </label>
+                  <input
+                    name="level"
+                    required
+                    placeholder="L2 Informatique"
+                    className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                    Année académique
+                  </label>
+                  <input
+                    name="academicYear"
+                    required
+                    defaultValue="2025-2026"
+                    className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
+                  />
+                </div>
+              </div>
+
+              {/* Collapsible advanced section */}
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen(!advancedOpen)}
+                className="mb-3 flex w-full items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant transition-colors hover:text-stitch-on-surface"
+              >
+                {advancedOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                {advancedOpen ? 'Masquer les options' : 'Options avancées'}
+              </button>
+
+              {advancedOpen && (
+                <div className="mb-3 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                      Prix en Coins
+                    </label>
+                    <input
+                      name="priceCoins"
+                      type="number"
+                      min="0"
+                      step="50"
+                      defaultValue="300"
+                      className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                      Statut
+                    </label>
+                    <select
+                      name="status"
+                      defaultValue="draft"
+                      className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
                     >
-                      {th}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedDocuments.map((document) => {
-                  const revenue = Math.round(
-                    document.salesCount *
-                      document.priceCoins *
-                      (document.commissionRate / 100),
-                  );
-                  return (
-                    <tr
-                      key={document.id}
-                      className="border-b border-stitch-surface-container transition-colors last:border-0 hover:bg-stitch-surface-container-low"
-                    >
-                      <td className="px-2.5 py-2.5">
-                        <div className="flex items-center gap-2 font-bold text-stitch-on-surface">
-                          <FileText size={16} className="shrink-0 text-stitch-on-surface-variant" />
-                          <span className="break-all">{document.title}</span>
-                        </div>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {[document.subject, document.level, document.teacher].map((tag) => (
-                            <span
-                              key={tag}
-                              className="inline-flex rounded-full border border-stitch-outline-variant bg-stitch-surface-container px-2 py-0.5 text-[11px] font-medium text-stitch-on-surface-variant"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-2.5 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            defaultValue={document.priceCoins}
-                            step="50"
-                            min="0"
-                            aria-label={`Prix de ${document.title}`}
-                            onBlur={(e) => {
-                              const newPrice = parseInt(e.target.value, 10);
-                              if (
-                                !isNaN(newPrice) &&
-                                newPrice !== document.priceCoins
-                              ) {
-                                updatePrice(document.id, newPrice);
-                              }
-                            }}
-                            className="w-20 rounded border border-stitch-outline-variant bg-stitch-surface px-2 py-1 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                          />
-                          <span className="text-sm text-stitch-on-surface-variant">C</span>
-                        </div>
-                      </td>
-                      <td className="px-2.5 py-2.5">
-                        <span
-                          className={`inline-flex rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${badgeClass[document.status] ?? ''}`}
-                        >
-                          {document.status.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-2.5 py-2.5 text-sm font-semibold text-stitch-on-surface">
-                        {document.salesCount}
-                      </td>
-                      <td className="px-2.5 py-2.5 text-sm text-stitch-on-surface-variant">
-                        {formatCoins(revenue)} C
-                      </td>
-                      <td className="px-2.5 py-2.5">
-                        <div className="flex flex-nowrap gap-1">
-                          <button
-                            onClick={() => reanalyze(document.id)}
-                            aria-label="Reanalyser avec IA"
-                            className="flex h-8 w-8 items-center justify-center rounded-stitch border border-stitch-outline-variant bg-stitch-surface text-stitch-primary transition-colors hover:border-stitch-primary hover:bg-stitch-primary-fixed"
-                          >
-                            <Sparkles size={16} />
-                          </button>
-                          <button
-                            onClick={() => updateStatus(document.id, 'published')}
-                            aria-label="Publier"
-                            className="flex h-8 w-8 items-center justify-center rounded-stitch border border-stitch-outline-variant bg-stitch-surface text-stitch-success transition-colors hover:border-stitch-success hover:bg-stitch-success-light"
-                          >
-                            <Check size={16} />
-                          </button>
-                          <button
-                            onClick={() => updateStatus(document.id, 'needs_review')}
-                            aria-label="Marquer à corriger"
-                            className="flex h-8 w-8 items-center justify-center rounded-stitch border border-stitch-outline-variant bg-stitch-surface text-orange-700 transition-colors hover:border-orange-400 hover:bg-orange-50"
-                          >
-                            <CircleAlert size={16} />
-                          </button>
-                          <button
-                            onClick={() => updateStatus(document.id, 'draft')}
-                            aria-label="Mettre en brouillon"
-                            className="flex h-8 w-8 items-center justify-center rounded-stitch border border-stitch-outline-variant bg-stitch-surface text-violet-700 transition-colors hover:border-violet-400 hover:bg-violet-50"
-                          >
-                            <FilePenLine size={16} />
-                          </button>
-                          <button
-                            onClick={() => updateStatus(document.id, 'archived')}
-                            aria-label="Archiver"
-                            className="flex h-8 w-8 items-center justify-center rounded-stitch border border-stitch-outline-variant bg-stitch-surface text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container"
-                          >
-                            <Archive size={16} />
-                          </button>
-                          <button
-                            onClick={() => remove(document.id)}
-                            aria-label="Supprimer"
-                            className="flex h-8 w-8 items-center justify-center rounded-stitch border border-stitch-outline-variant bg-stitch-surface text-stitch-error transition-colors hover:border-stitch-error hover:bg-stitch-error-light"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {paginatedDocuments.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="py-12 text-center text-stitch-on-surface-variant"
-                    >
-                      Aucun PDF trouvé.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                      <option value="draft">Brouillon</option>
+                      <option value="analyzing">Analyse IA</option>
+                      <option value="needs_review">À corriger</option>
+                      <option value="published">Publié</option>
+                      <option value="archived">Archive</option>
+                    </select>
+                  </div>
+                </div>
+              )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between border-t border-stitch-outline-variant px-4 py-3">
-              <span className="text-[13px] text-stitch-on-surface-variant">
-                {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
-                {Math.min(currentPage * ITEMS_PER_PAGE, visibleDocuments.length)} sur{' '}
-                {visibleDocuments.length}
-              </span>
-              <div className="flex items-center gap-1">
+              {!advancedOpen && (
+                <div className="mb-3 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                      Prix en Coins
+                    </label>
+                    <input
+                      name="priceCoins"
+                      type="number"
+                      min="0"
+                      step="50"
+                      defaultValue="300"
+                      className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                      Statut
+                    </label>
+                    <select
+                      name="status"
+                      defaultValue="draft"
+                      className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
+                    >
+                      <option value="draft">Brouillon</option>
+                      <option value="analyzing">Analyse IA</option>
+                      <option value="needs_review">À corriger</option>
+                      <option value="published">Publié</option>
+                      <option value="archived">Archive</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <label className="mb-1.5 mt-3 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                Fichier PDF
+              </label>
+              <input
+                name="file"
+                type="file"
+                accept="application/pdf"
+                required
+                multiple
+                onChange={onFileChange}
+                className="mb-1 w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface file:mr-3 file:rounded-lg file:border-0 file:bg-stitch-primary-fixed file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-stitch-primary file:cursor-pointer"
+              />
+
+              <input type="hidden" name="aiSummary" />
+              <input type="hidden" name="aiTags" />
+              <input type="hidden" name="aiDifficulty" />
+              <input type="hidden" name="suggestedPriceCoins" />
+              <input type="hidden" name="qualityScore" />
+              <input type="hidden" name="aiStudyPlan" />
+              <input type="hidden" name="aiQuiz" />
+              <input type="hidden" name="extractedText" />
+
+              {/* AI note */}
+              <div className="mt-4 grid grid-cols-[34px_1fr] items-center gap-2.5 rounded-xl border border-stitch-outline-variant bg-stitch-primary-fixed p-3 text-stitch-on-surface">
+                <Sparkles size={18} className="text-stitch-primary" />
+                <div>
+                  <strong className="block text-stitch-on-surface">Analyse IA admin</strong>
+                  <span className="mt-0.5 block text-[13px] text-stitch-on-surface-variant">
+                    Le PDF pré-remplit les champs, propose un prix, un résumé, des tags
+                    et un score avant publication.
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-end gap-2.5">
                 <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  aria-label="Page précédente"
-                  className="flex h-8 w-8 items-center justify-center rounded-stitch-sm text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container hover:text-stitch-on-surface disabled:cursor-not-allowed disabled:opacity-40"
+                  type="button"
+                  onClick={() => setUploadOpen(false)}
+                  className="flex min-h-10 items-center gap-2 rounded-lg border border-stitch-outline-variant px-5 py-2.5 text-sm font-bold text-stitch-on-surface transition-colors hover:bg-stitch-surface-container"
                 >
-                  <ChevronLeft size={16} />
+                  Annuler
                 </button>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let page: number;
-                  if (totalPages <= 5) {
-                    page = i + 1;
-                  } else if (currentPage <= 3) {
-                    page = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    page = totalPages - 4 + i;
-                  } else {
-                    page = currentPage - 2 + i;
-                  }
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      aria-label={`Page ${page}`}
-                      aria-current={currentPage === page ? 'page' : undefined}
-                      className={
-                        currentPage === page
-                          ? 'flex h-8 w-8 items-center justify-center rounded-stitch-sm bg-stitch-primary text-[13px] font-medium text-stitch-on-primary'
-                          : 'flex h-8 w-8 items-center justify-center rounded-stitch-sm text-[13px] font-medium text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container hover:text-stitch-on-surface'
-                      }
-                    >
-                      {page}
-                    </button>
-                  );
-                })}
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  aria-label="Page suivante"
-                  className="flex h-8 w-8 items-center justify-center rounded-stitch-sm text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container hover:text-stitch-on-surface disabled:cursor-not-allowed disabled:opacity-40"
+                  type="submit"
+                  disabled={loading || analysisLoading}
+                  className="flex min-h-10 items-center gap-2 rounded-lg border-none bg-stitch-primary px-5 py-2.5 text-sm font-bold text-stitch-on-primary transition-all hover:opacity-90 hover:shadow-stitch-md disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <ChevronRight size={16} />
+                  {loading ? 'Upload...' : analysisLoading ? 'Analyse...' : 'Enregistrer PDF'}
                 </button>
               </div>
-            </div>
-          )}
-        </section>
-      </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

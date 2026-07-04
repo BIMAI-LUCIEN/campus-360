@@ -149,7 +149,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* ── Topbar (sticky, 64px) ─────────────────────────── */}
-      <header className="sticky top-0 right-0 z-40 flex h-16 w-full max-w-[calc(100%-240px)] items-center justify-between border-b border-stitch-outline-variant bg-stitch-surface px-8 shadow-sm">
+      <header className="sticky top-0 right-0 z-40 ml-60 flex h-16 w-full items-center justify-between border-b border-stitch-outline-variant bg-stitch-surface px-8 shadow-sm">
         <div className="flex items-center gap-6">
           {/* Search */}
           <div className="relative w-64">
@@ -217,7 +217,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </header>
 
       {/* ── Main content ─────────────────────────────────────── */}
-      <main className="ml-[240px] w-full max-w-[1600px] flex-1 bg-stitch-bg p-8">{children}</main>
+      <main className="ml-60 w-full max-w-[1600px] flex-1 bg-stitch-bg p-8">{children}</main>
     </div>
   );
 }
