@@ -81,11 +81,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         />
       )}
 
-      {/* â”€â”€ Sidebar (fixed/sliding drawer, 240px) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── Sidebar (fixed/sliding drawer, 240px) ─────────────────────────── */}
       <aside
         className={[
           'fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col border-r border-stitch-outline-variant bg-stitch-surface py-6 transition-transform duration-300 ease-in-out',
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+          isSidebarOpen ? 'translate-x-0' : 'max-lg:-translate-x-full',
         ].join(' ')}
       >
         {/* Brand header */}
