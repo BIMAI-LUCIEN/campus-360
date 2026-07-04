@@ -134,7 +134,7 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
   }
 
   const config: Parameters<typeof betterAuth>[0] = {
-    appName: 'Campus-Bordes',
+    appName: 'Campus 360',
     database: databasePool,
     baseURL,
     secret: finalSecret,

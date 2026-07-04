@@ -28,7 +28,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const access = await requireMobileUser(request);
     if (access.response) return access.response;
 
-    // Check ownership
     const document = await getDocumentById(documentId, access.user.id);
     if (!document) {
       return NextResponse.json({ error: 'Document introuvable.' }, { status: 404 });
@@ -55,7 +54,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const access = await requireMobileUser(request);
     if (access.response) return access.response;
 
-    // Check ownership
     const document = await getDocumentById(documentId, access.user.id);
     if (!document) {
       return NextResponse.json({ error: 'Document introuvable.' }, { status: 404 });
