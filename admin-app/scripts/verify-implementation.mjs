@@ -57,7 +57,7 @@ async function testPdfWatermark() {
   console.log(`Original PDF pages: ${pdfDoc.getPageCount()}`);
   
   // Generate watermarked preview (extracts first page and overlays watermark)
-  const previewBuffer = await generateWatermarkedPreview(srcBuffer, 'Campus-Bordes Preview');
+  const previewBuffer = await generateWatermarkedPreview(srcBuffer, 'Campus 360 Preview');
   
   // Load generated preview PDF
   const previewDoc = await PDFDocument.load(previewBuffer);

@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': referer,
-          'X-Title': 'Campus-Bordes Editor',
+          'X-Title': 'Campus 360 Editor',
         },
         body: JSON.stringify({
           model,

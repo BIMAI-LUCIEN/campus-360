@@ -58,7 +58,7 @@ const signUp = async () => {
         email,
         password,
         email_confirm: true,
-        user_metadata: { name: 'Etudiant Test Campus-Bordes' },
+        user_metadata: { name: 'Etudiant Test Campus 360' },
       }),
     });
     return null;
@@ -70,7 +70,7 @@ const signUp = async () => {
       body: JSON.stringify({
         email,
         password,
-        data: { name: 'Etudiant Test Campus-Bordes' },
+        data: { name: 'Etudiant Test Campus 360' },
       }),
     });
   } catch (error) {

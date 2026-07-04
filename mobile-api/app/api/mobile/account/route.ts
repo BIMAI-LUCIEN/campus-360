@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const user = access.user;
 
     const [wallet, documents, packs, transactions] = await Promise.all([
-      databasePool.query('select balance_coins, ia_credits from public.app_wallets where user_id = $1', [user.id]),
+      databasePool.query('select balance_coins, ia_credits, report_credits from public.app_wallets where user_id = $1', [user.id]),
       databasePool.query('select document_id from public.app_document_purchases where buyer_id = $1', [user.id]),
       databasePool.query('select pack_id, document_ids from public.app_pack_purchases where buyer_id = $1', [user.id]),
       databasePool.query(
@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
       wallet: {
         balanceCoins: Number(wallet.rows[0]?.balance_coins ?? 0),
         iaCredits: Number(wallet.rows[0]?.ia_credits ?? 0),
+        reportCredits: Number(wallet.rows[0]?.report_credits ?? 0),
       },
       subscription: {
         tier: String(user.subscription_tier || 'free'),
