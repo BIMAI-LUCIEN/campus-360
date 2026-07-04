@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { requireMobileUser, mobileErrorResponse } from '@/lib/mobile-access';
-import { getReportById, addReportSection, reorderReportSections } from '@/lib/reports-db';
+import { getDocumentById, addDocumentSection, reorderDocumentSections } from '@/lib/documents-db';
 
 export const runtime = 'nodejs';
 
@@ -24,14 +24,14 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
-    const { id: reportId } = await context.params;
+    const { id: documentId } = await context.params;
     const access = await requireMobileUser(request);
     if (access.response) return access.response;
 
     // Check ownership
-    const report = await getReportById(reportId, access.user.id);
-    if (!report) {
-      return NextResponse.json({ error: 'Rapport introuvable.' }, { status: 404 });
+    const document = await getDocumentById(documentId, access.user.id);
+    if (!document) {
+      return NextResponse.json({ error: 'Document introuvable.' }, { status: 404 });
     }
 
     const body = await request.json().catch(() => null);
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     const { title, sort_order } = parsed.data;
-    const section = await addReportSection(reportId, title, sort_order);
+    const section = await addDocumentSection(documentId, title, sort_order);
 
     return NextResponse.json({ section }, { status: 201 });
   } catch (error) {
@@ -51,14 +51,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
-    const { id: reportId } = await context.params;
+    const { id: documentId } = await context.params;
     const access = await requireMobileUser(request);
     if (access.response) return access.response;
 
     // Check ownership
-    const report = await getReportById(reportId, access.user.id);
-    if (!report) {
-      return NextResponse.json({ error: 'Rapport introuvable.' }, { status: 404 });
+    const document = await getDocumentById(documentId, access.user.id);
+    if (!document) {
+      return NextResponse.json({ error: 'Document introuvable.' }, { status: 404 });
     }
 
     const body = await request.json().catch(() => null);
@@ -67,7 +67,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Données de tri invalides.' }, { status: 400 });
     }
 
-    await reorderReportSections(reportId, parsed.data.orders);
+    await reorderDocumentSections(documentId, parsed.data.orders);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return mobileErrorResponse(error);

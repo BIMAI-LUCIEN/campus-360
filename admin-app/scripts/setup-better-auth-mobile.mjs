@@ -98,7 +98,7 @@ create table if not exists public.app_user_push_tokens (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.app_reports (
+create table if not exists public.app_documents (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.app_users(id) on delete cascade,
   title text not null,
@@ -113,9 +113,9 @@ create table if not exists public.app_reports (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.app_report_sections (
+create table if not exists public.app_document_sections (
   id uuid primary key default gen_random_uuid(),
-  report_id uuid not null references public.app_reports(id) on delete cascade,
+  document_id uuid not null references public.app_documents(id) on delete cascade,
   title text not null,
   content_html text not null default '',
   content_json jsonb,
@@ -134,8 +134,8 @@ create index if not exists app_pack_purchases_buyer_idx on public.app_pack_purch
 create index if not exists app_wallet_transactions_user_idx on public.app_wallet_transactions (user_id, created_at desc);
 create index if not exists app_ia_usage_logs_user_idx on public.app_ia_usage_logs (user_id, created_at desc);
 create index if not exists app_user_push_tokens_user_idx on public.app_user_push_tokens (user_id);
-create index if not exists app_reports_user_idx on public.app_reports (user_id);
-create index if not exists app_report_sections_report_idx on public.app_report_sections (report_id, sort_order);
+create index if not exists app_documents_user_idx on public.app_documents (user_id);
+create index if not exists app_document_sections_document_idx on public.app_document_sections (document_id, sort_order);
 
 alter table public.app_users enable row level security;
 alter table public.app_wallets enable row level security;
@@ -144,8 +144,8 @@ alter table public.app_pack_purchases enable row level security;
 alter table public.app_wallet_transactions enable row level security;
 alter table public.app_ia_usage_logs enable row level security;
 alter table public.app_user_push_tokens enable row level security;
-alter table public.app_reports enable row level security;
-alter table public.app_report_sections enable row level security;
+alter table public.app_documents enable row level security;
+alter table public.app_document_sections enable row level security;
 `;
 
 const client = new Client({

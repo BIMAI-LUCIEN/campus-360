@@ -9,7 +9,7 @@ import {
   Plus, Trash2, ArrowUpDown, AlignLeft, Bold, Italic, 
   Heading1, Heading2, List, Undo, Redo, FileText, CheckCircle2 
 } from 'lucide-react';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } from 'docx';
+import { Document as DocxDocument, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } from 'docx';
 
 import { authClient } from '@/lib/auth-client';
 
@@ -24,7 +24,7 @@ const ssrConfirm = (message: string): boolean => {
   return window.confirm(message);
 };
 
-type Report = {
+type Document = {
   id: string;
   title: string;
   description?: string;
@@ -36,7 +36,7 @@ type Report = {
   cover_data: Record<string, any>;
 };
 
-type ReportSection = {
+type DocumentSection = {
   id: string;
   title: string;
   content_html: string;
@@ -45,16 +45,16 @@ type ReportSection = {
   is_system: boolean;
 };
 
-export default function ReportEditorPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: reportId } = use(params);
+export default function DocumentEditorPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: documentId } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
   const isMobileMode = searchParams.get('mode') === 'mobile';
 
   const { data: session, isPending: sessionLoading } = authClient.useSession();
 
-  const [report, setReport] = useState<Report | null>(null);
-  const [sections, setSections] = useState<ReportSection[]>([]);
+  const [document, setDocument] = useState<Document | null>(null);
+  const [sections, setSections] = useState<DocumentSection[]>([]);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   
   const [loading, setLoading] = useState(true);
@@ -73,7 +73,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
   // Debounced auto-save timer
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 1. Fetch Report and Sections
+  // 1. Fetch Document and Sections
   useEffect(() => {
     if (sessionLoading) return;
     if (!session) {
@@ -88,20 +88,20 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
     async function loadData() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/mobile/reports/${reportId}`);
+        const res = await fetch(`/api/mobile/documents/${documentId}`);
         if (!res.ok) {
-          // 404 means the report doesn't exist yet — likely a /new hit.
+          // 404 means the document doesn't exist yet — likely a /new hit.
           // Surface a friendly error instead of looping on the loader.
           if (res.status === 404) {
-            setError(`Rapport "${reportId}" introuvable. Il a peut-être été supprimé, ou l'identifiant est invalide.`);
+            setError(`Document "${documentId}" introuvable. Il a peut-être été supprimé, ou l'identifiant est invalide.`);
           } else {
             const errBody = await res.json().catch(() => ({}));
-            throw new Error(errBody.error || `Impossible de charger le rapport (HTTP ${res.status}).`);
+            throw new Error(errBody.error || `Impossible de charger le document (HTTP ${res.status}).`);
           }
           return;
         }
         const data = await res.json();
-        setReport(data.report);
+        setDocument(data.document);
         setSections(data.sections);
         if (data.sections.length > 0) {
           setActiveSectionId(data.sections[0].id);
@@ -114,7 +114,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
     }
 
     loadData();
-  }, [reportId, session, sessionLoading, router, isMobileMode]);
+  }, [documentId, session, sessionLoading, router, isMobileMode]);
 
   const activeSection = sections.find((s) => s.id === activeSectionId);
 
@@ -177,7 +177,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
   const saveSectionContent = async (sectionId: string, html: string, json: any) => {
     try {
       setSaving(true);
-      await fetch(`/api/mobile/reports/${reportId}/sections/${sectionId}`, {
+      await fetch(`/api/mobile/documents/${documentId}/sections/${sectionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content_html: html, content_json: json }),
@@ -189,23 +189,23 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
     }
   };
 
-  // 4. Update Report Settings (Font, Margins, Spacing, Cover fields)
-  const updateSettings = async (updates: Partial<Report>) => {
-    if (!report) return;
-    const oldReport = report;
-    const newReport = { ...report, ...updates } as Report;
-    setReport(newReport);
+  // 4. Update Document Settings (Font, Margins, Spacing, Cover fields)
+  const updateSettings = async (updates: Partial<Document>) => {
+    if (!document) return;
+    const oldDocument = document;
+    const newDocument = { ...document, ...updates } as Document;
+    setDocument(newDocument);
 
     try {
       setSaving(true);
-      const res = await fetch(`/api/mobile/reports/${reportId}`, {
+      const res = await fetch(`/api/mobile/documents/${documentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       });
       if (!res.ok) throw new Error();
     } catch {
-      setReport(oldReport); // rollback
+      setDocument(oldDocument); // rollback
     } finally {
       setSaving(false);
     }
@@ -217,7 +217,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
     try {
       setSaving(true);
       const nextSortOrder = sections.length > 0 ? Math.max(...sections.map(s => s.sort_order)) + 1 : 0;
-      const res = await fetch(`/api/mobile/reports/${reportId}/sections`, {
+      const res = await fetch(`/api/mobile/documents/${documentId}/sections`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: newSectionTitle, sort_order: nextSortOrder }),
@@ -249,7 +249,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
 
     try {
       setSaving(true);
-      const res = await fetch(`/api/mobile/reports/${reportId}/sections/${sectionId}`, {
+      const res = await fetch(`/api/mobile/documents/${documentId}/sections/${sectionId}`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error();
@@ -286,7 +286,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
 
     try {
       setAiLoading(true);
-      const res = await fetch('/api/mobile/reports/ai', {
+      const res = await fetch('/api/mobile/documents/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -322,12 +322,12 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
 
   // 8. DOCX Exporter
   const handleExportDocx = async () => {
-    if (!report) return;
+    if (!document) return;
 
     try {
-      const c = report.cover_data;
+      const c = document.cover_data;
       const school = c.school || 'Établissement';
-      const title = c.title || report.title;
+      const title = c.title || document.title;
       const subtitle = c.subtitle || '';
       const studentName = c.studentName || '';
       const company = c.company || '';
@@ -380,7 +380,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
         docElements.push(new Paragraph({ children: [new PageBreak()] }));
       });
 
-      const doc = new Document({
+      const doc = new DocxDocument({
         sections: [{
           properties: {},
           children: docElements,
@@ -389,9 +389,9 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
 
       const blob = await Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = window.document.createElement('a');
       a.href = url;
-      a.download = `Rapport_${report.title.replace(/\s+/g, '_')}.docx`;
+      a.download = `Document_${document.title.replace(/\s+/g, '_')}.docx`;
       a.click();
     } catch (err: any) {
       ssrAlert(`Erreur d'export Word : ${err.message}`);
@@ -400,7 +400,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
 
   // 9. PDF Exporter
   const handleExportPdf = () => {
-    window.open(`/api/mobile/reports/${reportId}/export/pdf`, '_blank');
+    window.open(`/api/mobile/documents/${documentId}/export/pdf`, '_blank');
   };
 
   if (loading) {
@@ -408,17 +408,17 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
       <div className="flex h-screen items-center justify-center bg-slate-900 text-slate-200">
         <div className="flex flex-col items-center gap-4">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
-          <p className="text-sm font-semibold">Chargement de votre éditeur de rapport...</p>
+          <p className="text-sm font-semibold">Chargement de votre éditeur de document...</p>
         </div>
       </div>
     );
   }
 
-  if (error || !report) {
+  if (error || !document) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-900 text-slate-200">
         <div className="max-w-md text-center">
-          <p className="text-red-400 font-bold mb-4">Erreur : {error || 'Rapport introuvable.'}</p>
+          <p className="text-red-400 font-bold mb-4">Erreur : {error || 'Document introuvable.'}</p>
           <button
             onClick={() => router.push('/admin/analytics')}
             className="rounded bg-slate-800 px-4 py-2 text-sm hover:bg-slate-700 transition"
@@ -443,8 +443,8 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
               <ChevronLeft size={18} />
             </button>
             <div>
-              <h1 className="text-base font-bold text-slate-200">{report.title}</h1>
-              <p className="text-xs text-slate-400">Modèle {report.template_type.toUpperCase()} • Modifié récemment</p>
+              <h1 className="text-base font-bold text-slate-200">{document.title}</h1>
+              <p className="text-xs text-slate-400">Modèle {document.template_type.toUpperCase()} • Modifié récemment</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -470,7 +470,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
         {/* Left Sidebar - Plan/Structure */}
         <aside className="w-64 border-r border-slate-800 bg-slate-900/20 flex flex-col">
           <div className="p-4 border-b border-slate-800/60 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Plan du rapport</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Plan du document</span>
             <button 
               onClick={() => setShowAddSection(!showAddSection)}
               className="p-1 rounded bg-slate-800 hover:bg-slate-700 transition text-emerald-500"
@@ -589,7 +589,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
                   <div className="space-y-6">
                     <div className="border-b border-slate-800 pb-3">
                       <h2 className="text-lg font-bold text-slate-200">Page de Garde - Informations</h2>
-                      <p className="text-xs text-slate-400">Remplissez ces champs pour structurer automatiquement la couverture de votre rapport.</p>
+                      <p className="text-xs text-slate-400">Remplissez ces champs pour structurer automatiquement la couverture de votre document.</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -597,8 +597,8 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
                         <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">Établissement / École</label>
                         <input 
                           type="text"
-                          value={report.cover_data.school || ''}
-                          onChange={(e) => updateSettings({ cover_data: { ...report.cover_data, school: e.target.value } })}
+                          value={document.cover_data.school || ''}
+                          onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, school: e.target.value } })}
                           className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500"
                         />
                       </div>
@@ -606,19 +606,19 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
                         <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">Année Académique</label>
                         <input 
                           type="text"
-                          value={report.cover_data.year || ''}
-                          onChange={(e) => updateSettings({ cover_data: { ...report.cover_data, year: e.target.value } })}
+                          value={document.cover_data.year || ''}
+                          onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, year: e.target.value } })}
                           className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">Titre du Rapport</label>
+                      <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">Titre du Document</label>
                       <input 
                         type="text"
-                        value={report.cover_data.title || ''}
-                        onChange={(e) => updateSettings({ cover_data: { ...report.cover_data, title: e.target.value } })}
+                        value={document.cover_data.title || ''}
+                        onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, title: e.target.value } })}
                         className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 font-bold"
                       />
                     </div>
@@ -626,8 +626,8 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
                     <div>
                       <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">Sujet / Sous-titre</label>
                       <textarea 
-                        value={report.cover_data.subtitle || ''}
-                        onChange={(e) => updateSettings({ cover_data: { ...report.cover_data, subtitle: e.target.value } })}
+                        value={document.cover_data.subtitle || ''}
+                        onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, subtitle: e.target.value } })}
                         className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 h-16"
                       />
                     </div>
@@ -637,8 +637,8 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
                         <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">Prénom & Nom Étudiant</label>
                         <input 
                           type="text"
-                          value={report.cover_data.studentName || ''}
-                          onChange={(e) => updateSettings({ cover_data: { ...report.cover_data, studentName: e.target.value } })}
+                          value={document.cover_data.studentName || ''}
+                          onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, studentName: e.target.value } })}
                           className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500"
                         />
                       </div>
@@ -646,8 +646,8 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
                         <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">Entreprise d'Accueil</label>
                         <input 
                           type="text"
-                          value={report.cover_data.company || ''}
-                          onChange={(e) => updateSettings({ cover_data: { ...report.cover_data, company: e.target.value } })}
+                          value={document.cover_data.company || ''}
+                          onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, company: e.target.value } })}
                           className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500"
                         />
                       </div>
@@ -658,8 +658,8 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
                         <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">Maître de Stage (Entreprise)</label>
                         <input 
                           type="text"
-                          value={report.cover_data.tutorCorporate || ''}
-                          onChange={(e) => updateSettings({ cover_data: { ...report.cover_data, tutorCorporate: e.target.value } })}
+                          value={document.cover_data.tutorCorporate || ''}
+                          onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, tutorCorporate: e.target.value } })}
                           className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500"
                         />
                       </div>
@@ -667,8 +667,8 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
                         <label className="block text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">Tuteur Académique (École)</label>
                         <input 
                           type="text"
-                          value={report.cover_data.tutorAcademic || ''}
-                          onChange={(e) => updateSettings({ cover_data: { ...report.cover_data, tutorAcademic: e.target.value } })}
+                          value={document.cover_data.tutorAcademic || ''}
+                          onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, tutorAcademic: e.target.value } })}
                           className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500"
                         />
                       </div>
@@ -723,7 +723,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
               <div>
                 <label className="block text-xs text-slate-400 font-bold mb-1.5 uppercase">Police de texte</label>
                 <select 
-                  value={report.font_family}
+                  value={document.font_family}
                   onChange={(e) => updateSettings({ font_family: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none"
                 >
@@ -737,7 +737,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
               <div>
                 <label className="block text-xs text-slate-400 font-bold mb-1.5 uppercase">Interligne</label>
                 <select 
-                  value={report.line_spacing}
+                  value={document.line_spacing}
                   onChange={(e) => updateSettings({ line_spacing: Number(e.target.value) })}
                   className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none"
                 >
@@ -750,7 +750,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
               <div>
                 <label className="block text-xs text-slate-400 font-bold mb-1.5 uppercase">Marges de page</label>
                 <select 
-                  value={report.margins}
+                  value={document.margins}
                   onChange={(e) => updateSettings({ margins: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none"
                 >
@@ -763,7 +763,7 @@ export default function ReportEditorPage({ params }: { params: Promise<{ id: str
               <div>
                 <label className="block text-xs text-slate-400 font-bold mb-1.5 uppercase">Thème page de garde</label>
                 <select 
-                  value={report.cover_template}
+                  value={document.cover_template}
                   onChange={(e) => updateSettings({ cover_template: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none"
                 >

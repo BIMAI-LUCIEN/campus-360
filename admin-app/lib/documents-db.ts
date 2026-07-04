@@ -1,6 +1,6 @@
 import { databasePool } from './database';
 
-export type Report = {
+export type Document = {
   id: string;
   user_id: string;
   title: string;
@@ -15,9 +15,9 @@ export type Report = {
   updated_at: string;
 };
 
-export type ReportSection = {
+export type DocumentSection = {
   id: string;
-  report_id: string;
+  document_id: string;
   title: string;
   content_html: string;
   content_json?: any;
@@ -61,9 +61,9 @@ const TEMPLATE_SECTIONS: Record<string, string[]> = {
   ],
 };
 
-export async function listUserReports(userId: string): Promise<Report[]> {
+export async function listUserDocuments(userId: string): Promise<Document[]> {
   const res = await databasePool.query(
-    'select * from public.app_reports where user_id = $1 order by updated_at desc',
+    'select * from public.app_documents where user_id = $1 order by updated_at desc',
     [userId]
   );
   return res.rows.map((row) => ({
@@ -72,10 +72,10 @@ export async function listUserReports(userId: string): Promise<Report[]> {
   }));
 }
 
-export async function getReportById(reportId: string, userId: string): Promise<Report | null> {
+export async function getDocumentById(documentId: string, userId: string): Promise<Document | null> {
   const res = await databasePool.query(
-    'select * from public.app_reports where id = $1 and user_id = $2 limit 1',
-    [reportId, userId]
+    'select * from public.app_documents where id = $1 and user_id = $2 limit 1',
+    [documentId, userId]
   );
   if (res.rows.length === 0) return null;
   return {
@@ -84,49 +84,49 @@ export async function getReportById(reportId: string, userId: string): Promise<R
   };
 }
 
-export async function getReportSections(reportId: string): Promise<ReportSection[]> {
+export async function getDocumentSections(documentId: string): Promise<DocumentSection[]> {
   const res = await databasePool.query(
-    'select * from public.app_report_sections where report_id = $1 order by sort_order asc',
-    [reportId]
+    'select * from public.app_document_sections where document_id = $1 order by sort_order asc',
+    [documentId]
   );
   return res.rows;
 }
 
-export async function createReport(
+export async function createDocument(
   userId: string,
   title: string,
   description: string,
   templateType: string
-): Promise<Report> {
+): Promise<Document> {
   const client = await databasePool.connect();
   try {
     await client.query('begin');
 
-    // 1. Insert report
-    const reportRes = await client.query(
-      `insert into public.app_reports (user_id, title, description, template_type)
+    // 1. Insert document
+    const documentRes = await client.query(
+      `insert into public.app_documents (user_id, title, description, template_type)
        values ($1, $2, $3, $4)
        returning *`,
       [userId, title, description || null, templateType]
     );
 
-    const report = reportRes.rows[0];
+    const document = documentRes.rows[0];
 
     // 2. Generate sections based on template
     const sectionNames = TEMPLATE_SECTIONS[templateType] || TEMPLATE_SECTIONS.blank;
     for (let i = 0; i < sectionNames.length; i++) {
       const isSystem = i === 0 || sectionNames[i] === 'Sommaire'; // Page de garde and Sommaire are handled by template system
       await client.query(
-        `insert into public.app_report_sections (report_id, title, sort_order, is_system)
+        `insert into public.app_document_sections (document_id, title, sort_order, is_system)
          values ($1, $2, $3, $4)`,
-        [report.id, sectionNames[i], i, isSystem]
+        [document.id, sectionNames[i], i, isSystem]
       );
     }
 
     await client.query('commit');
     return {
-      ...report,
-      line_spacing: Number(report.line_spacing),
+      ...document,
+      line_spacing: Number(document.line_spacing),
     };
   } catch (error) {
     await client.query('rollback');
@@ -136,8 +136,8 @@ export async function createReport(
   }
 }
 
-export async function updateReportSettings(
-  reportId: string,
+export async function updateDocumentSettings(
+  documentId: string,
   userId: string,
   settings: {
     title?: string;
@@ -148,9 +148,9 @@ export async function updateReportSettings(
     cover_template?: string;
     cover_data?: Record<string, any>;
   }
-): Promise<Report> {
+): Promise<Document> {
   const fields: string[] = [];
-  const params: any[] = [reportId, userId];
+  const params: any[] = [documentId, userId];
   let paramCount = 3;
 
   for (const [key, value] of Object.entries(settings)) {
@@ -162,13 +162,13 @@ export async function updateReportSettings(
   }
 
   if (fields.length === 0) {
-    const r = await getReportById(reportId, userId);
-    if (!r) throw new Error('Report introuvable.');
-    return r;
+    const d = await getDocumentById(documentId, userId);
+    if (!d) throw new Error('Document introuvable.');
+    return d;
   }
 
   const res = await databasePool.query(
-    `update public.app_reports
+    `update public.app_documents
      set ${fields.join(', ')}, updated_at = now()
      where id = $1 and user_id = $2
      returning *`,
@@ -176,7 +176,7 @@ export async function updateReportSettings(
   );
 
   if (res.rows.length === 0) {
-    throw new Error('Report introuvable ou droits insuffisants.');
+    throw new Error('Document introuvable ou droits insuffisants.');
   }
 
   return {
@@ -185,16 +185,16 @@ export async function updateReportSettings(
   };
 }
 
-export async function deleteReport(reportId: string, userId: string): Promise<boolean> {
+export async function deleteDocument(documentId: string, userId: string): Promise<boolean> {
   const res = await databasePool.query(
-    'delete from public.app_reports where id = $1 and user_id = $2 returning id',
-    [reportId, userId]
+    'delete from public.app_documents where id = $1 and user_id = $2 returning id',
+    [documentId, userId]
   );
   return res.rows.length > 0;
 }
 
-export async function updateReportSection(
-  reportId: string,
+export async function updateDocumentSection(
+  documentId: string,
   sectionId: string,
   data: {
     title?: string;
@@ -202,9 +202,9 @@ export async function updateReportSection(
     content_json?: any;
     sort_order?: number;
   }
-): Promise<ReportSection> {
+): Promise<DocumentSection> {
   const fields: string[] = [];
-  const params: any[] = [sectionId, reportId];
+  const params: any[] = [sectionId, documentId];
   let paramCount = 3;
 
   for (const [key, value] of Object.entries(data)) {
@@ -217,17 +217,17 @@ export async function updateReportSection(
 
   if (fields.length === 0) {
     const res = await databasePool.query(
-      'select * from public.app_report_sections where id = $1 and report_id = $2 limit 1',
-      [sectionId, reportId]
+      'select * from public.app_document_sections where id = $1 and document_id = $2 limit 1',
+      [sectionId, documentId]
     );
     if (res.rows.length === 0) throw new Error('Section introuvable.');
     return res.rows[0];
   }
 
   const res = await databasePool.query(
-    `update public.app_report_sections
+    `update public.app_document_sections
      set ${fields.join(', ')}, updated_at = now()
-     where id = $1 and report_id = $2
+     where id = $1 and document_id = $2
      returning *`,
     params
   );
@@ -236,39 +236,39 @@ export async function updateReportSection(
     throw new Error('Section introuvable.');
   }
 
-  // Also touch the parent report update timestamp
+  // Also touch the parent document update timestamp
   await databasePool.query(
-    'update public.app_reports set updated_at = now() where id = $1',
-    [reportId]
+    'update public.app_documents set updated_at = now() where id = $1',
+    [documentId]
   );
 
   return res.rows[0];
 }
 
-export async function addReportSection(
-  reportId: string,
+export async function addDocumentSection(
+  documentId: string,
   title: string,
   sortOrder: number
-): Promise<ReportSection> {
+): Promise<DocumentSection> {
   const res = await databasePool.query(
-    `insert into public.app_report_sections (report_id, title, sort_order)
+    `insert into public.app_document_sections (document_id, title, sort_order)
      values ($1, $2, $3)
      returning *`,
-    [reportId, title, sortOrder]
+    [documentId, title, sortOrder]
   );
 
   await databasePool.query(
-    'update public.app_reports set updated_at = now() where id = $1',
-    [reportId]
+    'update public.app_documents set updated_at = now() where id = $1',
+    [documentId]
   );
 
   return res.rows[0];
 }
 
-export async function deleteReportSection(reportId: string, sectionId: string): Promise<boolean> {
+export async function deleteDocumentSection(documentId: string, sectionId: string): Promise<boolean> {
   const sectionRes = await databasePool.query(
-    'select is_system from public.app_report_sections where id = $1 and report_id = $2 limit 1',
-    [sectionId, reportId]
+    'select is_system from public.app_document_sections where id = $1 and document_id = $2 limit 1',
+    [sectionId, documentId]
   );
 
   if (sectionRes.rows.length === 0) return false;
@@ -277,20 +277,20 @@ export async function deleteReportSection(reportId: string, sectionId: string): 
   }
 
   const res = await databasePool.query(
-    'delete from public.app_report_sections where id = $1 and report_id = $2 returning id',
-    [sectionId, reportId]
+    'delete from public.app_document_sections where id = $1 and document_id = $2 returning id',
+    [sectionId, documentId]
   );
 
   await databasePool.query(
-    'update public.app_reports set updated_at = now() where id = $1',
-    [reportId]
+    'update public.app_documents set updated_at = now() where id = $1',
+    [documentId]
   );
 
   return res.rows.length > 0;
 }
 
-export async function reorderReportSections(
-  reportId: string,
+export async function reorderDocumentSections(
+  documentId: string,
   orders: Array<{ id: string; sort_order: number }>
 ): Promise<void> {
   const client = await databasePool.connect();
@@ -298,11 +298,11 @@ export async function reorderReportSections(
     await client.query('begin');
     for (const item of orders) {
       await client.query(
-        'update public.app_report_sections set sort_order = $1 where id = $2 and report_id = $3',
-        [item.sort_order, item.id, reportId]
+        'update public.app_document_sections set sort_order = $1 where id = $2 and document_id = $3',
+        [item.sort_order, item.id, documentId]
       );
     }
-    await client.query('update public.app_reports set updated_at = now() where id = $1', [reportId]);
+    await client.query('update public.app_documents set updated_at = now() where id = $1', [documentId]);
     await client.query('commit');
   } catch (error) {
     await client.query('rollback');

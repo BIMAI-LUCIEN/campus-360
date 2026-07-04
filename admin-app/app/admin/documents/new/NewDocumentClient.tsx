@@ -23,7 +23,7 @@ type TemplateMeta = {
 const TEMPLATES: TemplateMeta[] = [
   {
     key: 'stage',
-    label: 'Rapport de stage',
+    label: 'Document de stage',
     desc: 'Structure académique classique avec page de garde, sommaire, remerciements, introduction, conclusion.',
     icon: FileText,
   },
@@ -41,7 +41,7 @@ const TEMPLATES: TemplateMeta[] = [
   },
 ];
 
-export default function NewReportPage() {
+export default function NewDocumentPage() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -58,7 +58,7 @@ export default function NewReportPage() {
     setError('');
     setSubmitting(true);
     try {
-      const res = await fetch('/api/mobile/reports', {
+      const res = await fetch('/api/mobile/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -73,11 +73,11 @@ export default function NewReportPage() {
         throw new Error(errBody.error || `Erreur ${res.status}`);
       }
       const data = await res.json();
-      const newId = data.report?.id;
-      if (!newId) throw new Error('Aucun identifiant de rapport reçu.');
-      router.push(`/reports/${newId}`);
+      const newId = data.document?.id;
+      if (!newId) throw new Error('Aucun identifiant de document reçu.');
+      router.push(`/documents/${newId}`);
     } catch (err: any) {
-      setError(err.message || 'Impossible de créer le rapport.');
+      setError(err.message || 'Impossible de créer le document.');
     } finally {
       setSubmitting(false);
     }
@@ -88,12 +88,12 @@ export default function NewReportPage() {
       {/* Back link */}
       <button
         type="button"
-        onClick={() => router.push('/admin/reports')}
+        onClick={() => router.push('/admin/documents')}
         className="flup-btn flup-btn--ghost flup-btn--sm"
         style={{ alignSelf: 'flex-start' }}
       >
         <ArrowLeft size={15} />
-        Retour à la liste des rapports
+        Retour à la liste des documents
       </button>
 
       {/* Header card */}
@@ -104,7 +104,7 @@ export default function NewReportPage() {
           </span>
           <div>
             <h1 className="flup-page-title" style={{ fontSize: 22 }}>
-              Nouveau rapport
+              Nouveau document
             </h1>
             <p className="flup-page-subtitle">
               Choisissez un modèle, donnez un titre, et l&apos;éditeur s&apos;ouvrira
@@ -131,7 +131,7 @@ export default function NewReportPage() {
               onChange={(e) => setTitle(e.target.value)}
               required
               autoFocus
-              placeholder="Ex: Rapport de stage — Miguel Melago"
+              placeholder="Ex: Document de stage — Miguel Melago"
               className="flup-input"
             />
           </div>
@@ -222,7 +222,7 @@ export default function NewReportPage() {
           >
             <button
               type="button"
-              onClick={() => router.push('/admin/reports')}
+              onClick={() => router.push('/admin/documents')}
               disabled={submitting}
               className="flup-btn flup-btn--secondary"
             >

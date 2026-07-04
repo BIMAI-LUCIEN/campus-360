@@ -48,8 +48,8 @@ import {
 import { OnboardingScreen } from './src/features/onboarding/OnboardingScreen';
 import { FreePdfSelector } from './src/features/onboarding/FreePdfSelector';
 import { PdfStudentSection } from './src/features/pdf/PdfStudentSection';
-import { ReportsScreen } from './src/features/reports/ReportsScreen';
-import { ReportEditorWebView } from './src/features/reports/ReportEditorWebView';
+import { DocumentsScreen } from './src/features/documents/DocumentsScreen';
+import { DocumentEditorWebView } from './src/features/documents/DocumentEditorWebView';
 import {
   buildSuggestedPacks,
   listPublishedPdfDocuments,
@@ -61,7 +61,7 @@ import {
 import type { CampusDocument, CampusPdfPack, Transaction } from './src/types';
 
 type ClientCatalogTab = 'packs' | 'catalog' | 'library';
-type AppSection = 'home' | 'explore' | 'library' | 'reports' | 'account' | 'premium';
+type AppSection = 'home' | 'explore' | 'library' | 'documents' | 'account' | 'premium';
 
 const logo = require('./assets/icon.png');
 const catalogCard = require('./assets/catalog-card.png');
@@ -155,7 +155,7 @@ function NavGlyph({ section, active }: { section: AppSection; active: boolean })
     return <BookOpen size={size} color={iconColor} />;
   }
 
-  if (section === 'reports') {
+  if (section === 'documents') {
     return <FileText size={size} color={iconColor} />;
   }
 
@@ -279,7 +279,7 @@ export default function App() {
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
   const [notificationsVisible, setNotificationsVisible] = useState(false);
   const [notificationsSettingsVisible, setNotificationsSettingsVisible] = useState(false);
-  const [editingReportId, setEditingReportId] = useState<string | null>(null);
+  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
   const [securitySettingsVisible, setSecuritySettingsVisible] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -1112,11 +1112,11 @@ export default function App() {
       return;
     }
 
-    if (section === 'reports') {
+    if (section === 'documents') {
       if (!studentSession) {
         setActiveSection('account');
         setAuthMode('sign-in');
-        setAuthNotice('Connecte-toi pour rédiger tes rapports de stage.');
+        setAuthNotice('Connecte-toi pour rédiger tes documents.');
         setAuthVisible(true);
         return;
       }
@@ -1430,11 +1430,11 @@ export default function App() {
     </>
   );
 
-  if (editingReportId) {
+  if (editingDocumentId) {
     return (
-      <ReportEditorWebView
-        reportId={editingReportId}
-        onClose={() => setEditingReportId(null)}
+      <DocumentEditorWebView
+        documentId={editingDocumentId}
+        onClose={() => setEditingDocumentId(null)}
       />
     );
   }
@@ -1620,9 +1620,9 @@ export default function App() {
                   </View>
                   <View style={[styles.homeLeadActions, { marginTop: 24 }]}>
                     <PrimaryButton 
-                      label="Rédiger mon rapport" 
+                      label="Rédiger mon document" 
                       fluid 
-                      onPress={() => openSection('reports')} 
+                      onPress={() => openSection('documents')} 
                       style={{ backgroundColor: '#10B981' }}
                     />
                   </View>
@@ -1780,13 +1780,13 @@ export default function App() {
                 </View>
 
                 <View style={{ marginTop: 32, gap: 12 }}>
-                  <Text style={[styles.dashboardSectionTitle, { fontSize: 16, textTransform: 'none', color: '#1E293B', marginBottom: 4 }]}>Rédaction & Rapports</Text>
+                  <Text style={[styles.dashboardSectionTitle, { fontSize: 16, textTransform: 'none', color: '#1E293B', marginBottom: 4 }]}>Rédaction & Documents</Text>
                   
-                  <Pressable style={styles.accountMenuItem} onPress={() => openSection('reports')}>
+                  <Pressable style={styles.accountMenuItem} onPress={() => openSection('documents')}>
                     <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#EFF6FF', marginRight: 12, alignItems: 'center', justifyContent: 'center' }}>
                       <BookOpen size={18} color="#2563EB" />
                     </View>
-                    <Text style={[styles.accountMenuItemText, styles.flex]}>Mes Rapports de stage</Text>
+                    <Text style={[styles.accountMenuItemText, styles.flex]}>Mes documents rédigés</Text>
                     <Text style={styles.accountMenuItemArrow}>›</Text>
                   </Pressable>
                 </View>
@@ -1968,8 +1968,8 @@ export default function App() {
                 </View>
               </View>
             </View>
-          ) : activeSection === 'reports' ? (
-            <ReportsScreen onEditReport={(id) => setEditingReportId(id)} />
+          ) : activeSection === 'documents' ? (
+            <DocumentsScreen onEditDocument={(id) => setEditingDocumentId(id)} />
           ) : activeSection === 'home' ? null : (
             <PdfStudentSection
               documents={pdfDocuments}
@@ -1997,7 +1997,7 @@ export default function App() {
             { key: 'home', label: 'Accueil' },
             { key: 'explore', label: 'Explorer' },
             { key: 'library', label: 'Biblio' },
-            { key: 'reports', label: 'Rapports' },
+            { key: 'documents', label: 'Rédaction' },
             { key: 'account', label: 'Compte' },
           ].map((item) => {
             const active = activeSection === item.key;

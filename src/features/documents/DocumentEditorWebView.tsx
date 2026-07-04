@@ -4,12 +4,12 @@ import { WebView } from 'react-native-webview';
 
 import { authBaseUrl, authClient } from '../auth/betterAuth';
 
-type ReportEditorWebViewProps = {
-  reportId: string;
+type DocumentEditorWebViewProps = {
+  documentId: string;
   onClose: () => void;
 };
 
-export function ReportEditorWebView({ reportId, onClose }: ReportEditorWebViewProps) {
+export function DocumentEditorWebView({ documentId, onClose }: DocumentEditorWebViewProps) {
   const [connectionError, setConnectionError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const webViewRef = useRef<any>(null);
@@ -20,7 +20,7 @@ export function ReportEditorWebView({ reportId, onClose }: ReportEditorWebViewPr
     : '';
   
   // Construct the URL
-  const editorUrl = `${authBaseUrl}/reports/${reportId}?mode=mobile`;
+  const editorUrl = `${authBaseUrl}/documents/${documentId}?mode=mobile`;
   
   console.log(`[WebView Editor] Loading URL: ${editorUrl}`);
 

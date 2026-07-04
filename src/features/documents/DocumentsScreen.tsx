@@ -6,7 +6,7 @@ import {
 
 import { authBaseUrl, authFetch } from '../auth/betterAuth';
 
-type Report = {
+type Document = {
   id: string;
   title: string;
   description?: string;
@@ -20,31 +20,31 @@ type Report = {
   updated_at: string;
 };
 
-type ReportsScreenProps = {
-  onEditReport: (id: string) => void;
+type DocumentsScreenProps = {
+  onEditDocument: (id: string) => void;
 };
 
-export function ReportsScreen({ onEditReport }: ReportsScreenProps) {
-  const [reports, setReports] = useState<Report[]>([]);
+export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Create Report Modal State
+  // Create Document Modal State
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newTemplate, setNewTemplate] = useState<'stage' | 'memoire' | 'blank'>('stage');
   const [creating, setCreating] = useState(false);
 
-  // Fetch Reports
-  const fetchReports = async () => {
+  // Fetch Documents
+  const fetchDocuments = async () => {
     try {
       setLoading(true);
       setError('');
-      const res = await authFetch('/api/mobile/reports');
-      if (!res.ok) throw new Error('Impossible de récupérer vos rapports.');
+      const res = await authFetch('/api/mobile/documents');
+      if (!res.ok) throw new Error('Impossible de récupérer vos documents.');
       const data = await res.json();
-      setReports(data.reports || []);
+      setDocuments(data.documents || []);
     } catch (err: any) {
       setError(err.message || 'Erreur de connexion.');
     } finally {
@@ -53,19 +53,19 @@ export function ReportsScreen({ onEditReport }: ReportsScreenProps) {
   };
 
   useEffect(() => {
-    fetchReports();
+    fetchDocuments();
   }, []);
 
-  // Handle Create Report
+  // Handle Create Document
   const handleCreate = async () => {
     if (!newTitle.trim()) {
-      Alert.alert('Erreur', 'Veuillez saisir un titre pour votre rapport.');
+      Alert.alert('Erreur', 'Veuillez saisir un titre pour votre document.');
       return;
     }
 
     try {
       setCreating(true);
-      const res = await authFetch('/api/mobile/reports', {
+      const res = await authFetch('/api/mobile/documents', {
         method: 'POST',
         body: JSON.stringify({
           title: newTitle,
@@ -74,7 +74,7 @@ export function ReportsScreen({ onEditReport }: ReportsScreenProps) {
         }),
       });
 
-      if (!res.ok) throw new Error('Impossible de créer le rapport.');
+      if (!res.ok) throw new Error('Impossible de créer le document.');
       const data = await res.json();
       
       setNewTitle('');
@@ -83,9 +83,9 @@ export function ReportsScreen({ onEditReport }: ReportsScreenProps) {
       setCreateModalVisible(false);
       
       // Refresh and open editor directly
-      fetchReports();
-      if (data.report?.id) {
-        onEditReport(data.report.id);
+      fetchDocuments();
+      if (data.document?.id) {
+        onEditDocument(data.document.id);
       }
     } catch (err: any) {
       Alert.alert('Erreur de création', err.message);
@@ -94,11 +94,11 @@ export function ReportsScreen({ onEditReport }: ReportsScreenProps) {
     }
   };
 
-  // Handle Delete Report
-  const handleDelete = (reportId: string, title: string) => {
+  // Handle Delete Document
+  const handleDelete = (documentId: string, title: string) => {
     Alert.alert(
       'Confirmer la suppression',
-      `Voulez-vous vraiment supprimer définitivement le rapport "${title}" ? Cette action est irréversible.`,
+      `Voulez-vous vraiment supprimer définitivement le document "${title}" ? Cette action est irréversible.`,
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -106,13 +106,13 @@ export function ReportsScreen({ onEditReport }: ReportsScreenProps) {
           style: 'destructive',
           onPress: async () => {
             try {
-              const res = await authFetch(`/api/mobile/reports/${reportId}`, {
+              const res = await authFetch(`/api/mobile/documents/${documentId}`, {
                 method: 'DELETE',
               });
               if (!res.ok) throw new Error();
-              setReports((prev) => prev.filter((r) => r.id !== reportId));
+              setDocuments((prev) => prev.filter((r) => r.id !== documentId));
             } catch {
-              Alert.alert('Erreur', 'Impossible de supprimer le rapport.');
+              Alert.alert('Erreur', 'Impossible de supprimer le document.');
             }
           },
         },
@@ -121,14 +121,14 @@ export function ReportsScreen({ onEditReport }: ReportsScreenProps) {
   };
 
   // Handle PDF Download
-  const handleDownloadPdf = (reportId: string) => {
-    const pdfUrl = `${authBaseUrl}/api/mobile/reports/${reportId}/export/pdf`;
+  const handleDownloadPdf = (documentId: string) => {
+    const pdfUrl = `${authBaseUrl}/api/mobile/documents/${documentId}/export/pdf`;
     Linking.openURL(pdfUrl).catch(() => {
       Alert.alert('Erreur', 'Impossible d\'ouvrir l\'URL de téléchargement.');
     });
   };
 
-  if (loading && reports.length === 0) {
+  if (loading && documents.length === 0) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#059669" />
@@ -141,15 +141,15 @@ export function ReportsScreen({ onEditReport }: ReportsScreenProps) {
     <View style={styles.container}>
       {/* Header card with action */}
       <View style={styles.heroCard}>
-        <Text style={styles.heroTitle}>Éditeur Guidé de Rapports</Text>
+        <Text style={styles.heroTitle}>Éditeur Guidé de Documents</Text>
         <Text style={styles.heroDesc}>
-          Rédigez votre rapport de stage ou mémoire facilement. Mise en page automatique aux normes académiques et assistant IA intégré !
+          Rédigez votre document de stage ou mémoire facilement. Mise en page automatique aux normes académiques et assistant IA intégré !
         </Text>
         <Pressable 
           style={styles.createButton}
           onPress={() => setCreateModalVisible(true)}
         >
-          <Text style={styles.createButtonText}>✍️ Créer un nouveau rapport</Text>
+          <Text style={styles.createButtonText}>✍️ Créer un nouveau document</Text>
         </Pressable>
       </View>
 
@@ -158,32 +158,32 @@ export function ReportsScreen({ onEditReport }: ReportsScreenProps) {
       {error ? (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={fetchReports}>
+          <Pressable style={styles.retryButton} onPress={fetchDocuments}>
             <Text style={styles.retryText}>Réessayer</Text>
           </Pressable>
         </View>
-      ) : reports.length === 0 ? (
+      ) : documents.length === 0 ? (
         <View style={styles.emptyBox}>
           <Text style={styles.emptyIcon}>📂</Text>
-          <Text style={styles.emptyTitle}>Aucun rapport créé</Text>
-          <Text style={styles.emptyText}>Commencez la rédaction de votre premier rapport de stage universitaire dès maintenant.</Text>
+          <Text style={styles.emptyTitle}>Aucun document créé</Text>
+          <Text style={styles.emptyText}>Commencez la rédaction de votre premier document de stage universitaire dès maintenant.</Text>
         </View>
       ) : (
         <View style={styles.listContainer}>
-          {reports.map((report) => {
-            const dateStr = new Date(report.updated_at).toLocaleDateString('fr-FR', {
+          {documents.map((document) => {
+            const dateStr = new Date(document.updated_at).toLocaleDateString('fr-FR', {
               day: 'numeric',
               month: 'short',
               hour: '2-digit',
               minute: '2-digit',
             });
 
-            let templateLabel = 'Rapport de stage';
-            if (report.template_type === 'memoire') templateLabel = 'Mémoire de recherche';
-            else if (report.template_type === 'blank') templateLabel = 'Document personnalisé';
+            let templateLabel = 'Document de stage';
+            if (document.template_type === 'memoire') templateLabel = 'Mémoire de recherche';
+            else if (document.template_type === 'blank') templateLabel = 'Document personnalisé';
 
             return (
-              <View key={report.id} style={styles.reportCard}>
+              <View key={document.id} style={styles.documentCard}>
                 <View style={styles.cardHeader}>
                   <View style={styles.templateBadge}>
                     <Text style={styles.templateBadgeText}>{templateLabel}</Text>
@@ -191,27 +191,27 @@ export function ReportsScreen({ onEditReport }: ReportsScreenProps) {
                   <Text style={styles.cardDate}>{dateStr}</Text>
                 </View>
                 
-                <Text style={styles.cardTitle}>{report.title}</Text>
-                {report.description ? (
-                  <Text style={styles.cardDesc} numberOfLines={2}>{report.description}</Text>
+                <Text style={styles.cardTitle}>{document.title}</Text>
+                {document.description ? (
+                  <Text style={styles.cardDesc} numberOfLines={2}>{document.description}</Text>
                 ) : null}
 
                 <View style={styles.cardActions}>
                   <Pressable 
                     style={[styles.actionButton, styles.editButton]}
-                    onPress={() => onEditReport(report.id)}
+                    onPress={() => onEditDocument(document.id)}
                   >
                     <Text style={styles.editButtonText}>Modifier</Text>
                   </Pressable>
                   <Pressable 
                     style={[styles.actionButton, styles.pdfButton]}
-                    onPress={() => handleDownloadPdf(report.id)}
+                    onPress={() => handleDownloadPdf(document.id)}
                   >
                     <Text style={styles.pdfButtonText}>📄 PDF</Text>
                   </Pressable>
                   <Pressable 
                     style={[styles.actionButton, styles.deleteButton]}
-                    onPress={() => handleDelete(report.id, report.title)}
+                    onPress={() => handleDelete(document.id, document.title)}
                   >
                     <Text style={styles.deleteButtonText}>✕</Text>
                   </Pressable>
@@ -234,12 +234,12 @@ export function ReportsScreen({ onEditReport }: ReportsScreenProps) {
           onPress={() => setCreateModalVisible(false)}
         >
           <View style={styles.modalCard} onStartShouldSetResponder={() => true}>
-            <Text style={styles.modalHeading}>Nouveau rapport</Text>
+            <Text style={styles.modalHeading}>Nouveau document</Text>
             
             <Text style={styles.inputLabel}>Titre du document</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="Ex: Rapport de stage - Miguel Melago"
+              placeholder="Ex: Document de stage - Miguel Melago"
               placeholderTextColor="#94A3B8"
               value={newTitle}
               onChangeText={setNewTitle}
@@ -259,7 +259,7 @@ export function ReportsScreen({ onEditReport }: ReportsScreenProps) {
             <Text style={styles.inputLabel}>Modèle de structure</Text>
             <View style={styles.templatesRow}>
               {[
-                { key: 'stage', label: 'Rapport Stage' },
+                { key: 'stage', label: 'Document Stage' },
                 { key: 'memoire', label: 'Mémoire Acad.' },
                 { key: 'blank', label: 'Personnalisé' },
               ].map((t) => (
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingBottom: 40,
   },
-  reportCard: {
+  documentCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,

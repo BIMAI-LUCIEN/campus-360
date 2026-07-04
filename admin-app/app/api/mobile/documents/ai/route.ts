@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       // inside <<<…>>> delimiters so it's clearly framed as data, not
       // instructions, and we explicitly forbid role changes.
       const systemPrompt =
-        `Tu es un redacteur professionnel de rapports de stage academiques. ` +
+        `Tu es un redacteur professionnel de documents academiques. ` +
         `Tu rediges ou ameliores du contenu pour la section : "${sectionTitle.replace(/"/g, '')}".\n` +
         `Ton : rigoureux, technique, universitaire, en francais.\n` +
         `Regles strictes :\n` +

@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // the `Module not found` webpack error during page data collection.
 
 import { requireMobileUser, mobileErrorResponse } from '@/lib/mobile-access';
-import { getReportById, getReportSections } from '@/lib/reports-db';
+import { getDocumentById, getDocumentSections } from '@/lib/documents-db';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
@@ -118,7 +118,7 @@ const renderCoverPage = (
   // All values go through escapeHtml / sanitizeUrl.
   const safeData = {
     school: escapeHtml(data.school ?? "Nom de l'etablissement"),
-    title: escapeHtml(data.title ?? 'Titre du Rapport de Stage'),
+    title: escapeHtml(data.title ?? 'Titre du document'),
     subtitle: escapeHtml(data.subtitle ?? 'Sujet ou thematique principale'),
     studentName: escapeHtml(data.studentName ?? 'Prenom Nom'),
     company: escapeHtml(data.company ?? "Entreprise d'accueil"),
@@ -157,7 +157,7 @@ const renderCoverPage = (
     return `
       <div class="cover-page cover-tech">
         <div class="tech-header">
-          <div class="tech-indicator">RAPPORT TECH</div>
+          <div class="tech-indicator">DOCUMENT TECH</div>
           <div class="school">${safeData.school}</div>
         </div>
         <div class="tech-body">
@@ -223,7 +223,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // PDF rendering launches a full Chromium process — very expensive. Hard cap.
     try {
       await enforceRateLimit(request, {
-        bucket: 'report-pdf-export',
+        bucket: 'document-pdf-export',
         max: 5,
         windowMs: 60_000,
         userId: access.user.id,
@@ -234,19 +234,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
       throw error;
     }
 
-    const report = await getReportById(id, access.user.id);
-    if (!report) {
-      return NextResponse.json({ error: 'Rapport introuvable.' }, { status: 404 });
+    const document = await getDocumentById(id, access.user.id);
+    if (!document) {
+      return NextResponse.json({ error: 'Document introuvable.' }, { status: 404 });
     }
 
-    const sections = await getReportSections(id);
+    const sections = await getDocumentSections(id);
 
-    const coverHtml = renderCoverPage(report.cover_template, report.cover_data ?? {});
+    const coverHtml = renderCoverPage(document.cover_template, document.cover_data ?? {});
 
     let marginStyle = 'margin: 2.5cm 2.5cm 2.5cm 2.5cm;';
-    if (report.margins === 'narrow') {
+    if (document.margins === 'narrow') {
       marginStyle = 'margin: 1.5cm 1.5cm 1.5cm 1.5cm;';
-    } else if (report.margins === 'wide') {
+    } else if (document.margins === 'wide') {
       marginStyle = 'margin: 3.0cm 3.0cm 3.0cm 3.0cm;';
     }
 
@@ -264,8 +264,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .join('');
 
     // Font must be allowlisted to avoid CSS injection.
-    const fontFamily = safeFont(report.font_family);
-    const lineSpacing = Number(report.line_spacing);
+    const fontFamily = safeFont(document.font_family);
+    const lineSpacing = Number(document.line_spacing);
     const safeLineSpacing =
       Number.isFinite(lineSpacing) && lineSpacing >= 0.5 && lineSpacing <= 4.0
         ? String(lineSpacing)
@@ -365,7 +365,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       </html>
     `;
 
-    console.log('[PDF Export] Launching Puppeteer', { reportId: id, userId: access.user.id });
+    console.log('[PDF Export] Launching Puppeteer', { documentId: id, userId: access.user.id });
 
     // Dynamic import — see top of file. Keeps puppeteer out of the webpack
     // bundle and lets Next.js resolve it at runtime on the serverless image.
@@ -413,13 +413,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
         format: 'A4',
         printBackground: true,
         displayHeaderFooter: true,
-        headerTemplate: `<div style="font-size: 8px; width: 100%; text-align: right; padding-right: 30px; font-family: sans-serif; color: #94A3B8;">${escapeHtml(report.title)}</div>`,
+        headerTemplate: `<div style="font-size: 8px; width: 100%; text-align: right; padding-right: 30px; font-family: sans-serif; color: #94A3B8;">${escapeHtml(document.title)}</div>`,
         footerTemplate:
           '<div style="font-size: 8px; width: 100%; text-align: center; font-family: sans-serif; color: #94A3B8;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>',
         margin: { top: '1.5cm', bottom: '1.5cm', left: '0px', right: '0px' },
       });
 
-      const filename = `Rapport_Stage_${String(report.title || 'rapport')
+      const filename = `Document_${String(document.title || 'document')
         .replace(/[^\p{L}\p{N}_-]+/gu, '_')
         .slice(0, 80)}.pdf`;
 

@@ -37,7 +37,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     label: 'ANALYTICS',
     items: [
       { href: '#', icon: <BarChart3 size={18} />, label: 'Analytics' },
-      { href: '/admin/reports', icon: <FileText size={18} />, label: 'Rapports' },
+      { href: '/admin/documents', icon: <FileText size={18} />, label: 'Rédactions' },
     ],
   },
   {
@@ -52,8 +52,8 @@ const pageTitleMap: Array<[RegExp, string, string]> = [
   [/^\/admin\/analytics$/, 'Dashboard', 'Overview'],
   [/^\/admin\/pdf/, 'PDF', 'Catalogue'],
   [/^\/admin\/users/, 'Dashboard', 'Utilisateurs'],
-  [/^\/admin\/reports\/new/, 'Dashboard', 'Nouveau rapport'],
-  [/^\/admin\/reports/, 'Dashboard', 'Overview'],
+  [/^\/admin\/documents\/new/, 'Dashboard', 'Nouveau document'],
+  [/^\/admin\/documents/, 'Dashboard', 'Overview'],
 ];
 
 function resolveBreadcrumb(pathname: string): { section: string; sub: string } {
