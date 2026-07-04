@@ -54,7 +54,7 @@ export function DashboardCharts({ dailyStats, categoryStats }: DashboardChartsPr
   return (
     <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
       {/* ── Bar chart: Ventes & Aperçus (14 jours) ───────── */}
-      <div className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest p-6 shadow-stitch-sm lg:col-span-2">
+      <div className="rounded-xl border border-stitch-outline-variant bg-white p-6 shadow-sm lg:col-span-2">
         <div className="mb-5 flex items-center justify-between gap-3">
           <div>
             <div className="font-stitch-headline text-base font-bold tracking-tight text-stitch-on-surface">
@@ -127,7 +127,7 @@ export function DashboardCharts({ dailyStats, categoryStats }: DashboardChartsPr
       </div>
 
       {/* ── Categories: horizontal bar list ────────────────── */}
-      <div className="rounded-stitch border border-stitch-outline-variant bg-stitch-surface-lowest p-6 shadow-stitch-sm">
+      <div className="rounded-xl border border-stitch-outline-variant bg-white p-6 shadow-sm">
         <div className="mb-5 flex items-center justify-between gap-3">
           <div>
             <div className="font-stitch-headline text-base font-bold tracking-tight text-stitch-on-surface">
