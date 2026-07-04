@@ -64,57 +64,57 @@
 @source "./**/*.{ts,tsx}";
 
 @theme {
-  /* ── Brand / Primary (Emerald green, Flup-style) ─────────────────── */
-  --color-primary: #10b981;
-  --color-primary-hover: #059669;
-  --color-primary-active: #047857;
-  --color-primary-soft: #d1fae5;
-  --color-primary-softer: #ecfdf5;
-  --color-primary-tint: #f0fdf4;
+  /* ── Brand / Primary (Stitch design) ──────────────────────────────── */
+  --color-primary: #004ac6;
+  --color-primary-hover: #003ea8;
+  --color-primary-active: #002e80;
+  --color-primary-soft: #dbe1ff;
+  --color-primary-softer: #eeefff;
+  --color-primary-tint: #eff4ff;
   --color-on-primary: #ffffff;
 
-  /* ── Surfaces (Flup: pure white sidebar, near-white bg) ───────────── */
-  --color-bg: #f5f7fa;
+  /* ── Surfaces (Stitch design) ─────────────────────────────────────── */
+  --color-bg: #f8f9ff;
   --color-surface: #ffffff;
-  --color-surface-2: #f8fafc;
-  --color-surface-3: #f1f5f9;
-  --color-surface-soft: #fafafa;
+  --color-surface-2: #eff4ff;
+  --color-surface-3: #e5eeff;
+  --color-surface-soft: #f8f9ff;
 
   /* ── Borders ──────────────────────────────────────────────────────── */
-  --color-border: #e5e7eb;
-  --color-border-light: #f3f4f6;
-  --color-border-strong: #d1d5db;
+  --color-border: #cbd5e1;
+  --color-border-light: #e2e8f0;
+  --color-border-strong: #737686;
 
   /* ── Foreground (text) ────────────────────────────────────────────── */
-  --color-fg: #111827;
-  --color-fg-muted: #4b5563;
-  --color-fg-subtle: #6b7280;
-  --color-fg-faint: #9ca3af;
+  --color-fg: #0b1c30;
+  --color-fg-muted: #434655;
+  --color-fg-subtle: #737686;
+  --color-fg-faint: #c3c6d7;
 
   /* ── Status ───────────────────────────────────────────────────────── */
   --color-success: #10b981;
-  --color-success-soft: #d1fae5;
+  --color-success-soft: #ecfdf5;
   --color-success-bg: #f0fdf4;
   --color-warning: #f59e0b;
   --color-warning-soft: #fef3c7;
   --color-warning-bg: #fffbeb;
-  --color-danger: #ef4444;
-  --color-danger-soft: #fee2e2;
+  --color-danger: #ba1a1a;
+  --color-danger-soft: #fef2f2;
   --color-danger-bg: #fef2f2;
-  --color-info: #0ea5e9;
-  --color-info-soft: #e0f2fe;
+  --color-info: #005a82;
+  --color-info-soft: #e4f2ff;
 
-  /* ── Sidebar / Topbar (two-layer, white) ──────────────────────────── */
+  /* ── Sidebar / Topbar (Stitch design) ────────────────────────────── */
   --color-sidebar: #ffffff;
   --color-sidebar-strip: #ffffff;
-  --color-sidebar-fg: #111827;
-  --color-sidebar-fg-muted: #6b7280;
-  --color-sidebar-active-bg: #ecfdf5;
-  --color-sidebar-active-fg: #10b981;
-  --color-sidebar-border: #e5e7eb;
-  --color-sidebar-divider: #f3f4f6;
+  --color-sidebar-fg: #0b1c30;
+  --color-sidebar-fg-muted: #434655;
+  --color-sidebar-active-bg: #d5e3fc;
+  --color-sidebar-active-fg: #004ac6;
+  --color-sidebar-border: #c3c6d7;
+  --color-sidebar-divider: #eff4ff;
 
-  /* ── Chart palette (Flup-style multi-color) ───────────────────────── */
+  /* ── Chart palette (Stitch multi-color style) ─────────────────────── */
   --color-chart-blue: #3b82f6;
   --color-chart-blue-soft: #dbeafe;
   --color-chart-orange: #fb923c;
@@ -134,6 +134,47 @@
   --color-chart-indigo: #6366f1;
   --color-chart-indigo-soft: #e0e7ff;
 
+  /* ── Stitch design system tokens (prefixed for backward compatibility) ─ */
+  --color-stitch-bg: #f8f9ff;
+  --color-stitch-surface: #f8f9ff;
+  --color-stitch-surface-lowest: #ffffff;
+  --color-stitch-surface-container-lowest: #ffffff;
+  --color-stitch-surface-container-low: #eff4ff;
+  --color-stitch-surface-container: #e5eeff;
+  --color-stitch-surface-container-high: #dce9ff;
+  --color-stitch-surface-container-highest: #d3e4fe;
+  --color-stitch-primary: #004ac6;
+  --color-stitch-primary-container: #2563eb;
+  --color-stitch-on-primary: #ffffff;
+  --color-stitch-on-primary-container: #eeefff;
+  --color-stitch-primary-fixed: #dbe1ff;
+  --color-stitch-on-surface: #0b1c30;
+  --color-stitch-on-surface-variant: #434655;
+  --color-stitch-outline: #737686;
+  --color-stitch-outline-variant: #c3c6d7;
+  --color-stitch-success: #10b981;
+  --color-stitch-success-light: #ecfdf5;
+  --color-stitch-success-dark: #047857;
+  --color-stitch-error: #ba1a1a;
+  --color-stitch-error-rose: #e11d48;
+  --color-stitch-error-light: #fef2f2;
+  --color-stitch-secondary: #515f74;
+  --color-stitch-secondary-container: #d5e3fc;
+  --color-stitch-on-secondary: #ffffff;
+  --color-stitch-on-secondary-container: #57657a;
+  --color-stitch-tertiary: #005a82;
+  --color-stitch-tertiary-container: #0074a6;
+  --color-stitch-on-tertiary: #ffffff;
+  --color-stitch-on-tertiary-container: #e4f2ff;
+
+  --font-stitch-headline: "Plus Jakarta Sans", sans-serif;
+  --font-stitch-body: "Inter", sans-serif;
+  --radius-stitch: 12px;
+  --radius-stitch-sm: 8px;
+  --radius-stitch-lg: 16px;
+  --spacing-stitch-sidebar: 240px;
+  --spacing-stitch-topbar: 64px;
+
   /* ── Typography ───────────────────────────────────────────────────── */
   --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
   --font-body: "Inter", system-ui, sans-serif;
@@ -147,12 +188,11 @@
   --radius-xl: 16px;
   --radius-2xl: 20px;
 
-  /* ── Spacing (layout chrome — two-layer sidebar) ───────────────────── */
-  --spacing-sidebar-strip: 68px;
+  /* ── Spacing ──────────────────────────────────────────────────────── */
   --spacing-sidebar: 240px;
   --spacing-topbar: 64px;
 
-  /* ── Shadows (Flup: very subtle) ──────────────────────────────────── */
+  /* ── Shadows ──────────────────────────────────────────────────────── */
   --shadow-card: 0 1px 2px 0 rgba(17, 24, 39, 0.04);
   --shadow-card-hover: 0 4px 12px -2px rgba(17, 24, 39, 0.06), 0 2px 4px -2px rgba(17, 24, 39, 0.03);
   --shadow-popover: 0 12px 32px -8px rgba(17, 24, 39, 0.12), 0 4px 8px -4px rgba(17, 24, 39, 0.06);

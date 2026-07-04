@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Campus 360 Admin - Catalogue PDF</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-container": "#57657a",
+                        "on-surface": "#0b1c30",
+                        "error-container": "#ffdad6",
+                        "inverse-surface": "#213145",
+                        "surface-variant": "#d3e4fe",
+                        "tertiary-fixed": "#c9e6ff",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#eeefff",
+                        "tertiary-fixed-dim": "#89ceff",
+                        "on-surface-variant": "#434655",
+                        "on-error-container": "#93000a",
+                        "inverse-primary": "#b4c5ff",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "tertiary": "#005a82",
+                        "surface-container-highest": "#d3e4fe",
+                        "tertiary-container": "#0074a6",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed": "#001e2f",
+                        "primary": "#004ac6",
+                        "surface-bright": "#f8f9ff",
+                        "surface-tint": "#0053db",
+                        "on-error": "#ffffff",
+                        "surface-container-low": "#eff4ff",
+                        "surface-dim": "#cbdbf5",
+                        "error": "#ba1a1a",
+                        "surface": "#f8f9ff",
+                        "outline": "#737686",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-background": "#0b1c30",
+                        "secondary-container": "#d5e3fc",
+                        "on-primary-fixed": "#00174b",
+                        "surface-container": "#e5eeff",
+                        "on-tertiary-container": "#e4f2ff",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "background": "#f8f9ff",
+                        "primary-fixed": "#dbe1ff",
+                        "secondary": "#515f74",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "surface-container-high": "#dce9ff",
+                        "outline-variant": "#c3c6d7",
+                        "inverse-on-surface": "#eaf1ff",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "secondary-fixed": "#d5e3fc",
+                        "primary-container": "#2563eb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "container-padding": "32px",
+                        "sidebar-width": "240px",
+                        "stack-sm": "8px",
+                        "stack-md": "16px",
+                        "stack-lg": "24px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "code": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "code": ["13px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #f8f9ff;
+            color: #0b1c30;
+        }
+        .sidebar-active {
+            font-weight: 600;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="font-body-md text-body-md overflow-x-hidden">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-[240px] bg-surface dark:bg-inverse-surface border-r border-outline-variant dark:border-outline flex flex-col py-6 z-50">
+<div class="px-6 mb-10">
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface dark:text-inverse-on-surface">Campus 360 Admin</h1>
+<p class="font-label-md text-label-md opacity-70">University Management</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary border-l-4 border-primary rounded-r-lg opacity-90 transition-opacity" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="font-label-md text-label-md">PDF Catalogue</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="package_2">package_2</span>
+<span class="font-label-md text-label-md">Packs</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-label-md text-label-md">Students</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-label-md text-label-md">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Configuration</span>
+</a>
+</nav>
+<div class="mt-auto px-4 border-t border-outline-variant pt-4">
+<div class="flex items-center gap-3 px-2 py-3">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[20px]" data-icon="account_circle">account_circle</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Lucien Pascal</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-wider">Administrator</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<div class="ml-[240px] flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="sticky top-0 right-0 h-16 w-full bg-surface dark:bg-inverse-surface border-b border-outline-variant dark:border-outline shadow-sm dark:shadow-none flex items-center justify-between px-8 z-40">
+<div class="flex items-center gap-4">
+<nav class="flex items-center gap-2 text-on-surface-variant font-body-md">
+<span class="opacity-60">Dashboard</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-primary dark:text-inverse-primary font-bold">Catalogue PDF</span>
+</nav>
+<div class="h-6 w-[1px] bg-outline-variant mx-4"></div>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</span>
+<input class="bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-1.5 w-64 text-body-sm focus:ring-2 focus:ring-primary transition-all" placeholder="Rechercher un catalogue..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-transform active:scale-95">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-transform active:scale-95">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden bg-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a university administrator named Lucien Pascal, styled in a clean, modern corporate aesthetic with soft lighting and a neutral professional background. High resolution, 4k detail, professional photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQN7XR0whJuP7BXc_GSqdZeAEY2IUmam7Uzv5_LSb7wf7F0hegyh1wCTlZV1kKwOeCF4kPvIoBHHCNR9RsUa5WKjryQewkocoq8kQXKK_dJL1GrW00pmDDSjPg8s5kDLlqxJUzynv5AXD-XpIqJgJ7fFBwtCpjwnoIcBGf4PuT7nf1yvO1E__o9Xqipfo_M6esuRn2WZDMs7tosiRAX4siMPK1m5j-Y5bx6ruqpOzQuWQrOWQHkVaTPA"/>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<main class="p-8 space-y-8 flex-1 max-w-[1600px]">
+<!-- Header Section -->
+<div class="flex items-end justify-between">
+<div class="space-y-1">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Catalogue PDF</h2>
+<p class="font-body-md text-on-surface-variant">Gère tes PDF académiques : upload, prévisualise et publie.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2 border border-outline text-on-surface font-label-md rounded-lg hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="file_download">file_download</span>
+                        Export
+                    </button>
+<button class="flex items-center gap-2 px-6 py-2 bg-primary text-on-primary font-label-md rounded-lg hover:opacity-90 transition-all shadow-sm">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+                        Nouveau PDF
+                    </button>
+</div>
+</div>
+<!-- Bento Filter Bar -->
+<div class="bg-white p-4 rounded-xl border border-outline-variant shadow-sm space-y-4">
+<div class="flex flex-wrap items-center gap-2">
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface font-label-md hover:bg-surface-container-highest transition-colors">
+<span>Statut</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface font-label-md hover:bg-surface-container-highest transition-colors">
+<span>Faculté</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface font-label-md hover:bg-surface-container-highest transition-colors">
+<span>Niveau</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface font-label-md hover:bg-surface-container-highest transition-colors">
+<span>Prix</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface font-label-md hover:bg-surface-container-highest transition-colors">
+<span>Auteur</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+<div class="h-6 w-[1px] bg-outline-variant mx-2"></div>
+<button class="text-primary font-label-md hover:underline decoration-2 underline-offset-4 px-2">
+                        Reset
+                    </button>
+</div>
+</div>
+<!-- Table Card -->
+<div class="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant bg-surface-container-low">
+<th class="p-4 w-10">
+<input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</th>
+<th class="p-4 font-label-md text-on-surface-variant uppercase">Aperçu</th>
+<th class="p-4 font-label-md text-on-surface-variant uppercase">Titre</th>
+<th class="p-4 font-label-md text-on-surface-variant uppercase">Faculté</th>
+<th class="p-4 font-label-md text-on-surface-variant uppercase">Niveau</th>
+<th class="p-4 font-label-md text-on-surface-variant uppercase">Prix</th>
+<th class="p-4 font-label-md text-on-surface-variant uppercase">Statut</th>
+<th class="p-4 w-10"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="p-4">
+<input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="p-4">
+<div class="w-12 h-16 bg-surface-container-high rounded border border-outline-variant flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A sophisticated academic PDF cover for Algebra L2, featuring abstract mathematical geometric patterns, a clean professional layout with university branding, soft blue and white color palette, high-end editorial design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBEtOYCH6jx-URcr_V0TWGCL9AuTeMDm28VZ9YEAxsMFj968zCkYItBJ3fOf4QR0SqQxShiRdj73wOPXQCzkghrVgujaIKMVafolDTcsv6BVycEh9rc_3L8k1_NTYsM3fx27C5GwYeYjiwq-n-KF3Uu7KmMp82if5ikP3pZueI7oNz2WvdAAVZHu9nAJ-_KMsdtWG0C1h58DJX60CjjU4jXCilgKKvy_mPqlxLf6sc6_9Bn7beCbZyKyw"/>
+</div>
+</td>
+<td class="p-4 font-body-md font-semibold text-on-surface">Algèbre L2</td>
+<td class="p-4 font-body-sm">Mathématiques</td>
+<td class="p-4 font-body-sm">Licence 2</td>
+<td class="p-4 font-body-sm font-medium">14.99 €</td>
+<td class="p-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant border border-tertiary/20">
+                                        PUBLISHED
+                                    </span>
+</td>
+<td class="p-4 text-right">
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-highest">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="p-4">
+<input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="p-4">
+<div class="w-12 h-16 bg-surface-container-high rounded border border-outline-variant flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="An anatomical textbook cover featuring a detailed, artistic medical illustration of human musculature in a modern, educational style. Clean typography, scholarly aesthetic, medical university theme with soft warm lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDocxQbLUO6y5N8PbHNT04Jwlc_PzGkYt0av5ZnYcYDb0yBI1WRXTI8HQheqpg9V7Mlb4tTEH5fAWx3ICAjMOfJcZAhZw5aCVkzmnyLhVyXcZEOVIT0r7ZJ8FpEElPT_xr1HfG5C4wuhWEicvVQsDm2ZiaPMOstmZcs10XPbUIzsnqlO2zTtcXqEqKa5tJW6sC787I0ST4Z_jpT_ppFAed_Xq_CcP9HKkyfx87z3lD5rCyg25HUOAjJfQ"/>
+</div>
+</td>
+<td class="p-4 font-body-md font-semibold text-on-surface">Anatomie L1</td>
+<td class="p-4 font-body-sm">Médecine</td>
+<td class="p-4 font-body-sm">Licence 1</td>
+<td class="p-4 font-body-sm font-medium">19.50 €</td>
+<td class="p-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant border border-tertiary/20">
+                                        PUBLISHED
+                                    </span>
+</td>
+<td class="p-4 text-right">
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-highest">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="p-4">
+<input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="p-4">
+<div class="w-12 h-16 bg-surface-container-high rounded border border-outline-variant flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A technical engineering coursebook cover for Mechanics L3, displaying complex gear schematics and industrial blueprints. Engineering aesthetic with deep blue background and crisp white technical lines. Professional university textbook style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrO0GWC1p_LG5X56ALd-iaxaobIDBpfBoKPjAIL_zv76fmRHWN6zuXUmdQ3Ui3Lrm7LFdwacm4KOCi2wWmEhn0XSZglC4PCit7Io6vU4f2JNHuDAqsrxlYirDfmyLlV8vCmgBqnjLxQ8P3dHdzTgcgl-vdDR3dThjDlQK_exSFbG8JLc5W9e-ZrhHWao1Ka-bKGIL3jqGlOfD5QueYCHYR9WLz5mWkUV0IKP2FbpCoBLdCKWrFZr-zow"/>
+</div>
+</td>
+<td class="p-4 font-body-md font-semibold text-on-surface">Mécanique L3</td>
+<td class="p-4 font-body-sm">Ingénierie</td>
+<td class="p-4 font-body-sm">Licence 3</td>
+<td class="p-4 font-body-sm font-medium">0.00 €</td>
+<td class="p-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-secondary-container text-on-secondary-container border border-outline-variant">
+                                        DRAFT
+                                    </span>
+</td>
+<td class="p-4 text-right">
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-highest">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Dummy row for fill -->
+<tr class="hover:bg-surface-container-low transition-colors group opacity-50">
+<td class="p-4">
+<input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="p-4">
+<div class="w-12 h-16 bg-surface-container-high rounded border border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-outline">description</span>
+</div>
+</td>
+<td class="p-4 font-body-md font-semibold text-on-surface">Biochimie S2</td>
+<td class="p-4 font-body-sm">Biologie</td>
+<td class="p-4 font-body-sm">Licence 2</td>
+<td class="p-4 font-body-sm font-medium">12.00 €</td>
+<td class="p-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-secondary-container text-on-secondary-container border border-outline-variant">
+                                        DRAFT
+                                    </span>
+</td>
+<td class="p-4 text-right">
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-highest">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="p-4 border-t border-outline-variant bg-surface flex items-center justify-between">
+<div class="font-label-md text-on-surface-variant">
+                        42 PDF
+                    </div>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded bg-primary text-on-primary font-label-md">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container font-label-md">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container font-label-md">3</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container font-label-md">4</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container font-label-md">5</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+<div class="flex items-center gap-2 font-label-md text-on-surface-variant">
+<span>Afficher:</span>
+<select class="bg-transparent border-none focus:ring-0 cursor-pointer pr-8 py-0 font-label-md">
+<option>20 / page</option>
+<option>50 / page</option>
+<option>100 / page</option>
+</select>
+</div>
+</div>
+</div>
+<!-- Dashboard Stats Summary (Bento Grid Style) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="p-6 bg-white rounded-xl border border-outline-variant shadow-sm flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="cloud_upload">cloud_upload</span>
+</div>
+<div>
+<p class="font-label-md text-on-surface-variant">Total Uploads</p>
+<h4 class="font-headline-md text-on-surface">1,284</h4>
+</div>
+</div>
+<div class="p-6 bg-white rounded-xl border border-outline-variant shadow-sm flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed-variant">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</div>
+<div>
+<p class="font-label-md text-on-surface-variant">Vues Catalogue</p>
+<h4 class="font-headline-md text-on-surface">12.5k</h4>
+</div>
+</div>
+<div class="p-6 bg-white rounded-xl border border-outline-variant shadow-sm flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed-variant">
+<span class="material-symbols-outlined" data-icon="monetization_on">monetization_on</span>
+</div>
+<div>
+<p class="font-label-md text-on-surface-variant">Revenu Estimé</p>
+<h4 class="font-headline-md text-on-surface">4,520 €</h4>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Decoration / Atmospheric element -->
+<footer class="p-8 mt-auto border-t border-outline-variant text-center opacity-30 pointer-events-none">
+<p class="font-label-md uppercase tracking-widest text-on-surface">Campus 360 Admin • 2024</p>
+</footer>
+</div>
+<!-- Micro-interaction Script -->
+<script>
+        document.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('click', (e) => {
+                if(e.target.type !== 'checkbox' && !e.target.closest('button')) {
+                    const checkbox = row.querySelector('input[type="checkbox"]');
+                    checkbox.checked = !checkbox.checked;
+                    row.classList.toggle('bg-primary-fixed', checkbox.checked);
+                    row.classList.toggle('bg-white', !checkbox.checked);
+                }
+            });
+        });
+
+        // Hover effect for stats
+        const statCards = document.querySelectorAll('.grid > div');
+        statCards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.classList.add('border-primary', 'shadow-md', '-translate-y-1');
+                card.style.transition = 'all 0.3s ease-out';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.classList.remove('border-primary', 'shadow-md', '-translate-y-1');
+            });
+        });
+    </script>
+</body></html>

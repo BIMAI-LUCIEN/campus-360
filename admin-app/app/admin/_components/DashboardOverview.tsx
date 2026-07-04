@@ -534,7 +534,7 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
                 <span className="inline-flex items-center gap-1.5 text-fg-muted">
                   <span
                     className="inline-block h-2 w-2 rounded-full"
-                    style={{ backgroundColor: '#10b981' }}
+                    style={{ backgroundColor: '#004ac6' }}
                   />
                   Revenus totaux
                 </span>
@@ -569,12 +569,12 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
                     >
                       <stop
                         offset="0%"
-                        stopColor="#10b981"
+                        stopColor="#004ac6"
                         stopOpacity={0.22}
                       />
                       <stop
                         offset="100%"
-                        stopColor="#10b981"
+                        stopColor="#004ac6"
                         stopOpacity={0}
                       />
                     </linearGradient>
@@ -602,7 +602,7 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
                   />
                   <Tooltip
                     cursor={{
-                      stroke: '#10b981',
+                      stroke: '#004ac6',
                       strokeOpacity: 0.25,
                       strokeWidth: 1,
                     }}
@@ -636,12 +636,12 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
                   <Area
                     type="monotone"
                     dataKey="revenue"
-                    stroke="#10b981"
+                    stroke="#004ac6"
                     strokeWidth={2.5}
                     fill="url(#revenueAreaFill)"
                     activeDot={{
                       r: 5,
-                      fill: '#10b981',
+                      fill: '#004ac6',
                       stroke: '#ffffff',
                       strokeWidth: 2,
                     }}

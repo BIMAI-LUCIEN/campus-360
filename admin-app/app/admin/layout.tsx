@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, Bell, HelpCircle, Loader2 } from 'lucide-react';
+import { LogOut, Bell, HelpCircle, Loader2, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
@@ -13,20 +13,20 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     label: 'PRINCIPAL',
     items: [
       { href: '/admin/analytics', icon: 'dashboard',       label: 'Dashboard' },
-      { href: '/admin/pdf',       icon: 'menu_book',       label: 'PDF Catalogue' },
+      { href: '/admin/pdf',       icon: 'menu_book',       label: 'Catalogue PDF' },
       { href: '/admin/packs',     icon: 'package_2',       label: 'Packs' },
-      { href: '/admin/users',     icon: 'group',           label: 'Étudiants' },
+      { href: '/admin/users',     icon: 'group',           label: 'Ã‰tudiants' },
     ],
   },
   {
     label: 'ANALYTICS',
     items: [
       { href: '#',                icon: 'analytics',       label: 'Analytics' },
-      { href: '/admin/documents', icon: 'description',   label: 'Rédactions' },
+      { href: '/admin/documents', icon: 'description',   label: 'RÃ©dactions' },
     ],
   },
   {
-    label: 'SYSTÈME',
+    label: 'SYSTÃˆME',
     items: [
       { href: '/admin/settings', icon: 'settings',        label: 'Configuration' },
     ],
@@ -55,6 +55,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const user = session?.user;
 
   const [search, setSearch] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -71,20 +72,43 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const userInitial = userName.trim().slice(0, 1).toUpperCase();
 
   return (
-    <div className="flex min-h-screen bg-stitch-bg text-stitch-on-surface font-stitch-body">
-      {/* ── Sidebar (fixed, 240px) ─────────────────────────── */}
-      <aside className="fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col border-r border-stitch-outline-variant bg-stitch-surface py-6">
+    <div className="flex min-h-screen bg-stitch-bg text-stitch-on-surface font-stitch-body overflow-x-hidden">
+      {/* Backdrop overlay for mobile */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden transition-opacity duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* â”€â”€ Sidebar (fixed/sliding drawer, 240px) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <aside
+        className={[
+          'fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col border-r border-stitch-outline-variant bg-stitch-surface py-6 transition-transform duration-300 ease-in-out',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+        ].join(' ')}
+      >
         {/* Brand header */}
-        <div className="px-6 mb-10">
-          <h1 className="font-stitch-headline text-xl font-bold text-stitch-on-surface leading-tight">
-            Campus 360 Admin
-          </h1>
-          <p
-            className="mt-1 text-[12px] font-semibold tracking-wide text-stitch-on-surface-variant uppercase"
-            style={{ letterSpacing: '0.05em' }}
+        <div className="px-6 mb-10 flex items-center justify-between">
+          <div>
+            <h1 className="font-stitch-headline text-xl font-bold text-stitch-on-surface leading-tight">
+              Campus 360 Admin
+            </h1>
+            <p
+              className="mt-1 text-[12px] font-semibold tracking-wide text-stitch-on-surface-variant uppercase"
+              style={{ letterSpacing: '0.05em' }}
+            >
+              University Management
+            </p>
+          </div>
+          <button
+            type="button"
+            className="lg:hidden p-1.5 rounded-lg text-stitch-on-surface-variant hover:bg-stitch-surface-container hover:text-stitch-on-surface transition-colors"
+            onClick={() => setIsSidebarOpen(false)}
+            aria-label="Fermer le menu"
           >
-            University Management
-          </p>
+            <X size={18} />
+          </button>
         </div>
 
         {/* Navigation */}
@@ -101,6 +125,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   <Link
                     key={item.href + item.label}
                     href={item.href}
+                    onClick={() => setIsSidebarOpen(false)}
                     aria-current={isActive ? 'page' : undefined}
                     className={
                       isActive
@@ -143,81 +168,96 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             className="mt-1 flex w-full items-center gap-3 px-4 py-2 text-left text-sm font-medium text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container-high hover:text-stitch-on-surface"
           >
             <LogOut size={18} />
-            <span>Déconnexion</span>
+            <span>DÃ©connexion</span>
           </button>
         </div>
       </aside>
 
-      {/* ── Topbar (sticky, 64px) ─────────────────────────── */}
-      <header className="sticky top-0 right-0 z-40 ml-60 flex h-16 w-full items-center justify-between border-b border-stitch-outline-variant bg-stitch-surface px-8 shadow-sm">
-        <div className="flex items-center gap-6">
-          {/* Search */}
-          <div className="relative w-64">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-stitch-on-surface-variant">
-              <span className="material-symbols-outlined text-sm leading-none">search</span>
-            </span>
-            <input
-              type="text"
-              placeholder="Rechercher..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-full border border-stitch-outline-variant bg-stitch-surface-container-low py-1.5 pl-10 pr-4 text-[13px] text-stitch-on-surface placeholder:text-stitch-outline transition-all focus:border-stitch-outline focus:outline-none focus:ring-2 focus:ring-stitch-primary/20"
-            />
+      {/* Wrapper container for Topbar + Main content to support fluid responsiveness */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* â”€â”€ Topbar (sticky, 64px) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <header className="sticky top-0 right-0 z-30 ml-0 lg:ml-[240px] flex h-16 items-center justify-between border-b border-stitch-outline-variant bg-stitch-surface px-4 sm:px-8 shadow-sm transition-[margin] duration-300">
+          <div className="flex items-center gap-4 sm:gap-6 min-w-0">
+            {/* Hamburger menu button for mobile/tablet */}
+            <button
+              type="button"
+              className="lg:hidden p-2 rounded-lg text-stitch-on-surface-variant hover:bg-stitch-surface-container hover:text-stitch-on-surface transition-colors focus:outline-none"
+              onClick={() => setIsSidebarOpen(true)}
+              aria-label="Ouvrir le menu"
+            >
+              <Menu size={20} />
+            </button>
+
+            {/* Search */}
+            <div className="relative w-40 sm:w-64 hidden sm:block">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-stitch-on-surface-variant">
+                <span className="material-symbols-outlined text-sm leading-none">search</span>
+              </span>
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-full border border-stitch-outline-variant bg-stitch-surface-container-low py-1.5 pl-10 pr-4 text-[13px] text-stitch-on-surface placeholder:text-stitch-outline transition-all focus:border-stitch-outline focus:outline-none focus:ring-2 focus:ring-stitch-primary/20"
+              />
+            </div>
+
+            {/* Breadcrumb */}
+            <nav className="flex items-center gap-1.5 sm:gap-2 text-[12px] sm:text-sm truncate">
+              <span className="text-stitch-on-surface-variant font-stitch-body">{section}</span>
+              <span className="material-symbols-outlined text-[14px] sm:text-[16px] text-stitch-outline-variant leading-none">
+                chevron_right
+              </span>
+              <span className="font-bold text-stitch-primary">{sub}</span>
+            </nav>
           </div>
 
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2">
-            <span className="text-stitch-on-surface-variant font-stitch-body text-sm">{section}</span>
-            <span className="material-symbols-outlined text-[16px] text-stitch-outline-variant leading-none">
-              chevron_right
-            </span>
-            <span className="font-bold text-stitch-primary">{sub}</span>
-          </nav>
-        </div>
+          {/* Right actions */}
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <div className="relative">
+              <button
+                className="flex h-9 w-9 items-center justify-center rounded-full text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container-high hover:text-stitch-primary"
+                aria-label="Notifications"
+                type="button"
+              >
+                <Bell size={18} />
+              </button>
+              {/* Notification dot */}
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-stitch-error" />
+            </div>
 
-        {/* Right actions */}
-        <div className="flex items-center gap-4">
-          <div className="relative">
             <button
-              className="flex h-10 w-10 items-center justify-center rounded-full text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container-high hover:text-stitch-primary"
-              aria-label="Notifications"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container-high hover:text-stitch-primary"
+              aria-label="Aide"
               type="button"
             >
-              <Bell size={18} />
+              <HelpCircle size={18} />
             </button>
-            {/* Notification dot */}
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-stitch-error" />
+
+            {isPending ? (
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-stitch-surface-lowest text-stitch-on-surface-variant">
+                <Loader2 size={16} className="animate-spin" />
+              </div>
+            ) : (
+              <div
+                className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-stitch-outline-variant bg-stitch-primary-container font-bold text-stitch-on-primary-container"
+                title={userName}
+              >
+                {user?.image ? (
+                  <img src={user.image} alt={userName} className="h-full w-full object-cover" />
+                ) : (
+                  userInitial
+                )}
+              </div>
+            )}
           </div>
+        </header>
 
-          <button
-            className="flex h-10 w-10 items-center justify-center rounded-full text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container-high hover:text-stitch-primary"
-            aria-label="Aide"
-            type="button"
-          >
-            <HelpCircle size={18} />
-          </button>
-
-          {isPending ? (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-stitch-surface-lowest text-stitch-on-surface-variant">
-              <Loader2 size={16} className="animate-spin" />
-            </div>
-          ) : (
-            <div
-              className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-stitch-outline-variant bg-stitch-primary-container font-bold text-stitch-on-primary-container"
-              title={userName}
-            >
-              {user?.image ? (
-                <img src={user.image} alt={userName} className="h-full w-full object-cover" />
-              ) : (
-                userInitial
-              )}
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* ── Main content ─────────────────────────────────────── */}
-      <main className="ml-60 w-full max-w-[1600px] flex-1 bg-stitch-bg p-8">{children}</main>
+        {/* ── Main content ─────────────────────────────────────── */}
+        <main className="ml-0 lg:ml-[240px] w-full max-w-[1600px] flex-1 bg-stitch-bg p-4 sm:p-6 lg:p-8 transition-[margin] duration-300 min-h-[calc(100vh-64px)]">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

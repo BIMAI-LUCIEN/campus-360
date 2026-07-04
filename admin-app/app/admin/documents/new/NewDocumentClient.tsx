@@ -10,6 +10,7 @@ import {
   Sparkles,
   BookOpen,
 } from 'lucide-react';
+import { Card, Button } from '../../_components/ui';
 
 type Template = 'stage' | 'memoire' | 'blank';
 
@@ -84,29 +85,28 @@ export default function NewDocumentPage() {
   };
 
   return (
-    <div className="flup-page" style={{ maxWidth: 880, width: '100%', margin: '0 auto' }}>
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full px-4 sm:px-0">
       {/* Back link */}
       <button
         type="button"
         onClick={() => router.push('/admin/documents')}
-        className="flup-btn flup-btn--ghost flup-btn--sm"
-        style={{ alignSelf: 'flex-start' }}
+        className="flex items-center gap-2 text-xs font-semibold text-stitch-on-surface-variant hover:text-stitch-primary transition-colors self-start cursor-pointer"
       >
-        <ArrowLeft size={15} />
+        <ArrowLeft size={14} />
         Retour à la liste des documents
       </button>
 
       {/* Header card */}
-      <div className="flup-card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
-          <span className="kpi-icon teal">
+      <Card padded className="border-stitch-outline-variant bg-white">
+        <div className="flex items-center gap-4 mb-6">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-stitch-primary-fixed text-stitch-primary">
             <Plus size={20} />
           </span>
           <div>
-            <h1 className="flup-page-title" style={{ fontSize: 22 }}>
+            <h1 className="font-stitch-headline text-lg sm:text-xl font-bold text-stitch-on-surface leading-tight">
               Nouveau document
             </h1>
-            <p className="flup-page-subtitle">
+            <p className="mt-1 text-xs text-stitch-on-surface-variant leading-relaxed">
               Choisissez un modèle, donnez un titre, et l&apos;éditeur s&apos;ouvrira
               automatiquement avec les sections pré-remplies.
             </p>
@@ -114,16 +114,16 @@ export default function NewDocumentPage() {
         </div>
 
         {error ? (
-          <div className="flup-alert flup-alert--danger" style={{ marginBottom: 16 }}>
+          <div className="mb-4 rounded-lg bg-stitch-error-light border border-stitch-error/20 p-3 text-xs text-stitch-error">
             {error}
           </div>
         ) : null}
 
-        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <form onSubmit={submit} className="flex flex-col gap-5">
           {/* Title */}
-          <div>
-            <label className="flup-label">
-              Titre du document <span style={{ color: 'var(--color-flup-accent-orange)' }}>*</span>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-stitch-on-surface-variant uppercase tracking-wider">
+              Titre du document <span className="text-stitch-error">*</span>
             </label>
             <input
               type="text"
@@ -132,27 +132,27 @@ export default function NewDocumentPage() {
               required
               autoFocus
               placeholder="Ex: Document de stage — Miguel Melago"
-              className="flup-input"
+              className="w-full rounded-lg border border-stitch-outline-variant bg-stitch-surface p-2.5 text-sm text-stitch-on-surface placeholder:text-stitch-outline/60 focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/10 transition-colors"
             />
           </div>
 
           {/* Description */}
-          <div>
-            <label className="flup-label">Description (facultatif)</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-stitch-on-surface-variant uppercase tracking-wider">Description (facultatif)</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Ex: Stage de fin d'études chez NextGen Tech..."
               rows={3}
-              className="flup-input"
+              className="w-full rounded-lg border border-stitch-outline-variant bg-stitch-surface p-2.5 text-sm text-stitch-on-surface placeholder:text-stitch-outline/60 focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/10 transition-colors"
               style={{ resize: 'vertical', minHeight: 88 }}
             />
           </div>
 
           {/* Template chooser */}
-          <div>
-            <label className="flup-label">Modèle de structure</label>
-            <div className="flup-grid-3">
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold text-stitch-on-surface-variant uppercase tracking-wider">Modèle de structure</label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {TEMPLATES.map(({ key, label, desc, icon: Icon }) => {
                 const selected = template === key;
                 return (
@@ -160,48 +160,27 @@ export default function NewDocumentPage() {
                     key={key}
                     type="button"
                     onClick={() => setTemplate(key)}
-                    className="flup-card flup-card--hover"
-                    style={{
-                      textAlign: 'left',
-                      padding: 16,
-                      cursor: 'pointer',
-                      borderColor: selected
-                        ? 'var(--color-flup-brand)'
-                        : 'var(--color-flup-border)',
-                      borderWidth: selected ? 2 : 1,
-                      background: selected
-                        ? 'var(--color-flup-brand-light)'
-                        : 'var(--color-flup-surface)',
-                      boxShadow: selected
-                        ? '0 0 0 4px rgba(8, 145, 178, 0.10)'
-                        : undefined,
-                    }}
+                    className={[
+                      'flex flex-col text-left p-4 rounded-xl border transition-all cursor-pointer',
+                      selected
+                        ? 'border-2 border-stitch-primary bg-stitch-surface-container-low shadow-sm'
+                        : 'border-stitch-outline-variant bg-stitch-surface hover:border-stitch-outline',
+                    ].join(' ')}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                    <div className="flex items-center gap-2.5 mb-2.5">
                       <span
-                        className={selected ? 'kpi-icon teal' : 'kpi-icon slate'}
-                        style={{ width: 32, height: 32 }}
+                        className={[
+                          'flex items-center justify-center rounded-lg h-8 w-8',
+                          selected ? 'bg-stitch-primary text-white' : 'bg-stitch-surface-container-high text-stitch-on-surface-variant',
+                        ].join(' ')}
                       >
                         <Icon size={16} />
                       </span>
-                      <span
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 700,
-                          color: 'var(--color-flup-text-main)',
-                        }}
-                      >
+                      <span className="text-sm font-bold text-stitch-on-surface">
                         {label}
                       </span>
                     </div>
-                    <p
-                      style={{
-                        fontSize: 12,
-                        color: 'var(--color-flup-text-muted)',
-                        margin: 0,
-                        lineHeight: 1.5,
-                      }}
-                    >
+                    <p className="text-xs text-stitch-on-surface-variant leading-relaxed">
                       {desc}
                     </p>
                   </button>
@@ -211,43 +190,26 @@ export default function NewDocumentPage() {
           </div>
 
           {/* Footer actions */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 10,
-              paddingTop: 16,
-              borderTop: '1px solid var(--color-flup-border-soft)',
-            }}
-          >
-            <button
+          <div className="flex justify-end gap-3 pt-4 border-t border-stitch-outline-variant">
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => router.push('/admin/documents')}
               disabled={submitting}
-              className="flup-btn flup-btn--secondary"
             >
               Annuler
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              disabled={submitting}
-              className="flup-btn flup-btn--primary"
+              variant="primary"
+              loading={submitting}
+              icon={Plus}
             >
-              {submitting ? (
-                <>
-                  <Loader2 size={16} className="spin-anim" />
-                  Création...
-                </>
-              ) : (
-                <>
-                  <Plus size={16} />
-                  Créer et ouvrir l&apos;éditeur
-                </>
-              )}
-            </button>
+              Créer et ouvrir l&apos;éditeur
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }
