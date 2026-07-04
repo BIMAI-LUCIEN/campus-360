@@ -112,7 +112,7 @@ ${motivation ? `<p>${motivation}</p>` : '<p>Votre entreprise m\'intéresse parti
 
 const generateSchema = z.object({
   type: z.enum(['cv', 'lettre_motivation']),
-  formData: z.record(z.union([z.string(), z.array(z.string())])),
+  formData: z.record(z.string(), z.union([z.string(), z.array(z.string())])),
   documentId: z.string().uuid().optional(),
 });
 
