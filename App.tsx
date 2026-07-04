@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
 import { type ReactNode, useEffect, useState } from 'react';
+import * as Updates from 'expo-updates';
 import {
   Alert,
   Image,
@@ -329,6 +330,8 @@ export default function App() {
   const [rechargePhone, setRechargePhone] = useState('');
   const [rechargeLoading, setRechargeLoading] = useState(false);
   const [pollingMessage, setPollingMessage] = useState('');
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
 
   const [notifications, setNotifications] = useState<Array<{
     id: string;
@@ -469,6 +472,35 @@ export default function App() {
       linkSubscription.remove();
     };
   }, []);
+
+  // In-app update check
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const checkForUpdates = async () => {
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          setUpdateAvailable(true);
+        }
+      } catch {
+        // Silent fail — don't block the app
+      }
+    };
+
+    checkForUpdates();
+  }, []);
+
+  const handleDownloadUpdate = async () => {
+    setUpdateLoading(true);
+    try {
+      await Updates.fetchUpdateAsync();
+      await Updates.reloadAsync();
+    } catch {
+      Alert.alert('Erreur', 'Impossible de telecharger la mise a jour. Reessaie plus tard.');
+      setUpdateLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (authMode === 'sign-up') return;
@@ -1371,6 +1403,26 @@ export default function App() {
             <View style={{ position: 'absolute', top: 8, right: 10, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444', borderWidth: 1, borderColor: '#FFFFFF' }} />
           </Pressable>
         </View>
+
+        {/* Update available banner */}
+        {updateAvailable && (
+          <View style={{ backgroundColor: '#0ea5e9', paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600', flex: 1 }}>
+              Nouvelle version disponible !
+            </Text>
+            <Pressable
+              onPress={handleDownloadUpdate}
+              disabled={updateLoading}
+              style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+            >
+              {updateLoading ? (
+                <ActivityIndicator size="small" color="#0ea5e9" />
+              ) : (
+                <Text style={{ color: '#0ea5e9', fontSize: 13, fontWeight: '700' }}>Mettre a jour</Text>
+              )}
+            </Pressable>
+          </View>
+        )}
 
         {isSessionRestoring ? (
           <View style={{ flex: 1, backgroundColor: '#0F172A', justifyContent: 'center', alignItems: 'center', gap: 16 }}>

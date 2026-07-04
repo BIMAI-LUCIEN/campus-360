@@ -3,7 +3,7 @@
     "name": "Campus 360",
     "slug": "campus",
     "scheme": "campus-bordes",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -26,13 +26,27 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-updates",
+        {
+          "channels": [
+            "preview"
+          ]
+        }
+      ]
     ],
     "extra": {
       "eas": {
         "projectId": "098589af-cd81-41d3-8c74-173bd02396a5"
       }
     },
-    "owner": "campus360s-team"
+    "owner": "campus360s-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/098589af-cd81-41d3-8c74-173bd02396a5"
+    }
   }
 }
