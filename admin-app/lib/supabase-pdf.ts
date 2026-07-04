@@ -20,6 +20,19 @@ export interface PdfAnalyticsSummary {
     assistantQuestions: number;
     revenue: number;
   };
+  /** Counts of catalog entities (live snapshot, not event-derived). */
+  catalog: {
+    totalUsers: number;
+    studentUsers: number;
+    adminUsers: number;
+    newUsersThisWeek: number;
+    totalPdfs: number;
+    publishedPdfs: number;
+    newPdfsThisWeek: number;
+    totalPacks: number;
+    publishedPacks: number;
+    newPacksThisWeek: number;
+  };
   dailyStats: {
     date: string;
     purchases: number;
@@ -48,6 +61,33 @@ export interface PdfAnalyticsSummary {
     userEmail?: string;
     createdAt: string;
   }[];
+  /** Wallet totals from public.wallet_transactions. */
+  wallet: {
+    totalRecharge: number;
+    totalSpend: number;
+    /** Per-week totals for the last 4 weeks (oldest → newest). */
+    weeklyRecharge: number[];
+    weeklySpend: number[];
+  };
+  /** IA usage breakdown from public.ia_usage_logs. */
+  ia: {
+    totalQuestions: number;
+    byFaculty: { faculty: string; requests: number }[];
+  };
+  /** Retention by signup month (last 6 months, oldest → newest).
+   * `cohortRetention` is a sparse list of (user, week_idx) pairs — the
+   * dashboard joins this with `cohortMonths` to compute per-week %.
+   */
+  cohortMonths: { label: string; monthIso: string; users: number }[];
+  cohortRetention: { userId: string; cohortMonthIso: string; weekIdx: number }[];
+  /** Funnel computed from document_events. */
+  funnel: {
+    visitors: number;     // distinct session_id
+    searchers: number;    // did at least one search
+    previewers: number;   // opened at least one preview
+    buyers: number;       // completed at least one purchase
+    readers: number;      // opened at least one reader
+  };
 }
 
 export const getPool = () => {
@@ -78,10 +118,41 @@ export const emptyAnalytics = (configured: boolean): PdfAnalyticsSummary => ({
     assistantQuestions: 0,
     revenue: 0,
   },
+  catalog: {
+    totalUsers: 0,
+    studentUsers: 0,
+    adminUsers: 0,
+    newUsersThisWeek: 0,
+    totalPdfs: 0,
+    publishedPdfs: 0,
+    newPdfsThisWeek: 0,
+    totalPacks: 0,
+    publishedPacks: 0,
+    newPacksThisWeek: 0,
+  },
   topDocuments: [],
   dailyStats: [],
   categoryStats: [],
   recentEvents: [],
+  wallet: {
+    totalRecharge: 0,
+    totalSpend: 0,
+    weeklyRecharge: [0, 0, 0, 0],
+    weeklySpend: [0, 0, 0, 0],
+  },
+  ia: {
+    totalQuestions: 0,
+    byFaculty: [],
+  },
+  cohortMonths: [],
+  cohortRetention: [],
+  funnel: {
+    visitors: 0,
+    searchers: 0,
+    previewers: 0,
+    buyers: 0,
+    readers: 0,
+  },
 });
 
 export const uploadSupabasePdfBytes = async (filePath: string, bytes: Buffer, bucket: string = 'documents') => {
@@ -319,7 +390,21 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
   if (!db) return emptyAnalytics(false);
 
   try {
-    const [totalsResult, topDocumentsResult, recentEventsResult, dailyStatsResult, categoryStatsResult] = await Promise.all([
+    const [
+      totalsResult,
+      topDocumentsResult,
+      recentEventsResult,
+      dailyStatsResult,
+      categoryStatsResult,
+      catalogResult,
+      walletResult,
+      walletRechargeResult,
+      walletSpendResult,
+      iaResult,
+      funnelResult,
+      cohortMonthsResult,
+      cohortRetentionResult,
+    ] = await Promise.all([
       db.query(`
         select
           count(distinct e.session_id)::int as sessions,
@@ -386,6 +471,117 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
         group by coalesce(d.subject, 'Autre')
         having count(*) filter (where e.event_type = 'purchase_success') > 0
         order by purchases desc
+      `),
+      // Catalog snapshot — direct counts from the canonical tables, not
+      // event-derived (so a doc with no recent activity still shows up).
+      // Note: schema uses public.profiles (not the Better Auth internal
+      // public."user" table which is empty) and public.pdf_packs (not
+      // public.packs). All timestamp columns are created_at (snake_case).
+      db.query(`
+        select
+          (select count(*) from public.profiles)::int as total_users,
+          (select count(*) from public.profiles where role = 'student')::int as student_users,
+          (select count(*) from public.profiles where role in ('admin', 'super_admin'))::int as admin_users,
+          (select count(*) from public.profiles where created_at >= now() - interval '7 days')::int as new_users_week,
+          (select count(*) from public.documents)::int as total_pdfs,
+          (select count(*) from public.documents where status = 'published')::int as published_pdfs,
+          (select count(*) from public.documents where created_at >= now() - interval '7 days')::int as new_pdfs_week,
+          (select count(*) from public.pdf_packs)::int as total_packs,
+          (select count(*) from public.pdf_packs where status = 'published')::int as published_packs,
+          (select count(*) from public.pdf_packs where created_at >= now() - interval '7 days')::int as new_packs_week
+      `),
+      // Wallet: total recharge/spend + weekly series (4 buckets: S-3 → S0).
+      // Simpler approach: 6 small queries instead of one mega-query with
+      // array_agg + lateral joins. Avoids Postgres operator precedence
+      // pitfalls with `int || text` casts in lateral contexts.
+      // Real table name is public.app_wallet_transactions (mobile app).
+      // Spend rows are stored as negative coins; abs() so the totals are
+      // positive on the dashboard.
+      db.query(`
+        select
+          coalesce(sum(case when type = 'topup' then amount_coins else 0 end), 0)::int as total_recharge,
+          coalesce(sum(case when type in ('purchase', 'subscription', 'ia_pack') then abs(amount_coins) else 0 end), 0)::int as total_spend
+        from public.app_wallet_transactions
+      `),
+      // 4 weeks of recharge (oldest → newest).
+      db.query(`
+        select
+          coalesce(sum(case when created_at >= now() - interval '28 days' and created_at <  now() - interval '21 days' and type = 'topup' then amount_coins else 0 end), 0)::int as w0,
+          coalesce(sum(case when created_at >= now() - interval '21 days' and created_at <  now() - interval '14 days' and type = 'topup' then amount_coins else 0 end), 0)::int as w1,
+          coalesce(sum(case when created_at >= now() - interval '14 days' and created_at <  now() - interval '7 days'  and type = 'topup' then amount_coins else 0 end), 0)::int as w2,
+          coalesce(sum(case when created_at >= now() - interval '7 days'  and type = 'topup' then amount_coins else 0 end), 0)::int as w3
+        from public.app_wallet_transactions
+      `),
+      // 4 weeks of spend (oldest → newest, absolute value).
+      db.query(`
+        select
+          coalesce(sum(case when created_at >= now() - interval '28 days' and created_at <  now() - interval '21 days' and type in ('purchase', 'subscription', 'ia_pack') then abs(amount_coins) else 0 end), 0)::int as w0,
+          coalesce(sum(case when created_at >= now() - interval '21 days' and created_at <  now() - interval '14 days' and type in ('purchase', 'subscription', 'ia_pack') then abs(amount_coins) else 0 end), 0)::int as w1,
+          coalesce(sum(case when created_at >= now() - interval '14 days' and created_at <  now() - interval '7 days'  and type in ('purchase', 'subscription', 'ia_pack') then abs(amount_coins) else 0 end), 0)::int as w2,
+          coalesce(sum(case when created_at >= now() - interval '7 days'  and type in ('purchase', 'subscription', 'ia_pack') then abs(amount_coins) else 0 end), 0)::int as w3
+        from public.app_wallet_transactions
+      `),
+      // IA usage: total + per-faculty breakdown (last 30 days).
+      // Real table name is public.app_ia_usage_logs (mobile app schema).
+      db.query(`
+        select
+          count(*)::int as total,
+          coalesce(
+            (
+              select jsonb_agg(row_to_json(t) order by t.requests desc)
+              from (
+                select coalesce(p.faculty, 'Non renseigné') as faculty,
+                       count(*) as requests
+                from public.app_ia_usage_logs l
+                left join public.profiles p on p.id = l.user_id
+                where l.created_at >= now() - interval '30 days'
+                group by coalesce(p.faculty, 'Non renseigné')
+                order by requests desc
+                limit 8
+              ) t
+            ),
+            '[]'::jsonb
+          ) as by_faculty
+      `),
+      // Funnel from document_events.
+      db.query(`
+        select
+          count(distinct session_id)::int as visitors,
+          count(distinct session_id) filter (where event_type = 'search')::int as searchers,
+          count(distinct session_id) filter (where event_type = 'preview_open')::int as previewers,
+          count(distinct session_id) filter (where event_type = 'purchase_success')::int as buyers,
+          count(distinct session_id) filter (where event_type = 'reader_open')::int as readers
+        from public.document_events
+        where created_at >= now() - interval '30 days'
+      `),
+      // Cohort signup months (6 last months) — retention computed in JS
+      // on the dashboard side; SQL just returns the labels and user counts.
+      db.query(`
+        select
+          to_char(date_trunc('month', created_at), 'Mon YYYY') as label,
+          date_trunc('month', created_at) as month,
+          count(*)::int as users
+        from public.profiles
+        where created_at >= now() - interval '6 months'
+          and role = 'student'
+        group by 1, 2
+        order by date_trunc('month', created_at)
+      `),
+      // Per-user activity timeline (used by the dashboard to compute
+      // weekly retention). One row per (user, week_bucket) for the last 6
+      // months — small, easy to group in JS.
+      db.query(`
+        select
+          p.id as user_id,
+          date_trunc('month', p.created_at) as cohort_month,
+          extract(week from e.created_at - p.created_at)::int / 7 as week_idx
+        from public.profiles p
+        join public.document_events e on e.user_id = p.id
+        where p.created_at >= now() - interval '6 months'
+          and p.role = 'student'
+          and e.created_at >= p.created_at
+          and e.created_at <  p.created_at + interval '28 days'
+        group by p.id, p.created_at, e.created_at
       `)
     ]);
 
@@ -405,6 +601,21 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
     return {
       configured: true,
       totals,
+      catalog: (() => {
+        const r = catalogResult.rows[0] ?? {};
+        return {
+          totalUsers: Number(r.total_users ?? 0),
+          studentUsers: Number(r.student_users ?? 0),
+          adminUsers: Number(r.admin_users ?? 0),
+          newUsersThisWeek: Number(r.new_users_week ?? 0),
+          totalPdfs: Number(r.total_pdfs ?? 0),
+          publishedPdfs: Number(r.published_pdfs ?? 0),
+          newPdfsThisWeek: Number(r.new_pdfs_week ?? 0),
+          totalPacks: Number(r.total_packs ?? 0),
+          publishedPacks: Number(r.published_packs ?? 0),
+          newPacksThisWeek: Number(r.new_packs_week ?? 0),
+        };
+      })(),
       dailyStats: dailyStatsResult.rows.map((row) => ({
         date: String(row.date),
         purchases: Number(row.purchases ?? 0),
@@ -442,8 +653,65 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
           minute: '2-digit',
         }),
       })),
+      wallet: (() => {
+        const r = walletResult.rows[0] ?? {};
+        const rechargeRow = walletRechargeResult.rows[0] ?? {};
+        const spendRow = walletSpendResult.rows[0] ?? {};
+        return {
+          totalRecharge: Number(r.total_recharge ?? 0),
+          totalSpend: Number(r.total_spend ?? 0),
+          weeklyRecharge: [
+            Number(rechargeRow.w0 ?? 0),
+            Number(rechargeRow.w1 ?? 0),
+            Number(rechargeRow.w2 ?? 0),
+            Number(rechargeRow.w3 ?? 0),
+          ],
+          weeklySpend: [
+            Number(spendRow.w0 ?? 0),
+            Number(spendRow.w1 ?? 0),
+            Number(spendRow.w2 ?? 0),
+            Number(spendRow.w3 ?? 0),
+          ],
+        };
+      })(),
+      ia: (() => {
+        const r = iaResult.rows[0] ?? {};
+        const faculties = Array.isArray(r.by_faculty) ? r.by_faculty : [];
+        return {
+          totalQuestions: Number(r.total ?? 0),
+          byFaculty: faculties.map((row: { faculty: string; requests: number | string }) => ({
+            faculty: String(row.faculty ?? 'Non renseigné'),
+            requests: Number(row.requests ?? 0),
+          })),
+        };
+      })(),
+      funnel: (() => {
+        const r = funnelResult.rows[0] ?? {};
+        return {
+          visitors: Number(r.visitors ?? 0),
+          searchers: Number(r.searchers ?? 0),
+          previewers: Number(r.previewers ?? 0),
+          buyers: Number(r.buyers ?? 0),
+          readers: Number(r.readers ?? 0),
+        };
+      })(),
+      cohortMonths: cohortMonthsResult.rows.map((row: { label: string; month: Date | string; users: number | string }) => ({
+        label: String(row.label ?? ''),
+        monthIso: row.month instanceof Date ? row.month.toISOString() : String(row.month ?? ''),
+        users: Number(row.users ?? 0),
+      })),
+      cohortRetention: cohortRetentionResult.rows.map(
+        (row: { user_id: string; cohort_month: Date | string; week_idx: number | string }) => ({
+          userId: String(row.user_id ?? ''),
+          cohortMonthIso: row.cohort_month instanceof Date ? row.cohort_month.toISOString() : String(row.cohort_month ?? ''),
+          weekIdx: Number(row.week_idx ?? 0),
+        }),
+      ),
     };
-  } catch {
-    return emptyAnalytics(true);
+  } catch (err) {
+    // Re-throw so the route handler can surface the real error to the
+    // client — without this the dashboard silently renders all zeros.
+    console.error('[analytics] getSupabasePdfAnalytics failed:', err);
+    throw err;
   }
 };

@@ -18,6 +18,191 @@
  *   - https://tailwindcss.com/docs/installation/using-postcss
  *   - https://github.com/tailwindlabs/tailwindcss/issues/13500
  */
+
+/* ============================================================================
+ * Campus 360 Admin — Design System v3 (Flup-inspired, green + multi-chart)
+ *
+ * Reference : Flup admin dashboard — modern SaaS, white surfaces, generous
+ *             whitespace, green primary accent, colorful chart palette
+ *             (blue / orange / purple / pink / cyan / green).
+ * Type      : Plus Jakarta Sans (display) + Inter (body)
+ * Sidebar   : Two-layer (collapsed icon strip + expanded sidebar with
+ *             MARKETING / PAYMENTS / SYSTEM sections).
+ * ============================================================================ */
+
+@import "tailwindcss";
+
+/* ============================================================================
+ * Load the prebuilt Tailwind output.
+ *
+ * `scripts/prebuild-css.mjs` runs as part of `npm run build` (wired through
+ * `prebuild` in package.json) and writes the fully-compiled CSS to
+ * `globals.compiled.css`. This indirection exists because Next.js's
+ * built-in PostCSS integration drops `@source` globs in monorepo /
+ * git-worktree setups — verified repeatedly in this repo. Pre-compiling
+ * under our own Node cwd sidesteps that bug.
+ *
+ * Refs:
+ *   - https://github.com/tailwindlabs/tailwindcss/issues/13500
+ * ============================================================================ */
 @import "./globals.compiled.css";
 
-/* Fonts loaded via <link> in app/layout.tsx (Google Fonts). */
+/* ============================================================================
+ * The block below is the SOURCE — it gets compiled by the prebuild step.
+ * Any `@source` directives here are read by prebuild-css.mjs to know
+ * which files to scan for utility-class usage. They are NOT used by
+ * Next.js's PostCSS at request time (that's the bug we're working
+ * around).
+ * ============================================================================ */
+
+/* Explicit source globs — Tailwind v4's auto-detection misses these in
+ * monorepo / git-worktree setups, so without @source the build ships an
+ * essentially empty stylesheet. Point at the app + lib + types folders
+ * so all `.tsx` / `.ts` are scanned for utility class usage.
+ */
+@source "../**/*.{ts,tsx}";
+@source "./**/*.{ts,tsx}";
+
+@theme {
+  /* ── Brand / Primary (Emerald green, Flup-style) ─────────────────── */
+  --color-primary: #10b981;
+  --color-primary-hover: #059669;
+  --color-primary-active: #047857;
+  --color-primary-soft: #d1fae5;
+  --color-primary-softer: #ecfdf5;
+  --color-primary-tint: #f0fdf4;
+  --color-on-primary: #ffffff;
+
+  /* ── Surfaces (Flup: pure white sidebar, near-white bg) ───────────── */
+  --color-bg: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-surface-2: #f8fafc;
+  --color-surface-3: #f1f5f9;
+  --color-surface-soft: #fafafa;
+
+  /* ── Borders ──────────────────────────────────────────────────────── */
+  --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
+  --color-border-strong: #d1d5db;
+
+  /* ── Foreground (text) ────────────────────────────────────────────── */
+  --color-fg: #111827;
+  --color-fg-muted: #4b5563;
+  --color-fg-subtle: #6b7280;
+  --color-fg-faint: #9ca3af;
+
+  /* ── Status ───────────────────────────────────────────────────────── */
+  --color-success: #10b981;
+  --color-success-soft: #d1fae5;
+  --color-success-bg: #f0fdf4;
+  --color-warning: #f59e0b;
+  --color-warning-soft: #fef3c7;
+  --color-warning-bg: #fffbeb;
+  --color-danger: #ef4444;
+  --color-danger-soft: #fee2e2;
+  --color-danger-bg: #fef2f2;
+  --color-info: #0ea5e9;
+  --color-info-soft: #e0f2fe;
+
+  /* ── Sidebar / Topbar (two-layer, white) ──────────────────────────── */
+  --color-sidebar: #ffffff;
+  --color-sidebar-strip: #ffffff;
+  --color-sidebar-fg: #111827;
+  --color-sidebar-fg-muted: #6b7280;
+  --color-sidebar-active-bg: #ecfdf5;
+  --color-sidebar-active-fg: #10b981;
+  --color-sidebar-border: #e5e7eb;
+  --color-sidebar-divider: #f3f4f6;
+
+  /* ── Chart palette (Flup-style multi-color) ───────────────────────── */
+  --color-chart-blue: #3b82f6;
+  --color-chart-blue-soft: #dbeafe;
+  --color-chart-orange: #fb923c;
+  --color-chart-orange-soft: #ffedd5;
+  --color-chart-purple: #8b5cf6;
+  --color-chart-purple-soft: #ede9fe;
+  --color-chart-pink: #ec4899;
+  --color-chart-pink-soft: #fce7f3;
+  --color-chart-green: #10b981;
+  --color-chart-green-soft: #d1fae5;
+  --color-chart-cyan: #06b6d4;
+  --color-chart-cyan-soft: #cffafe;
+  --color-chart-amber: #f59e0b;
+  --color-chart-amber-soft: #fef3c7;
+  --color-chart-rose: #f43f5e;
+  --color-chart-rose-soft: #ffe4e6;
+  --color-chart-indigo: #6366f1;
+  --color-chart-indigo-soft: #e0e7ff;
+
+  /* ── Typography ───────────────────────────────────────────────────── */
+  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* ── Radius ───────────────────────────────────────────────────────── */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  /* ── Spacing (layout chrome — two-layer sidebar) ───────────────────── */
+  --spacing-sidebar-strip: 68px;
+  --spacing-sidebar: 240px;
+  --spacing-topbar: 64px;
+
+  /* ── Shadows (Flup: very subtle) ──────────────────────────────────── */
+  --shadow-card: 0 1px 2px 0 rgba(17, 24, 39, 0.04);
+  --shadow-card-hover: 0 4px 12px -2px rgba(17, 24, 39, 0.06), 0 2px 4px -2px rgba(17, 24, 39, 0.03);
+  --shadow-popover: 0 12px 32px -8px rgba(17, 24, 39, 0.12), 0 4px 8px -4px rgba(17, 24, 39, 0.06);
+  --shadow-topbar: 0 1px 0 0 rgba(17, 24, 39, 0.05);
+  --shadow-sidebar: 1px 0 0 0 rgba(17, 24, 39, 0.05);
+}
+
+/* ============================================================================
+ * Base layer overrides
+ * ============================================================================ */
+
+@layer base {
+  html, body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  /* Disable the legacy `spin-anim` if any component still uses it */
+  .spin-anim {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  /* Standardized focus ring (WCAG) */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
