@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 const createDocumentSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(1000).optional().default(''),
-  templateType: z.enum(['stage', 'memoire', 'blank']).default('stage'),
+  templateType: z.enum(['stage', 'memoire', 'cv', 'lettre_motivation', 'blank']).default('stage'),
 });
 
 export async function GET(request: NextRequest) {

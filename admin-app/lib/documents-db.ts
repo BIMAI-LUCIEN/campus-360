@@ -52,6 +52,12 @@ const TEMPLATE_SECTIONS: Record<string, string[]> = {
     'Conclusion générale',
     'Bibliographie',
   ],
+  cv: [
+    'CV généré',
+  ],
+  lettre_motivation: [
+    'Lettre de motivation',
+  ],
   blank: [
     'Page de garde',
     'Sommaire',
