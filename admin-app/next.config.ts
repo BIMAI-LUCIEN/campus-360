@@ -1,7 +1,8 @@
 import type { NextConfig } from 'next';
+import path from 'path';
 
 const nextConfig: NextConfig = {
-  outputFileTracingRoot: process.cwd(),
+  outputFileTracingRoot: path.resolve(__dirname),
   // Puppeteer pulls in a deep tree of platform-specific code (Chromium
   // bindings, native .node loaders, post-install scripts). Letting webpack
   // trace it on Vercel causes the `finishWithoutResolve` / "module not

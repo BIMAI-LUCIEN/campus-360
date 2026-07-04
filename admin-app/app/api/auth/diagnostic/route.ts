@@ -50,6 +50,14 @@ export async function GET() {
         sslmodeParam: (dbUrl.match(/sslmode=([^&]+)/) ?? [])[1] ?? 'not set',
       };
     }
+
+    // Now actually exercise the auth Proxy — does auth.api.getSession() work?
+    try {
+      const session = await auth.api.getSession({ headers: new Headers() });
+      checks.auth_getSession = session ? 'returned session' : 'returned null (no session)';
+    } catch (gsErr) {
+      checks.auth_getSession = `FAILED: ${(gsErr as Error).message}\nStack: ${(gsErr as Error).stack}`;
+    }
   } catch (authErr) {
     checks.auth_init = `FAILED: ${(authErr as Error).message}\nStack: ${(authErr as Error).stack}`;
   }

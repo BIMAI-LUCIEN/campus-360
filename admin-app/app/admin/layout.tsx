@@ -6,8 +6,6 @@ import {
   Bell,
   HelpCircle,
   Search as SearchIcon,
-  Calendar,
-  Download,
   LayoutDashboard,
   BookOpen,
   Package,
@@ -29,7 +27,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     items: [
       { href: '/admin/analytics', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
       { href: '/admin/pdf',       icon: <BookOpen size={18} />,       label: 'PDF Catalogue' },
-      { href: '#',                icon: <Package size={18} />,       label: 'Packs' },
+      { href: '/admin/packs',     icon: <Package size={18} />,        label: 'Packs' },
       { href: '/admin/users',     icon: <Users size={18} />,          label: 'Étudiants' },
     ],
   },
@@ -43,12 +41,12 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
   {
     label: 'SYSTÈME',
     items: [
-      { href: '#', icon: <Settings size={18} />, label: 'Configuration' },
+      { href: '/admin/settings', icon: <Settings size={18} />, label: 'Configuration' },
     ],
   },
 ];
 
-const pageTitleMap: Array<[RegExp, string, string]> = [
+const breadcrumbMap: Array<[RegExp, string, string]> = [
   [/^\/admin\/analytics$/, 'Dashboard', 'Overview'],
   [/^\/admin\/pdf/, 'PDF', 'Catalogue'],
   [/^\/admin\/users/, 'Dashboard', 'Utilisateurs'],
@@ -57,7 +55,7 @@ const pageTitleMap: Array<[RegExp, string, string]> = [
 ];
 
 function resolveBreadcrumb(pathname: string): { section: string; sub: string } {
-  for (const [re, section, sub] of pageTitleMap) {
+  for (const [re, section, sub] of breadcrumbMap) {
     if (re.test(pathname)) return { section, sub };
   }
   return { section: 'Dashboard', sub: 'Overview' };
@@ -85,39 +83,38 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const userName = user?.name || 'Admin';
   const userInitial = userName.trim().slice(0, 1).toUpperCase();
 
-  // Stitch sidebar link classes (Tailwind utility composition)
-  const linkBase = 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150';
-  const linkIdle = 'text-stitch-on-surface-variant hover:bg-stitch-surface-container-high hover:text-stitch-on-surface';
-  const linkActive = 'bg-stitch-secondary-container text-stitch-on-primary border-l-4 border-stitch-primary pl-2 font-semibold';
-
   return (
-    <div className="block min-h-screen bg-stitch-bg text-stitch-on-surface font-stitch-body">
-      {/* ── Sidebar (240px, fixed) ───────────────────────── */}
-      <aside className="fixed top-0 left-0 h-screen w-60 bg-stitch-surface border-r border-stitch-outline-variant flex flex-col py-6 z-50">
-        <div className="px-6 mb-8">
-          <h1 className="font-stitch-headline text-lg font-bold text-stitch-on-surface tracking-tight">
+    <div className="flex min-h-screen bg-stitch-bg text-stitch-on-surface font-stitch-body">
+      {/* ── Sidebar (fixed, 240px) ─────────────────────────── */}
+      <aside className="fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-stitch-outline-variant bg-stitch-surface py-6">
+        <div className="px-6 pb-8">
+          <h1 className="font-stitch-headline text-lg font-bold tracking-tight text-stitch-on-surface">
             Campus 360 Admin
           </h1>
-          <p className="text-xs text-stitch-on-surface-variant mt-0.5">
+          <p className="mt-0.5 text-xs text-stitch-on-surface-variant">
             University Management
           </p>
         </div>
 
-        <nav className="flex-1 flex flex-col gap-1 px-2 overflow-y-auto">
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2">
           {NAV_GROUPS.map((group) => (
             <div key={group.label} className="mb-4">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-stitch-on-surface-variant px-3 py-2">
+              <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-stitch-on-surface-variant">
                 {group.label}
               </div>
               {group.items.map((item) => {
                 const isActive =
-                  item.href !== '#' &&
-                  (pathname === item.href || pathname.startsWith(item.href + '/'));
+                  pathname === item.href || pathname.startsWith(item.href + '/');
                 return (
                   <Link
                     key={item.href + item.label}
                     href={item.href}
-                    className={`${linkBase} ${isActive ? linkActive : linkIdle}`}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={
+                      isActive
+                        ? 'flex items-center gap-3 rounded-md border-l-4 border-stitch-primary bg-stitch-secondary-container py-2.5 pl-2 pr-3 text-sm font-semibold text-stitch-on-primary'
+                        : 'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-stitch-on-surface-variant transition-colors duration-150 hover:bg-stitch-surface-container-high hover:text-stitch-on-surface'
+                    }
                   >
                     {item.icon}
                     <span>{item.label}</span>
@@ -128,11 +125,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           ))}
         </nav>
 
-        <div className="mt-auto px-2 pt-4 border-t border-stitch-outline-variant">
+        <div className="mt-auto border-t border-stitch-outline-variant px-2 pt-4">
           <button
             type="button"
             onClick={handleLogout}
-            className={`${linkBase} ${linkIdle} w-full text-left bg-transparent border-0`}
+            className="flex w-full items-center gap-3 rounded-md bg-transparent px-3 py-2.5 text-left text-sm font-medium text-stitch-on-surface-variant transition-colors duration-150 hover:bg-stitch-surface-container-high hover:text-stitch-on-surface"
           >
             <LogOut size={18} />
             <span>Déconnexion</span>
@@ -140,11 +137,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      {/* ── Topbar (sticky, 64px) ──────────────────────────── */}
-      <header className="sticky top-0 h-16 ml-60 flex items-center justify-between px-8 bg-stitch-surface shadow-stitch-sm z-40">
+      {/* ── Topbar (sticky, 64px) ─────────────────────────── */}
+      <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between bg-stitch-surface px-8 shadow-stitch-sm ml-60">
         <div className="flex items-center gap-6">
           <div className="relative">
-            <span className="absolute inset-y-0 left-3 flex items-center text-stitch-outline pointer-events-none">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-stitch-outline">
               <SearchIcon size={16} />
             </span>
             <input
@@ -152,33 +149,44 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               placeholder="Rechercher..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-1.5 bg-stitch-surface-container-low border border-stitch-outline-variant rounded-full text-[13px] text-stitch-on-surface w-64 focus:outline-none focus:border-stitch-primary focus:ring-4 focus:ring-stitch-primary/15 transition-all placeholder-stitch-outline"
+              className="w-64 rounded-full border border-stitch-outline-variant bg-stitch-surface-container-low py-1.5 pl-9 pr-4 text-[13px] text-stitch-on-surface transition-all placeholder:text-stitch-outline focus:border-stitch-outline focus:outline-none focus:ring-4 focus:ring-stitch-primary/15"
             />
           </div>
 
           <div className="flex items-center gap-3 text-sm">
-            <span className="text-stitch-primary font-bold">{section}</span>
+            <span className="font-bold text-stitch-primary">{section}</span>
             <span className="text-stitch-outline-variant">/</span>
             <span className="text-stitch-on-surface-variant">{sub}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-6">
-          <button className="w-9 h-9 inline-flex items-center justify-center text-stitch-on-surface-variant hover:text-stitch-primary hover:bg-stitch-surface-container-high rounded-full transition-colors" title="Notifications">
+          <button
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container-high hover:text-stitch-primary"
+            aria-label="Notifications"
+            type="button"
+          >
             <Bell size={18} />
           </button>
-          <button className="w-9 h-9 inline-flex items-center justify-center text-stitch-on-surface-variant hover:text-stitch-primary hover:bg-stitch-surface-container-high rounded-full transition-colors" title="Aide">
+          <button
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container-high hover:text-stitch-primary"
+            aria-label="Aide"
+            type="button"
+          >
             <HelpCircle size={18} />
           </button>
 
           {isPending ? (
-            <div className="w-10 h-10 rounded-full bg-stitch-surface-container flex items-center justify-center text-stitch-on-surface-variant">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-stitch-surface-container text-stitch-on-surface-variant">
               <Loader2 size={16} className="spin-anim" />
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-full bg-stitch-primary-container flex items-center justify-center text-stitch-on-primary-container font-bold border border-stitch-outline-variant overflow-hidden" title={userName}>
+            <div
+              className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-stitch-outline-variant bg-stitch-primary-container font-bold text-stitch-on-primary-container"
+              title={userName}
+            >
               {user?.image ? (
-                <img src={user.image} alt={userName} className="w-full h-full object-cover" />
+                <img src={user.image} alt={userName} className="h-full w-full object-cover" />
               ) : (
                 userInitial
               )}
@@ -187,10 +195,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      {/* ── Main content ─────────────────────────────────── */}
-      <main className="ml-60 p-8 max-w-[1600px]">
-        {children}
-      </main>
+      {/* ── Main content ─────────────────────────────────────── */}
+      <main className="ml-60 w-full max-w-[1600px] flex-1 p-8">{children}</main>
     </div>
   );
 }

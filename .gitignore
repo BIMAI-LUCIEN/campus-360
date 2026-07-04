@@ -53,3 +53,7 @@ admin-app/public/uploads/pdfs/*
 # Git worktrees
 .worktrees/
 
+# Next.js build cache (root level — admin-app/.next is already ignored above)
+.next/
+
+
