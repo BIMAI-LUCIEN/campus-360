@@ -264,9 +264,7 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
             }
           }
         }
-      }
-      return undefined;
-    }),
+      }),
   },
 };
 
