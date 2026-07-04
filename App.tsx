@@ -11,8 +11,8 @@ import {
   Platform,
   Pressable,
   Switch,
-  SafeAreaView,
   ScrollView,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import { Bell, Shield, MessageSquare, Smartphone, Wallet, BookOpen, Crown, Home, Search, User, Sparkles, FileText } from 'lucide-react-native';
 import * as Notifications from 'expo-notifications';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 
 import {
@@ -42,6 +43,7 @@ import {
   type StudentProfile,
   type StudentSession,
   updateStudentProfile,
+  changeStudentPassword,
 } from './src/features/auth/betterAuth';
 import { OnboardingScreen } from './src/features/onboarding/OnboardingScreen';
 import { FreePdfSelector } from './src/features/onboarding/FreePdfSelector';
@@ -89,6 +91,7 @@ function PrimaryButton({
   fluid,
   style,
   textStyle,
+  disabled,
 }: {
   label: string;
   onPress: () => void;
@@ -96,18 +99,20 @@ function PrimaryButton({
   fluid?: boolean;
   style?: any;
   textStyle?: any;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       style={({ pressed }) => [
         styles.button,
         variant === 'secondary' && styles.secondaryButton,
         variant === 'danger' && styles.dangerButton,
         fluid && styles.fluid,
         {
-          transform: [{ scale: pressed ? 0.96 : 1 }],
-          opacity: pressed ? 0.9 : 1,
+          transform: [{ scale: pressed && !disabled ? 0.96 : 1 }],
+          opacity: disabled ? 0.5 : (pressed ? 0.9 : 1),
         },
         style,
       ]}
@@ -276,6 +281,11 @@ export default function App() {
   const [notificationsSettingsVisible, setNotificationsSettingsVisible] = useState(false);
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [securitySettingsVisible, setSecuritySettingsVisible] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
   const [notifNewPdf, setNotifNewPdf] = useState(true);
   const [notifPromos, setNotifPromos] = useState(false);
@@ -761,6 +771,49 @@ export default function App() {
     setActiveSection('home');
     setAuthMode('sign-in');
     setAuthNotice('');
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert('Changement de mot de passe', 'Veuillez remplir tous les champs.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      Alert.alert('Changement de mot de passe', 'Le nouveau mot de passe doit faire au moins 8 caractères.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Changement de mot de passe', 'Les nouveaux mots de passe ne correspondent pas.');
+      return;
+    }
+
+    setUpdatingPassword(true);
+    try {
+      await changeStudentPassword(currentPassword, newPassword);
+      Alert.alert('Succès', 'Votre mot de passe a été mis à jour.');
+      setSecuritySettingsVisible(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      Alert.alert('Erreur', error instanceof Error ? error.message : 'Impossible de changer le mot de passe.');
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
+
+  const handlePullToRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (studentSession) {
+        await syncStudentAccount(studentSession);
+      }
+      await refreshDocuments();
+    } catch (err) {
+      console.warn('Error during pull to refresh:', err);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const buyDocument = (document: CampusDocument) => {
@@ -1387,7 +1440,8 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" backgroundColor="#FFFFFF" translucent={false} />
       <View style={styles.shell}>
         <View style={[styles.topBar, narrowScreen && styles.topBarCompact]}>
@@ -1446,7 +1500,13 @@ export default function App() {
             </ScrollView>
           </KeyboardAvoidingView>
         ) : (
-          <ScrollView contentContainerStyle={[styles.content, compactScreen && styles.contentCompact]} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={[styles.content, compactScreen && styles.contentCompact]}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handlePullToRefresh} colors={['#059669']} />
+            }
+          >
           {activeSection === 'home' ? (
             <View style={styles.clientDashboard}>
               <View style={[styles.dashboardHero, narrowScreen && styles.dashboardHeroCompact, { flexDirection: 'column', alignItems: 'flex-start' }]}>
@@ -2569,10 +2629,35 @@ export default function App() {
             <ScrollView style={{ flex: 1, padding: 20 }} showsVerticalScrollIndicator={false}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: '#475569', marginBottom: 16 }}>CHANGER LE MOT DE PASSE</Text>
               <View style={{ gap: 12, marginBottom: 32 }}>
-                <TextInput style={[styles.input, { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }]} placeholder="Mot de passe actuel" secureTextEntry />
-                <TextInput style={[styles.input, { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }]} placeholder="Nouveau mot de passe" secureTextEntry />
-                <TextInput style={[styles.input, { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }]} placeholder="Confirmer le nouveau mot de passe" secureTextEntry />
-                <PrimaryButton label="Mettre à jour" onPress={() => setSecuritySettingsVisible(false)} />
+                <TextInput
+                  style={[styles.input, { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }]}
+                  placeholder="Mot de passe actuel"
+                  secureTextEntry
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  editable={!updatingPassword}
+                />
+                <TextInput
+                  style={[styles.input, { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }]}
+                  placeholder="Nouveau mot de passe"
+                  secureTextEntry
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  editable={!updatingPassword}
+                />
+                <TextInput
+                  style={[styles.input, { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }]}
+                  placeholder="Confirmer le nouveau mot de passe"
+                  secureTextEntry
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  editable={!updatingPassword}
+                />
+                <PrimaryButton
+                  label={updatingPassword ? "Mise à jour..." : "Mettre à jour"}
+                  onPress={handleUpdatePassword}
+                  disabled={updatingPassword}
+                />
               </View>
 
               <Text style={{ fontSize: 14, fontWeight: '700', color: '#475569', marginBottom: 16 }}>SESSIONS ACTIVES</Text>
@@ -2616,7 +2701,10 @@ export default function App() {
               <Text style={{ fontSize: 14, color: '#475569', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
                 Notre équipe est disponible sur WhatsApp pour t'aider avec tes recharges, tes PDF ou tout autre problème.
               </Text>
-              <Pressable style={{ backgroundColor: '#25D366', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 24, width: '100%', justifyContent: 'center' }}>
+              <Pressable
+                style={{ backgroundColor: '#25D366', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 24, width: '100%', justifyContent: 'center' }}
+                onPress={() => Linking.openURL('https://wa.me/237690273500')}
+              >
                 <Text style={{ fontSize: 20, marginRight: 8 }}>📱</Text>
                 <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>Discuter sur WhatsApp</Text>
               </Pressable>
@@ -2626,6 +2714,7 @@ export default function App() {
       </Modal>
 
     </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 

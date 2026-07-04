@@ -4,5 +4,5 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "exclude": ["admin-app", "node_modules", "dist", ".expo", "scratch"]
+  "exclude": ["admin-app", "landing-site", "node_modules", "dist", ".expo", "scratch"]
 }

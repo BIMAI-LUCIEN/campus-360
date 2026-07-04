@@ -262,6 +262,17 @@ const betterAuthConfig: Parameters<typeof betterAuth>[0] = {
       }
       return undefined;
     }),
+    after: createAuthMiddleware(async (ctx) => {
+      const path = ctx.path;
+      if ((path === '/sign-in/email' || path === '/sign-up/email') && ctx.request) {
+        const body = (ctx.body ?? {}) as { email?: string };
+        const email = typeof body.email === 'string' ? body.email : '';
+        if (email) {
+          await recordLoginSuccess(ctx.request, email);
+        }
+      }
+      return undefined;
+    }),
   },
 };
 

@@ -8,6 +8,10 @@
       "channel": "preview",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_AUTH_URL": "https://admin.campus360b.site",
+        "EXPO_PUBLIC_AUTH_WEB_URL": "https://admin.campus360b.site"
       }
     },
     "development": {

@@ -191,6 +191,15 @@ export const resetStudentPassword = async (token: string, newPassword: string) =
   if (result.error) throw new Error(errorMessage(result.error));
 };
 
+export const changeStudentPassword = async (currentPassword: string, newPassword: string) => {
+  const result = await authClient.changePassword({
+    newPassword,
+    currentPassword,
+    revokeOtherSessions: false,
+  });
+  if (result.error) throw new Error(errorMessage(result.error));
+};
+
 export const getAuthCapabilities = async (): Promise<AuthCapabilities> =>
   (await fetch(`${authBaseUrl}/api/mobile/auth-capabilities`)).json() as Promise<AuthCapabilities>;
 
