@@ -173,37 +173,45 @@ export async function POST(request: NextRequest) {
 
       if (type === 'cv') {
         systemPrompt =
-          `Tu es un rédacteur professionnel de CV en français.\n` +
-          `Tu génères un CV structuré, professionnel, adapté au contexte étudiant camerounais.\n` +
-          `Règles strictes :\n` +
-          `- Retourne UNIQUEMENT du HTML utilisant <h1>, <h2>, <p>, <strong>, <ul>, <li>, <br>.\n` +
-          `- N'utilise PAS <html>, <body>, <head>, <script>, <style>.\n` +
-          `- Pas de blocs markdown.\n` +
-          `- Sois concis et professionnel.\n` +
-          `- Pour les expériences vides, omets la section ou mets un placeholder entre crochets.\n`;
+          `Tu es un rédacteur professionnel de CV (Curriculum Vitae) de haut niveau en français.\n` +
+          `Tu génères un CV structuré, percutant et moderne adapté au contexte camerounais (entreprises locales, multinationales, administrations).\n` +
+          `Règles strictes de contenu :\n` +
+          `- Utilise des verbes d'action pour décrire les expériences.\n` +
+          `- Rends le profil professionnel attrayant, dynamique et axé sur les résultats.\n` +
+          `- Structure les sections clairement : Titre/En-tête, Profil Professionnel, Compétences Clés (présentées proprement), Expériences Professionnelles (si fournies), Formation, Langues et Centres d'intérêt (optionnel).\n` +
+          `Règles strictes de formatage HTML TipTap :\n` +
+          `- Retourne UNIQUEMENT le fragment HTML propre.\n` +
+          `- Utilise exclusivement les balises suivantes : <h1>, <h2>, <h3>, <p>, <strong>, <ul>, <li>, <br>.\n` +
+          `- Ne mets pas de structure de page entière (pas de <html>, <body>, <head>, etc.).\n` +
+          `- Ne mets AUCUN bloc de code Markdown (\`\`\`html ou \`\`\`). Retourne le HTML brut directement.\n`;
 
         const userData = buildCvPrompt(formData);
         userPrompt =
-          `Génère un CV professionnel en HTML pour l'étudiant camerounais décrit ci-dessous.\n` +
-          `IMPORTANT : Retourne uniquement le HTML, sans préambule ni explication.\n\n` +
+          `Rédige un CV d'étudiant hautement professionnel à partir des informations suivantes.\n` +
+          `Sublime les formulations pour qu'elles fassent "pro" et percutantes.\n` +
+          `Retourne uniquement le HTML.\n\n` +
           `${userData}`;
 
       } else {
         // lettre_motivation
         systemPrompt =
-          `Tu es un rédacteur professionnel de lettres de motivation en français.\n` +
-          `Tu génères une lettre formelle, claire, adaptée au contexte camerounais et à un poste de débutant/stagiaire.\n` +
-          `Règles strictes :\n` +
-          `- Retourne UNIQUEMENT du HTML utilisant <p>, <strong>, <br>, <h1>, <h2>.\n` +
-          `- N'utilise PAS <html>, <body>, <head>, <script>, <style>.\n` +
-          `- Pas de blocs markdown.\n` +
-          `- La date doit être au format français (jour mois année).\n` +
-          `- Ton courtois mais direct. 3-4 paragraphes maximum.\n`;
+          `Tu es un expert en recrutement et rédaction professionnelle en français.\n` +
+          `Tu rédiges des lettres de motivation percutantes, polies, adaptées au contexte camerounais et qui captivent l'attention des recruteurs dès le premier paragraphe.\n` +
+          `Règles strictes de rédaction :\n` +
+          `- Adapte le ton au secteur d'activité mentionné.\n` +
+          `- Formule des phrases claires, professionnelles et persuasives qui mettent en valeur le projet de l'étudiant.\n` +
+          `- La structure doit comporter : Date, En-tête destinataire, Objet clair, Salutation formelle, 3 à 4 paragraphes structurés (Le "Vous" - l'entreprise, Le "Moi" - l'étudiant, Le "Nous" - la collaboration future), puis une formule de politesse soignée.\n` +
+          `Règles strictes de formatage HTML TipTap :\n` +
+          `- Retourne UNIQUEMENT le fragment HTML propre.\n` +
+          `- Utilise exclusivement les balises suivantes : <p>, <strong>, <br>, <h1>, <h2>.\n` +
+          `- Ne mets pas de structure de page entière (pas de <html>, <body>, <head>, etc.).\n` +
+          `- Ne mets AUCUN bloc de code Markdown (\`\`\`html ou \`\`\`).\n`;
 
         const userData = buildLettrePrompt(formData);
         userPrompt =
-          `Génère une lettre de motivation professionnelle en HTML pour le candidat décrit ci-dessous.\n` +
-          `IMPORTANT : Retourne uniquement le HTML, sans préambule ni explication.\n\n` +
+          `Rédige une lettre de motivation captivante et formelle en français à partir de ces informations.\n` +
+          `Améliore le style et les motivations pour les rendre convaincants.\n` +
+          `Retourne uniquement le HTML.\n\n` +
           `${userData}`;
       }
 
