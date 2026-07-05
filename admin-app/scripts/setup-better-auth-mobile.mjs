@@ -109,9 +109,12 @@ create table if not exists public.app_documents (
   margins text not null default 'normal',
   cover_template text not null default 'classic',
   cover_data jsonb not null default '{}',
+  document_metadata jsonb not null default '{}',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.app_documents add column if not exists document_metadata jsonb not null default '{}';
 
 create table if not exists public.app_document_sections (
   id uuid primary key default gen_random_uuid(),

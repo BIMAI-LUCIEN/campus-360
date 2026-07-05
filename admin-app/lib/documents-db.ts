@@ -11,6 +11,7 @@ export type Document = {
   margins: string;
   cover_template: string;
   cover_data: Record<string, any>;
+  document_metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
 };
@@ -153,6 +154,7 @@ export async function updateDocumentSettings(
     margins?: string;
     cover_template?: string;
     cover_data?: Record<string, any>;
+    document_metadata?: Record<string, any>;
   }
 ): Promise<Document> {
   const fields: string[] = [];

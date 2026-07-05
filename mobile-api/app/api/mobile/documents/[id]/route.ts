@@ -14,6 +14,7 @@ const updateDocumentSchema = z.object({
   margins: z.enum(['normal', 'narrow', 'wide']).optional(),
   cover_template: z.enum(['classic', 'minimalist', 'tech']).optional(),
   cover_data: z.record(z.string(), z.any()).optional(),
+  document_metadata: z.record(z.string(), z.any()).optional(),
 });
 
 type RouteContext = { params: Promise<{ id: string }> };

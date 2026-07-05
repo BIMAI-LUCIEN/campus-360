@@ -70,8 +70,20 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
   const [showAddSection, setShowAddSection] = useState(false);
   const [newSectionTitle, setNewSectionTitle] = useState('');
 
+  // Chat d'onboarding IA & UI Tabs
+  const [leftTab, setLeftTab] = useState<'onboarding' | 'sections' | 'cover' | 'style'>('onboarding');
+  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([
+    { role: 'assistant', content: "Bonjour ! Je suis ton assistant de rédaction Campus 360. Dis-moi : as-tu effectué un stage ? Quel est le thème de ton document et dans quelle entreprise ou université ?" }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+
   // Debounced auto-save timer
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Image Placeholders Upload References
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const clickedPlaceholderRef = useRef<HTMLElement | null>(null);
 
   // 1. Fetch Document and Sections
   useEffect(() => {
@@ -263,6 +275,115 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
     } finally {
       setSaving(false);
     }
+  };
+
+  // 6.5 Onboarding Chatbot Logic
+  const sendChatMessage = async () => {
+    if (!chatInput.trim()) return;
+    const userMsg = { role: 'user' as const, content: chatInput.trim() };
+    setChatMessages((prev) => [...prev, userMsg]);
+    setChatInput('');
+    setChatLoading(true);
+
+    try {
+      const res = await fetch('/api/mobile/documents/onboard-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...chatMessages, userMsg],
+          documentType: document?.template_type ?? 'stage'
+        }),
+      });
+
+      if (!res.ok) throw new Error('Impossible de contacter l\'IA.');
+      const data = await res.json();
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
+    } catch (err: any) {
+      ssrAlert(err.message || 'Une erreur est survenue.');
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const generateFullDocument = async () => {
+    if (chatMessages.length < 2) {
+      ssrAlert('Commencez à discuter pour donner quelques informations d\'onboarding à l\'IA.');
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const res = await fetch('/api/mobile/documents/generate-full', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: chatMessages,
+          documentId,
+          documentType: document?.template_type ?? 'stage'
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Erreur lors de la génération.');
+      }
+
+      ssrAlert('Rédaction complète réussie ! Rechargement des sections...');
+      // Reload document sections
+      const reloadRes = await fetch(`/api/mobile/documents/${documentId}`);
+      if (reloadRes.ok) {
+        const data = await reloadRes.json();
+        setSections(data.sections);
+        if (data.sections.length > 0) {
+          setActiveSectionId(data.sections[0].id);
+        }
+      }
+      setLeftTab('sections'); // Swtich tab to preview sections
+    } catch (err: any) {
+      ssrAlert(err.message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // 6.7 Interactive Image Placeholder Handlers
+  const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const placeholder = target.closest('.image-placeholder') as HTMLElement;
+    if (placeholder) {
+      clickedPlaceholderRef.current = placeholder;
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editor || editor.isDestroyed) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      const caption = clickedPlaceholderRef.current?.getAttribute('data-caption') || 'Image';
+      
+      if (clickedPlaceholderRef.current) {
+        const imgHtml = `<figure class="my-6 text-center"><img src="${base64}" alt="${caption}" class="mx-auto rounded-lg max-w-full shadow-md" /><figcaption class="text-xs text-slate-400 mt-2 font-sans italic">${caption}</figcaption></figure>`;
+        const currentHtml = editor.getHTML();
+        const placeholderOuter = clickedPlaceholderRef.current.outerHTML;
+        
+        if (currentHtml.includes(placeholderOuter)) {
+          editor.commands.setContent(currentHtml.replace(placeholderOuter, imgHtml));
+        } else {
+          editor.commands.insertContent(imgHtml);
+        }
+      } else {
+        editor.commands.insertContent(`<img src="${base64}" alt="${caption}" />`);
+      }
+      
+      clickedPlaceholderRef.current = null;
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.readAsDataURL(file);
   };
 
   // 7. AI Operations
@@ -467,64 +588,285 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
 
       {/* 2. Workspace Layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar - Plan/Structure */}
-        <aside className="w-64 border-r border-slate-800 bg-slate-900/20 flex flex-col">
-          <div className="p-4 border-b border-slate-800/60 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Plan du document</span>
-            <button 
-              onClick={() => setShowAddSection(!showAddSection)}
-              className="p-1 rounded bg-slate-800 hover:bg-slate-700 transition text-emerald-500"
+        {/* Left Control Panel - Onboarding Chat, Structure, Cover & Style */}
+        <aside className="w-[380px] border-r border-slate-800 bg-slate-900/30 flex flex-col shrink-0">
+          {/* Tabs Selector */}
+          <div className="grid grid-cols-4 border-b border-slate-800 bg-slate-900/50 p-1 text-[11px] font-bold">
+            <button
+              onClick={() => setLeftTab('onboarding')}
+              className={`py-2 text-center rounded transition-colors ${leftTab === 'onboarding' ? 'bg-slate-800 text-emerald-400' : 'text-slate-400 hover:text-slate-200'}`}
             >
-              <Plus size={16} />
+              🤖 Chat IA
+            </button>
+            <button
+              onClick={() => setLeftTab('sections')}
+              className={`py-2 text-center rounded transition-colors ${leftTab === 'sections' ? 'bg-slate-800 text-emerald-400' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              📋 Chapitres
+            </button>
+            <button
+              onClick={() => setLeftTab('cover')}
+              className={`py-2 text-center rounded transition-colors ${leftTab === 'cover' ? 'bg-slate-800 text-emerald-400' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              📖 Couverture
+            </button>
+            <button
+              onClick={() => setLeftTab('style')}
+              className={`py-2 text-center rounded transition-colors ${leftTab === 'style' ? 'bg-slate-800 text-emerald-400' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              🎨 Design
             </button>
           </div>
 
-          {showAddSection && (
-            <div className="p-3 bg-slate-900 border-b border-slate-800 flex gap-2">
-              <input 
-                type="text" 
-                placeholder="Titre de la section..."
-                value={newSectionTitle}
-                onChange={(e) => setNewSectionTitle(e.target.value)}
-                className="flex-1 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-              />
-              <button 
-                onClick={handleAddSection}
-                className="bg-emerald-600 hover:bg-emerald-500 px-2 py-1 rounded text-xs font-bold"
-              >
-                Ajouter
-              </button>
-            </div>
-          )}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* 1. Onboarding Chat Tab */}
+            {leftTab === 'onboarding' && (
+              <div className="flex-1 flex flex-col p-4 overflow-hidden">
+                <div className="flex-1 overflow-y-auto space-y-3 mb-3 pr-1 text-xs">
+                  {chatMessages.map((msg, i) => (
+                    <div
+                      key={i}
+                      className={`p-2.5 rounded-lg max-w-[85%] ${
+                        msg.role === 'user'
+                          ? 'bg-emerald-600/20 border border-emerald-500/30 text-emerald-100 self-end ml-auto'
+                          : 'bg-slate-800 text-slate-300 self-start'
+                      }`}
+                    >
+                      <TextFormatted text={msg.content} />
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="bg-slate-800 p-2.5 rounded-lg max-w-[85%] self-start flex items-center gap-2">
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-emerald-500"></div>
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-emerald-500 delay-100"></div>
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-emerald-500 delay-200"></div>
+                    </div>
+                  )}
+                </div>
 
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {sections.map((sec) => (
-              <div 
-                key={sec.id}
-                className={`group flex items-center justify-between rounded px-3 py-2.5 text-sm cursor-pointer transition ${
-                  activeSectionId === sec.id 
-                    ? 'bg-slate-800/80 border-l-2 border-emerald-500 text-slate-100 font-semibold' 
-                    : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-                }`}
-                onClick={() => setActiveSectionId(sec.id)}
-              >
-                <span className="truncate flex items-center gap-2">
-                  <BookOpen size={14} className={activeSectionId === sec.id ? 'text-emerald-500' : 'text-slate-500'} />
-                  {sec.title}
-                </span>
-                {!sec.is_system && (
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteSection(sec.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition p-0.5"
+                <div className="space-y-2 mt-auto">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Répondez ici..."
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      onClick={sendChatMessage}
+                      disabled={chatLoading}
+                      className="bg-emerald-600 hover:bg-emerald-500 px-3 rounded text-xs font-bold text-white transition"
+                    >
+                      Envoi
+                    </button>
+                  </div>
+                  <button
+                    onClick={generateFullDocument}
+                    disabled={aiLoading}
+                    className="w-full bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 py-2 rounded text-xs font-bold transition flex items-center justify-center gap-1.5"
                   >
-                    <Trash2 size={13} />
+                    {aiLoading ? 'Génération en cours...' : '🤖 Rédiger le document à 90% (5 cr)'}
                   </button>
-                )}
+                </div>
               </div>
-            ))}
+            )}
+
+            {/* 2. Chapters Tab */}
+            {leftTab === 'sections' && (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="p-3 border-b border-slate-800 flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sections</span>
+                  <button
+                    onClick={() => setShowAddSection(!showAddSection)}
+                    className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-emerald-500 transition"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+
+                {showAddSection && (
+                  <div className="p-2.5 bg-slate-900 border-b border-slate-800 flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nom du chapitre..."
+                      value={newSectionTitle}
+                      onChange={(e) => setNewSectionTitle(e.target.value)}
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none"
+                    />
+                    <button
+                      onClick={handleAddSection}
+                      className="bg-emerald-600 hover:bg-emerald-500 px-2 py-1 rounded text-xs font-bold"
+                    >
+                      OK
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+                  {sections.map((sec) => (
+                    <div
+                      key={sec.id}
+                      className={`group flex items-center justify-between rounded px-2.5 py-2 text-xs cursor-pointer transition ${
+                        activeSectionId === sec.id
+                          ? 'bg-slate-800/80 border-l-2 border-emerald-500 text-slate-100 font-semibold'
+                          : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                      }`}
+                      onClick={() => setActiveSectionId(sec.id)}
+                    >
+                      <span className="truncate flex items-center gap-1.5">
+                        <BookOpen size={12} className={activeSectionId === sec.id ? 'text-emerald-500' : 'text-slate-500'} />
+                        {sec.title}
+                      </span>
+                      {!sec.is_system && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSection(sec.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition p-0.5"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3. Cover page inputs */}
+            {leftTab === 'cover' && (
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+                <div>
+                  <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1.5">Établissement / École</label>
+                  <input
+                    type="text"
+                    value={document.cover_data.school || ''}
+                    onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, school: e.target.value } })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1.5">Titre du document</label>
+                  <input
+                    type="text"
+                    value={document.cover_data.title || ''}
+                    onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, title: e.target.value } })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 font-bold focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1.5">Sous-titre</label>
+                  <textarea
+                    value={document.cover_data.subtitle || ''}
+                    onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, subtitle: e.target.value } })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 h-16 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1.5">Étudiant (Nom complet)</label>
+                  <input
+                    type="text"
+                    value={document.cover_data.studentName || ''}
+                    onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, studentName: e.target.value } })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1.5">Entreprise d'accueil</label>
+                  <input
+                    type="text"
+                    value={document.cover_data.company || ''}
+                    onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, company: e.target.value } })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1.5">Maitre de stage (Entreprise)</label>
+                  <input
+                    type="text"
+                    value={document.cover_data.tutorCorporate || ''}
+                    onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, tutorCorporate: e.target.value } })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1.5">Tuteur académique (École)</label>
+                  <input
+                    type="text"
+                    value={document.cover_data.tutorAcademic || ''}
+                    onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, tutorAcademic: e.target.value } })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1.5">Année académique</label>
+                  <input
+                    type="text"
+                    value={document.cover_data.year || ''}
+                    onChange={(e) => updateSettings({ cover_data: { ...document.cover_data, year: e.target.value } })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* 4. Design & Style Tab */}
+            {leftTab === 'style' && (
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+                <div>
+                  <label className="block text-[10px] text-slate-400 font-bold mb-1.5 uppercase">Police de texte</label>
+                  <select
+                    value={document.font_family}
+                    onChange={(e) => updateSettings({ font_family: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none"
+                  >
+                    <option value="Times New Roman">Times New Roman (Classique)</option>
+                    <option value="Arial">Arial (Standard)</option>
+                    <option value="Inter">Inter (Moderne)</option>
+                    <option value="Calibri">Calibri (Microsoft)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-400 font-bold mb-1.5 uppercase">Interligne</label>
+                  <select
+                    value={document.line_spacing}
+                    onChange={(e) => updateSettings({ line_spacing: Number(e.target.value) })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none"
+                  >
+                    <option value="1.15">1.15</option>
+                    <option value="1.5">1.5 (Conseillé)</option>
+                    <option value="2">2.0 (Double)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-400 font-bold mb-1.5 uppercase">Marges de page</label>
+                  <select
+                    value={document.margins}
+                    onChange={(e) => updateSettings({ margins: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none"
+                  >
+                    <option value="normal">Normale (2.5 cm)</option>
+                    <option value="narrow">Étroite (1.5 cm)</option>
+                    <option value="wide">Large (3.0 cm)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-400 font-bold mb-1.5 uppercase">Thème page de garde</label>
+                  <select
+                    value={document.cover_template}
+                    onChange={(e) => updateSettings({ cover_template: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none"
+                  >
+                    <option value="classic">Classique Universitaire</option>
+                    <option value="minimalist">Minimaliste Épuré</option>
+                    <option value="tech">Technique Moderne (Sombre)</option>
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
         </aside>
 
@@ -696,9 +1038,16 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
                   </div>
                 ) : (
                   // TipTap Editor Content
-                  <div className="flex-1 flex flex-col min-h-[400px]">
+                  <div className="flex-1 flex flex-col min-h-[400px]" onClick={handleEditorClick}>
                     <h2 className="text-xl font-bold text-slate-200 mb-6 border-b border-slate-800 pb-2">{activeSection.title}</h2>
                     <EditorContent editor={editor} className="flex-1 text-slate-300 font-serif leading-relaxed text-base focus:outline-none prose prose-invert max-w-none" />
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleFileChange} 
+                      accept="image/*" 
+                      className="hidden" 
+                    />
                   </div>
                 )
               ) : (
@@ -839,6 +1188,18 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function TextFormatted({ text }: { text: string }) {
+  return (
+    <div className="space-y-1">
+      {text.split('\n').map((line, idx) => (
+        <p key={idx} className="min-h-[1.2em]">
+          {line}
+        </p>
+      ))}
     </div>
   );
 }
