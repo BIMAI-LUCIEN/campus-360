@@ -174,9 +174,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Wrapper container for Topbar + Main content to support fluid responsiveness */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* â”€â”€ Topbar (sticky, 64px) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-        <header className="sticky top-0 right-0 z-30 ml-0 lg:ml-[240px] flex h-16 items-center justify-between border-b border-stitch-outline-variant bg-stitch-surface px-4 sm:px-8 shadow-sm transition-[margin] duration-300">
+      <div className="flex-1 flex flex-col min-w-0 ml-0 lg:ml-[240px] transition-[margin] duration-300">
+        {/* ── Topbar (sticky, 64px) ─────────────────────────── */}
+        <header className="sticky top-0 right-0 z-30 flex h-16 items-center justify-between border-b border-stitch-outline-variant bg-stitch-surface px-4 sm:px-8 shadow-sm">
           <div className="flex items-center gap-4 sm:gap-6 min-w-0">
             {/* Hamburger menu button for mobile/tablet */}
             <button
@@ -254,7 +254,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </header>
 
         {/* ── Main content ─────────────────────────────────────── */}
-        <main className="ml-0 lg:ml-[240px] w-full max-w-[1600px] flex-1 bg-stitch-bg p-4 sm:p-6 lg:p-8 transition-[margin] duration-300 min-h-[calc(100vh-64px)]">
+        <main className="w-full max-w-[1600px] flex-1 bg-stitch-bg p-4 sm:p-6 lg:p-8 min-h-[calc(100vh-64px)]">
           {children}
         </main>
       </div>
