@@ -1081,7 +1081,7 @@ export default function App() {
       : 'Utilise les packs pour gagner du temps sur plusieurs PDF lies.',
     purchasedDocuments.length > 0
       ? 'Ouvre un PDF depuis ta bibliothèque puis utilise "Resume" pour réviser plus vite.'
-      : 'Débloqué un premier PDF pour lancer la lecture sécurisée dans l'application.',
+      : "Débloqué un premier PDF pour lancer la lecture sécurisée dans l'application.",
     balance < 300
       ? 'Garde toujours un petit solde pour acheter un PDF urgent.'
       : 'Ton solde actuel te permet de tester un nouveau document ou un pack.',
@@ -1363,7 +1363,7 @@ export default function App() {
                 {authLoading
                   ? 'Patiente...'
                   : authMode === 'sign-in'
-                    ? 'Entrer dans l'application'
+                    ? "Entrer dans l'application"
                     : authMode === 'sign-up'
                       ? 'Créer mon espace'
                       : authMode === 'new-password'
