@@ -57,3 +57,4 @@ admin-app/public/uploads/pdfs/*
 .next/
 
 
+.vercel
