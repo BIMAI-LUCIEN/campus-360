@@ -12,17 +12,17 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
   {
     label: 'PRINCIPAL',
     items: [
-      { href: '/admin/analytics', icon: 'dashboard',       label: 'Dashboard' },
+      { href: '/admin',           icon: 'dashboard',       label: 'Dashboard' },
       { href: '/admin/pdf',       icon: 'menu_book',       label: 'Catalogue PDF' },
       { href: '/admin/packs',     icon: 'package_2',       label: 'Packs' },
       { href: '/admin/users',     icon: 'group',           label: 'Étudiants' },
+      { href: '/admin/documents', icon: 'description',   label: 'Rédactions' },
     ],
   },
   {
     label: 'ANALYTICS',
     items: [
-      { href: '#',                icon: 'analytics',       label: 'Analytics' },
-      { href: '/admin/documents', icon: 'description',   label: 'Rédactions' },
+      { href: '/admin/analytics', icon: 'analytics',       label: 'Analytics' },
     ],
   },
   {
@@ -34,11 +34,13 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
 ];
 
 const breadcrumbMap: Array<[RegExp, string, string]> = [
-  [/^\/admin\/analytics$/, 'Dashboard', 'Overview'],
+  [/^\/admin$/, 'Dashboard', 'Overview'],
+  [/^\/admin\/analytics$/, 'Analytics', 'Overview'],
   [/^\/admin\/pdf/, 'Dashboard', 'Catalogue PDF'],
-  [/^\/admin\/users/, 'Dashboard', 'Utilisateurs'],
+  [/^\/admin\/packs/, 'Dashboard', 'Packs'],
+  [/^\/admin\/users/, 'Dashboard', 'Étudiants'],
   [/^\/admin\/documents\/new/, 'Dashboard', 'Nouveau document'],
-  [/^\/admin\/documents/, 'Dashboard', 'Overview'],
+  [/^\/admin\/documents/, 'Dashboard', 'Rédactions'],
 ];
 
 function resolveBreadcrumb(pathname: string): { section: string; sub: string } {
