@@ -15,18 +15,18 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
       { href: '/admin/analytics', icon: 'dashboard',       label: 'Dashboard' },
       { href: '/admin/pdf',       icon: 'menu_book',       label: 'Catalogue PDF' },
       { href: '/admin/packs',     icon: 'package_2',       label: 'Packs' },
-      { href: '/admin/users',     icon: 'group',           label: 'Ã‰tudiants' },
+      { href: '/admin/users',     icon: 'group',           label: 'Étudiants' },
     ],
   },
   {
     label: 'ANALYTICS',
     items: [
       { href: '#',                icon: 'analytics',       label: 'Analytics' },
-      { href: '/admin/documents', icon: 'description',   label: 'RÃ©dactions' },
+      { href: '/admin/documents', icon: 'description',   label: 'Rédactions' },
     ],
   },
   {
-    label: 'SYSTÃˆME',
+    label: 'SYSTÈME',
     items: [
       { href: '/admin/settings', icon: 'settings',        label: 'Configuration' },
     ],
@@ -168,7 +168,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             className="mt-1 flex w-full items-center gap-3 px-4 py-2 text-left text-sm font-medium text-stitch-on-surface-variant transition-colors hover:bg-stitch-surface-container-high hover:text-stitch-on-surface"
           >
             <LogOut size={18} />
-            <span>DÃ©connexion</span>
+            <span>Déconnexion</span>
           </button>
         </div>
       </aside>

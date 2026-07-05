@@ -171,8 +171,8 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
     if (type === 'cv' || type === 'lettre_motivation') {
       if (iaCredits !== null && iaCredits < IA_CREDITS_PER_GEN) {
         Alert.alert(
-          'Credits IA insuffisants',
-          `Il te faut ${IA_CREDITS_PER_GEN} credits IA pour generer ce document. Tu en as ${iaCredits}.`,
+          'Crédits IA insuffisants',
+          `Il te faut ${IA_CREDITS_PER_GEN} crédits IA pour générer ce document. Tu en as ${iaCredits}.`,
           [{ text: 'Recharger', onPress: () => { resetForm(); } }, { text: 'Annuler' }]
         );
         return;

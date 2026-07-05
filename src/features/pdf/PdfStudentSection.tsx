@@ -301,7 +301,7 @@ export function PdfStudentSection({
   const activeFilterCount = [university, faculty, subject, level].filter((item) => item !== allValue).length;
   const filterSections = [
     { key: 'university', label: 'Universite', options: universities, value: university, onChange: setUniversity },
-    { key: 'faculty', label: 'Filiere', options: faculties, value: faculty, onChange: setFaculty },
+    { key: 'faculty', label: 'Filière', options: faculties, value: faculty, onChange: setFaculty },
     { key: 'subject', label: 'Matiere', options: subjects, value: subject, onChange: setSubject },
     { key: 'level', label: 'Niveau', options: levels, value: level, onChange: setLevel },
   ] as const;
@@ -468,7 +468,7 @@ export function PdfStudentSection({
         { id: `assistant-${Date.now()}`, role: 'assistant', content: answer },
       ]);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Je ne peux pas joindre le serveur IA maintenant. Reessaie dans un instant.';
+      const errorMessage = error instanceof Error ? error.message : 'Je ne peux pas joindre le serveur IA maintenant. Réessaie dans un instant.';
       setAssistantMessages((current) => [
         ...current,
         {
@@ -607,7 +607,7 @@ export function PdfStudentSection({
             <Text style={styles.stateBadgeText}>0</Text>
           </View>
           <Text style={styles.stateTitle}>
-            {viewMode === 'library' ? 'aucun PDF debloque' : 'aucun PDF trouve'}
+            {viewMode === 'library' ? 'aucun PDF débloqué' : 'aucun PDF trouve'}
           </Text>
           <Text style={styles.bodyMuted}>
             {viewMode === 'library' ? "Tu n'as pas encore débloqué de PDF." : "Essaie une autre recherche."}
@@ -628,8 +628,8 @@ export function PdfStudentSection({
       {!loading && !error && activeTab === 'library' && (visiblePacks.length > 0 || visibleDocuments.length > 0) ? (
         <View style={styles.sectionStrip}>
           <View style={styles.flex}>
-            <Text style={styles.sectionStripEyebrow}>Bibliotheque</Text>
-            <Text style={styles.sectionStripTitle}>Tes contenus debloques</Text>
+            <Text style={styles.sectionStripEyebrow}>Bibliothèque</Text>
+            <Text style={styles.sectionStripTitle}>Tes contenus débloqués</Text>
             <Text style={styles.bodyMuted}>
               {purchasedCount} PDF, {purchasedPackIds.length} packs et {ownedPageCount} pages disponibles pour reprendre vite.
             </Text>
@@ -790,7 +790,7 @@ export function PdfStudentSection({
                   </View>
                   <Text style={[styles.bodyMuted, { fontSize: 14, color: '#64748B', marginTop: 4 }]}>{document.subject} • {document.level}</Text>
                   <Text style={[styles.metaText, { fontSize: 13, color: '#94A3B8', marginTop: 2 }]}>{document.teacher} • {document.university}</Text>
-                  {inLibrary ? <Text style={[styles.libraryResume, { color: '#0284C7', fontSize: 13, fontWeight: '600', marginTop: 8 }]}>🚀 Pret pour la lecture securisee.</Text> : null}
+                  {inLibrary ? <Text style={[styles.libraryResume, { color: '#0284C7', fontSize: 13, fontWeight: '600', marginTop: 8 }]}>🚀 Pret pour la lecture sécurisée.</Text> : null}
                 </View>
               </View>
 
@@ -916,7 +916,7 @@ export function PdfStudentSection({
                       }
                     >
                       {purchasedPackIds.includes(selectedPack.id)
-                        ? 'Deja achete'
+                        ? 'Déjà acheté'
                         : `${formatCoins(selectedPack.price)} Coins`}
                     </Text>
                   </Pressable>

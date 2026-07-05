@@ -198,15 +198,15 @@ const getStorage = () => {
 const onboardingSlides = [
   {
     title: 'Trouve le bon PDF',
-    text: 'Recherche par universite, filiere, matiere ou niveau.',
+    text: 'Recherche par université, filière, matière ou niveau.',
   },
   {
     title: 'Preview puis achat',
-    text: 'Regarde un apercu, puis debloque le PDF avec ton wallet.',
+    text: 'Regarde un apercu, puis débloqué le PDF avec ton wallet.',
   },
   {
     title: 'Lis et revise',
-    text: 'Garde tes achats et utilise l assistant pour reviser plus vite.',
+    text: 'Garde tes achats et utilise l assistant pour réviser plus vite.',
   },
 ];
 
@@ -507,7 +507,7 @@ export default function App() {
       await Updates.fetchUpdateAsync();
       await Updates.reloadAsync();
     } catch {
-      Alert.alert('Erreur', 'Impossible de telecharger la mise a jour. Reessaie plus tard.');
+      Alert.alert('Erreur', 'Impossible de télécharger la mise a jour. Réessaie plus tard.');
       setUpdateLoading(false);
     }
   };
@@ -647,19 +647,19 @@ export default function App() {
       return;
     }
     if (authMode === 'sign-up' && !name) {
-      Alert.alert('Creation du compte', 'Entre ton nom.');
+      Alert.alert('Création du compte', 'Entre ton nom.');
       return;
     }
     if (authMode === 'sign-up' && !whatsappPhone) {
-      Alert.alert('Creation du compte', 'Entre ton numero WhatsApp.');
+      Alert.alert('Création du compte', 'Entre ton numero WhatsApp.');
       return;
     }
     if (authMode === 'sign-up' && !university) {
-      Alert.alert('Creation du compte', 'Choisis ton universite.');
+      Alert.alert('Création du compte', 'Choisis ton université.');
       return;
     }
     if (authMode === 'sign-up' && !faculty) {
-      Alert.alert('Creation du compte', 'Entre ta filiere.');
+      Alert.alert('Création du compte', 'Entre ta filière.');
       return;
     }
 
@@ -715,7 +715,7 @@ export default function App() {
       }
     } catch (error) {
       console.error('submitAuth error:', error);
-      Alert.alert('Connexion impossible', error instanceof Error ? error.message : 'Reessaie dans un instant.');
+      Alert.alert('Connexion impossible', error instanceof Error ? error.message : 'Réessaie dans un instant.');
     } finally {
       setAuthLoading(false);
     }
@@ -736,10 +736,10 @@ export default function App() {
       await syncStudentAccount(session);
       setAuthVisible(false);
       setActiveSection('home');
-      Alert.alert('Connecte', 'Connexion via Google reussie.');
+      Alert.alert('Connecte', 'Connexion via Google réussie.');
     } catch (error) {
       console.error('Google sign-in error:', error);
-      Alert.alert('Connexion impossible', error instanceof Error ? error.message : 'Reessaie dans un instant.');
+      Alert.alert('Connexion impossible', error instanceof Error ? error.message : 'Réessaie dans un instant.');
     } finally {
       setAuthLoading(false);
     }
@@ -818,7 +818,7 @@ export default function App() {
 
   const buyDocument = (document: CampusDocument) => {
     if (purchasedDocuments.includes(document.id)) {
-      Alert.alert('Deja achete', 'Ce PDF est deja dans ta bibliotheque.');
+      Alert.alert('Déjà acheté', 'Ce PDF est deja dans ta bibliothèque.');
       return;
     }
 
@@ -854,7 +854,7 @@ export default function App() {
             level: document.level,
           },
         });
-        Alert.alert('PDF achete', `${document.title} est maintenant dans Mes PDF.`);
+        Alert.alert('PDF acheté', `${document.title} est maintenant dans Mes PDF.`);
       })
       .catch((error) => {
         const message = error instanceof Error ? error.message : '';
@@ -871,7 +871,7 @@ export default function App() {
           setInsufficientVisible(true);
           return;
         }
-        Alert.alert('Achat impossible', message || 'Reessaie dans un instant.');
+        Alert.alert('Achat impossible', message || 'Réessaie dans un instant.');
       })
       .finally(() => {
         setPurchasingDocumentId(null);
@@ -880,7 +880,7 @@ export default function App() {
 
   const buyPack = (pack: CampusPdfPack) => {
     if (purchasedPacks.includes(pack.id)) {
-      Alert.alert('Pack deja achete', 'Ce pack est deja dans ta bibliotheque.');
+      Alert.alert('Pack déjà acheté', 'Ce pack est deja dans ta bibliothèque.');
       return;
     }
 
@@ -900,7 +900,7 @@ export default function App() {
           Array.from(new Set([...unlockedIds, ...current])),
         );
         await syncStudentAccount(studentSession);
-        Alert.alert('Pack achete', `${pack.title} est maintenant dans ta bibliotheque.`);
+        Alert.alert('Pack acheté', `${pack.title} est maintenant dans ta bibliothèque.`);
       })
       .catch((error) => {
         const message = error instanceof Error ? error.message : '';
@@ -908,7 +908,7 @@ export default function App() {
           setInsufficientVisible(true);
           return;
         }
-        Alert.alert('Achat impossible', message || 'Reessaie dans un instant.');
+        Alert.alert('Achat impossible', message || 'Réessaie dans un instant.');
       })
       .finally(() => {
         setPurchasingPackId(null);
@@ -995,7 +995,7 @@ export default function App() {
       const result = await purchaseSubscription(tier);
       setSubscriptionTier(result.tier as 'basic' | 'premium');
       setSubscriptionExpiresAt(result.expiresAt);
-      Alert.alert('Abonnement active', `Tu as souscrit au forfait ${tier}.`);
+      Alert.alert('Abonnement activé', `Tu as souscrit au forfait ${tier}.`);
       await syncStudentAccount(studentSession ?? undefined);
     } catch (error) {
       Alert.alert('Achat impossible', error instanceof Error ? error.message : 'Solde insuffisant ou erreur.');
@@ -1007,7 +1007,7 @@ export default function App() {
       const result = await purchaseIaPack(packId);
       setBalance(result.balanceCoins);
       setIaCredits(result.iaCredits);
-      Alert.alert('Pack IA ajoute', `Tes credits IA ont ete mis a jour.`);
+      Alert.alert('Pack IA ajouté', `Tes crédits IA ont été mis à jour.`);
       await syncStudentAccount(studentSession ?? undefined);
     } catch (error) {
       Alert.alert('Achat impossible', error instanceof Error ? error.message : 'Solde insuffisant ou erreur.');
@@ -1039,27 +1039,27 @@ export default function App() {
           title: balance < 300 ? 'Wallet a surveiller' : 'Wallet disponible',
           body:
             balance < 300
-              ? 'Ton solde devient limite pour acheter un nouveau PDF.'
+              ? 'Ton solde devient limité pour acheter un nouveau PDF.'
               : `Tu peux encore depenser ${formatCoins(balance)} C dans le catalogue.`,
         }
       : {
           id: 'welcome',
           tone: 'neutral' as const,
           title: 'Compte non connecte',
-          body: 'Connecte-toi pour synchroniser ton wallet, tes achats et ta revision.',
+          body: 'Connecte-toi pour synchroniser ton wallet, tes achats et ta révision.',
         },
     continueDocument
       ? {
           id: 'resume',
           tone: 'primary' as const,
-          title: 'Reprendre ta revision',
+          title: 'Reprendre ta révision',
           body: `Le PDF "${continueDocument.title}" est pret a etre rouvert.`,
         }
       : {
           id: 'discover',
           tone: 'primary' as const,
           title: 'Premier pack conseille',
-          body: 'Commence par un pack pour debloquer plusieurs documents en une fois.',
+          body: 'Commence par un pack pour débloquer plusieurs documents en une fois.',
         },
     recentTransaction
       ? {
@@ -1080,8 +1080,8 @@ export default function App() {
       ? `Demande a l assistant un quiz rapide sur "${continueDocument.title}".`
       : 'Utilise les packs pour gagner du temps sur plusieurs PDF lies.',
     purchasedDocuments.length > 0
-      ? 'Ouvre un PDF depuis ta bibliotheque puis utilise "Resume" pour reviser plus vite.'
-      : 'Debloque un premier PDF pour lancer la lecture securisee dans l application.',
+      ? 'Ouvre un PDF depuis ta bibliothèque puis utilise "Resume" pour réviser plus vite.'
+      : 'Débloqué un premier PDF pour lancer la lecture sécurisée dans l'application.',
     balance < 300
       ? 'Garde toujours un petit solde pour acheter un PDF urgent.'
       : 'Ton solde actuel te permet de tester un nouveau document ou un pack.',
@@ -1103,7 +1103,7 @@ export default function App() {
       if (!studentSession) {
         setActiveSection('account');
         setAuthMode('sign-in');
-        setAuthNotice('Connecte-toi pour ouvrir ta bibliotheque.');
+        setAuthNotice('Connecte-toi pour ouvrir ta bibliothèque.');
         setAuthVisible(true);
         return;
       }
@@ -1143,7 +1143,7 @@ export default function App() {
         </View>
         <Text style={styles.modalTitle}>
           {authMode === 'sign-up'
-            ? 'Creer un compte'
+            ? 'Créer un compte'
             : authMode === 'reset'
               ? 'Mot de passe oublie'
               : authMode === 'new-password'
@@ -1263,7 +1263,7 @@ export default function App() {
                         !authUniversity && styles.inputDropdownTextPlaceholder,
                       ]}
                     >
-                      {authUniversity || 'Choisir ton universite'}
+                      {authUniversity || 'Choisir ton université'}
                     </Text>
                     <Text style={styles.inputDropdownArrow}>▼</Text>
                   </Pressable>
@@ -1363,9 +1363,9 @@ export default function App() {
                 {authLoading
                   ? 'Patiente...'
                   : authMode === 'sign-in'
-                    ? 'Entrer dans l application'
+                    ? 'Entrer dans l'application'
                     : authMode === 'sign-up'
-                      ? 'Creer mon espace'
+                      ? 'Créer mon espace'
                       : authMode === 'new-password'
                         ? 'Modifier le mot de passe'
                         : 'Envoyer le lien'}
@@ -1415,7 +1415,7 @@ export default function App() {
                   ? 'Deja un compte ? '
                   : ''}
               <Text style={styles.authLinkText}>
-                {authMode === 'sign-in' ? 'Creer un compte' : authMode === 'sign-up' ? 'Se connecter' : 'Retour a la connexion'}
+                {authMode === 'sign-in' ? 'Créer un compte' : authMode === 'sign-up' ? 'Se connecter' : 'Retour à la connexion'}
               </Text>
             </Text>
           </Pressable>
@@ -1472,7 +1472,7 @@ export default function App() {
               {updateLoading ? (
                 <ActivityIndicator size="small" color="#0ea5e9" />
               ) : (
-                <Text style={{ color: '#0ea5e9', fontSize: 13, fontWeight: '700' }}>Mettre a jour</Text>
+                <Text style={{ color: '#0ea5e9', fontSize: 13, fontWeight: '700' }}>Mettre à jour</Text>
               )}
             </Pressable>
           </View>
@@ -1515,7 +1515,7 @@ export default function App() {
                     <View style={styles.dashboardHeroText}>
                       <Text style={[styles.dashboardEyebrow, { fontSize: 14, color: '#64748B', textTransform: 'none', fontWeight: '500' }]}>👋 Bienvenue sur Campus-Bordes</Text>
                       <Text style={[styles.dashboardTitle, { fontSize: 28, fontWeight: '800', marginTop: 4, marginBottom: 8 }]}>
-                        {studentProfile?.name?.split(' ')[0] ?? 'Etudiant'}
+                        {studentProfile?.name?.split(' ')[0] ?? 'Étudiant'}
                       </Text>
                     </View>
                     <Pressable
@@ -1529,7 +1529,7 @@ export default function App() {
                   
                   <Text style={[styles.dashboardSubtitle, { fontSize: 15, lineHeight: 22, color: '#475569', marginTop: 8 }]}>
                     {studentSession
-                      ? 'Retrouve vite les bons PDF, ouvre ta bibliotheque et reprends ta revision.'
+                      ? 'Retrouve vite les bons PDF, ouvre ta bibliothèque et reprends ta révision.'
                       : 'Trouve des PDF fiables, preview avant achat et revise avec l assistant IA.'}
                   </Text>
                   
@@ -1574,7 +1574,7 @@ export default function App() {
                       <Text style={[styles.dashboardActionKicker, { fontSize: 13, color: '#2563EB', textTransform: 'none', marginBottom: 6 }]}>✨ Decouvre le catalogue</Text>
                       <Text style={[styles.dashboardActionTitle, { fontSize: 20, fontWeight: '700', lineHeight: 28 }]}>Acheter et lire des PDF campus</Text>
                       <Text style={[styles.dashboardActionText, { fontSize: 14, color: '#64748B', lineHeight: 22, marginTop: 8 }]}>
-                        Recherche par universite, filiere et niveau. Preview gratuite, puis lecture avec l'assistant IA.
+                        Recherche par université, filière et niveau. Preview gratuite, puis lecture avec l'assistant IA.
                       </Text>
                     </View>
                     <View style={[styles.dashboardFeatureImageWrap, { marginLeft: 16, borderRadius: 16, overflow: 'hidden' }]}>
@@ -1586,7 +1586,7 @@ export default function App() {
                       <Text style={[styles.homeBenefitText, { color: '#475569', fontSize: 12, fontWeight: '600' }]}>👁️ Preview</Text>
                     </View>
                     <View style={[styles.homeBenefitChip, { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 }]}>
-                      <Text style={[styles.homeBenefitText, { color: '#475569', fontSize: 12, fontWeight: '600' }]}>🔒 Securise</Text>
+                      <Text style={[styles.homeBenefitText, { color: '#475569', fontSize: 12, fontWeight: '600' }]}>🔒 Sécurisé</Text>
                     </View>
                     <View style={[styles.homeBenefitChip, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE', borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 }]}>
                       <Text style={[styles.homeBenefitText, { color: '#1D4ED8', fontSize: 12, fontWeight: '700' }]}>🤖 IA</Text>
@@ -1599,7 +1599,7 @@ export default function App() {
                       onPress={() => openSection('explore')} 
                     />
                     <PrimaryButton
-                      label={continueDocument ? 'Continuer la lecture' : 'Ouvrir ma bibliotheque'}
+                      label={continueDocument ? 'Continuer la lecture' : 'Ouvrir ma bibliothèque'}
                       variant="secondary"
                       fluid
                       onPress={() => openSection('library')}
@@ -1631,7 +1631,7 @@ export default function App() {
                 {featuredHomePack ? (
                   <Pressable style={[styles.homeFeatureStrip, { backgroundColor: '#F8FAFC', borderRadius: 20, padding: 20, marginTop: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 }]} onPress={() => openSection('explore')}>
                     <View style={styles.flex}>
-                      <Text style={[styles.dashboardSectionTitle, { fontSize: 13, textTransform: 'none', color: '#64748B', marginBottom: 4 }]}>⭐ Pack Recommande</Text>
+                      <Text style={[styles.dashboardSectionTitle, { fontSize: 13, textTransform: 'none', color: '#64748B', marginBottom: 4 }]}>⭐ Pack Recommandé</Text>
                       <Text style={[styles.homeFeatureStripTitle, { fontSize: 18, color: '#1E293B', marginBottom: 6 }]}>{featuredHomePack.title}</Text>
                       <Text style={[styles.dashboardInfoSub, { fontSize: 13, color: '#94A3B8' }]} numberOfLines={2}>
                         {featuredHomePack.documentCount} PDF • {featuredHomePack.level} • reduc. {featuredHomePack.discountPercent}%
@@ -1657,7 +1657,7 @@ export default function App() {
                   </View>
                   <View style={styles.flex}>
                     <Text style={[styles.dashboardSectionTitle, { fontSize: 13, textTransform: 'none', color: '#64748B' }]}>Espace Compte</Text>
-                    <Text style={[styles.accountSurfaceTitle, { fontSize: 22, fontWeight: '700' }]}>{studentProfile?.name ?? 'Etudiant Campus-Bordes'}</Text>
+                    <Text style={[styles.accountSurfaceTitle, { fontSize: 22, fontWeight: '700' }]}>{studentProfile?.name ?? 'Étudiant Campus-Bordes'}</Text>
                     <Text style={[styles.dashboardInfoSub, { fontSize: 15, color: '#94A3B8' }]}>
                       {studentProfile?.email ?? studentSession.user.email ?? 'Connecte'}
                     </Text>
@@ -1733,10 +1733,10 @@ export default function App() {
                   <View style={[styles.accountSummaryCard, narrowScreen && styles.accountSummaryCardCompact, { borderRadius: 24, padding: 20 }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                       <BookOpen size={14} color="#64748B" style={{ marginRight: 6 }} />
-                      <Text style={[styles.dashboardSectionTitle, { fontSize: 13, textTransform: 'none', color: '#64748B', marginBottom: 0 }]}>Bibliotheque</Text>
+                      <Text style={[styles.dashboardSectionTitle, { fontSize: 13, textTransform: 'none', color: '#64748B', marginBottom: 0 }]}>Bibliothèque</Text>
                     </View>
                     <Text style={[styles.accountSummaryValue, { fontSize: 24 }]}>{hasSubscription ? 'Illimite' : purchasedDocuments.length}</Text>
-                    <Text style={[styles.dashboardInfoSub, { marginTop: 8, fontSize: 13, color: '#94A3B8' }]}>{hasSubscription ? 'Abonnement actif.' : 'PDF debloques.'}</Text>
+                    <Text style={[styles.dashboardInfoSub, { marginTop: 8, fontSize: 13, color: '#94A3B8' }]}>{hasSubscription ? 'Abonnement actif.' : 'PDF débloqués.'}</Text>
                   </View>
                 </View>
 
@@ -1746,11 +1746,11 @@ export default function App() {
                   
                   {[
                     { icon: '🎁', title: '3 PDFs gratuits', desc: 'Choisis tes premiers cours dans le catalogue', color: '#F59E0B', bg: '#FFFBEB' },
-                    { icon: '📚', title: '3 500+ PDFs disponibles', desc: 'Acces a tout le catalogue Universites & Filieres', color: '#2563EB', bg: '#EFF6FF' },
+                    { icon: '📚', title: '3 500+ PDFs disponibles', desc: 'Accès à tout le catalogue Universités & Filières', color: '#2563EB', bg: '#EFF6FF' },
                     { icon: '🤖', title: '5 requetes IA/jour', desc: 'Fiches, resumes et quiz sur tes PDF', color: '#7C3AED', bg: '#F5F3FF' },
                     { icon: '💳', title: 'Wallet des 500 FCFA', desc: 'Recharge via MTN MoMo ou Orange Money', color: '#059669', bg: '#ECFDF5' },
                     { icon: '📱', title: 'Sync multi-appareils', desc: 'Ton compte et tes achats synchronises', color: '#0891B2', bg: '#ECFEFF' },
-                    { icon: '📥', title: 'Mode hors-ligne', desc: 'Lis tes PDF sans connexion apres telechargement', color: '#DC2626', bg: '#FEF2F2' },
+                    { icon: '📥', title: 'Mode hors-ligne', desc: 'Lis tes PDF sans connexion après téléchargement', color: '#DC2626', bg: '#FEF2F2' },
                   ].map((perk) => (
                     <View key={perk.title} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: perk.bg, borderRadius: 14, padding: 12, gap: 12 }}>
                       <Text style={{ fontSize: 24 }}>{perk.icon}</Text>
@@ -1864,12 +1864,12 @@ export default function App() {
                 ) : null}
 
                 <View style={[styles.accountSupportCard, { marginTop: 32, backgroundColor: '#F8FAFC', padding: 24, borderRadius: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 }]}>
-                  <Text style={[styles.accountSupportTitle, { fontSize: 18, color: '#1E293B', marginBottom: 8 }]}>📚 Bibliotheque securisee</Text>
+                  <Text style={[styles.accountSupportTitle, { fontSize: 18, color: '#1E293B', marginBottom: 8 }]}>📚 Bibliothèque sécurisée</Text>
                   <Text style={[styles.dashboardInfoSub, { fontSize: 14, color: '#64748B', lineHeight: 22 }]}>
-                    Retrouve tes documents achetes pour les relire, generer des quiz ou utiliser l'assistant IA hors catalogue.
+                    Retrouve tes documents achetés pour les relire, générer des quiz ou utiliser l'assistant IA hors catalogue.
                   </Text>
                   <Pressable style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center' }} onPress={() => openSection('library')}>
-                    <Text style={{ color: '#2563EB', fontWeight: '700', fontSize: 15 }}>Ouvrir ma bibliotheque</Text>
+                    <Text style={{ color: '#2563EB', fontWeight: '700', fontSize: 15 }}>Ouvrir ma bibliothèque</Text>
                     <Text style={{ color: '#2563EB', fontWeight: 'bold', fontSize: 18, marginLeft: 6 }}>→</Text>
                   </Pressable>
                 </View>
@@ -1880,7 +1880,7 @@ export default function App() {
               <View style={styles.premiumHero}>
                 <Text style={styles.premiumCrown}>👑</Text>
                 <Text style={styles.premiumTitle}>Passe en mode Premium</Text>
-                <Text style={styles.premiumSubtitle}>Abonne-toi pour debloquer tous les documents et profiter de l'IA sans limites.</Text>
+                <Text style={styles.premiumSubtitle}>Abonnez-vous pour débloquer tous les documents et profiter de l'IA sans limites.</Text>
               </View>
 
               <View style={styles.premiumPlansContainer}>
@@ -1889,27 +1889,27 @@ export default function App() {
                   <Text style={styles.premiumPlanName}>Basic</Text>
                   <Text style={styles.premiumPlanPrice}>1 000 <Text style={styles.premiumPlanPriceUnit}>C / mois</Text></Text>
                   <View style={styles.premiumPlanFeatures}>
-                    <Text style={styles.premiumPlanFeature}>✓ Acces ILLIMITE a tous les PDF</Text>
-                    <Text style={styles.premiumPlanFeature}>✓ Lecture securisee hors-ligne</Text>
+                    <Text style={styles.premiumPlanFeature}>✓ Accès ILLIMITE a tous les PDF</Text>
+                    <Text style={styles.premiumPlanFeature}>✓ Lecture sécurisée hors-ligne</Text>
                     <Text style={[styles.premiumPlanFeature, styles.premiumPlanFeatureMuted]}>✗ Assistant IA inclus</Text>
                   </View>
                   <View style={{ marginTop: 20 }}>
-                    <PrimaryButton label={subscriptionTier === 'basic' ? "Actif" : "S'abonner a Basic"} variant={subscriptionTier === 'basic' ? 'secondary' : 'primary'} onPress={() => buySubscription('basic')} />
+                    <PrimaryButton label={subscriptionTier === 'basic' ? "Actif" : "S'abonner à Basic"} variant={subscriptionTier === 'basic' ? 'secondary' : 'primary'} onPress={() => buySubscription('basic')} />
                   </View>
                 </View>
 
                 <View style={[styles.premiumPlanCard, styles.premiumPlanCardFeatured, subscriptionTier === 'premium' && styles.premiumPlanCardActive]}>
-                  <View style={styles.premiumFeaturedBadge}><Text style={styles.premiumFeaturedBadgeText}>Recommande</Text></View>
+                  <View style={styles.premiumFeaturedBadge}><Text style={styles.premiumFeaturedBadgeText}>Recommandé</Text></View>
                   <Text style={[styles.premiumPlanName, { color: '#FFFFFF' }]}>Premium</Text>
                   <Text style={[styles.premiumPlanPrice, { color: '#FFFFFF' }]}>2 000 <Text style={[styles.premiumPlanPriceUnit, { color: '#E0E7FF' }]}>C / mois</Text></Text>
                   <View style={styles.premiumPlanFeatures}>
-                    <Text style={[styles.premiumPlanFeature, { color: '#FFFFFF' }]}>✓ Acces ILLIMITE a tous les PDF</Text>
-                    <Text style={[styles.premiumPlanFeature, { color: '#FFFFFF' }]}>✓ Lecture securisee hors-ligne</Text>
-                    <Text style={[styles.premiumPlanFeature, { color: '#FFFFFF', fontWeight: 'bold' }]}>✓ 100 Credits IA / mois inclus</Text>
+                    <Text style={[styles.premiumPlanFeature, { color: '#FFFFFF' }]}>✓ Accès ILLIMITE a tous les PDF</Text>
+                    <Text style={[styles.premiumPlanFeature, { color: '#FFFFFF' }]}>✓ Lecture sécurisée hors-ligne</Text>
+                    <Text style={[styles.premiumPlanFeature, { color: '#FFFFFF', fontWeight: 'bold' }]}>✓ 100 Crédits IA / mois inclus</Text>
                   </View>
                   <View style={{ marginTop: 20 }}>
                     <PrimaryButton 
-                      label={subscriptionTier === 'premium' ? "Actif" : "S'abonner a Premium"} 
+                      label={subscriptionTier === 'premium' ? "Actif" : "S'abonner à Premium"} 
                       onPress={() => buySubscription('premium')} 
                       variant={subscriptionTier === 'premium' ? 'secondary' : 'primary'}
                       style={subscriptionTier !== 'premium' ? { backgroundColor: '#FCD34D' } : undefined}
@@ -1961,7 +1961,7 @@ export default function App() {
                   <Text style={[styles.premiumSectionTitle, { fontSize: 20, color: '#1E293B', fontWeight: '800' }]}>Besoin de Coins ?</Text>
                 </View>
                 <Text style={[styles.premiumSectionSubtitle, { fontSize: 14, color: '#64748B', lineHeight: 20 }]}>
-                  Recharge ton portefeuille via Mobile Money (MoMo/OM) pour souscrire a un abonnement ou acheter des packs IA.
+                  Recharge ton portefeuille via Mobile Money (MoMo/OM) pour souscrire à un abonnement ou acheter des packs IA.
                 </Text>
                 <View style={{ marginTop: 24 }}>
                   <PrimaryButton label="Recharger mon Wallet" onPress={() => setRechargeVisible(true)} variant="primary" fluid />
@@ -2023,7 +2023,7 @@ export default function App() {
             </View>
             <View style={styles.flex}>
               <Text style={styles.cardTitle}>
-                {studentProfile?.name ?? 'Etudiant Campus-Bordes'}
+                {studentProfile?.name ?? 'Étudiant Campus-Bordes'}
               </Text>
               <Text style={styles.bodyMuted}>
                 {`${studentProfile?.email ?? studentSession?.user.email ?? 'Connecte'}${syncingAccount ? ' - sync...' : ''}`}
@@ -2052,7 +2052,7 @@ export default function App() {
                 openSection('library');
               }}
             >
-              <Text style={styles.accountQuickActionLabel}>Bibliotheque</Text>
+              <Text style={styles.accountQuickActionLabel}>Bibliothèque</Text>
               <Text style={styles.accountQuickActionValue}>{`${purchasedDocuments.length} PDF`}</Text>
             </Pressable>
             <Pressable
@@ -2110,7 +2110,7 @@ export default function App() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Montant a ajouter</Text>
+              <Text style={styles.inputLabel}>Montant à ajouter</Text>
               <TextInput keyboardType="numeric" value={rechargeAmount} onChangeText={setRechargeAmount} style={styles.input} />
             </View>
 
@@ -2185,33 +2185,33 @@ export default function App() {
         <ModalCard>
           <View style={styles.rechargeHero}>
             <Text style={styles.modalTitle}>Forfaits & IA</Text>
-            <Text style={styles.bodyMuted}>Passe a la vitesse superieure pour tes revisions.</Text>
+            <Text style={styles.bodyMuted}>Passe à la vitesse supérieure pour tes révisions.</Text>
           </View>
 
           <View style={styles.walletPanel}>
             <Text style={styles.kicker}>Forfait actuel: {subscriptionTier === 'premium' ? 'Premium' : subscriptionTier === 'basic' ? 'Basic' : 'Gratuit'}</Text>
             {subscriptionExpiresAt && <Text style={styles.bodyMuted}>Expire le: {new Date(subscriptionExpiresAt).toLocaleDateString('fr-CM')}</Text>}
-            <Text style={styles.walletAmount}>{iaCredits} Credits IA</Text>
+            <Text style={styles.walletAmount}>{iaCredits} Crédits IA</Text>
             <Text style={styles.walletHint}>Solde Wallet: {formatCoins(balance)} C</Text>
           </View>
 
           <ScrollView style={{ maxHeight: 400 }}>
             <View style={styles.authFormCard}>
-              <Text style={styles.inputLabel}>Abonnements (Acces illimite PDF)</Text>
+              <Text style={styles.inputLabel}>Abonnements (Accès illimité PDF)</Text>
               
               <View style={[styles.rechargePreset, { marginBottom: 12, padding: 12 }]}>
                 <Text style={styles.dashboardSectionTitle}>Basic (1 000 C / mois)</Text>
-                <Text style={styles.bodyMuted}>Acces a TOUS les PDF en illimite. Pas de credits IA inclus.</Text>
+                <Text style={styles.bodyMuted}>Accès à TOUS les PDF en illimite. Pas de crédits IA inclus.</Text>
                 <View style={{ marginTop: 8 }}>
-                  <PrimaryButton label="S'abonner a Basic" onPress={() => buySubscription('basic')} />
+                  <PrimaryButton label="S'abonner à Basic" onPress={() => buySubscription('basic')} />
                 </View>
               </View>
 
               <View style={[styles.rechargePreset, { marginBottom: 12, padding: 12 }]}>
                 <Text style={styles.dashboardSectionTitle}>Premium (2 000 C / mois)</Text>
-                <Text style={styles.bodyMuted}>Acces illimite PDF + 100 Credits IA inclus pour poser tes questions au document.</Text>
+                <Text style={styles.bodyMuted}>Accès illimité PDF + 100 Crédits IA inclus pour poser tes questions au document.</Text>
                 <View style={{ marginTop: 8 }}>
-                  <PrimaryButton label="S'abonner a Premium" onPress={() => buySubscription('premium')} />
+                  <PrimaryButton label="S'abonner à Premium" onPress={() => buySubscription('premium')} />
                 </View>
               </View>
 
@@ -2315,7 +2315,7 @@ export default function App() {
             <Text style={styles.bodyMuted}>Recharge via MTN MoMo ou Orange Money pour continuer cet achat PDF.</Text>
           </View>
           <View style={styles.insufficientPanel}>
-            <Text style={styles.kicker}>Action recommandee</Text>
+            <Text style={styles.kicker}>Action recommandée</Text>
             <Text style={styles.insufficientTitle}>Ajoute des coins puis reviens sur ton achat.</Text>
             <Text style={styles.bodyMuted}>Ton wallet reprendra ensuite le flux d achat plus naturellement.</Text>
           </View>
@@ -2344,7 +2344,7 @@ export default function App() {
           onPress={() => setUniversityModalVisible(false)}
         >
           <View style={styles.dropdownModalCard} onStartShouldSetResponder={() => true}>
-            <Text style={styles.dropdownModalTitle}>Choisis ton universite</Text>
+            <Text style={styles.dropdownModalTitle}>Choisis ton université</Text>
             <ScrollView style={styles.dropdownScrollView} showsVerticalScrollIndicator={false}>
               {CAMEROON_UNIVERSITIES.map((univ) => (
                 <Pressable
