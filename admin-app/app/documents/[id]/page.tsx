@@ -12,6 +12,25 @@ import {
 import { Document as DocxDocument, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } from 'docx';
 
 import { authClient } from '@/lib/auth-client';
+import { ImagePlaceholder } from './extensions/ImagePlaceholder';
+import { htmlToDocxParagraphs } from './lib/html-to-docx';
+
+/**
+ * Helper: convert a margin preset name into the editor padding (in pixels).
+ * Mirrors what the export PDF will use; keep in sync with export-css.ts.
+ */
+const MARGIN_PADDING: Record<string, string> = {
+  narrow: '1.5cm',
+  normal: '2.5cm',
+  wide: '3cm',
+};
+
+/**
+ * Helper: convert a margin preset name into the editor padding value.
+ */
+function marginToCss(m: string): string {
+  return MARGIN_PADDING[m] ?? MARGIN_PADDING.normal;
+}
 
 // SSR-safe alert/confirm — `window.alert` / `window.confirm` don't exist
 // during server rendering. We silently no-op on the server; the user will
@@ -34,6 +53,9 @@ type Document = {
   margins: string;
   cover_template: string;
   cover_data: Record<string, any>;
+  // Theme colors are optional and may be missing from older rows.
+  primary_color?: string | null;
+  secondary_color?: string | null;
 };
 
 type DocumentSection = {
@@ -52,6 +74,11 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
   const isMobileMode = searchParams.get('mode') === 'mobile';
 
   const { data: session, isPending: sessionLoading } = authClient.useSession();
+
+  // Mobile view: 0 = control panel (chat/style/cover), 1 = editor. The two
+  // 380px sidebars from desktop don't fit on a phone, so we collapse them
+  // into a single tabbed pane that the user toggles.
+  const [mobileTab, setMobileTab] = useState<'panel' | 'editor'>('editor');
 
   const [document, setDocument] = useState<Document | null>(null);
   const [sections, setSections] = useState<DocumentSection[]>([]);
@@ -132,7 +159,7 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
 
   // 2. Initialize TipTap Editor — create ONCE, mutate content on section change.
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [StarterKit, ImagePlaceholder],
     content: '',
     onUpdate: ({ editor }) => {
       if (!activeSectionId) return;
@@ -346,15 +373,30 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
   };
 
   // 6.7 Interactive Image Placeholder Handlers
+  //
+  // The placeholder is now a real TipTap node (ImagePlaceholder extension).
+  // Clicking it opens a file picker; we resolve the clicked node's ProseMirror
+  // position and use setUploadedSrc to swap it for the uploaded image.
   const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    const placeholder = target.closest('.image-placeholder') as HTMLElement;
-    if (placeholder) {
+    // The DOM may contain either a fresh placeholder (the one rendered by our
+    // extension) or an uploaded figure. We treat both as "open picker".
+    const placeholder = target.closest('.image-placeholder') as HTMLElement | null;
+    if (!placeholder || !editor || editor.isDestroyed) return;
+
+    // Walk up to the nearest ProseMirror node DOM element to find the position.
+    // We use a small heuristic: scan the doc to find a node whose DOM matches.
+    const dom = placeholder.closest('[data-node]') as HTMLElement | null;
+    if (!dom) {
+      // Fallback: just open the picker. The user can still replace via toolbar.
       clickedPlaceholderRef.current = placeholder;
-      if (fileInputRef.current) {
-        fileInputRef.current.click();
-      }
+      fileInputRef.current?.click();
+      return;
     }
+    const pos = editor.view.posAtDOM(dom, 0);
+    clickedPlaceholderRef.current = placeholder;
+    (clickedPlaceholderRef.current as any).__pos = pos;
+    fileInputRef.current?.click();
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -364,22 +406,15 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = reader.result as string;
-      const caption = clickedPlaceholderRef.current?.getAttribute('data-caption') || 'Image';
-      
-      if (clickedPlaceholderRef.current) {
-        const imgHtml = `<figure class="my-6 text-center"><img src="${base64}" alt="${caption}" class="mx-auto rounded-lg max-w-full shadow-md" /><figcaption class="text-xs text-slate-400 mt-2 font-sans italic">${caption}</figcaption></figure>`;
-        const currentHtml = editor.getHTML();
-        const placeholderOuter = clickedPlaceholderRef.current.outerHTML;
-        
-        if (currentHtml.includes(placeholderOuter)) {
-          editor.commands.setContent(currentHtml.replace(placeholderOuter, imgHtml));
-        } else {
-          editor.commands.insertContent(imgHtml);
-        }
-      } else {
-        editor.commands.insertContent(`<img src="${base64}" alt="${caption}" />`);
+      const pos = (clickedPlaceholderRef.current as any)?.__pos as number | undefined;
+
+      if (typeof pos === 'number' && pos >= 0) {
+        editor.commands.setUploadedSrc(pos, base64);
+      } else if (clickedPlaceholderRef.current) {
+        // Fallback: insert as a new image node (legacy path).
+        editor.commands.insertContent(`<img src="${base64}" alt="Image" />`);
       }
-      
+
       clickedPlaceholderRef.current = null;
       if (fileInputRef.current) fileInputRef.current.value = '';
     };
@@ -471,7 +506,6 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
         new Paragraph({ children: [new PageBreak()] }),
       ];
 
-      // Parse and map html nodes to docx elements
       sections.forEach((sec) => {
         const lower = sec.title.toLowerCase();
         if (lower === 'page de garde') return;
@@ -479,20 +513,19 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
         docElements.push(new Paragraph({
           text: sec.title,
           heading: HeadingLevel.HEADING_1,
-          spacing: { before: 240, after: 120 }
+          spacing: { before: 240, after: 120 },
         }));
 
         if (lower === 'sommaire') {
-          sections.filter(s => s.title.toLowerCase() !== 'page de garde' && s.title.toLowerCase() !== 'sommaire')
-            .forEach(s => {
+          sections
+            .filter((s) => s.title.toLowerCase() !== 'page de garde' && s.title.toLowerCase() !== 'sommaire')
+            .forEach((s) => {
               docElements.push(new Paragraph({ text: `- ${s.title}` }));
             });
         } else {
-          const content = sec.content_html || '';
-          // Strip HTML tags for simplicity in word
-          const plainText = content.replace(/<[^>]+>/g, '').trim();
-          if (plainText) {
-            docElements.push(new Paragraph({ text: plainText }));
+          const html = sec.content_html || '';
+          if (html.trim()) {
+            docElements.push(...htmlToDocxParagraphs(html));
           } else {
             docElements.push(new Paragraph({ text: '...' }));
           }
@@ -502,10 +535,12 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
       });
 
       const doc = new DocxDocument({
-        sections: [{
-          properties: {},
-          children: docElements,
-        }]
+        sections: [
+          {
+            properties: {},
+            children: docElements,
+          },
+        ],
       });
 
       const blob = await Packer.toBlob(doc);
@@ -588,8 +623,35 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
 
       {/* 2. Workspace Layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Control Panel - Onboarding Chat, Structure, Cover & Style */}
-        <aside className="w-[380px] border-r border-slate-800 bg-slate-900/30 flex flex-col shrink-0">
+        {/* Mobile tab toggle */}
+        {isMobileMode && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex bg-slate-900 border border-slate-800 rounded-full p-1 text-[10px] font-bold shadow-lg">
+            <button
+              onClick={() => setMobileTab('panel')}
+              className={`px-3 py-1 rounded-full transition ${mobileTab === 'panel' ? 'bg-emerald-600 text-white' : 'text-slate-400'}`}
+            >
+              ⚙️ Panneau
+            </button>
+            <button
+              onClick={() => setMobileTab('editor')}
+              className={`px-3 py-1 rounded-full transition ${mobileTab === 'editor' ? 'bg-emerald-600 text-white' : 'text-slate-400'}`}
+            >
+              ✍️ Éditeur
+            </button>
+          </div>
+        )}
+
+        {/* Left Control Panel - Onboarding Chat, Structure, Cover & Style.
+            In mobile mode we hide it when the editor tab is active. */}
+        <aside
+          className={`${
+            isMobileMode
+              ? mobileTab === 'panel'
+                ? 'flex w-full'
+                : 'hidden'
+              : 'flex w-[380px]'
+          } border-r border-slate-800 bg-slate-900/30 flex-col shrink-0`}
+        >
           {/* Tabs Selector */}
           <div className="grid grid-cols-4 border-b border-slate-800 bg-slate-900/50 p-1 text-[11px] font-bold">
             <button
@@ -827,6 +889,7 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
                     <option value="Arial">Arial (Standard)</option>
                     <option value="Inter">Inter (Moderne)</option>
                     <option value="Calibri">Calibri (Microsoft)</option>
+                    <option value="Georgia">Georgia (Élégant)</option>
                   </select>
                 </div>
                 <div>
@@ -853,7 +916,50 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
                     <option value="wide">Large (3.0 cm)</option>
                   </select>
                 </div>
-                <div>
+
+                {/* Theme colors — apply live to H1 / H2 in the preview */}
+                <div className="pt-2 border-t border-slate-800 space-y-3">
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold mb-1.5 uppercase">
+                      Couleur primaire (titres H1)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={document.primary_color || '#10B981'}
+                        onChange={(e) => updateSettings({ primary_color: e.target.value })}
+                        className="h-8 w-10 rounded border border-slate-800 bg-slate-950 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={document.primary_color || '#10B981'}
+                        onChange={(e) => updateSettings({ primary_color: e.target.value })}
+                        className="flex-1 bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none font-mono"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold mb-1.5 uppercase">
+                      Couleur secondaire (sous-titres H2)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={document.secondary_color || '#64748B'}
+                        onChange={(e) => updateSettings({ secondary_color: e.target.value })}
+                        className="h-8 w-10 rounded border border-slate-800 bg-slate-950 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={document.secondary_color || '#64748B'}
+                        onChange={(e) => updateSettings({ secondary_color: e.target.value })}
+                        className="flex-1 bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800">
                   <label className="block text-[10px] text-slate-400 font-bold mb-1.5 uppercase">Thème page de garde</label>
                   <select
                     value={document.cover_template}
@@ -871,7 +977,15 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
         </aside>
 
         {/* Central Editor View */}
-        <main className="flex-1 flex flex-col bg-slate-950 overflow-hidden">
+        <main
+          className={`${
+            isMobileMode
+              ? mobileTab === 'editor'
+                ? 'flex w-full'
+                : 'hidden'
+              : 'flex flex-1'
+          } flex-col bg-slate-950 overflow-hidden`}
+        >
           {/* Editor Header Toolbar (TipTap action) */}
           {activeSection && activeSection.title.toLowerCase() !== 'page de garde' && activeSection.title.toLowerCase() !== 'sommaire' && editor && (
             <div className="flex h-11 items-center gap-1 border-b border-slate-800 bg-slate-900/30 px-4">
@@ -922,9 +1036,21 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
             </div>
           )}
 
-          {/* Core Content Box */}
+          {/* Core Content Box — preview applies the user's style choices live */}
           <div className="flex-1 overflow-y-auto p-8 flex justify-center bg-slate-900/10">
-            <div className="w-full max-w-2xl bg-slate-900/40 border border-slate-800/80 rounded-xl p-8 shadow-2xl flex flex-col">
+            <div
+              className="w-full max-w-2xl bg-slate-900/40 border border-slate-800/80 rounded-xl p-8 shadow-2xl flex flex-col"
+              style={{
+                // Live preview reflects the user's design choices instantly.
+                fontFamily: document.font_family,
+                lineHeight: document.line_spacing,
+                // Inject the theme colors as CSS variables; consumed by headings.
+                // --doc-primary / --doc-secondary are read in the prose CSS below.
+                ['--doc-primary' as any]: document.primary_color || '#10B981',
+                ['--doc-secondary' as any]: document.secondary_color || '#64748B',
+                padding: marginToCss(document.margins),
+              }}
+            >
               {activeSection ? (
                 activeSection.title.toLowerCase() === 'page de garde' ? (
                   // Cover Page Form Editor
@@ -1040,13 +1166,16 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
                   // TipTap Editor Content
                   <div className="flex-1 flex flex-col min-h-[400px]" onClick={handleEditorClick}>
                     <h2 className="text-xl font-bold text-slate-200 mb-6 border-b border-slate-800 pb-2">{activeSection.title}</h2>
-                    <EditorContent editor={editor} className="flex-1 text-slate-300 font-serif leading-relaxed text-base focus:outline-none prose prose-invert max-w-none" />
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      onChange={handleFileChange} 
-                      accept="image/*" 
-                      className="hidden" 
+                    <EditorContent
+                      editor={editor}
+                      className="flex-1 text-slate-300 leading-relaxed text-base focus:outline-none max-w-none document-editor-prose"
+                    />
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="image/*"
+                      className="hidden"
                     />
                   </div>
                 )
@@ -1059,71 +1188,14 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
           </div>
         </main>
 
-        {/* Right Sidebar - Styling & AI Assistant */}
-        <aside className="w-80 border-l border-slate-800 bg-slate-900/20 p-5 flex flex-col gap-6 overflow-y-auto">
-          {/* Style Configuration */}
-          <div>
-            <div className="flex items-center gap-2 mb-4 text-emerald-400">
-              <Settings2 size={16} />
-              <h3 className="text-xs font-bold uppercase tracking-wider">Mise en forme</h3>
-            </div>
-            
-            <div className="space-y-4 bg-slate-900/60 border border-slate-800/80 p-4 rounded-lg">
-              <div>
-                <label className="block text-xs text-slate-400 font-bold mb-1.5 uppercase">Police de texte</label>
-                <select 
-                  value={document.font_family}
-                  onChange={(e) => updateSettings({ font_family: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none"
-                >
-                  <option value="Times New Roman">Times New Roman (Classique)</option>
-                  <option value="Arial">Arial (Standard)</option>
-                  <option value="Inter">Inter (Moderne)</option>
-                  <option value="Calibri">Calibri (Microsoft)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs text-slate-400 font-bold mb-1.5 uppercase">Interligne</label>
-                <select 
-                  value={document.line_spacing}
-                  onChange={(e) => updateSettings({ line_spacing: Number(e.target.value) })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none"
-                >
-                  <option value="1.15">1.15</option>
-                  <option value="1.5">1.5 (Conseillé)</option>
-                  <option value="2">2.0 (Double)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs text-slate-400 font-bold mb-1.5 uppercase">Marges de page</label>
-                <select 
-                  value={document.margins}
-                  onChange={(e) => updateSettings({ margins: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none"
-                >
-                  <option value="normal">Normale (2.5 cm)</option>
-                  <option value="narrow">Étroite (1.5 cm)</option>
-                  <option value="wide">Large (3.0 cm)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs text-slate-400 font-bold mb-1.5 uppercase">Thème page de garde</label>
-                <select 
-                  value={document.cover_template}
-                  onChange={(e) => updateSettings({ cover_template: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none"
-                >
-                  <option value="classic">Classique Universitaire</option>
-                  <option value="minimalist">Minimaliste Épuré</option>
-                  <option value="tech">Technique Moderne (Sombre)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
+        {/* Right Sidebar - AI Assistant only (Style moved to left "Design" tab).
+            Hidden in mobile mode: the AI assistant is reachable from the
+            left panel tab, so we keep one pane at a time. */}
+        <aside
+          className={`${
+            isMobileMode ? 'hidden' : 'flex'
+          } w-80 border-l border-slate-800 bg-slate-900/20 p-5 flex-col gap-6 overflow-y-auto`}
+        >
           {/* AI Assistant Editor Panel */}
           <div className="flex-1 flex flex-col">
             <div className="flex items-center gap-2 mb-4 text-amber-400">

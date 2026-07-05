@@ -110,11 +110,15 @@ create table if not exists public.app_documents (
   cover_template text not null default 'classic',
   cover_data jsonb not null default '{}',
   document_metadata jsonb not null default '{}',
+  primary_color text not null default '#10B981',
+  secondary_color text not null default '#64748B',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 alter table public.app_documents add column if not exists document_metadata jsonb not null default '{}';
+alter table public.app_documents add column if not exists primary_color text not null default '#10B981';
+alter table public.app_documents add column if not exists secondary_color text not null default '#64748B';
 
 create table if not exists public.app_document_sections (
   id uuid primary key default gen_random_uuid(),

@@ -11,6 +11,11 @@ export type Document = {
   margins: string;
   cover_template: string;
   cover_data: Record<string, any>;
+  // Theme colors — applied live to H1 (primary) and H2 (secondary) in the
+  // editor preview and cover page. Optional because some legacy rows may
+  // predate the migration; the UI falls back to its own defaults.
+  primary_color?: string | null;
+  secondary_color?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -153,6 +158,8 @@ export async function updateDocumentSettings(
     margins?: string;
     cover_template?: string;
     cover_data?: Record<string, any>;
+    primary_color?: string | null;
+    secondary_color?: string | null;
   }
 ): Promise<Document> {
   const fields: string[] = [];

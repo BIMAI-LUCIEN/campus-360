@@ -89,23 +89,44 @@ export async function POST(request: NextRequest) {
       );
       const sections = sectionsRes.rows;
 
+      // Heuristic: detect whether the student mentioned a stage / internship.
+      // We scan the user messages for keywords. If none found, we switch the
+      // system prompt to a "theoretical" mode that compensates with deeper
+      // academic research / literature review / methodology framing.
+      //
+      // This is a coarse signal but matches what the chat d'onboarding asks:
+      // "as-tu effectué un stage ?" is the very first question it poses.
+      const userMessagesText = messages
+        .filter((m) => m.role === 'user')
+        .map((m) => m.content.toLowerCase())
+        .join(' \n ');
+      const hasStage =
+        /\b(stage|stagiaire|entreprise|mission|alternance|cdd|cdi|emploi|poste)\b/.test(userMessagesText) &&
+        !/(pas de stage|aucun stage|sans stage|pas de stage|n['’]ai pas (fait|effectué))/i.test(userMessagesText);
+
       // Generate content for each editable section
       for (const section of sections) {
         const titleLower = section.title.toLowerCase();
         // Skip cover page and summary
         if (titleLower === 'page de garde' || titleLower === 'sommaire') continue;
 
+        const stageGuidance = hasStage
+          ? `L'étudiant a effectué un stage. Rédige cette section en te basant sur son vécu en entreprise : cite des missions concrètes, des outils utilisés, des difficultés rencontrées et les compétences développées. Évite le générique ; ancre chaque paragraphe dans le contexte fourni dans le chat d'onboarding.\n`
+          : `L'étudiant n'a PAS effectué de stage. Rédige cette section de manière académique et théorique : mobilise des références bibliographiques types (auteurs reconnus du domaine), construis une revue de littérature structurée, propose une méthodologie hypothétique rigoureuse, et replace le sujet dans son cadre scientifique. Sois particulièrement détaillé sur les concepts clés et les modèles théoriques pertinents.\n`;
+
         const systemPrompt =
           `Tu es un rédacteur universitaire et professionnel chevronné.\n` +
           `Rédige le contenu complet de la section : "${section.title}" pour le document "${document.title}" (${documentType}).\n` +
           `Prends en compte les informations fournies dans la discussion d'onboarding ci-dessous.\n\n` +
+          `${stageGuidance}\n` +
           `Règles de mise en page :\n` +
           `- Si un organigramme, un graphique, une photo d'équipe ou un schéma est utile dans ce chapitre, insère un placeholder d'image exactement sous cette forme :\n` +
-          `  <div class="image-placeholder bg-slate-900 border border-dashed border-slate-700 rounded-lg p-6 text-center cursor-pointer my-4" data-caption="[METS ICI LA LÉGENDE DE L'IMAGE]">` +
-          `     <span class="text-2xl">📷</span><p class="text-xs text-slate-400 mt-1 font-sans">Cliquez pour insérer l'image : [METS ICI LE TITRE DE L'IMAGE]</p>` +
+          `  <div class="image-placeholder bg-slate-900 border border-dashed border-slate-700 rounded-lg p-6 text-center cursor-pointer my-4" data-caption="[METS ICI LA LÉGENDE DE L'IMAGE]">\n` +
+          `     <span class="text-2xl">📷</span><p class="text-xs text-slate-400 mt-1 font-sans">Cliquez pour insérer l'image : [METS ICI LE TITRE DE L'IMAGE]</p>\n` +
           `  </div>\n` +
           `- Retourne UNIQUEMENT du HTML propre et structuré. Pas de blocs de code markdown.\n` +
-          `- Sois extrêmement complet, rigoureux et universitaire dans ton écriture.`;
+          `- Sois extrêmement complet, rigoureux et universitaire dans ton écriture. Utilise des sous-titres <h2> et <h3> pour structurer les longs passages.\n` +
+          `- Les paragraphes doivent faire au moins 4-6 phrases chacun. Évite les listes à puces pour le contenu narratif — privilégie-les uniquement pour les étapes procédurales.`;
 
         const userPrompt = 
           `Voici la discussion d'onboarding contenant toutes les informations :\n` +

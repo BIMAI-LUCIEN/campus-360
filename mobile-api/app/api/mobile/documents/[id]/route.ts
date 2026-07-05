@@ -6,6 +6,14 @@ import { getDocumentById, getDocumentSections, updateDocumentSettings, deleteDoc
 
 export const runtime = 'nodejs';
 
+// Hex color helper: accepts `#RGB`, `#RRGGBB`, or `#RRGGBBAA` (case-insensitive).
+// Editor color picker always sends `#RRGGBB`, but we accept the other forms
+// so future tooling (named colors, alpha) can write into the same column.
+const hexColorSchema = z
+  .string()
+  .trim()
+  .regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/, 'Couleur hex invalide (#RGB, #RRGGBB ou #RRGGBBAA)');
+
 const updateDocumentSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
   description: z.string().trim().max(1000).optional(),
@@ -15,6 +23,8 @@ const updateDocumentSchema = z.object({
   cover_template: z.enum(['classic', 'minimalist', 'tech']).optional(),
   cover_data: z.record(z.string(), z.any()).optional(),
   document_metadata: z.record(z.string(), z.any()).optional(),
+  primary_color: hexColorSchema.optional(),
+  secondary_color: hexColorSchema.optional(),
 });
 
 type RouteContext = { params: Promise<{ id: string }> };
