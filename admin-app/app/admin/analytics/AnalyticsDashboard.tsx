@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Calendar,
@@ -12,6 +12,15 @@ import {
 } from 'lucide-react';
 import type { PdfAnalyticsSummary } from '@/lib/supabase-pdf';
 import { DashboardCharts } from './DashboardCharts';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+} from 'recharts';
 
 interface AnalyticsDashboardProps {
   initialData: PdfAnalyticsSummary;
@@ -26,6 +35,17 @@ const EVENT_LABELS: Record<string, string> = {
   purchase_failed: 'Échec de paiement',
   search: 'Recherche',
   assistant_question: "Question à l'IA",
+};
+
+const tooltipStyle = {
+  backgroundColor: '#ffffff',
+  border: '1px solid #c3c6d7',
+  borderRadius: 8,
+  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+  padding: '10px 14px',
+  color: '#0b1c30',
+  fontFamily: 'Inter, sans-serif',
+  fontSize: 12,
 };
 
 const formatInt = (v: number) => new Intl.NumberFormat('fr-FR').format(v);
@@ -137,6 +157,19 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
     data.totals.previews > 0
       ? Math.round((data.totals.purchases / data.totals.previews) * 100)
       : 0;
+
+  const walletChartData = useMemo(() => {
+    if (!data.wallet) return [];
+    const labels = ['Semaine -3', 'Semaine -2', 'Semaine -1', 'Cette semaine'];
+    return labels.map((label, idx) => ({
+      name: label,
+      recharge: data.wallet.weeklyRecharge?.[idx] ?? 0,
+      spend: data.wallet.weeklySpend?.[idx] ?? 0,
+    }));
+  }, [data.wallet]);
+
+  const totalIaRequests = data.ia?.totalQuestions || 0;
+  const facultyStats = data.ia?.byFaculty || [];
 
   // Weekly trend (purchase delta week-over-week) sourced from dailyStats
   const today = new Date();
@@ -252,9 +285,9 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
             </div>
             <div className="mt-2 flex items-center justify-between gap-3">
               <span className="font-stitch-headline leading-none text-[32px] font-bold text-stitch-on-surface">
-                {formatInt(data.topDocuments.length || 0)}
+                {formatInt(data.catalog?.publishedPdfs || 0)}
               </span>
-              <TrendNeutral value={`+${Math.max(0, data.topDocuments.length - 5)}`} />
+              <TrendNeutral value={`+${data.catalog?.newPdfsThisWeek || 0}`} />
             </div>
           </div>
           <div className="mt-4 text-[13px] text-stitch-on-surface-variant">
@@ -270,9 +303,13 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
             </div>
             <div className="mt-2 flex items-center justify-between gap-3">
               <span className="font-stitch-headline leading-none text-[32px] font-bold text-stitch-on-surface">
-                {formatInt(data.totals.sessions)}
+                {formatInt(data.catalog?.studentUsers || 0)}
               </span>
-              {data.totals.sessions > 0 ? <TrendUp value="+56" /> : <TrendNeutral value="0" />}
+              {data.catalog?.newUsersThisWeek > 0 ? (
+                <TrendUp value={`+${data.catalog.newUsersThisWeek}`} />
+              ) : (
+                <TrendNeutral value="0" />
+              )}
             </div>
           </div>
           <div className="mt-4 text-[13px] text-stitch-on-surface-variant">
@@ -291,7 +328,7 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
                 {conversionRate}%
               </span>
               <span className="rounded-full bg-stitch-surface-container px-2 py-0.5 text-[11px] font-semibold text-stitch-on-surface-variant">
-                Stable
+                {conversionRate >= 15 ? 'Excellent' : conversionRate >= 5 ? 'Stable' : 'Faible'}
               </span>
             </div>
           </div>
@@ -306,6 +343,193 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
         dailyStats={data.dailyStats}
         categoryStats={data.categoryStats}
       />
+
+      {/* ── Portefeuille & Suivi Financier ─────────────────── */}
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="flex flex-col justify-between gap-4 rounded-xl border border-stitch-outline-variant bg-white p-6 shadow-sm">
+          <div>
+            <div className="font-stitch-headline text-base font-bold tracking-tight text-stitch-on-surface">
+              Portefeuille & Crédits
+            </div>
+            <div className="mt-0.5 text-xs text-stitch-on-surface-variant">
+              Recharges et dépenses des étudiants
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-4">
+            <div className="rounded-lg bg-stitch-surface p-3 border border-stitch-outline-variant/60">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-stitch-on-surface-variant">
+                Total Rechargé
+              </div>
+              <div className="mt-1 font-stitch-headline text-2xl font-bold text-stitch-primary">
+                {formatCoins(data.wallet?.totalRecharge || 0)}
+              </div>
+            </div>
+            
+            <div className="rounded-lg bg-stitch-surface p-3 border border-stitch-outline-variant/60">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-stitch-on-surface-variant">
+                Total Dépensé (PDF + IA)
+              </div>
+              <div className="mt-1 font-stitch-headline text-2xl font-bold text-stitch-on-surface">
+                {formatCoins(data.wallet?.totalSpend || 0)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-stitch-outline-variant bg-white p-6 shadow-sm lg:col-span-2">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div>
+              <div className="font-stitch-headline text-base font-bold tracking-tight text-stitch-on-surface">
+                Historique Portefeuille (4 Semaines)
+              </div>
+              <div className="mt-0.5 text-xs text-stitch-on-surface-variant">
+                Recharges vs Dépenses en Coins
+              </div>
+            </div>
+            <div className="flex gap-3 text-xs">
+              <span className="inline-flex items-center gap-1 text-stitch-on-surface-variant">
+                <span className="h-2 w-2 rounded-sm bg-stitch-primary" />
+                Recharges
+              </span>
+              <span className="inline-flex items-center gap-1 text-stitch-on-surface-variant">
+                <span className="h-2 w-2 rounded-sm bg-stitch-outline" />
+                Dépenses
+              </span>
+            </div>
+          </div>
+          <div className="h-[200px] w-full">
+            {walletChartData.length > 0 ? (
+              <ResponsiveContainer>
+                <BarChart
+                  data={walletChartData}
+                  margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                  barCategoryGap="30%"
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e9e1d8" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#434655', fontFamily: 'Inter' }}
+                    dy={8}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#434655', fontFamily: 'Inter' }}
+                    allowDecimals={false}
+                  />
+                  <RechartsTooltip contentStyle={tooltipStyle} />
+                  <Bar
+                    dataKey="recharge"
+                    fill="#004ac6"
+                    radius={[4, 4, 0, 0]}
+                    name="Recharges"
+                  />
+                  <Bar
+                    dataKey="spend"
+                    fill="#737686"
+                    radius={[4, 4, 0, 0]}
+                    name="Dépenses"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-[13px] text-stitch-on-surface-variant">
+                Pas de données de portefeuille
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── IA & Entonnoir de Conversion ────────────────────── */}
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-stitch-outline-variant bg-white p-6 shadow-sm">
+          <div className="mb-5">
+            <div className="font-stitch-headline text-base font-bold tracking-tight text-stitch-on-surface">
+              Utilisation de l&apos;IA par Filière
+            </div>
+            <div className="mt-0.5 text-xs text-stitch-on-surface-variant">
+              Total questions posées : <span className="font-bold text-stitch-primary">{data.ia?.totalQuestions || 0}</span> (30J)
+            </div>
+          </div>
+
+          {facultyStats.length === 0 ? (
+            <div className="flex h-[200px] items-center justify-center text-[13px] text-stitch-on-surface-variant">
+              Aucune question IA enregistrée.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {facultyStats.map((item, idx) => {
+                const percent = totalIaRequests > 0 ? Math.round((item.requests / totalIaRequests) * 100) : 0;
+                return (
+                  <div key={item.faculty + idx} className="flex flex-col gap-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="font-semibold text-stitch-on-surface">{item.faculty}</span>
+                      <span className="text-stitch-on-surface-variant font-bold">
+                        {item.requests} ({percent}%)
+                      </span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-stitch-surface-container">
+                      <div
+                        className="h-full rounded-full bg-stitch-primary"
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-stitch-outline-variant bg-white p-6 shadow-sm">
+          <div className="mb-5">
+            <div className="font-stitch-headline text-base font-bold tracking-tight text-stitch-on-surface">
+              Entonnoir de Conversion (30J)
+            </div>
+            <div className="mt-0.5 text-xs text-stitch-on-surface-variant">
+              Taux de conversion global : <span className="font-bold text-stitch-success-dark">{conversionRate}%</span>
+            </div>
+          </div>
+
+          {data.funnel ? (
+            <div className="flex flex-col gap-3.5">
+              {[
+                { label: 'Visiteurs uniques', val: data.funnel.visitors, base: data.funnel.visitors, color: 'bg-stitch-primary' },
+                { label: 'Recherches', val: data.funnel.searchers, base: data.funnel.visitors, color: 'bg-stitch-primary/80' },
+                { label: 'Aperçus ouverts', val: data.funnel.previewers, base: data.funnel.visitors, color: 'bg-stitch-primary/65' },
+                { label: 'Achats validés', val: data.funnel.buyers, base: data.funnel.visitors, color: 'bg-stitch-success' },
+                { label: 'Lectures sécurisées', val: data.funnel.readers, base: data.funnel.visitors, color: 'bg-stitch-success/80' },
+              ].map((step, idx) => {
+                const percent = step.base > 0 ? Math.round((step.val / step.base) * 100) : 0;
+                return (
+                  <div key={step.label + idx} className="flex flex-col gap-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="font-medium text-stitch-on-surface">{step.label}</span>
+                      <span className="text-stitch-on-surface-variant font-bold">
+                        {step.val.toLocaleString('fr-FR')} {idx > 0 ? `(${percent}%)` : ''}
+                      </span>
+                    </div>
+                    <div className="h-3 w-full rounded-md bg-stitch-surface-container overflow-hidden">
+                      <div
+                        className={`h-full ${step.color}`}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex h-[200px] items-center justify-center text-[13px] text-stitch-on-surface-variant">
+              Données de l&apos;entonnoir non disponibles
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* ── Top documents + Recent activity ────────────────── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
