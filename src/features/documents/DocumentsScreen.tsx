@@ -121,7 +121,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       setLoading(true);
       setError('');
       const res = await authFetch('/api/mobile/documents');
-      if (!res.ok) throw new Error('Impossible de recuperer vos documents.');
+    if (!res.ok) throw new Error('Impossible de récupérer vos documents.');
       const data = await res.json();
       setDocuments(data.documents || []);
     } catch (err: any) {
@@ -164,7 +164,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
     if (!type) return;
 
     if (!newTitle.trim()) {
-      Alert.alert('Titre requis', 'Donne un titre a ton document.');
+      Alert.alert('Titre requis', 'Donne un titre à ton document.');
       return;
     }
 
@@ -195,7 +195,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
 
       if (!createRes.ok) {
         const err = await createRes.json().catch(() => ({ error: 'Erreur' }));
-        throw new Error(err.error || 'Erreur lors de la creation.');
+        throw new Error(err.error || 'Erreur lors de la création.');
       }
 
       const { document: doc } = await createRes.json();
@@ -262,7 +262,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   // ─── Create without AI ──────────────────────────────────────────────────────
   const handleCreate = async () => {
     if (!selectedType || !newTitle.trim()) {
-      Alert.alert('Titre requis', 'Donne un titre a ton document.');
+      Alert.alert('Titre requis', 'Donne un titre à ton document.');
       return;
     }
 
@@ -279,7 +279,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Erreur' }));
-        throw new Error(err.error || 'Erreur lors de la creation.');
+        throw new Error(err.error || 'Erreur lors de la création.');
       }
 
       const { document: doc } = await res.json();
@@ -287,7 +287,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       fetchDocuments();
       onEditDocument(doc.id);
     } catch (err: any) {
-      Alert.alert('Erreur de creation', err.message);
+      Alert.alert('Erreur de création', err.message);
     } finally {
       setCreating(false);
     }
@@ -306,8 +306,8 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   const templateLabel = (t: string) => {
     if (t === 'cv') return 'CV';
     if (t === 'lettre_motivation') return 'Lettre de motivation';
-    if (t === 'memoire') return 'Memoire';
-    if (t === 'blank') return 'Personnalise';
+    if (t === 'memoire') return 'Mémoire';
+    if (t === 'blank') return 'Personnalisé';
     return 'Stage';
   };
 
@@ -556,7 +556,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                     <Text style={styles.fieldLabel}>VOS MOTIVATIONS (optionnel)</Text>
                     <TextInput
                       style={[styles.textInput, { height: 80, textAlignVertical: 'top' }]}
-                      placeholder="Decrivez brievement pourquoi ce poste vous interesse..."
+                      placeholder="Décrivez brièvement pourquoi ce poste vous intéresse..."
                       placeholderTextColor="#94A3B8"
                       multiline
                       value={lettreMotivation}

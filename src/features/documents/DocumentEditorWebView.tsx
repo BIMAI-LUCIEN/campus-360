@@ -39,7 +39,7 @@ export function DocumentEditorWebView({ documentId, onClose }: DocumentEditorWeb
         <Pressable onPress={onClose} style={styles.backButton}>
           <Text style={styles.backButtonText}>✕ Quitter</Text>
         </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>Édition de rapport</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>Édition du document</Text>
         <Pressable onPress={handleRetry} style={styles.reloadHeaderButton} disabled={isLoading}>
           <Text style={styles.reloadHeaderText}>🔄</Text>
         </Pressable>

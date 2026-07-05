@@ -12,19 +12,37 @@ import {
 } from 'lucide-react';
 import { Card, Button } from '../../_components/ui';
 
-type Template = 'stage' | 'memoire' | 'blank';
+type Template = 'stage' | 'memoire' | 'blank' | 'cv' | 'lettre_motivation';
 
 type TemplateMeta = {
   key: Template;
   label: string;
   desc: string;
   icon: React.ElementType;
+  isAi?: boolean;
+  color?: string;
 };
 
 const TEMPLATES: TemplateMeta[] = [
   {
+    key: 'cv',
+    label: 'CV',
+    desc: 'Génère un CV structuré en sections (Profil, Formation, Expériences, Compétences) grâce à l’IA.',
+    icon: FileText,
+    isAi: true,
+    color: '#2563EB',
+  },
+  {
+    key: 'lettre_motivation',
+    label: 'Lettre de motivation',
+    desc: 'Génère une lettre formelle en français adaptée au poste et à l’entreprise cible.',
+    icon: Sparkles,
+    isAi: true,
+    color: '#7C3AED',
+  },
+  {
     key: 'stage',
-    label: 'Document de stage',
+    label: 'Rapport de stage',
     desc: 'Structure académique classique avec page de garde, sommaire, remerciements, introduction, conclusion.',
     icon: FileText,
   },
@@ -38,7 +56,7 @@ const TEMPLATES: TemplateMeta[] = [
     key: 'blank',
     label: 'Vierge',
     desc: 'Document personnalisé sans sections pré-remplies.',
-    icon: Sparkles,
+    icon: Plus,
   },
 ];
 
@@ -107,8 +125,7 @@ export default function NewDocumentPage() {
               Nouveau document
             </h1>
             <p className="mt-1 text-xs text-stitch-on-surface-variant leading-relaxed">
-              Choisissez un modèle, donnez un titre, et l&apos;éditeur s&apos;ouvrira
-              automatiquement avec les sections pré-remplies.
+              CV et lettres générés par l&apos;IA — rapports de stage et mémoires avec sections pré-remplies.
             </p>
           </div>
         </div>
@@ -149,11 +166,10 @@ export default function NewDocumentPage() {
             />
           </div>
 
-          {/* Template chooser */}
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-stitch-on-surface-variant uppercase tracking-wider">Modèle de structure</label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {TEMPLATES.map(({ key, label, desc, icon: Icon }) => {
+            <label className="text-xs font-semibold text-stitch-on-surface-variant uppercase tracking-wider">Type de document</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {TEMPLATES.map(({ key, label, desc, icon: Icon, isAi, color }) => {
                 const selected = template === key;
                 return (
                   <button
@@ -161,12 +177,17 @@ export default function NewDocumentPage() {
                     type="button"
                     onClick={() => setTemplate(key)}
                     className={[
-                      'flex flex-col text-left p-4 rounded-xl border transition-all cursor-pointer',
+                      'relative flex flex-col text-left p-4 rounded-xl border transition-all cursor-pointer',
                       selected
                         ? 'border-2 border-stitch-primary bg-stitch-surface-container-low shadow-sm'
                         : 'border-stitch-outline-variant bg-stitch-surface hover:border-stitch-outline',
                     ].join(' ')}
                   >
+                    {isAi && (
+                      <span className="absolute top-3 right-3 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: (color ?? '#2563EB') + '20', color: color ?? '#2563EB' }}>
+                        🤖 IA
+                      </span>
+                    )}
                     <div className="flex items-center gap-2.5 mb-2.5">
                       <span
                         className={[

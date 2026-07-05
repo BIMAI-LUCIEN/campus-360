@@ -29,9 +29,11 @@ type Document = {
 };
 
 const TEMPLATE_META: Record<string, { label: string; badge: string }> = {
-  stage:   { label: 'Document de stage', badge: 'bg-stitch-primary-fixed text-stitch-primary' },
-  memoire: { label: 'Mémoire',          badge: 'bg-stitch-tertiary-container/15 text-stitch-tertiary' },
-  blank:   { label: 'Document vierge',  badge: 'bg-stitch-surface-container-high text-stitch-on-surface-variant' },
+  cv:               { label: 'CV',                badge: 'bg-blue-100 text-blue-700' },
+  lettre_motivation:{ label: 'Lettre de motivation', badge: 'bg-purple-100 text-purple-700' },
+  stage:            { label: 'Rapport de stage', badge: 'bg-stitch-primary-fixed text-stitch-primary' },
+  memoire:          { label: 'Mémoire',          badge: 'bg-stitch-tertiary-container/15 text-stitch-tertiary' },
+  blank:            { label: 'Document vierge',  badge: 'bg-stitch-surface-container-high text-stitch-on-surface-variant' },
 };
 
 const formatDate = (iso: string) =>
@@ -82,9 +84,10 @@ export default function DocumentsListClient() {
   };
 
   const total = documents.length;
+  const cvs = documents.filter((r) => r.template_type === 'cv').length;
+  const lettres = documents.filter((r) => r.template_type === 'lettre_motivation').length;
   const stages = documents.filter((r) => r.template_type === 'stage').length;
   const memoires = documents.filter((r) => r.template_type === 'memoire').length;
-  const blanks = documents.filter((r) => r.template_type === 'blank').length;
   const oneWeekAgo = Date.now() - 7 * 86_400_000;
   const thisWeek = documents.filter(
     (r) => new Date(r.updated_at).getTime() >= oneWeekAgo,
@@ -101,12 +104,10 @@ export default function DocumentsListClient() {
               <span>Documents</span>
             </div>
             <h1 className="font-stitch-headline text-[26px] font-bold text-stitch-on-surface tracking-tight m-0">
-              Documents de stage &amp; Mémoires
+              Hub de documents étudiants
             </h1>
             <p className="text-[14px] text-stitch-on-surface-variant mt-1.5 max-w-[60ch] m-0 leading-relaxed">
-              Gérez les documents de vos étudiants. Créez, modifiez et exportez
-              en PDF ou Word. Toutes les actions sont synchronisées avec la
-              base de données.
+              CV, lettres de motivation, rapports de stage et mémoires — générez, éditez et exportez en PDF depuis un seul endroit.
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -123,11 +124,11 @@ export default function DocumentsListClient() {
 
       {/* ── KPI strip ───────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <KpiMini icon={FileText} iconClass="bg-stitch-success-light text-stitch-success-dark" label="Total documents" value={total} />
-        <KpiMini icon={BookOpen} iconClass="bg-stitch-primary-fixed text-stitch-primary" label="Documents de stage" value={stages} />
-        <KpiMini icon={BookOpen} iconClass="bg-stitch-tertiary-container/15 text-stitch-tertiary" label="Mémoires" value={memoires} />
-        <KpiMini icon={Plus} iconClass="bg-stitch-error-light text-stitch-error-rose" label="Vierges" value={blanks} />
-        <KpiMini icon={Calendar} iconClass="bg-stitch-secondary-container text-stitch-on-surface-variant" label="Cette semaine" value={thisWeek} />
+        <KpiMini icon={FileText}  iconClass="bg-stitch-success-light text-stitch-success-dark"         label="Total"            value={total} />
+        <KpiMini icon={FileText}  iconClass="bg-blue-100 text-blue-600"                                label="CV"               value={cvs} />
+        <KpiMini icon={FileText}  iconClass="bg-purple-100 text-purple-600"                            label="Lettres"           value={lettres} />
+        <KpiMini icon={BookOpen}  iconClass="bg-stitch-primary-fixed text-stitch-primary"              label="Stage"            value={stages} />
+        <KpiMini icon={Calendar}  iconClass="bg-stitch-secondary-container text-stitch-on-surface-variant" label="Cette semaine" value={thisWeek} />
       </div>
 
       {/* ── Error banner ────────────────────────────────── */}
@@ -161,9 +162,7 @@ export default function DocumentsListClient() {
             Aucun document pour le moment
           </div>
           <p className="text-[13px] text-stitch-on-surface-variant max-w-md mx-auto mb-5 leading-relaxed">
-            Créez votre premier document de stage ou mémoire en quelques
-            secondes. L&apos;éditeur s&apos;ouvrira automatiquement avec les
-            sections pré-remplies (page de garde, sommaire, etc.).
+            Créez votre premier document — CV, lettre de motivation, rapport de stage ou mémoire. L&apos;IA vous aide à démarrer en quelques secondes.
           </p>
           <Link
             href="/admin/documents/new"
