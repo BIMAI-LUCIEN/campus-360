@@ -8,6 +8,7 @@ export type PublicEnv = {
   aiProxyUrl: string;
   authUrl: string;
   authWebUrl: string;
+  adminUrl: string;
 };
 
 export const publicEnv: PublicEnv = {
@@ -16,6 +17,7 @@ export const publicEnv: PublicEnv = {
   aiProxyUrl: process.env?.EXPO_PUBLIC_AI_PROXY_URL ?? '',
   authUrl: process.env?.EXPO_PUBLIC_AUTH_URL ?? 'http://localhost:3001',
   authWebUrl: process.env?.EXPO_PUBLIC_AUTH_WEB_URL ?? 'http://localhost:3001',
+  adminUrl: process.env?.EXPO_PUBLIC_ADMIN_URL ?? 'https://admin.campus360b.site',
 };
 
 export const isSupabaseConfigured = () =>

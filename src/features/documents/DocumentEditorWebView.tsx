@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, Pressable, SafeAreaView, ActivityIndicator, Pla
 import { WebView } from 'react-native-webview';
 
 import { authBaseUrl, authClient } from '../auth/betterAuth';
+import { publicEnv } from '../../config/env';
 
 type DocumentEditorWebViewProps = {
   documentId: string;
@@ -20,7 +21,7 @@ export function DocumentEditorWebView({ documentId, onClose }: DocumentEditorWeb
     : '';
   
   // Construct the URL
-  const editorUrl = `${authBaseUrl}/documents/${documentId}?mode=mobile`;
+  const editorUrl = `${publicEnv.adminUrl}/documents/${documentId}?mode=mobile`;
   
   console.log(`[WebView Editor] Loading URL: ${editorUrl}`);
 
