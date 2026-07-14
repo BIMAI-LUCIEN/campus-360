@@ -29,48 +29,61 @@ type DocumentsScreenProps = {
 const IA_CREDITS_PER_GEN = 5;
 
 // ─── Type cards ────────────────────────────────────────────────────────────────
+// Each type is rendered in its own typographic voice — like a poster series.
+// No emoji, no random color. The typography IS the personality.
 const DOCUMENT_TYPES = [
   {
     key: 'cv',
     label: 'CV',
-    emoji: '📄',
-    badge: '🤖 IA',
-    desc: 'Génère un CV professionnel en quelques clics',
-    color: '#2563EB',
-    bgColor: '#EFF6FF',
+    kicker: 'Pour postuler',
+    desc: 'Une page. Des faits. Pas de place pour le doute.',
+    voice: 'sans' as const,
+    voiceStyle: { fontFamily: 'sans-serif', fontWeight: '700' as const, letterSpacing: -0.5 },
+    badge: 'IA',
     hasAi: true,
   },
   {
     key: 'lettre_motivation',
-    label: 'Lettre de Motivation',
-    emoji: '✉️',
-    badge: '🤖 IA',
-    desc: 'Génère une lettre adaptée à ton poste cible',
-    color: '#7C3AED',
-    bgColor: '#F5F3FF',
+    label: 'Lettre de motivation',
+    kicker: 'Pour convaincre',
+    desc: 'Une voix, une histoire, une raison d’être retenu.',
+    voice: 'script' as const,
+    voiceStyle: { fontFamily: 'serif', fontStyle: 'italic' as const, fontWeight: '500' as const },
+    badge: 'IA',
     hasAi: true,
   },
   {
     key: 'stage',
-    label: 'Rapport de Stage',
-    emoji: '📋',
+    label: 'Rapport de stage',
+    kicker: 'Pour documenter',
+    desc: 'Qu’as-tu fait, comment, et qu’en as-tu appris ?',
+    voice: 'mono' as const,
+    voiceStyle: { fontFamily: 'monospace', fontWeight: '500' as const, letterSpacing: 0.5 },
     badge: null,
-    desc: 'Structure académique pour rapport de fin de stage',
-    color: '#059669',
-    bgColor: '#ECFDF5',
     hasAi: false,
   },
   {
     key: 'memoire',
     label: 'Mémoire',
-    emoji: '🎓',
+    kicker: 'Pour démontrer',
+    desc: 'Une thèse, des preuves, un travail de recherche.',
+    voice: 'display' as const,
+    voiceStyle: { fontFamily: 'serif', fontWeight: '900' as const, letterSpacing: -1.5 },
     badge: null,
-    desc: 'Template pour mémoire de recherche académique',
-    color: '#D97706',
-    bgColor: '#FFFBEB',
     hasAi: false,
   },
 ] as const;
+
+// ─── Editorial palette ────────────────────────────────────────────────────────
+const EDITORIAL = {
+  ink: '#0F172A',
+  inkSoft: '#1E293B',
+  paper: '#F6F1E7',
+  paperDeep: '#EDE6D3',
+  sienna: '#B7410E',
+  emeraldDeep: '#047857',
+  rule: '#0F172A',
+};
 
 // ─── Skills common options ────────────────────────────────────────────────────
 const COMMON_SKILLS = [
@@ -323,19 +336,22 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header — editorial */}
       <View style={styles.heroCard}>
-        <Text style={styles.heroTitle}>Éditeur Guidé de Documents</Text>
+        <Text style={styles.heroEyebrow}>CAMPUS 360 — ATELIER D'ÉCRITURE</Text>
+        <View style={styles.heroRule} />
+        <Text style={styles.heroTitle}>Qu'écris-tu aujourd'hui ?</Text>
         <Text style={styles.heroDesc}>
-          CV, lettres de motivation, rapports de stage et mémoires — l'IA vous aide à démarrer.
+          CV, lettres, rapports de stage, mémoires — l'IA t'aide à démarrer, la typo te donne le ton.
         </Text>
         {iaCredits !== null && iaCredits > 0 && (
           <View style={styles.creditsBadge}>
-            <Text style={styles.creditsBadgeText}>🤖 {iaCredits} crédit{iaCredits > 1 ? 's' : ''} IA</Text>
+            <Text style={styles.creditsBadgeText}>✦ {iaCredits} CRÉDIT{iaCredits > 1 ? 'S' : ''} IA</Text>
           </View>
         )}
         <Pressable style={styles.createButton} onPress={() => setCreateStep('type-select')}>
-          <Text style={styles.createButtonText}>✍️ Créer un nouveau document</Text>
+          <Text style={styles.createButtonText}>Commencer un nouveau document</Text>
+          <Text style={styles.createButtonArrow}>→</Text>
         </Pressable>
       </View>
 
@@ -350,10 +366,10 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         </View>
       ) : documents.length === 0 ? (
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyIcon}>📂</Text>
-          <Text style={styles.emptyTitle}>Aucun document créé</Text>
+          <View style={styles.emptyFolioRule} />
+          <Text style={styles.emptyTitle}>Le tiroir est vide.</Text>
           <Text style={styles.emptyText}>
-            Commencez par un CV ou une lettre de motivation — l'IA vous aide à démarrer.
+            Commence par un CV ou une lettre — l'IA pose les premières lignes, tu traces le reste.
           </Text>
         </View>
       ) : (
@@ -366,14 +382,12 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
               <View key={doc.id} style={styles.documentCard}>
                 <View style={styles.cardHeader}>
                   <View style={[styles.templateBadge, {
-                    backgroundColor: doc.template_type === 'cv' ? '#EFF6FF' :
-                      doc.template_type === 'lettre_motivation' ? '#F5F3FF' :
-                      doc.template_type === 'memoire' ? '#FFFBEB' : '#ECFDF5',
+                    backgroundColor: doc.template_type === 'cv' ? '#0F172A' :
+                      doc.template_type === 'lettre_motivation' ? '#0F172A' :
+                      doc.template_type === 'memoire' ? '#0F172A' : '#0F172A',
                   }]}>
                     <Text style={[styles.templateBadgeText, {
-                      color: doc.template_type === 'cv' ? '#2563EB' :
-                        doc.template_type === 'lettre_motivation' ? '#7C3AED' :
-                        doc.template_type === 'memoire' ? '#D97706' : '#059669',
+                      color: '#F6F1E7',
                     }]}>{templateLabel(doc.template_type)}</Text>
                   </View>
                   <Text style={styles.cardDate}>{dateStr}</Text>
@@ -416,35 +430,71 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         </View>
       )}
 
-      {/* ─── TYPE SELECTOR MODAL ─────────────────────────────────────────── */}
+      {/* ─── TYPE SELECTOR MODAL — Editorial poster series ─────────────── */}
       <Modal
         visible={createStep === 'type-select'}
         transparent animationType="slide"
         onRequestClose={resetForm}
       >
         <Pressable style={styles.modalBackdrop} onPress={resetForm}>
-          <Pressable style={[styles.modalCard, { paddingBottom: 40 }]} onPress={() => {}}>
+          <Pressable style={[styles.posterSheet]} onPress={() => {}}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalHeading}>Choisir le type de document</Text>
 
-            <View style={styles.typeGrid}>
-              {DOCUMENT_TYPES.map((t) => (
+            {/* Editorial header */}
+            <View style={styles.posterHeader}>
+              <Text style={styles.posterEyebrow}>CAMPUS 360 — DOSSIER No. 01</Text>
+              <View style={styles.posterHeaderRule} />
+              <Text style={styles.posterTitle}>Que veux-tu écrire ?</Text>
+              <Text style={styles.posterSubtitle}>
+                Quatre intentions, quatre voix. Choisis celle qui te ressemble.
+              </Text>
+            </View>
+
+            {/* The poster grid */}
+            <View style={styles.posterGrid}>
+              {DOCUMENT_TYPES.map((t, i) => (
                 <Pressable
                   key={t.key}
-                  style={[styles.typeCard, { backgroundColor: t.bgColor, borderColor: t.color + '40' }]}
+                  style={({ pressed }) => [
+                    styles.posterCard,
+                    i % 2 === 0 ? styles.posterCardLeft : styles.posterCardRight,
+                    pressed && styles.posterCardPressed,
+                  ]}
                   onPress={() => {
                     setSelectedType(t.key);
                     setCreateStep('form');
                   }}
                 >
-                  <Text style={{ fontSize: 32, marginBottom: 8 }}>{t.emoji}</Text>
-                  <Text style={[styles.typeCardLabel, { color: t.color }]}>{t.label}</Text>
-                  <Text style={styles.typeCardDesc}>{t.desc}</Text>
-                  {t.badge && (
-                    <View style={[styles.typeBadge, { backgroundColor: t.color + '20' }]}>
-                      <Text style={[styles.typeBadgeText, { color: t.color }]}>{t.badge}</Text>
-                    </View>
-                  )}
+                  {/* Folio number — sets the editorial tone */}
+                  <Text style={styles.posterFolio}>— 0{i + 1}</Text>
+
+                  {/* The typographic statement — this is the signature */}
+                  <Text
+                    style={[styles.posterVoice, t.voiceStyle]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {t.label}
+                  </Text>
+
+                  {/* Kicker + description */}
+                  <View style={styles.posterKickerRow}>
+                    <View style={styles.posterKickerRule} />
+                    <Text style={styles.posterKicker}>{t.kicker.toUpperCase()}</Text>
+                  </View>
+                  <Text style={styles.posterDesc}>{t.desc}</Text>
+
+                  {/* Footer with IA badge if applicable */}
+                  <View style={styles.posterFooter}>
+                    {t.badge ? (
+                      <View style={styles.posterAiBadge}>
+                        <Text style={styles.posterAiBadgeText}>✦ {t.badge}</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.posterDot} />
+                    )}
+                    <Text style={styles.posterArrow}>→</Text>
+                  </View>
                 </Pressable>
               ))}
             </View>
@@ -456,7 +506,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         </Pressable>
       </Modal>
 
-      {/* ─── FORM MODAL ─────────────────────────────────────────────────── */}
+      {/* ─── FORM MODAL — Editorial form ────────────────────────────────── */}
       <Modal
         visible={createStep === 'form'}
         transparent animationType="slide"
@@ -467,14 +517,32 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
           style={{ flex: 1 }}
         >
           <Pressable style={styles.modalBackdrop} onPress={resetForm}>
-            <Pressable style={[styles.modalCard, styles.formModalCard]} onPress={() => {}}>
+            <Pressable style={[styles.formSheet]} onPress={() => {}}>
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
                 <View style={styles.modalHandle} />
-                <Text style={styles.modalHeading}>
-                  {selectedType === 'cv' ? 'Créer un CV' :
-                   selectedType === 'lettre_motivation' ? 'Créer une lettre de motivation' :
-                   'Créer un document'}
-                </Text>
+
+                {/* Editorial header for form */}
+                <View style={styles.formHeader}>
+                  <View style={styles.formHeaderTopRow}>
+                    <Text style={styles.formEyebrow}>CAMPUS 360 — No. 0{DOCUMENT_TYPES.findIndex(t => t.key === selectedType) + 1}</Text>
+                    <Pressable onPress={resetForm} hitSlop={12}>
+                      <Text style={styles.formCloseLink}>✕ Fermer</Text>
+                    </Pressable>
+                  </View>
+                  <View style={styles.formHeaderRule} />
+                  {(() => {
+                    const t = DOCUMENT_TYPES.find(d => d.key === selectedType);
+                    if (!t) return <Text style={styles.formTitle}>Créer un document</Text>;
+                    return (
+                      <>
+                        <Text style={[styles.formTitle, t.voiceStyle]} numberOfLines={1} adjustsFontSizeToFit>
+                          {t.label}
+                        </Text>
+                        <Text style={styles.formKicker}>{t.kicker.toUpperCase()}</Text>
+                      </>
+                    );
+                  })()}
+                </View>
 
                 {/* Title */}
                 <Text style={styles.fieldLabel}>TITRE DU DOCUMENT</Text>
@@ -620,44 +688,215 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC', padding: 16 },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC', gap: 16 },
-  loadingText: { color: '#64748B', fontSize: 14, fontWeight: '600' },
+  container: { flex: 1, backgroundColor: '#F6F1E7', padding: 16 },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F6F1E7',
+    gap: 16,
+  },
+  loadingText: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'serif',
+    fontStyle: 'italic',
+  },
 
-  heroCard: { backgroundColor: '#1E293B', borderRadius: 24, padding: 24, marginBottom: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 4 },
-  heroTitle: { color: '#FFFFFF', fontSize: 22, fontWeight: '800', marginBottom: 6 },
-  heroDesc: { color: '#94A3B8', fontSize: 13, lineHeight: 18, marginBottom: 14 },
-  creditsBadge: { alignSelf: 'flex-start', backgroundColor: '#F5F3FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginBottom: 14 },
-  creditsBadgeText: { color: '#7C3AED', fontSize: 12, fontWeight: '700' },
-  createButton: { backgroundColor: '#10B981', borderRadius: 16, paddingVertical: 14, alignItems: 'center' },
-  createButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  heroCard: {
+    backgroundColor: '#F6F1E7',
+    borderRadius: 4,
+    padding: 22,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+  },
+  heroEyebrow: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#B7410E',
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  heroRule: {
+    height: 1,
+    backgroundColor: '#0F172A',
+    marginBottom: 14,
+  },
+  heroTitle: {
+    color: '#0F172A',
+    fontSize: 26,
+    fontWeight: '900',
+    lineHeight: 30,
+    fontFamily: 'serif',
+    letterSpacing: -0.5,
+    marginBottom: 8,
+  },
+  heroDesc: {
+    color: '#475569',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 14,
+    fontStyle: 'italic',
+  },
+  creditsBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#047857',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 2,
+    marginBottom: 14,
+  },
+  creditsBadgeText: {
+    color: '#FFFFFF',
+    fontFamily: 'monospace',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  createButton: {
+    backgroundColor: '#0F172A',
+    borderRadius: 4,
+    paddingVertical: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  createButtonText: {
+    color: '#F6F1E7',
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'serif',
+    letterSpacing: 0.3,
+  },
+  createButtonArrow: {
+    color: '#B7410E',
+    fontSize: 16,
+    fontFamily: 'serif',
+  },
 
-  sectionTitle: { color: '#1E293B', fontSize: 16, fontWeight: '800', marginBottom: 16 },
-  listContainer: { gap: 14, paddingBottom: 40 },
+  sectionTitle: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'monospace',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 16,
+  },
+  listContainer: { gap: 12, paddingBottom: 40 },
 
-  documentCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, borderColor: '#E2E8F0', borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 },
+  documentCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    padding: 18,
+    borderColor: '#0F172A',
+    borderWidth: 1,
+  },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  templateBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  templateBadgeText: { fontSize: 11, fontWeight: '700' },
-  cardDate: { color: '#94A3B8', fontSize: 11, fontWeight: '600' },
-  cardTitle: { color: '#1E293B', fontSize: 15, fontWeight: '700', marginBottom: 14 },
+  templateBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 2, borderWidth: 1, borderColor: '#0F172A' },
+  templateBadgeText: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  cardDate: {
+    color: '#475569',
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  cardTitle: {
+    color: '#0F172A',
+    fontSize: 17,
+    fontWeight: '700',
+    fontFamily: 'serif',
+    lineHeight: 22,
+    marginBottom: 14,
+  },
   cardActions: { flexDirection: 'row', gap: 8 },
-  actionButton: { height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  editButton: { flex: 1, backgroundColor: '#1E293B' },
-  editButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
-  pdfButton: { width: 60, backgroundColor: '#F1F5F9', borderColor: '#E2E8F0', borderWidth: 1 },
-  pdfButtonText: { color: '#475569', fontSize: 12, fontWeight: '700' },
-  deleteButton: { width: 36, backgroundColor: '#FEF2F2' },
-  deleteButtonText: { color: '#EF4444', fontSize: 13, fontWeight: 'bold' },
+  actionButton: { height: 36, borderRadius: 2, alignItems: 'center', justifyContent: 'center' },
+  editButton: { flex: 1, backgroundColor: '#0F172A' },
+  editButtonText: {
+    color: '#F6F1E7',
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'serif',
+  },
+  pdfButton: {
+    width: 64,
+    backgroundColor: 'transparent',
+    borderColor: '#0F172A',
+    borderWidth: 1,
+  },
+  pdfButtonText: {
+    color: '#0F172A',
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'monospace',
+    letterSpacing: 1,
+  },
+  deleteButton: { width: 36, backgroundColor: 'transparent', borderWidth: 1, borderColor: '#B7410E' },
+  deleteButtonText: { color: '#B7410E', fontSize: 14, fontWeight: 'bold' },
 
-  emptyBox: { paddingVertical: 60, alignItems: 'center', paddingHorizontal: 30 },
-  emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B', marginBottom: 8 },
-  emptyText: { fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 18 },
+  emptyBox: {
+    paddingVertical: 60,
+    alignItems: 'center',
+    paddingHorizontal: 30,
+    backgroundColor: 'transparent',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#0F172A',
+  },
+  emptyFolioRule: {
+    width: 40,
+    height: 1,
+    backgroundColor: '#B7410E',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'serif',
+    marginBottom: 10,
+    fontStyle: 'italic',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#475569',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontFamily: 'serif',
+    maxWidth: 280,
+  },
   errorBox: { padding: 30, alignItems: 'center' },
-  errorText: { color: '#EF4444', fontSize: 14, textAlign: 'center', marginBottom: 16 },
-  retryButton: { backgroundColor: '#1E293B', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-  retryText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+  errorText: {
+    color: '#B7410E',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+    fontFamily: 'serif',
+    fontStyle: 'italic',
+  },
+  retryButton: {
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 2,
+  },
+  retryText: {
+    color: '#F6F1E7',
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'serif',
+  },
 
   // Modal
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'flex-end' },
@@ -673,38 +912,289 @@ const styles = StyleSheet.create({
   typeBadge: { marginTop: 8, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   typeBadgeText: { fontSize: 11, fontWeight: '700' },
 
-  cancelLink: { alignItems: 'center', paddingVertical: 8 },
-  cancelLinkText: { color: '#94A3B8', fontSize: 14, fontWeight: '600' },
+  cancelLink: { alignItems: 'center', paddingVertical: 14, marginTop: 10 },
+  cancelLinkText: {
+    color: '#475569',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'serif',
+    fontStyle: 'italic',
+  },
 
-  fieldLabel: { fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 12, marginBottom: 6 },
-  textInput: { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: '#1E293B', marginBottom: 10 },
+  fieldLabel: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#0F172A',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginTop: 18,
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#0F172A',
+    borderWidth: 1,
+    borderRadius: 2,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontSize: 15,
+    fontFamily: 'serif',
+    color: '#0F172A',
+    marginBottom: 10,
+  },
   fieldRow: { flexDirection: 'row', gap: 10 },
   flex: { flex: 1 },
 
   tagGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  tagChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: '#F1F5F9', borderColor: '#E2E8F0', borderWidth: 1 },
-  tagChipActive: { backgroundColor: '#EFF6FF', borderColor: '#3B82F6' },
-  tagChipText: { fontSize: 12, color: '#475569', fontWeight: '600' },
-  tagChipTextActive: { color: '#2563EB' },
+  tagChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 2,
+    backgroundColor: 'transparent',
+    borderColor: '#0F172A',
+    borderWidth: 1,
+  },
+  tagChipActive: { backgroundColor: '#0F172A', borderColor: '#0F172A' },
+  tagChipText: { fontSize: 12, color: '#0F172A', fontWeight: '600' },
+  tagChipTextActive: { color: '#F6F1E7' },
 
   tagRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-  tagCheckbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, borderColor: '#CBD5E1', backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center' },
-  tagCheckboxActive: { backgroundColor: '#3B82F6', borderColor: '#3B82F6' },
-  tagCheckboxCheck: { color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' },
-  tagRowLabel: { fontSize: 13, color: '#1E293B', fontWeight: '600' },
+  tagCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 2,
+    borderWidth: 1.5,
+    borderColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tagCheckboxActive: { backgroundColor: '#0F172A', borderColor: '#0F172A' },
+  tagCheckboxCheck: { color: '#F6F1E7', fontSize: 11, fontWeight: 'bold' },
+  tagRowLabel: { fontSize: 13, color: '#0F172A', fontWeight: '600' },
 
-  addMoreText: { color: '#3B82F6', fontSize: 13, fontWeight: '600', marginBottom: 10 },
+  addMoreText: {
+    color: '#B7410E',
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 10,
+    fontFamily: 'serif',
+    fontStyle: 'italic',
+  },
 
-  creditsInfo: { backgroundColor: '#F5F3FF', borderRadius: 12, padding: 12, marginTop: 8 },
-  creditsInfoText: { color: '#7C3AED', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  creditsInfo: {
+    backgroundColor: 'transparent',
+    borderRadius: 2,
+    padding: 12,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#047857',
+    borderStyle: 'dashed',
+  },
+  creditsInfoText: {
+    color: '#047857',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    fontFamily: 'monospace',
+    letterSpacing: 0.5,
+  },
 
-  modalButtons: { flexDirection: 'row', gap: 12, marginTop: 16 },
-  modalButton: { flex: 1, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  cancelBtn: { backgroundColor: '#F1F5F9' },
-  cancelBtnText: { color: '#475569', fontSize: 14, fontWeight: '700' },
-  confirmBtn: { backgroundColor: '#10B981' },
-  confirmBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  aiGenerateBtn: { backgroundColor: '#7C3AED', flex: 2 },
-  aiGenerateBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#0F172A',
+  },
+  modalButton: {
+    flex: 1,
+    height: 52,
+    borderRadius: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#0F172A',
+  },
+  cancelBtnText: { color: '#0F172A', fontSize: 14, fontWeight: '700', fontFamily: 'serif' },
+  confirmBtn: { backgroundColor: '#0F172A' },
+  confirmBtnText: { color: '#F6F1E7', fontSize: 14, fontWeight: '700', fontFamily: 'serif' },
+  aiGenerateBtn: { backgroundColor: '#B7410E', flex: 2 },
+  aiGenerateBtnText: { color: '#F6F1E7', fontSize: 14, fontWeight: '700', fontFamily: 'serif' },
   buttonDisabled: { opacity: 0.5 },
+
+  // ── Editorial poster sheet (type selector) ─────────────────────────────
+  posterSheet: {
+    backgroundColor: '#F6F1E7',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 22,
+    paddingTop: 14,
+    paddingBottom: 36,
+    maxHeight: '92%',
+  },
+  posterHeader: { marginTop: 18, marginBottom: 22 },
+  posterEyebrow: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 2,
+    color: '#0F172A',
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  posterHeaderRule: {
+    height: 1,
+    backgroundColor: '#0F172A',
+    marginBottom: 14,
+  },
+  posterTitle: {
+    fontFamily: 'serif',
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#0F172A',
+    lineHeight: 36,
+    letterSpacing: -1,
+    marginBottom: 6,
+  },
+  posterSubtitle: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: '#475569',
+    lineHeight: 20,
+  },
+  posterGrid: { gap: 14 },
+  posterCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    padding: 22,
+    minHeight: 168,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+  },
+  posterCardLeft: {},
+  posterCardRight: {},
+  posterCardPressed: { backgroundColor: '#EDE6D3' },
+  posterFolio: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    color: '#B7410E',
+    fontWeight: '600',
+    letterSpacing: 1,
+    marginBottom: 14,
+  },
+  posterVoice: {
+    color: '#0F172A',
+    fontSize: 30,
+    lineHeight: 34,
+    marginBottom: 14,
+  },
+  posterKickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  posterKickerRule: {
+    width: 16,
+    height: 1,
+    backgroundColor: '#0F172A',
+  },
+  posterKicker: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#0F172A',
+    fontWeight: '700',
+  },
+  posterDesc: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    color: '#334155',
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  posterFooter: {
+    marginTop: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  posterAiBadge: {
+    backgroundColor: '#047857',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 2,
+  },
+  posterAiBadgeText: {
+    color: '#FFFFFF',
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  posterDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#94A3B8',
+  },
+  posterArrow: {
+    fontFamily: 'serif',
+    fontSize: 22,
+    color: '#0F172A',
+  },
+
+  // ── Editorial form sheet (creation form) ────────────────────────────────
+  formSheet: {
+    backgroundColor: '#F6F1E7',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 22,
+    paddingTop: 14,
+    paddingBottom: 16,
+    maxHeight: '92%',
+  },
+  formHeader: { marginTop: 12, marginBottom: 18 },
+  formHeaderTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  formEyebrow: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#0F172A',
+    fontWeight: '600',
+  },
+  formCloseLink: {
+    fontFamily: 'serif',
+    fontSize: 13,
+    color: '#475569',
+  },
+  formHeaderRule: {
+    height: 1,
+    backgroundColor: '#0F172A',
+    marginBottom: 14,
+  },
+  formTitle: {
+    color: '#0F172A',
+    fontSize: 32,
+    lineHeight: 36,
+    marginBottom: 6,
+  },
+  formKicker: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#B7410E',
+    fontWeight: '700',
+  },
 });
