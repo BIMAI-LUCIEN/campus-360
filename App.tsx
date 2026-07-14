@@ -1509,136 +1509,142 @@ export default function App() {
           >
           {activeSection === 'home' ? (
             <View style={styles.clientDashboard}>
-              <View style={[styles.dashboardHero, narrowScreen && styles.dashboardHeroCompact, { flexDirection: 'column', alignItems: 'flex-start' }]}>
-                <View style={[styles.dashboardHeroContent, { width: '100%' }]}>
-                  <View style={[styles.flex, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }]}>
-                    <View style={styles.dashboardHeroText}>
-                      <Text style={[styles.dashboardEyebrow, { fontSize: 14, color: '#64748B', textTransform: 'none', fontWeight: '500' }]}>👋 Bienvenue sur Campus-Bordes</Text>
-                      <Text style={[styles.dashboardTitle, { fontSize: 28, fontWeight: '800', marginTop: 4, marginBottom: 8 }]}>
-                        {studentProfile?.name?.split(' ')[0] ?? 'Étudiant'}
-                      </Text>
-                    </View>
-                    <Pressable
-                      style={{ backgroundColor: '#F8FAFC', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}
-                      onPress={() => setAccountVisible(true)}
-                    >
-                      <Text style={{ fontSize: 16, marginRight: 6 }}>🪙</Text>
-                      <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#1E293B' }}>{formatCoins(balance)} C</Text>
-                    </Pressable>
-                  </View>
-                  
-                  <Text style={[styles.dashboardSubtitle, { fontSize: 15, lineHeight: 22, color: '#475569', marginTop: 8 }]}>
-                    {studentSession
-                      ? 'Retrouve vite les bons PDF, ouvre ta bibliothèque et reprends ta révision.'
-                      : 'Trouve des PDF fiables, preview avant achat et revise avec l assistant IA.'}
-                  </Text>
-                  
-                  <View style={[styles.dashboardHeroProof, { marginTop: 16, backgroundColor: '#EFF6FF', alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }]}>
-                    <Text style={[styles.dashboardHeroProofText, { color: '#2563EB', fontWeight: '600', fontSize: 13 }]}>
-                      📚 {publishedDocumentCount} PDF publies{homePacks.length ? ` • ${homePacks.length} packs disponibles` : ''}
+              {/* Editorial hero — paper background, ink type, no emoji */}
+              <View style={styles.homeHero}>
+                <View style={styles.homeHeroTopRow}>
+                  <View style={{ flex: 1, paddingRight: 12 }}>
+                    <Text style={styles.homeHeroEyebrow}>CAMPUS 360 — ÉDITION DU JOUR</Text>
+                    <View style={styles.homeHeroRule} />
+                    <Text style={styles.homeHeroGreeting}>
+                      {studentSession
+                        ? `Bonjour, ${studentProfile?.name?.split(' ')[0] ?? 'Étudiant'}.`
+                        : 'Bonjour.'}
                     </Text>
                   </View>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.homeWalletChip,
+                      pressed && { opacity: 0.85 },
+                    ]}
+                    onPress={() => setAccountVisible(true)}
+                  >
+                    <Text style={styles.homeWalletCoin}>₵</Text>
+                    <View>
+                      <Text style={styles.homeWalletAmount}>{formatCoins(balance)}</Text>
+                      <Text style={styles.homeWalletLabel}>Coins</Text>
+                    </View>
+                  </Pressable>
+                </View>
+
+                <Text style={styles.homeHeroSubtitle}>
+                  {studentSession
+                    ? 'Retrouve vite les bons PDF, ouvre ta bibliothèque et reprends ta révision.'
+                    : 'Trouve des PDF fiables, preview avant achat et revise avec l assistant IA.'}
+                </Text>
+
+                <View style={styles.homeHeroFootnote}>
+                  <Text style={styles.homeHeroFootnoteText}>
+                    {publishedDocumentCount} PDF publiés
+                    {homePacks.length ? `  ·  ${homePacks.length} packs en vente` : ''}
+                  </Text>
                 </View>
               </View>
 
-              {/* Welcome perks strip */}
-              <View style={{ marginTop: 16, marginHorizontal: 16, backgroundColor: '#0F172A', borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, overflow: 'hidden', position: 'relative' }}>
-                <View style={{ position: 'absolute', top: -30, right: -30, width: 100, height: 100, borderRadius: 50, backgroundColor: '#2563EB', opacity: 0.08 }} />
-                <View style={{ position: 'absolute', bottom: -20, left: 40, width: 60, height: 60, borderRadius: 30, backgroundColor: '#059669', opacity: 0.08 }} />
-                
-                <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ fontSize: 22 }}>🎁</Text>
-                  <Text style={{ color: '#F8FAFC', fontSize: 11, fontWeight: '800', marginTop: 4, textAlign: 'center', lineHeight: 14 }}>3 PDFs{'\n'}gratuits</Text>
-                </View>
-                <View style={{ width: 1, height: 40, backgroundColor: '#1E293B' }} />
-                <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ fontSize: 22 }}>🤖</Text>
-                  <Text style={{ color: '#F8FAFC', fontSize: 11, fontWeight: '800', marginTop: 4, textAlign: 'center', lineHeight: 14 }}>5 requêtes{'\n'}IA / jour</Text>
-                </View>
-                <View style={{ width: 1, height: 40, backgroundColor: '#1E293B' }} />
-                <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ fontSize: 22 }}>📥</Text>
-                  <Text style={{ color: '#F8FAFC', fontSize: 11, fontWeight: '800', marginTop: 4, textAlign: 'center', lineHeight: 14 }}>Mode{'\n'}hors-ligne</Text>
-                </View>
-                <View style={{ width: 1, height: 40, backgroundColor: '#1E293B' }} />
-                <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ fontSize: 22 }}>📱</Text>
-                  <Text style={{ color: '#F8FAFC', fontSize: 11, fontWeight: '800', marginTop: 4, textAlign: 'center', lineHeight: 14 }}>Sync{'\n'}multi-devices</Text>
-                </View>
+              {/* Perks strip — monospace, paper, no emoji */}
+              <View style={styles.homePerks}>
+                {[
+                  { num: '3', label: 'PDFs gratuits' },
+                  { num: '5', label: 'Requêtes IA / jour' },
+                  { num: '∞', label: 'Mode hors-ligne' },
+                  { num: '↔', label: 'Multi-devices' },
+                ].map((p, i) => (
+                  <View key={p.label} style={[styles.homePerk, i !== 0 && styles.homePerkDivider]}>
+                    <Text style={styles.homePerkNum}>{p.num}</Text>
+                    <Text style={styles.homePerkLabel}>{p.label}</Text>
+                  </View>
+                ))}
               </View>
 
               <View style={styles.homeMainStack}>
-                <View style={[styles.homeLeadCard, { borderRadius: 24, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 }]}>
-                  <View style={styles.dashboardFeatureRow}>
-                    <View style={[styles.dashboardFeatureText, { flex: 1 }]}>
-                      <Text style={[styles.dashboardActionKicker, { fontSize: 13, color: '#2563EB', textTransform: 'none', marginBottom: 6 }]}>✨ Decouvre le catalogue</Text>
-                      <Text style={[styles.dashboardActionTitle, { fontSize: 20, fontWeight: '700', lineHeight: 28 }]}>Acheter et lire des PDF campus</Text>
-                      <Text style={[styles.dashboardActionText, { fontSize: 14, color: '#64748B', lineHeight: 22, marginTop: 8 }]}>
+                {/* Catalogue card */}
+                <View style={styles.homeCard}>
+                  <View style={styles.homeCardFeatureRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.homeCardKicker}>— LE CATALOGUE</Text>
+                      <Text style={styles.homeCardTitle}>Acheter et lire des PDF campus</Text>
+                      <Text style={styles.homeCardBody}>
                         Recherche par université, filière et niveau. Preview gratuite, puis lecture avec l'assistant IA.
                       </Text>
                     </View>
-                    <View style={[styles.dashboardFeatureImageWrap, { marginLeft: 16, borderRadius: 16, overflow: 'hidden' }]}>
-                      <Image source={catalogCard} style={[styles.dashboardFeatureImage, { width: 90, height: 110 }]} resizeMode="cover" />
+                    <View style={styles.homeCardImageWrap}>
+                      <Image source={catalogCard} style={styles.homeCardImage} resizeMode="cover" />
                     </View>
                   </View>
-                  <View style={[styles.homeBenefitRow, { marginTop: 20, gap: 8 }]}>
-                    <View style={[styles.homeBenefitChip, { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 }]}>
-                      <Text style={[styles.homeBenefitText, { color: '#475569', fontSize: 12, fontWeight: '600' }]}>👁️ Preview</Text>
-                    </View>
-                    <View style={[styles.homeBenefitChip, { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 }]}>
-                      <Text style={[styles.homeBenefitText, { color: '#475569', fontSize: 12, fontWeight: '600' }]}>🔒 Sécurisé</Text>
-                    </View>
-                    <View style={[styles.homeBenefitChip, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE', borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 }]}>
-                      <Text style={[styles.homeBenefitText, { color: '#1D4ED8', fontSize: 12, fontWeight: '700' }]}>🤖 IA</Text>
+                  <View style={styles.homeCardTagsRow}>
+                    <View style={styles.homeCardTag}><Text style={styles.homeCardTagText}>— Preview</Text></View>
+                    <View style={styles.homeCardTag}><Text style={styles.homeCardTagText}>— Sécurisé</Text></View>
+                    <View style={[styles.homeCardTag, styles.homeCardTagEm]}>
+                      <Text style={[styles.homeCardTagText, styles.homeCardTagTextEm]}>— Assistant IA</Text>
                     </View>
                   </View>
-                  <View style={[styles.homeLeadActions, { marginTop: 24, gap: 12 }]}>
-                    <PrimaryButton 
-                      label="Explorer le catalogue" 
-                      fluid 
-                      onPress={() => openSection('explore')} 
-                    />
-                    <PrimaryButton
-                      label={continueDocument ? 'Continuer la lecture' : 'Ouvrir ma bibliothèque'}
-                      variant="secondary"
-                      fluid
+                  <View style={styles.homeCardActions}>
+                    <Pressable
+                      style={({ pressed }) => [styles.homeCardCta, pressed && { opacity: 0.85 }]}
+                      onPress={() => openSection('explore')}
+                    >
+                      <Text style={styles.homeCardCtaText}>Explorer le catalogue</Text>
+                      <Text style={styles.homeCardCtaArrow}>→</Text>
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [styles.homeCardCtaSecondary, pressed && { opacity: 0.85 }]}
                       onPress={() => openSection('library')}
-                      style={{ backgroundColor: 'transparent', borderColor: '#E2E8F0', borderWidth: 1 }}
-                    />
+                    >
+                      <Text style={styles.homeCardCtaSecondaryText}>
+                        {continueDocument ? 'Continuer la lecture' : 'Ouvrir ma bibliothèque'}
+                      </Text>
+                    </Pressable>
                   </View>
                 </View>
 
-                <View style={[styles.homeLeadCard, { borderRadius: 24, padding: 24, marginTop: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 }]}>
-                  <View style={styles.dashboardFeatureRow}>
-                    <View style={[styles.dashboardFeatureText, { flex: 1 }]}>
-                      <Text style={[styles.dashboardActionKicker, { fontSize: 13, color: '#10B981', textTransform: 'none', marginBottom: 6 }]}>✨ Rédaction & Rapport</Text>
-                      <Text style={[styles.dashboardActionTitle, { fontSize: 20, fontWeight: '700', lineHeight: 28 }]}>Rapport de Stage & Mémoire</Text>
-                      <Text style={[styles.dashboardActionText, { fontSize: 14, color: '#64748B', lineHeight: 22, marginTop: 8 }]}>
-                        Rédigez vos rapports d'internship et mémoires directement, générez vos chapitres par IA, et exportez en Word / PDF.
+                {/* Rédaction card */}
+                <View style={styles.homeCard}>
+                  <View style={styles.homeCardFeatureRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.homeCardKicker, { color: '#047857' }]}>— LA RÉDACTION</Text>
+                      <Text style={styles.homeCardTitle}>Rapport de Stage & Mémoire</Text>
+                      <Text style={styles.homeCardBody}>
+                        Rédige tes rapports d'internship et mémoires, génère tes chapitres par IA, et exporte en Word ou PDF.
                       </Text>
                     </View>
                   </View>
-                  <View style={[styles.homeLeadActions, { marginTop: 24 }]}>
-                    <PrimaryButton 
-                      label="Rédiger mon document" 
-                      fluid 
-                      onPress={() => openSection('documents')} 
-                      style={{ backgroundColor: '#10B981' }}
-                    />
+                  <View style={styles.homeCardActions}>
+                    <Pressable
+                      style={({ pressed }) => [styles.homeCardCta, pressed && { opacity: 0.85 }]}
+                      onPress={() => openSection('documents')}
+                    >
+                      <Text style={styles.homeCardCtaText}>Rédiger mon document</Text>
+                      <Text style={styles.homeCardCtaArrow}>→</Text>
+                    </Pressable>
                   </View>
                 </View>
 
+                {/* Featured pack */}
                 {featuredHomePack ? (
-                  <Pressable style={[styles.homeFeatureStrip, { backgroundColor: '#F8FAFC', borderRadius: 20, padding: 20, marginTop: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 }]} onPress={() => openSection('explore')}>
-                    <View style={styles.flex}>
-                      <Text style={[styles.dashboardSectionTitle, { fontSize: 13, textTransform: 'none', color: '#64748B', marginBottom: 4 }]}>⭐ Pack Recommandé</Text>
-                      <Text style={[styles.homeFeatureStripTitle, { fontSize: 18, color: '#1E293B', marginBottom: 6 }]}>{featuredHomePack.title}</Text>
-                      <Text style={[styles.dashboardInfoSub, { fontSize: 13, color: '#94A3B8' }]} numberOfLines={2}>
-                        {featuredHomePack.documentCount} PDF • {featuredHomePack.level} • reduc. {featuredHomePack.discountPercent}%
+                  <Pressable
+                    style={({ pressed }) => [styles.homeFeatured, pressed && { opacity: 0.9 }]}
+                    onPress={() => openSection('explore')}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.homeFeaturedKicker}>— PACK RECOMMANDÉ</Text>
+                      <View style={styles.homeFeaturedRule} />
+                      <Text style={styles.homeFeaturedTitle}>{featuredHomePack.title}</Text>
+                      <Text style={styles.homeFeaturedMeta} numberOfLines={2}>
+                        {featuredHomePack.documentCount} PDF  ·  {featuredHomePack.level}  ·  reduc. {featuredHomePack.discountPercent}%
                       </Text>
                     </View>
-                    <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
-                      <Text style={[styles.homeFeatureStripPrice, { fontSize: 16, color: '#1D4ED8', fontWeight: 'bold' }]}>{formatCoins(featuredHomePack.price)} C</Text>
+                    <View style={styles.homeFeaturedPriceBlock}>
+                      <Text style={styles.homeFeaturedPrice}>{formatCoins(featuredHomePack.price)}</Text>
+                      <Text style={styles.homeFeaturedPriceUnit}>C</Text>
                     </View>
                   </Pressable>
                 ) : null}
@@ -3601,47 +3607,303 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
   },
+  // ── Home dashboard (editorial) ─────────────────────────────────────────
   clientDashboard: {
     gap: 14,
     marginBottom: 18,
   },
-  dashboardHero: {
-    borderRadius: 16,
+  homeHero: {
+    backgroundColor: '#F6F1E7',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    padding: 20,
+  },
+  homeHeroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  homeHeroEyebrow: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.8,
+    color: '#B7410E',
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  homeHeroRule: {
+    height: 1,
+    backgroundColor: '#0F172A',
+    marginBottom: 12,
+  },
+  homeHeroGreeting: {
+    fontFamily: 'serif',
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#0F172A',
+    lineHeight: 32,
+    letterSpacing: -0.5,
+  },
+  homeWalletChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    borderRadius: 2,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  homeWalletCoin: {
+    fontFamily: 'serif',
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#B7410E',
+  },
+  homeWalletAmount: {
+    fontFamily: 'serif',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#F6F1E7',
+    lineHeight: 18,
+  },
+  homeWalletLabel: {
+    fontFamily: 'monospace',
+    fontSize: 8,
+    color: '#94A3B8',
+    letterSpacing: 1,
+    marginTop: 1,
+  },
+  homeHeroSubtitle: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: '#475569',
+    lineHeight: 21,
+    marginTop: 14,
+  },
+  homeHeroFootnote: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#0F172A',
+  },
+  homeHeroFootnoteText: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: '#0F172A',
+    fontWeight: '600',
+  },
+  // Perks strip
+  homePerks: {
+    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    paddingVertical: 14,
+  },
+  homePerk: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  homePerkDivider: {
+    borderLeftWidth: 1,
+    borderLeftColor: '#0F172A',
+  },
+  homePerkNum: {
+    fontFamily: 'serif',
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#B7410E',
+    lineHeight: 26,
+  },
+  homePerkLabel: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    color: '#0F172A',
+    letterSpacing: 0.8,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 12,
+  },
+  // Main cards
+  homeMainStack: { gap: 12 },
+  homeCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    padding: 20,
+  },
+  homeCardFeatureRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  homeCardKicker: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#0F172A',
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  homeCardTitle: {
+    fontFamily: 'serif',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    lineHeight: 26,
+    letterSpacing: -0.3,
+    marginBottom: 8,
+  },
+  homeCardBody: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 21,
+  },
+  homeCardImageWrap: {
+    width: 84,
+    height: 100,
+    borderRadius: 2,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    flexShrink: 0,
+  },
+  homeCardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  homeCardTagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 16,
+  },
+  homeCardTag: {
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 2,
+  },
+  homeCardTagEm: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+  },
+  homeCardTagText: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    color: '#0F172A',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  homeCardTagTextEm: { color: '#F6F1E7' },
+  homeCardActions: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#0F172A',
+    gap: 10,
+  },
+  homeCardCta: {
+    backgroundColor: '#0F172A',
+    borderRadius: 2,
+    paddingVertical: 14,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  homeCardCtaText: {
+    fontFamily: 'serif',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#F6F1E7',
+  },
+  homeCardCtaArrow: {
+    fontFamily: 'serif',
+    fontSize: 16,
+    color: '#B7410E',
+  },
+  homeCardCtaSecondary: {
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  homeCardCtaSecondaryText: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  // Featured pack
+  homeFeatured: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F6F1E7',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#B7410E',
     padding: 18,
     gap: 14,
   },
-  dashboardHeroCompact: {
-    gap: 14,
+  homeFeaturedKicker: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#B7410E',
+    fontWeight: '700',
+    marginBottom: 6,
   },
-  dashboardHeroContent: {
-    gap: 14,
+  homeFeaturedRule: {
+    height: 1,
+    backgroundColor: '#0F172A',
+    marginBottom: 8,
   },
-  dashboardHeroText: {
-    gap: 2,
+  homeFeaturedTitle: {
+    fontFamily: 'serif',
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0F172A',
+    lineHeight: 22,
+    marginBottom: 6,
   },
-  dashboardEyebrow: {
-    color: colors.primaryDeep,
-    fontSize: 12,
+  homeFeaturedMeta: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    color: '#475569',
+    letterSpacing: 0.5,
+    lineHeight: 14,
+  },
+  homeFeaturedPriceBlock: {
+    alignItems: 'flex-end',
+    paddingLeft: 12,
+    borderLeftWidth: 1,
+    borderLeftColor: '#0F172A',
+  },
+  homeFeaturedPrice: {
+    fontFamily: 'serif',
+    fontSize: 22,
     fontWeight: '900',
-    textTransform: 'uppercase',
+    color: '#0F172A',
+    lineHeight: 24,
   },
-  dashboardTitle: {
-    color: colors.ink,
-    fontSize: 26,
-    fontWeight: '900',
-    marginTop: 6,
-  },
-  dashboardSubtitle: {
-    color: colors.muted,
-    marginTop: 6,
-    lineHeight: 20,
-    fontWeight: '600',
+  homeFeaturedPriceUnit: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    color: '#B7410E',
+    letterSpacing: 1.2,
+    fontWeight: '700',
+    marginTop: 2,
   },
   dashboardHeroMetaRow: {
     flexDirection: 'row',
@@ -3866,96 +4128,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
   },
-  homeMainStack: {
-    gap: 12,
-  },
-  homeLeadCard: {
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 18,
-    gap: 16,
-  },
-  homeBenefitRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  homeBenefitChip: {
-    borderRadius: 999,
-    backgroundColor: '#F3F8FF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  homeBenefitText: {
-    color: colors.primaryDeep,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  homeLeadActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  homeCtaButton: {
-    minHeight: 48,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    flex: 1,
-  },
-  homeCtaPrimary: {
-    backgroundColor: colors.primary,
-  },
-  homeCtaSecondary: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  homeCtaPrimaryText: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-  },
-  homeCtaSecondaryText: {
-    color: colors.primaryDeep,
-    fontWeight: '900',
-  },
-  homeFeatureStrip: {
-    borderRadius: 22,
-    backgroundColor: '#F8FBFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  homeFeatureStripTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: '900',
-    marginTop: 4,
-  },
-  homeFeatureStripPrice: {
-    color: colors.primaryDeep,
-    fontSize: 18,
-    fontWeight: '900',
-  },
   dashboardInfoRow: {
     gap: 10,
   },
@@ -4052,38 +4224,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-  },
-  homeFeaturedEyebrow: {
-    color: colors.primaryDeep,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  homeFeaturedTitle: {
-    color: colors.ink,
-    fontSize: 20,
-    fontWeight: '900',
-    marginTop: 4,
-  },
-  homeFeaturedPrice: {
-    color: colors.primaryDeep,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  homeFeaturedMetaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  homeFeaturedMeta: {
-    borderRadius: 999,
-    overflow: 'hidden',
-    backgroundColor: colors.primarySoft,
-    color: colors.primaryDeep,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    fontSize: 11,
-    fontWeight: '900',
   },
   homeMiniPackList: {
     gap: 8,
