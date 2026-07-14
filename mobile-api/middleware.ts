@@ -13,6 +13,8 @@ const ALLOWED_ORIGINS = [
   // Local development
   'http://localhost:3001',
   'http://127.0.0.1:3001',
+  'http://localhost:8081',
+  'http://127.0.0.1:8081',
 ];
 
 const isAllowedOrigin = (origin: string) => {
