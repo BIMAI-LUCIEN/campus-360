@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import { WebView } from 'react-native-webview';
 import { createElement, useEffect, useMemo, useState } from 'react';
@@ -22,6 +21,29 @@ import type { CampusDocument, CampusPdfPack } from '../../types';
 import { createSignedPdfUrl, recordPdfAnalyticsEvent } from './pdfApi';
 import { askPdfAssistant, type PdfAssistantMessage } from './pdfAssistant';
 import { FileText, Sparkles, Calendar, HelpCircle, MessageSquare, Lock } from 'lucide-react-native';
+
+// ─── Editorial colour tokens ─────────────────────────────────────────────────
+const $ = {
+  ink:    '#0F172A',
+  paper:  '#F6F1E7',
+  sienna: '#B7410E',
+  emd:    '#047857',   // emerald-deep: owned / success
+  muted:  '#475569',
+  soft:   '#94A3B8',
+  line:   '#CBD5E1',
+  surface:'#FFFFFF',
+  // pack icon BG: warm cream to contrast with paper
+  cream:  '#EDE8DC',
+  // owned tint
+  emdBg:  '#D1FAE5',
+  // sienna tint
+  siennaBg: '#FEF3C7',
+} as const;
+
+// ─── Shared typography helpers ────────────────────────────────────────────────
+const MONO = { fontFamily: 'monospace', letterSpacing: 1.4 } as const;
+const SERIF_TITLE = { fontFamily: 'serif', fontWeight: '700' as const };
+
 type PdfStudentSectionProps = {
   documents: CampusDocument[];
   packs: CampusPdfPack[];
@@ -96,6 +118,9 @@ const getDocumentBadges = (document: CampusDocument) => {
   if (!badges.length) badges.push('Selection PDF');
   return badges.slice(0, 3);
 };
+
+// Folio index helper — gives a consistent two-digit number per item
+const folioNum = (n: number) => String(n).padStart(2, '0');
 
 export function PdfStudentSection({
   documents,
@@ -172,8 +197,8 @@ export function PdfStudentSection({
   const subjects = useMemo(() => {
     const fromDocs = uniqueOptions(publishedDocuments.map((d) => d.subject)).filter(s => s !== 'Tous');
     const defaults = [
-      'Algèbre', 'Analyse Mathématique', 'Programmation C/C++', 'Droit Administratif', 
-      'Microéconomie', 'Macroéconomie', 'Biologie Cellulaire', 'Réseaux Informatiques', 
+      'Algèbre', 'Analyse Mathématique', 'Programmation C/C++', 'Droit Administratif',
+      'Microéconomie', 'Macroéconomie', 'Biologie Cellulaire', 'Réseaux Informatiques',
       'Comptabilité Générale', 'Physique Quantique'
     ];
     return ['Tous', ...Array.from(new Set([...fromDocs, ...defaults]))];
@@ -182,9 +207,9 @@ export function PdfStudentSection({
   const universities = useMemo(() => {
     const fromDocs = uniqueOptions(publishedDocuments.map((d) => d.university)).filter(u => u !== 'Tous');
     const defaults = [
-      'Université de Douala', 'Université de Yaoundé I', 'Université de Yaoundé II', 
-      'Université de Dschang', 'Université de Buea', 'Université de Bamenda', 
-      'Université de Ngaoundéré', 'Université de Maroua', 'ENSP (Polytechnique)', 
+      'Université de Douala', 'Université de Yaoundé I', 'Université de Yaoundé II',
+      'Université de Dschang', 'Université de Buea', 'Université de Bamenda',
+      'Université de Ngaoundéré', 'Université de Maroua', 'ENSP (Polytechnique)',
       'ENAM', 'IUC', 'IUT', 'IUG', 'UCAC'
     ];
     return ['Tous', ...Array.from(new Set([...fromDocs, ...defaults]))];
@@ -194,10 +219,10 @@ export function PdfStudentSection({
     const fromDocs = uniqueOptions(publishedDocuments.map((d) => d.faculty)).filter(f => f !== 'Tous');
     const defaults = [
       'Informatique et Génie Logiciel', 'Génie Informatique', 'Génie Réseaux et Télécommunications',
-      'Génie Électrique', 'Génie Civil', 'Génie Mécanique', 'Techniques de Commercialisation', 
-      'Logistique Industrielle', 'Gestion Comptable et Financière', 'Médecine et Pharmacie', 
-      'Droit et Sciences Politiques', 'Sciences Économiques et Gestion', 'Ingénierie et Technologies', 
-      'Lettres et Sciences Humaines', 'Mathématiques et Physique', 'Comptabilité et Finance', 
+      'Génie Électrique', 'Génie Civil', 'Génie Mécanique', 'Techniques de Commercialisation',
+      'Logistique Industrielle', 'Gestion Comptable et Financière', 'Médecine et Pharmacie',
+      'Droit et Sciences Politiques', 'Sciences Économiques et Gestion', 'Ingénierie et Technologies',
+      'Lettres et Sciences Humaines', 'Mathématiques et Physique', 'Comptabilité et Finance',
       'Communication', 'Agronomie'
     ];
     return ['Tous', ...Array.from(new Set([...fromDocs, ...defaults]))];
@@ -206,7 +231,7 @@ export function PdfStudentSection({
   const levels = useMemo(() => {
     const fromDocs = uniqueOptions(publishedDocuments.map((d) => d.level)).filter(l => l !== 'Tous');
     const defaults = [
-      'Licence 1', 'Licence 2', 'Licence 3', 'Master 1', 'Master 2', 
+      'Licence 1', 'Licence 2', 'Licence 3', 'Master 1', 'Master 2',
       'BTS 1ère année', 'BTS 2ème année', 'Cycle Ingénieur'
     ];
     return ['Tous', ...Array.from(new Set([...fromDocs, ...defaults]))];
@@ -482,17 +507,25 @@ export function PdfStudentSection({
     }
   };
 
+  // Track item index for folio numbers
+  const [packIndex, docIndex] = useState({ pack: 0, doc: 0 });
+
   return (
-    <View>
+    <View style={styles.root}>
+
+      {/* ── Library heading ─────────────────────────────────────────────── */}
       {viewMode === 'library' && (
         <View style={styles.libraryHeadingSection}>
-          <Text style={styles.libraryHeadingTitle}>Mes Achats</Text>
-          <Text style={styles.libraryHeadingSubtitle}>
+          <Text style={styles.eyebrow}>Bibliothèque</Text>
+          <View style={styles.rule} />
+          <Text style={styles.editorialTitle}>Mes Achats</Text>
+          <Text style={styles.editorialSubtitle}>
             Retrouve ici tous les PDF et Packs que tu as débloqués.
           </Text>
         </View>
       )}
 
+      {/* ── Controls: result count, tabs, search, filter toolbar ──────────── */}
       <View style={styles.controls}>
         <View style={styles.resultRow}>
           <Text style={styles.resultText}>
@@ -505,19 +538,27 @@ export function PdfStudentSection({
           ) : null}
         </View>
 
-        <View style={styles.segment}>
+        {/* Editorial tab strip */}
+        <View style={styles.editorialTabStrip}>
           {([
-            ['packs', viewMode === 'library' ? 'Mes packs' : 'Packs'],
-            ['catalog', viewMode === 'library' ? 'Mes PDF' : 'PDF'],
-          ] as Array<[TabKey, string]>).map(([key, label]) => {
+            ['packs',    viewMode === 'library' ? 'Mes packs' : 'Packs'],
+            ['catalog',  viewMode === 'library' ? 'Mes PDF'  : 'Catalogue'],
+          ] as Array<[TabKey, string]>).map(([key, label], i) => {
             const active = activeTab === key;
+            const isFirst = i === 0;
             return (
               <Pressable
                 key={key}
-                style={[styles.segmentButton, active && styles.segmentButtonActive]}
+                style={[
+                  styles.editorialTab,
+                  active && styles.editorialTabActive,
+                  !isFirst && styles.editorialTabRight,
+                ]}
                 onPress={() => setActiveTab(key)}
               >
-                <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
+                <Text style={[styles.editorialTabText, active && styles.editorialTabTextActive]}>
+                  {label}
+                </Text>
               </Pressable>
             );
           })}
@@ -527,7 +568,7 @@ export function PdfStudentSection({
           value={query}
           onChangeText={setQuery}
           placeholder="Titre, matiere, prof..."
-          placeholderTextColor={colors.muted}
+          placeholderTextColor={$.muted}
           style={styles.searchInput}
         />
 
@@ -562,20 +603,22 @@ export function PdfStudentSection({
         </View>
       </View>
 
+      {/* ── Loading state ─────────────────────────────────────────────────── */}
       {loading ? (
         <View style={styles.statePanel}>
           <View style={styles.stateBadge}>
-            <Text style={styles.stateBadgeText}>...</Text>
+            <Text style={styles.stateBadgeMono}>...</Text>
           </View>
           <Text style={styles.stateTitle}>Chargement du catalogue</Text>
           <Text style={styles.bodyMuted}>On recupere les PDF, packs et filtres disponibles.</Text>
         </View>
       ) : null}
 
+      {/* ── Error state ───────────────────────────────────────────────────── */}
       {!loading && error ? (
         <View style={styles.statePanel}>
           <View style={[styles.stateBadge, styles.stateBadgeAlert]}>
-            <Text style={styles.stateBadgeText}>!</Text>
+            <Text style={styles.stateBadgeMono}>!</Text>
           </View>
           <Text style={styles.stateTitle}>Catalogue indisponible</Text>
           <Text style={styles.bodyMuted}>{error}</Text>
@@ -587,10 +630,11 @@ export function PdfStudentSection({
         </View>
       ) : null}
 
+      {/* ── Empty: no packs found ─────────────────────────────────────────── */}
       {!loading && !error && activeTab === 'packs' && visiblePacks.length === 0 ? (
-        <View style={styles.emptyState}>
+        <View style={styles.statePanel}>
           <View style={styles.stateBadge}>
-            <Text style={styles.stateBadgeText}>+</Text>
+            <Text style={styles.stateBadgeMono}>0</Text>
           </View>
           <Text style={styles.stateTitle}>
             {viewMode === 'library' ? 'aucun pack achete' : 'aucun pack trouve'}
@@ -601,322 +645,373 @@ export function PdfStudentSection({
         </View>
       ) : null}
 
+      {/* ── Empty: no PDFs found ──────────────────────────────────────────── */}
       {!loading && !error && activeTab === 'catalog' && visibleDocuments.length === 0 ? (
-        <View style={styles.emptyState}>
+        <View style={styles.statePanel}>
           <View style={styles.stateBadge}>
-            <Text style={styles.stateBadgeText}>0</Text>
+            <Text style={styles.stateBadgeMono}>0</Text>
           </View>
           <Text style={styles.stateTitle}>
-            {viewMode === 'library' ? 'aucun PDF débloqué' : 'aucun PDF trouve'}
+            {viewMode === 'library' ? 'aucun PDF debloque' : 'aucun PDF trouve'}
           </Text>
           <Text style={styles.bodyMuted}>
-            {viewMode === 'library' ? "Tu n'as pas encore débloqué de PDF." : "Essaie une autre recherche."}
+            {viewMode === 'library' ? "Tu n'as pas encore debloque de PDF." : "Essaie une autre recherche."}
           </Text>
         </View>
       ) : null}
 
+      {/* ── Empty: library has nothing ───────────────────────────────────── */}
       {!loading && !error && activeTab === 'library' && visiblePacks.length === 0 && visibleDocuments.length === 0 ? (
-        <View style={styles.emptyState}>
+        <View style={styles.statePanel}>
           <View style={styles.stateBadge}>
-            <Text style={styles.stateBadgeText}>0</Text>
+            <Text style={styles.stateBadgeMono}>0</Text>
           </View>
           <Text style={styles.stateTitle}>Aucun achat</Text>
-          <Text style={styles.bodyMuted}>Tu n'as pas encore de PDF ou de Pack acheté.</Text>
+          <Text style={styles.bodyMuted}>Tu n'as pas encore de PDF ou de Pack achete.</Text>
         </View>
       ) : null}
 
+      {/* ── Library content strip ────────────────────────────────────────── */}
       {!loading && !error && activeTab === 'library' && (visiblePacks.length > 0 || visibleDocuments.length > 0) ? (
-        <View style={styles.sectionStrip}>
+        <View style={styles.editorialSectionStrip}>
           <View style={styles.flex}>
-            <Text style={styles.sectionStripEyebrow}>Bibliothèque</Text>
-            <Text style={styles.sectionStripTitle}>Tes contenus débloqués</Text>
+            <Text style={styles.eyebrow}>Bibliothèque</Text>
+            <View style={styles.rule} />
+            <Text style={styles.editorialTitle}>Tes contenus debloques</Text>
             <Text style={styles.bodyMuted}>
-              {purchasedCount} PDF, {purchasedPackIds.length} packs et {ownedPageCount} pages disponibles pour reprendre vite.
+              {purchasedCount} PDF, {purchasedPackIds.length} packs et {ownedPageCount} pages disponibles.
             </Text>
           </View>
         </View>
       ) : null}
 
+      {/* ── Packs hero strip ─────────────────────────────────────────────── */}
       {!loading && !error && activeTab === 'packs' && visiblePacks.length > 0 ? (
-        <View style={[styles.sectionStrip, { backgroundColor: '#F8FAFC', borderRadius: 20, padding: 20, marginTop: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 }]}>
+        <View style={styles.editorialSectionStrip}>
           <View style={styles.flex}>
-            <Text style={[styles.sectionStripEyebrow, { fontSize: 13, textTransform: 'none', color: '#64748B', marginBottom: 4 }]}>💼 Packs academiques</Text>
-            <Text style={[styles.sectionStripTitle, { fontSize: 18, color: '#1E293B', marginBottom: 6 }]}>Des lots plus rentables pour ton semestre</Text>
-            <Text style={[styles.bodyMuted, { fontSize: 13, color: '#94A3B8' }]}>
-              {visiblePacks.length} packs disponibles et {formatCoins(
+            <Text style={styles.eyebrow}>Packs academiques</Text>
+            <View style={styles.rule} />
+            <Text style={[styles.editorialTitle, { fontSize: 17 }]}>Des lots plus rentables pour ton semestre</Text>
+            <Text style={[styles.bodyMuted, { marginTop: 6 }]}>
+              {visiblePacks.length} packs · econ. potentielle {formatCoins(
                 Math.max(0, visiblePacks.reduce((sum, pack) => sum + Math.max(0, pack.originalPrice - pack.price), 0)),
-              )} C d economie potentielle.
+              )} C
             </Text>
           </View>
           {featuredPack ? (
-            <Pressable style={styles.sectionStripLink} onPress={() => setSelectedPack(featuredPack)}>
-              <Text style={styles.sectionStripLinkText}>Voir le recommande</Text>
+            <Pressable style={styles.editorialLink} onPress={() => setSelectedPack(featuredPack)}>
+              <Text style={styles.editorialLinkText}>Voir</Text>
             </Pressable>
           ) : null}
         </View>
       ) : null}
 
+      {/* ── Catalog hero strip ───────────────────────────────────────────── */}
       {!loading && !error && activeTab === 'catalog' && visibleDocuments.length > 0 ? (
-        <View style={[styles.sectionStrip, { backgroundColor: '#F8FAFC', borderRadius: 20, padding: 20, marginTop: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 }]}>
+        <View style={styles.editorialSectionStrip}>
           <View style={styles.flex}>
-            <Text style={[styles.sectionStripEyebrow, { fontSize: 13, textTransform: 'none', color: '#64748B', marginBottom: 4 }]}>📖 Ton catalogue</Text>
-            <Text style={[styles.sectionStripTitle, { fontSize: 18, color: '#1E293B', marginBottom: 6 }]}>Trouve rapidement le bon support</Text>
-            <Text style={[styles.bodyMuted, { fontSize: 13, color: '#94A3B8' }]}>
-              {visibleDocuments.length} PDF visibles, {subjects.length - 1} matieres et des filtres pour aller droit au bon document.
+            <Text style={styles.eyebrow}>Catalogue PDF</Text>
+            <View style={styles.rule} />
+            <Text style={[styles.editorialTitle, { fontSize: 17 }]}>Trouve rapidement le bon support</Text>
+            <Text style={[styles.bodyMuted, { marginTop: 6 }]}>
+              {visibleDocuments.length} PDF visibles, {subjects.length - 1} matieres, filtres appliques.
             </Text>
           </View>
           {featuredDocument ? (
-            <Pressable style={styles.sectionStripLink} onPress={() => openPreview(featuredDocument)}>
-              <Text style={styles.sectionStripLinkText}>Preview du recommande</Text>
+            <Pressable style={styles.editorialLink} onPress={() => openPreview(featuredDocument)}>
+              <Text style={styles.editorialLinkText}>Apercu</Text>
             </Pressable>
           ) : null}
         </View>
       ) : null}
 
+      {/* ── Pack cards ────────────────────────────────────────────────────── */}
       {!loading && !error && activeTab === 'packs' ? (
-        visiblePacks.map((pack) => {
+        visiblePacks.map((pack, idx) => {
           const owned = purchasedPackIds.includes(pack.id);
           const purchasing = purchasingPackId === pack.id;
           const packDocuments = getPackDocuments(pack);
           const readCount = packDocuments.filter((document) => ownedDocumentIds.includes(document.id)).length;
           const inLibrary = viewMode === 'library';
           const savings = Math.max(0, pack.originalPrice - pack.price);
+          const fi = folioNum(idx + 1);
 
           return (
-            <LinearGradient
+            <View
               key={pack.id}
-              colors={inLibrary ? ['#F4FAFF', '#FFFFFF'] : ['#FFFFFF', '#F8FCFF']}
-              style={[styles.packCard, inLibrary && styles.libraryPackCard, { flexDirection: 'column', gap: 16, padding: 20, borderRadius: 16, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 }]}
+              style={[styles.editorialCard, inLibrary && styles.editorialCardOwned]}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16 }}>
-                <View style={{ width: 60, height: 60, borderRadius: 16, backgroundColor: inLibrary ? '#E0F2FE' : '#F8FAFC', alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ color: inLibrary ? '#0284C7' : '#475569', fontSize: 24 }}>💼</Text>
+              {/* Card header row */}
+              <View style={styles.cardHeaderRow}>
+                {/* Folio icon */}
+                <View style={styles.folioIconBox}>
+                  <Text style={styles.folioDash}>—</Text>
+                  <Text style={styles.folioNumber}>{fi}</Text>
                 </View>
 
-                <View style={[styles.flex]}>
-                  <View style={[styles.titleRow, { justifyContent: 'space-between' }]}>
-                    <Text style={[styles.cardTitle, { flex: 1, fontSize: 18, color: '#1E293B', fontWeight: '700', lineHeight: 24 }]} numberOfLines={2}>{pack.title}</Text>
-                    <View style={{ backgroundColor: owned ? '#ECFDF5' : '#EFF6FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginLeft: 12, alignSelf: 'flex-start' }}>
-                      <Text style={{ color: owned ? '#059669' : '#1D4ED8', fontSize: 13, fontWeight: 'bold' }}>
+                <View style={styles.flex}>
+                  <View style={styles.cardTitleRow}>
+                    <Text style={styles.cardTitle} numberOfLines={2}>{pack.title}</Text>
+                    <View style={[styles.priceBadge, owned ? styles.priceBadgeOwned : styles.priceBadgeBuy]}>
+                      <Text style={[styles.priceBadgeText, owned ? styles.priceBadgeTextOwned : styles.priceBadgeTextBuy]}>
                         {owned ? 'Achete' : `${formatCoins(pack.price)} C`}
                       </Text>
                     </View>
                   </View>
-                  <Text style={[styles.bodyMuted, { fontSize: 14, color: '#64748B', marginTop: 4 }]}>{pack.university} • {pack.level}</Text>
-                  
+                  <Text style={styles.cardMeta}>{pack.university} · {pack.level}</Text>
                   {pack.description ? (
-                    <Text style={[styles.description, { fontSize: 13, color: '#94A3B8', marginTop: 8, lineHeight: 20 }]} numberOfLines={2}>{pack.description}</Text>
+                    <Text style={styles.cardDescription} numberOfLines={2}>{pack.description}</Text>
                   ) : null}
                 </View>
               </View>
 
-              <View style={[styles.badgeRow, { marginTop: 4, gap: 8 }]}>
+              {/* Badges row */}
+              <View style={styles.badgeRow}>
                 {getPackBadges(pack).map((badge) => (
-                  <View key={badge} style={{ backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
-                    <Text style={{ color: '#475569', fontSize: 12, fontWeight: '600' }}>{badge}</Text>
+                  <View key={badge} style={[styles.editorialBadge, styles.editorialBadgeMuted]}>
+                    <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextMuted]}>{badge}</Text>
                   </View>
                 ))}
-                <View style={{ backgroundColor: '#F1F5F9', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
-                  <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '600' }}>{pack.documentCount} PDF</Text>
+                <View style={[styles.editorialBadge, styles.editorialBadgeMuted]}>
+                  <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextMuted]}>{pack.documentCount} PDF</Text>
                 </View>
-                <View style={{ backgroundColor: '#F1F5F9', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
-                  <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '600' }}>{pack.pageCount} p.</Text>
+                <View style={[styles.editorialBadge, styles.editorialBadgeMuted]}>
+                  <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextMuted]}>{pack.pageCount} p.</Text>
                 </View>
-                <View style={{ backgroundColor: '#ECFDF5', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
-                  <Text style={{ color: '#059669', fontSize: 12, fontWeight: 'bold' }}>-{pack.discountPercent}%</Text>
+                <View style={[styles.editorialBadge, styles.editorialBadgeSienna]}>
+                  <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextSienna]}>-{pack.discountPercent}%</Text>
                 </View>
               </View>
 
-              <View style={[styles.packProgressTrack, { backgroundColor: '#F1F5F9', height: 6, borderRadius: 3, marginTop: 4 }]}>
+              {/* Progress track */}
+              <View style={styles.progressTrack}>
                 <View
                   style={[
-                    styles.packProgressFill,
-                    { height: 6, borderRadius: 3, backgroundColor: '#3B82F6', width: `${pack.documentCount ? Math.min(100, Math.round((readCount / pack.documentCount) * 100)) : 0}%` },
+                    styles.progressFill,
+                    {
+                      width: `${pack.documentCount ? Math.min(100, Math.round((readCount / pack.documentCount) * 100)) : 0}%`,
+                      backgroundColor: $.emd,
+                    },
                   ]}
                 />
               </View>
-              <Text style={[styles.metaText, { fontSize: 12, color: '#94A3B8', marginTop: -4 }]}>
+              <Text style={styles.progressMeta}>
                 {owned
                   ? `${readCount}/${pack.documentCount} PDF lus`
-                  : `Economie: ${formatCoins(Math.max(0, pack.originalPrice - pack.price))} C`}
+                  : `Economie: ${formatCoins(savings)} C`}
               </Text>
 
-              <View style={[styles.actionRow, { marginTop: 8, gap: 12 }]}>
+              {/* Actions */}
+              <View style={styles.actionRow}>
                 <Pressable
-                  style={({ pressed }) => [styles.secondaryButton, { flex: 1, backgroundColor: 'transparent', borderColor: '#E2E8F0', borderWidth: 1, alignItems: 'center', justifyContent: 'center', height: 48, borderRadius: 24, opacity: pressed ? 0.8 : 1 }]}
-                  onPress={() => setSelectedPack(pack)} 
+                  style={({ pressed }) => [
+                    styles.btnSecondary,
+                    pressed && styles.btnPressed,
+                  ]}
+                  onPress={() => setSelectedPack(pack)}
                 >
-                  <Text style={[styles.secondaryButtonText, { color: '#1E293B', fontWeight: '700' }]}>{inLibrary ? 'Contenu' : 'Details'}</Text>
+                  <Text style={styles.btnSecondaryText}>{inLibrary ? 'Contenu' : 'Details'}</Text>
                 </Pressable>
                 <Pressable
                   disabled={purchasing}
-                  style={({ pressed }) => [styles.primaryButton, { flex: 1, alignItems: 'center', justifyContent: 'center', height: 48, borderRadius: 24, backgroundColor: purchasing ? '#94A3B8' : (owned && inLibrary ? '#1E3A8A' : '#2563EB'), opacity: pressed || purchasing ? 0.8 : 1 }]}
+                  style={({ pressed }) => [
+                    styles.btnPrimary,
+                    purchasing && styles.btnDisabled,
+                    owned && !inLibrary && styles.btnOwned,
+                    owned && inLibrary && styles.btnOwnedLibrary,
+                    (pressed || purchasing) && styles.btnPressed,
+                  ]}
                   onPress={() => (owned ? setSelectedPack(pack) : onBuyPack(pack))}
                 >
-                  <Text style={[styles.primaryButtonText, { color: '#FFFFFF', fontWeight: '700' }]}>{purchasing ? 'Achat...' : owned ? (inLibrary ? 'Continuer' : 'Ouvrir') : 'Acheter pack'}</Text>
+                  <Text style={styles.btnPrimaryText}>
+                    {purchasing ? 'Achat...' : owned ? (inLibrary ? 'Continuer' : 'Ouvrir') : 'Acheter pack'}
+                  </Text>
                 </Pressable>
               </View>
-            </LinearGradient>
+            </View>
           );
         })
       ) : null}
 
+      {/* ── Document cards ────────────────────────────────────────────────── */}
       {!loading && !error && activeTab === 'catalog' ? (
-        visibleDocuments.map((document) => {
+        visibleDocuments.map((document, idx) => {
           const owned = ownedDocumentIds.includes(document.id);
           const purchasing = purchasingDocumentId === document.id;
           const inLibrary = viewMode === 'library';
+          const di = folioNum(idx + 1);
+          const initials = document.subject.slice(0, 2).toUpperCase();
+
           return (
-            <LinearGradient
+            <View
               key={document.id}
-              colors={inLibrary ? ['#F4FAFF', '#FFFFFF'] : ['#FFFFFF', '#F8FCFF']}
-              style={[styles.documentCard, inLibrary && styles.libraryDocumentCard, { flexDirection: 'column', gap: 16, padding: 20, borderRadius: 16, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 }]}
+              style={[styles.editorialCard, inLibrary && styles.editorialCardOwned]}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16 }}>
-                <View style={{ width: 60, height: 60, borderRadius: 16, backgroundColor: inLibrary ? '#E0F2FE' : '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ color: inLibrary ? '#0284C7' : '#64748B', fontSize: 20, fontWeight: 'bold' }}>
-                    {document.subject.slice(0, 2).toUpperCase()}
-                  </Text>
+              {/* Card header row */}
+              <View style={styles.cardHeaderRow}>
+                {/* Folio icon */}
+                <View style={[styles.folioIconBox, { backgroundColor: inLibrary ? $.emdBg : $.cream }]}>
+                  <Text style={[styles.folioNumber, { color: inLibrary ? $.emd : $.sienna }]}>{initials}</Text>
                 </View>
 
-                <View style={[styles.documentBody, compact && styles.documentBodyCompact]}>
-                  <View style={[styles.titleRow, { justifyContent: 'space-between' }]}>
-                    <Text style={[styles.cardTitle, { flex: 1, fontSize: 18, color: '#1E293B', fontWeight: '700', lineHeight: 24 }]} numberOfLines={2}>{document.title}</Text>
-                    <View style={{ backgroundColor: owned ? '#ECFDF5' : '#EFF6FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginLeft: 12, alignSelf: 'flex-start' }}>
-                      <Text style={{ color: owned ? '#059669' : '#1D4ED8', fontSize: 13, fontWeight: 'bold' }}>
+                <View style={styles.flex}>
+                  <View style={styles.cardTitleRow}>
+                    <Text style={styles.cardTitle} numberOfLines={2}>{document.title}</Text>
+                    <View style={[styles.priceBadge, owned ? styles.priceBadgeOwned : styles.priceBadgeBuy]}>
+                      <Text style={[styles.priceBadgeText, owned ? styles.priceBadgeTextOwned : styles.priceBadgeTextBuy]}>
                         {owned ? 'Achete' : `${formatCoins(document.price)} C`}
                       </Text>
                     </View>
                   </View>
-                  <Text style={[styles.bodyMuted, { fontSize: 14, color: '#64748B', marginTop: 4 }]}>{document.subject} • {document.level}</Text>
-                  <Text style={[styles.metaText, { fontSize: 13, color: '#94A3B8', marginTop: 2 }]}>{document.teacher} • {document.university}</Text>
-                  {inLibrary ? <Text style={[styles.libraryResume, { color: '#0284C7', fontSize: 13, fontWeight: '600', marginTop: 8 }]}>🚀 Pret pour la lecture sécurisée.</Text> : null}
+                  <Text style={styles.cardMeta}>{document.subject} · {document.level}</Text>
+                  <Text style={styles.cardMeta}>{document.teacher} · {document.university}</Text>
+                  {inLibrary ? (
+                    <Text style={[styles.cardMeta, { color: $.emd, marginTop: 4, fontFamily: 'monospace', fontSize: 10 }]}>
+                      — securise pour lecture
+                    </Text>
+                  ) : null}
                 </View>
               </View>
 
-              <View style={[styles.badgeRow, { marginTop: 4, gap: 8 }]}>
+              {/* Badges row */}
+              <View style={styles.badgeRow}>
                 {getDocumentBadges(document).map((badge) => (
-                  <View key={badge} style={{ backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
-                    <Text style={{ color: '#475569', fontSize: 12, fontWeight: '600' }}>{badge}</Text>
+                  <View key={badge} style={[styles.editorialBadge, styles.editorialBadgeMuted]}>
+                    <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextMuted]}>{badge}</Text>
                   </View>
                 ))}
-                <View style={{ backgroundColor: '#F1F5F9', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
-                  <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '600' }}>{document.pageCount} p.</Text>
+                <View style={[styles.editorialBadge, styles.editorialBadgeMuted]}>
+                  <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextMuted]}>{document.pageCount} p.</Text>
                 </View>
-                <View style={{ backgroundColor: '#F1F5F9', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
-                  <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '600' }}>{document.fileSize}</Text>
+                <View style={[styles.editorialBadge, styles.editorialBadgeMuted]}>
+                  <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextMuted]}>{document.fileSize}</Text>
                 </View>
                 {document.rating > 0 ? (
-                  <View style={{ backgroundColor: '#FEF3C7', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
-                    <Text style={{ color: '#D97706', fontSize: 12, fontWeight: 'bold' }}>⭐ {document.rating}</Text>
+                  <View style={[styles.editorialBadge, styles.editorialBadgeSienna]}>
+                    <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextSienna]}>★ {document.rating}</Text>
                   </View>
                 ) : null}
               </View>
 
-              <View style={[styles.actionRow, { marginTop: 8, gap: 12 }]}>
+              {/* Actions */}
+              <View style={styles.actionRow}>
                 <Pressable
-                  style={({ pressed }) => [styles.secondaryButton, { flex: 1, backgroundColor: 'transparent', borderColor: '#E2E8F0', borderWidth: 1, alignItems: 'center', justifyContent: 'center', height: 48, borderRadius: 24, opacity: pressed ? 0.8 : 1 }]}
-                  onPress={() => openPreview(document)} 
+                  style={({ pressed }) => [
+                    styles.btnSecondary,
+                    pressed && styles.btnPressed,
+                  ]}
+                  onPress={() => openPreview(document)}
                 >
-                  <Text style={[styles.secondaryButtonText, { color: '#1E293B', fontWeight: '700' }]}>{inLibrary ? 'Apercu' : 'Voir details'}</Text>
+                  <Text style={styles.btnSecondaryText}>{inLibrary ? 'Apercu' : 'Voir details'}</Text>
                 </Pressable>
                 <Pressable
                   disabled={purchasing}
-                  style={({ pressed }) => [styles.primaryButton, { flex: 1, alignItems: 'center', justifyContent: 'center', height: 48, borderRadius: 24, backgroundColor: purchasing ? '#94A3B8' : (owned && inLibrary ? '#1E3A8A' : '#2563EB'), opacity: pressed || purchasing ? 0.8 : 1 }]}
+                  style={({ pressed }) => [
+                    styles.btnPrimary,
+                    purchasing && styles.btnDisabled,
+                    owned && inLibrary && styles.btnOwnedLibrary,
+                    (pressed || purchasing) && styles.btnPressed,
+                  ]}
                   onPress={() => (owned ? openDocument(document) : onBuyDocument(document))}
                 >
-                  <Text style={[styles.primaryButtonText, { color: '#FFFFFF', fontWeight: '700' }]}>{purchasing ? 'Achat...' : owned ? (inLibrary ? 'Continuer' : "Lire") : 'Acheter'}</Text>
+                  <Text style={styles.btnPrimaryText}>
+                    {purchasing ? 'Achat...' : owned ? (inLibrary ? 'Continuer' : 'Lire') : 'Acheter'}
+                  </Text>
                 </Pressable>
               </View>
-            </LinearGradient>
+            </View>
           );
         })
       ) : null}
 
-
-
+      {/* ── Pack detail modal ─────────────────────────────────────────────── */}
       <Modal transparent animationType="slide" visible={Boolean(selectedPack)}>
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
+          <View style={styles.editorialModalCard}>
             {selectedPack ? (
               <>
-                <Text style={styles.modalTitle}>{selectedPack.title}</Text>
-                <Text style={styles.bodyMuted}>
-                  {selectedPack.university} - {selectedPack.faculty} - {selectedPack.level}
+                <Text style={styles.eyebrow}>Pack detail</Text>
+                <View style={styles.rule} />
+                <Text style={styles.editorialTitle}>{selectedPack.title}</Text>
+                <Text style={[styles.bodyMuted, { marginTop: 4 }]}>
+                  {selectedPack.university} — {selectedPack.faculty} — {selectedPack.level}
                 </Text>
-                <View style={styles.badgeRow}>
-                  {getPackBadges(selectedPack).map((badge) => (
-                    <Text key={badge} style={styles.packBadge}>{badge}</Text>
-                  ))}
-                </View>
-                <View style={styles.packHero}>
-                  <Text style={styles.packHeroNumber}>{selectedPack.documentCount}</Text>
-                  <Text style={styles.packHeroLabel}>PDF inclus</Text>
-                  <Text style={styles.packHeroSave}>-{selectedPack.discountPercent}%</Text>
-                </View>
-                <Text style={styles.description}>{selectedPack.description}</Text>
-                <View style={styles.packBenefitRow}>
-                  <View style={styles.packBenefitCard}>
-                    <Text style={styles.packBenefitValue}>{selectedPack.documentCount}</Text>
-                    <Text style={styles.packBenefitLabel}>Documents</Text>
+
+                {/* Hero stat */}
+                <View style={styles.modalHeroRow}>
+                  <View style={styles.modalHeroStat}>
+                    <Text style={styles.modalHeroValue}>{selectedPack.documentCount}</Text>
+                    <Text style={styles.modalHeroLabel}>PDF inclus</Text>
                   </View>
-                  <View style={styles.packBenefitCard}>
-                    <Text style={styles.packBenefitValue}>{formatCoins(Math.max(0, selectedPack.originalPrice - selectedPack.price))} C</Text>
-                    <Text style={styles.packBenefitLabel}>Economie</Text>
+                  <View style={styles.modalHeroDivider} />
+                  <View style={styles.modalHeroStat}>
+                    <Text style={[styles.modalHeroValue, { color: $.emd }]}>-{selectedPack.discountPercent}%</Text>
+                    <Text style={styles.modalHeroLabel}>Remise</Text>
                   </View>
-                  <View style={styles.packBenefitCard}>
-                    <Text style={styles.packBenefitValue}>{selectedPack.pageCount}</Text>
-                    <Text style={styles.packBenefitLabel}>Pages</Text>
+                  <View style={styles.modalHeroDivider} />
+                  <View style={styles.modalHeroStat}>
+                    <Text style={styles.modalHeroValue}>{selectedPack.pageCount}</Text>
+                    <Text style={styles.modalHeroLabel}>Pages</Text>
                   </View>
                 </View>
+
+                <Text style={styles.cardDescription}>{selectedPack.description}</Text>
+
+                {/* Chips */}
                 <View style={styles.chipRow}>
-                  <Text style={styles.chip}>{selectedPack.pageCount} pages</Text>
-                  <Text style={styles.chip}>{selectedPack.semester}</Text>
-                  <Text style={styles.chip}>{selectedPack.packType.replace('_', ' ')}</Text>
+                  <View style={[styles.editorialBadge, styles.editorialBadgeMuted]}>
+                    <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextMuted]}>{selectedPack.semester}</Text>
+                  </View>
+                  <View style={[styles.editorialBadge, styles.editorialBadgeMuted]}>
+                    <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextMuted]}>{selectedPack.packType.replace('_', ' ')}</Text>
+                  </View>
+                  <View style={[styles.editorialBadge, styles.editorialBadgeMuted]}>
+                    <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextMuted]}>{selectedPack.pageCount} pages</Text>
+                  </View>
                 </View>
+
+                {/* Document list */}
                 <View style={styles.packDocumentsList}>
-                  {getPackDocuments(selectedPack).map((document) => {
-                    const owned = ownedDocumentIds.includes(document.id);
+                  {getPackDocuments(selectedPack).map((doc) => {
+                    const docOwned = ownedDocumentIds.includes(doc.id);
+                    const docInitials = doc.subject.slice(0, 2).toUpperCase();
                     return (
-                      <Pressable key={document.id} style={styles.packDocumentRow} onPress={() => openPreview(document)}>
-                        <View style={styles.packDocumentIcon}>
-                          <Text style={styles.packDocumentIconText}>{document.subject.slice(0, 2).toUpperCase()}</Text>
+                      <Pressable key={doc.id} style={styles.packDocumentRow} onPress={() => openPreview(doc)}>
+                        <View style={styles.packDocIcon}>
+                          <Text style={styles.packDocIconText}>{docInitials}</Text>
                         </View>
                         <View style={styles.flex}>
-                          <Text style={styles.cardTitle} numberOfLines={1}>{document.title}</Text>
-                          <Text style={styles.metaText}>{document.pageCount} pages - {document.subject}</Text>
+                          <Text style={styles.cardTitle} numberOfLines={1}>{doc.title}</Text>
+                          <Text style={styles.cardMeta}>{doc.pageCount} pages — {doc.subject}</Text>
                         </View>
-                        <Text style={owned ? styles.ownedMini : styles.priceMini}>
-                          {owned ? 'OK' : `${formatCoins(document.price)} C`}
+                        <Text style={docOwned ? styles.ownedMini : styles.priceMini}>
+                          {docOwned ? '— OK' : `${formatCoins(doc.price)} C`}
                         </Text>
                       </Pressable>
                     );
                   })}
                 </View>
+
+                {/* Actions */}
                 <View style={styles.actionRow}>
-                  <Pressable style={styles.secondaryButton} onPress={() => setSelectedPack(null)}>
-                    <Text style={styles.secondaryButtonText}>Fermer</Text>
+                  <Pressable style={styles.btnSecondary} onPress={() => setSelectedPack(null)}>
+                    <Text style={styles.btnSecondaryText}>Fermer</Text>
                   </Pressable>
                   <Pressable
                     disabled={purchasingPackId === selectedPack.id}
                     style={[
-                      purchasedPackIds.includes(selectedPack.id) ? styles.ownedButton : styles.primaryButton,
-                      purchasingPackId === selectedPack.id && styles.disabledButton,
+                      styles.btnPrimary,
+                      purchasedPackIds.includes(selectedPack.id) ? styles.btnOwned : null,
+                      purchasingPackId === selectedPack.id && styles.btnDisabled,
                     ]}
                     onPress={() => {
                       if (!purchasedPackIds.includes(selectedPack.id)) onBuyPack(selectedPack);
                       setSelectedPack(null);
                     }}
                   >
-                    <Text
-                      style={
-                        purchasedPackIds.includes(selectedPack.id)
-                          ? styles.ownedButtonText
-                          : styles.primaryButtonText
-                      }
-                    >
+                    <Text style={styles.btnPrimaryText}>
                       {purchasedPackIds.includes(selectedPack.id)
-                        ? 'Déjà acheté'
+                        ? 'Deja achete'
                         : `${formatCoins(selectedPack.price)} Coins`}
                     </Text>
                   </Pressable>
@@ -927,54 +1022,48 @@ export function PdfStudentSection({
         </View>
       </Modal>
 
+      {/* ── Reader / PDF view modal ───────────────────────────────────────── */}
       <Modal animationType="slide" visible={Boolean(readerDocument)}>
         <View style={styles.readerScreen}>
           {readerDocument ? (
             <>
+              {/* Top bar */}
               <View style={styles.readerTopBar}>
                 <Pressable style={styles.readerClose} onPress={closeReader}>
                   <Text style={styles.readerCloseText}>Fermer</Text>
                 </Pressable>
                 <View style={styles.flex}>
                   <Text style={styles.readerTitle} numberOfLines={1}>{readerDocument.title}</Text>
-                  <Text style={styles.readerMeta}>{readerDocument.subject} - {readerDocument.level}</Text>
+                  <Text style={styles.readerMeta}>{readerDocument.subject} — {readerDocument.level}</Text>
                 </View>
               </View>
 
-              {/* Tab Switcher / Preview Mode Badge always visible under top bar */}
+              {/* Tool segment or preview badge */}
               {!isReaderPreview ? (
                 <View style={styles.toolSegment}>
                   {(['pdf', 'summary', 'plan', 'quiz', 'assistant'] as const).map((tool) => {
                     const active = activeTool === tool;
-                    const iconColor = active ? '#2563EB' : '#6B7280';
+                    const iconColor = active ? $.sienna : $.muted;
                     const label =
-                      tool === 'pdf'
-                        ? 'PDF'
-                        : tool === 'summary'
-                          ? 'Résumé'
-                          : tool === 'plan'
-                            ? 'Plan'
-                            : tool === 'quiz'
-                              ? 'Quiz'
-                              : 'Chat';
+                      tool === 'pdf' ? 'PDF'
+                      : tool === 'summary' ? 'Resume'
+                      : tool === 'plan' ? 'Plan'
+                      : tool === 'quiz' ? 'Quiz'
+                      : 'Chat';
                     const IconComponent =
-                      tool === 'pdf'
-                        ? FileText
-                        : tool === 'summary'
-                          ? Sparkles
-                          : tool === 'plan'
-                            ? Calendar
-                            : tool === 'quiz'
-                              ? HelpCircle
-                              : MessageSquare;
+                      tool === 'pdf' ? FileText
+                      : tool === 'summary' ? Sparkles
+                      : tool === 'plan' ? Calendar
+                      : tool === 'quiz' ? HelpCircle
+                      : MessageSquare;
                     return (
                       <Pressable
                         key={tool}
                         style={[styles.toolSegmentButton, active && styles.toolSegmentButtonActive]}
                         onPress={() => setActiveTool(tool)}
                       >
-                        <IconComponent size={15} color={iconColor} style={{ marginBottom: 2 }} />
-                        <Text style={[styles.toolSegmentText, active && styles.toolSegmentTextActive, { fontSize: 11 }]}>
+                        <IconComponent size={13} color={iconColor} style={{ marginBottom: 2 }} />
+                        <Text style={[styles.toolSegmentText, active && styles.toolSegmentTextActive]}>
                           {label}
                         </Text>
                       </Pressable>
@@ -982,18 +1071,18 @@ export function PdfStudentSection({
                   })}
                 </View>
               ) : (
-                <View style={[styles.previewModeBadge, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]}>
-                  <Lock size={14} color="#FFFFFF" />
-                  <Text style={styles.previewModeBadgeText}>MODE APERÇU (PAGE 1)</Text>
+                <View style={styles.previewModeBadge}>
+                  <Lock size={12} color={$.paper} />
+                  <Text style={styles.previewModeBadgeText}>MODE APERCU — PAGE 1</Text>
                 </View>
               )}
 
+              {/* PDF viewport */}
               {activeTool === 'pdf' ? (
-                /* Fullscreen PDF Reader viewport directly under top bar / tab switcher */
                 <View style={styles.fullscreenPdfReaderWrapper}>
                   {readerLoading ? (
                     <View style={styles.pdfFrameFallback}>
-                      <ActivityIndicator color={colors.primary} size="large" />
+                      <ActivityIndicator color={$.sienna} size="large" />
                       <Text style={styles.bodyMuted}>Ouverture du PDF...</Text>
                     </View>
                   ) : readerError ? (
@@ -1010,7 +1099,7 @@ export function PdfStudentSection({
                           width: '100%',
                           height: '100%',
                           border: '0',
-                          backgroundColor: '#F8FAFC',
+                          backgroundColor: $.paper,
                         },
                       })
                     ) : (
@@ -1020,7 +1109,7 @@ export function PdfStudentSection({
                         startInLoadingState
                         renderLoading={() => (
                           <View style={styles.webViewLoading}>
-                            <ActivityIndicator color={colors.primary} size="large" />
+                            <ActivityIndicator color={$.sienna} size="large" />
                             <Text style={styles.bodyMuted}>Chargement du cours...</Text>
                           </View>
                         )}
@@ -1031,12 +1120,12 @@ export function PdfStudentSection({
                     )
                   ) : null}
 
-                  {/* Floating unlock banner in preview mode */}
+                  {/* Preview unlock banner */}
                   {isReaderPreview && (
                     <View style={styles.previewUnlockBanner}>
-                      <Lock size={24} color="#9D174D" style={{ marginBottom: 6 }} />
+                      <Lock size={20} color={$.sienna} style={{ marginBottom: 6 }} />
                       <Text style={styles.previewUnlockText}>
-                        Ce document contient {readerDocument.pageCount} pages. Débloque-le pour y accéder et utiliser les outils IA (Résumé, Quiz, Chat).
+                        Ce document contient {readerDocument.pageCount} pages. Debloque-le pour y acceder et utiliser les outils IA.
                       </Text>
                       <Pressable
                         style={styles.previewUnlockButton}
@@ -1053,25 +1142,26 @@ export function PdfStudentSection({
                   )}
                 </View>
               ) : activeTool === 'assistant' ? (
-                <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#F8FAFC' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                  <View style={[styles.aiHeader, { backgroundColor: '#FFFFFF', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center' }]}>
-                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                      <Sparkles size={20} color="#2563EB" />
+                <KeyboardAvoidingView style={{ flex: 1, backgroundColor: $.paper }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                  {/* AI header */}
+                  <View style={styles.aiHeader}>
+                    <View style={[styles.aiHeaderIcon, { backgroundColor: $.cream, borderColor: $.line, borderWidth: 1 }]}>
+                      <Sparkles size={18} color={$.sienna} />
                     </View>
                     <View style={styles.flex}>
-                      <Text style={[styles.aiTitle, { fontSize: 16, color: '#1E293B' }]}>Campus AI</Text>
-                      <Text style={[styles.aiSubtitle, { fontSize: 13, color: '#64748B', marginTop: 2 }]}>
-                        Ton assistant personnel de révision.
+                      <Text style={[styles.aiTitle, { ...SERIF_TITLE, fontSize: 16, color: $.ink }]}>Campus AI</Text>
+                      <Text style={[styles.aiSubtitle, { fontSize: 12, color: $.muted, marginTop: 2 }]}>
+                        Ton assistant personnel de revision.
                       </Text>
                     </View>
                   </View>
 
                   <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 32 }}>
                     {assistantMessages.length === 0 ? (
-                      <View style={[styles.quickPromptRow, { marginTop: 8 }]}>
-                        {['Fais-moi un résumé', 'Génère un quiz de 5 questions', 'Explique-moi les concepts clés'].map((prompt) => (
-                          <Pressable key={prompt} style={[styles.quickPrompt, { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20 }]} onPress={() => askAssistant(prompt)}>
-                            <Text style={[styles.quickPromptText, { color: '#475569', fontSize: 13, fontWeight: '600' }]}>{prompt}</Text>
+                      <View style={{ marginTop: 8, gap: 8 }}>
+                        {['Fais-moi un resume', 'Genere un quiz de 5 questions', 'Explique-moi les concepts cles'].map((prompt) => (
+                          <Pressable key={prompt} style={styles.quickPrompt} onPress={() => askAssistant(prompt)}>
+                            <Text style={styles.quickPromptText}>{prompt}</Text>
                           </Pressable>
                         ))}
                       </View>
@@ -1080,30 +1170,31 @@ export function PdfStudentSection({
                     {assistantMessages.map((message) => (
                       <View
                         key={message.id}
-                        style={{ flexDirection: 'row', marginBottom: 16, justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start' }}
+                        style={{
+                          flexDirection: 'row',
+                          marginBottom: 14,
+                          justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+                        }}
                       >
                         {message.role === 'assistant' && (
-                          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginRight: 8, marginTop: 4 }}>
-                            <Sparkles size={16} color="#2563EB" />
+                          <View style={[styles.aiBubbleIcon, { backgroundColor: $.cream, borderColor: $.line, borderWidth: 1 }]}>
+                            <Sparkles size={14} color={$.sienna} />
                           </View>
                         )}
                         <View
                           style={[
-                            message.role === 'user' ? styles.userBubble : styles.assistantBubble,
+                            styles.assistantBubble,
                             {
                               maxWidth: '80%',
-                              padding: 14,
-                              borderRadius: 20,
-                              borderTopLeftRadius: message.role === 'assistant' ? 4 : 20,
-                              borderTopRightRadius: message.role === 'user' ? 4 : 20,
-                              backgroundColor: message.role === 'user' ? '#2563EB' : '#FFFFFF',
-                              shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 4, elevation: 1
-                            }
+                              backgroundColor: message.role === 'user' ? $.ink : $.surface,
+                              borderWidth: message.role === 'assistant' ? 1 : 0,
+                              borderColor: $.line,
+                            },
                           ]}
                         >
                           <Text style={[
-                            message.role === 'user' ? styles.userBubbleText : styles.assistantBubbleText,
-                            { color: message.role === 'user' ? '#FFFFFF' : '#334155', fontSize: 15, lineHeight: 22 }
+                            styles.assistantBubbleText,
+                            { color: message.role === 'user' ? $.paper : $.ink, fontSize: 14, lineHeight: 21 },
                           ]}>
                             {message.content}
                           </Text>
@@ -1111,32 +1202,42 @@ export function PdfStudentSection({
                       </View>
                     ))}
                     {assistantLoading && (
-                      <View style={{ flexDirection: 'row', marginBottom: 16, justifyContent: 'flex-start' }}>
-                        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginRight: 8, marginTop: 4 }}>
-                          <Sparkles size={16} color="#2563EB" />
+                      <View style={{ flexDirection: 'row', marginBottom: 14, justifyContent: 'flex-start' }}>
+                        <View style={[styles.aiBubbleIcon, { backgroundColor: $.cream, borderColor: $.line, borderWidth: 1 }]}>
+                          <Sparkles size={14} color={$.sienna} />
                         </View>
-                        <View style={[styles.assistantBubble, { padding: 14, borderRadius: 20, borderTopLeftRadius: 4, backgroundColor: '#FFFFFF' }]}>
-                          <Text style={{ color: '#94A3B8', fontSize: 14, fontStyle: 'italic' }}>L'IA réfléchit...</Text>
+                        <View style={[styles.assistantBubble, { backgroundColor: $.surface, borderWidth: 1, borderColor: $.line }]}>
+                          <Text style={{ color: $.soft, fontSize: 13, fontStyle: 'italic' }}>L'IA reflechit...</Text>
                         </View>
                       </View>
                     )}
                   </ScrollView>
 
-                  <View style={[styles.aiInputRow, { backgroundColor: '#FFFFFF', padding: 12, borderTopWidth: 1, borderTopColor: '#E2E8F0', margin: 0, gap: 12 }]}>
+                  <View style={styles.aiInputRow}>
                     <TextInput
                       value={assistantInput}
                       onChangeText={setAssistantInput}
                       placeholder="Pose une question au doc..."
-                      placeholderTextColor={colors.muted}
-                      style={[styles.aiInput, { backgroundColor: '#F8FAFC', borderRadius: 24, paddingHorizontal: 16, height: 48, borderWidth: 1, borderColor: '#E2E8F0' }]}
+                      placeholderTextColor={$.muted}
+                      style={[
+                        styles.aiInput,
+                        {
+                          backgroundColor: $.surface,
+                          borderColor: $.line,
+                          color: $.ink,
+                        },
+                      ]}
                       multiline
                     />
-                    <Pressable 
-                      style={[styles.aiSendButton, { width: 48, height: 48, borderRadius: 24, alignItems: 'center', paddingHorizontal: 0, opacity: assistantLoading || !assistantInput.trim() ? 0.5 : 1 }]} 
+                    <Pressable
+                      style={[
+                        styles.aiSendButton,
+                        (assistantLoading || !assistantInput.trim()) && styles.aiSendButtonDisabled,
+                      ]}
                       onPress={() => askAssistant(assistantInput)}
                       disabled={assistantLoading || !assistantInput.trim()}
                     >
-                      <Text style={{ fontSize: 20 }}>{assistantLoading ? '⏳' : '↑'}</Text>
+                      <Text style={styles.aiSendButtonText}>↑</Text>
                     </Pressable>
                   </View>
                 </KeyboardAvoidingView>
@@ -1147,7 +1248,7 @@ export function PdfStudentSection({
                       <View style={styles.toolContent}>
                         {readerDocument.aiSummary ? (
                           <View style={[styles.studyBox, styles.studyBoxFeatured]}>
-                            <Text style={styles.studyBoxTitle}>Résumé de l'IA</Text>
+                            <Text style={styles.studyBoxTitle}>Resume de l'IA</Text>
                             <Text style={styles.readerParagraph}>{readerDocument.aiSummary}</Text>
                           </View>
                         ) : null}
@@ -1162,14 +1263,14 @@ export function PdfStudentSection({
                       <View style={styles.toolContent}>
                         {readerDocument.studyPlan?.length ? (
                           <View style={styles.studyBox}>
-                            <Text style={styles.studyBoxTitle}>Plan de révision recommandé</Text>
+                            <Text style={styles.studyBoxTitle}>Plan de revision recommande</Text>
                             {readerDocument.studyPlan.map((step, index) => (
                               <Text style={styles.readerParagraph} key={step}>{index + 1}. {step}</Text>
                             ))}
                           </View>
                         ) : (
                           <View style={styles.studyBox}>
-                            <Text style={styles.bodyMuted}>Aucun plan de révision disponible pour ce document.</Text>
+                            <Text style={styles.bodyMuted}>Aucun plan de revision disponible pour ce document.</Text>
                           </View>
                         )}
                       </View>
@@ -1179,11 +1280,11 @@ export function PdfStudentSection({
                       <View style={styles.toolContent}>
                         {readerDocument.quiz?.length ? (
                           <View style={styles.studyBox}>
-                            <Text style={styles.studyBoxTitle}>Quiz rapide d'auto-évaluation</Text>
+                            <Text style={styles.studyBoxTitle}>Quiz rapide d'auto-evaluation</Text>
                             {readerDocument.quiz.map((item) => (
                               <View key={item.question} style={styles.quizItem}>
                                 <Text style={styles.quizQuestion}>{item.question}</Text>
-                                <Text style={styles.metaText}>{item.answer}</Text>
+                                <Text style={styles.cardMeta}>{item.answer}</Text>
                               </View>
                             ))}
                           </View>
@@ -1195,7 +1296,7 @@ export function PdfStudentSection({
                       </View>
                     ) : null}
 
-                    <Text style={styles.readerWatermark}>CAMPUS-BORDES</Text>
+                    <Text style={styles.readerWatermark}>CAMPUS 360</Text>
                   </View>
                 </ScrollView>
               )}
@@ -1204,16 +1305,19 @@ export function PdfStudentSection({
         </View>
       </Modal>
 
+      {/* ── Filters modal ─────────────────────────────────────────────────── */}
       <Modal transparent animationType="slide" visible={filtersVisible} onRequestClose={() => setFiltersVisible(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={styles.filterSheet}>
-            <View style={[styles.filterSheetHeader, { alignItems: 'center' }]}>
+          <View style={styles.editorialModalCard}>
+            <View style={styles.filterSheetHeader}>
               <View style={styles.flex}>
-                <Text style={styles.modalTitle}>Filtres PDF</Text>
+                <Text style={styles.eyebrow}>Filtres PDF</Text>
+                <View style={styles.rule} />
+                <Text style={[styles.editorialTitle, { fontSize: 18 }]}>Affiner la recherche</Text>
                 <Text style={[styles.bodyMuted, { marginTop: 4 }]}>Affiche seulement les PDF qui collent a ton besoin.</Text>
               </View>
               <Pressable style={styles.filterSheetClose} onPress={() => setFiltersVisible(false)}>
-                <Text style={styles.filterSheetCloseText}>✕</Text>
+                <Text style={styles.filterSheetCloseText}>×</Text>
               </Pressable>
             </View>
 
@@ -1230,11 +1334,11 @@ export function PdfStudentSection({
             </ScrollView>
 
             <View style={styles.sheetActions}>
-              <Pressable style={styles.sheetGhostButton} onPress={resetFilters}>
-                <Text style={styles.sheetGhostButtonText}>Reinitialiser</Text>
+              <Pressable style={styles.btnSecondary} onPress={resetFilters}>
+                <Text style={styles.btnSecondaryText}>Reinitialiser</Text>
               </Pressable>
-              <Pressable style={styles.sheetPrimaryButton} onPress={() => setFiltersVisible(false)}>
-                <Text style={styles.sheetPrimaryButtonText}>Afficher les resultats</Text>
+              <Pressable style={styles.btnPrimary} onPress={() => setFiltersVisible(false)}>
+                <Text style={styles.btnPrimaryText}>Afficher</Text>
               </Pressable>
             </View>
           </View>
@@ -1244,6 +1348,7 @@ export function PdfStudentSection({
   );
 }
 
+// ─── Filter row sub-component ──────────────────────────────────────────────────
 function FilterRow({
   label,
   options,
@@ -1258,17 +1363,19 @@ function FilterRow({
   return (
     <View style={styles.filterBlock}>
       <Text style={styles.filterLabel}>{label}</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {options.map((option) => {
-          if (option === 'Tous') return null; // Hide the 'Tous' pill
+          if (option === 'Tous') return null;
           const active = option === value;
           return (
-            <Pressable 
-              key={option} 
-              style={[styles.filterChip, active && styles.filterChipActive]} 
-              onPress={() => onChange(active ? 'Tous' : option)} // Toggle off if already active
+            <Pressable
+              key={option}
+              style={[styles.editorialBadge, active ? styles.editorialBadgeActive : styles.editorialBadgeMuted]}
+              onPress={() => onChange(active ? 'Tous' : option)}
             >
-              <Text style={[styles.filterText, active && styles.filterTextActive]}>{option}</Text>
+              <Text style={[styles.editorialBadgeText, active ? styles.editorialBadgeTextActive : styles.editorialBadgeTextMuted]}>
+                {option}
+              </Text>
             </Pressable>
           );
         })}
@@ -1277,1050 +1384,629 @@ function FilterRow({
   );
 }
 
-const colors = {
-  ink: '#0F172A',         // Slate 900
-  muted: '#64748B',       // Slate 500
-  line: '#E2E8F0',        // Slate 200
-  surface: '#FFFFFF',
-  soft: '#F8FAFC',        // Slate 50
-  primary: '#3B82F6',     // Premium Electric Blue
-  primaryDeep: '#1E40AF', // Deep Royal Blue
-  primarySoft: '#EFF6FF', // Soft Sky Tint
-  blue: '#3B82F6',
-};
-
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  // Root
+  root: {
+    backgroundColor: $.paper,
+    flex: 1,
+  },
+
+  // ── Editorial atoms ──────────────────────────────────────────────────────
+  eyebrow: {
+    ...MONO,
+    fontSize: 9,
+    fontWeight: '700',
+    color: $.sienna,
+    textTransform: 'uppercase',
+  },
+  rule: {
+    height: 1,
+    backgroundColor: $.ink,
+    marginVertical: 6,
+  },
+  editorialTitle: {
+    ...SERIF_TITLE,
+    fontSize: 22,
+    color: $.ink,
+    lineHeight: 28,
+  },
+  editorialSubtitle: {
+    color: $.muted,
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  bodyMuted: {
+    color: $.muted,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  flex: { flex: 1 },
+
+  // ── Controls ────────────────────────────────────────────────────────────
   libraryHeadingSection: {
     paddingHorizontal: 16,
     paddingVertical: 18,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#F3F4F6',
-    marginBottom: 16,
-    borderRadius: 16,
-  },
-  libraryHeadingTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#111827',
-    marginBottom: 6,
-  },
-  libraryHeadingSubtitle: {
-    fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 18,
+    backgroundColor: $.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: $.line,
+    marginBottom: 14,
   },
   controls: {
     backgroundColor: 'transparent',
+    paddingHorizontal: 16,
   },
   resultRow: {
-    minHeight: 34,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   resultText: {
-    color: colors.ink,
-    fontSize: 16,
-    fontWeight: '900',
+    ...MONO,
+    fontSize: 11,
+    fontWeight: '700',
+    color: $.ink,
+    textTransform: 'uppercase',
+    letterSpacing: 1.6,
   },
   clearButton: {
-    borderRadius: 7,
-    backgroundColor: '#FFFFFF',
-    
-    borderColor: colors.line,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.ink,
     paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingVertical: 5,
+    backgroundColor: $.surface,
   },
   clearButtonText: {
-    color: colors.primaryDeep,
-    fontSize: 12,
-    fontWeight: '900',
+    ...MONO,
+    fontSize: 10,
+    fontWeight: '700',
+    color: $.sienna,
+    textTransform: 'uppercase',
   },
-  flex: {
-    flex: 1,
-  },
-  segment: {
+
+  // ── Editorial tabs ──────────────────────────────────────────────────────
+  editorialTabStrip: {
     flexDirection: 'row',
-    borderRadius: 18,
-    backgroundColor: '#EEF2F7',
-    padding: 4,
-    marginBottom: 14,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.ink,
+    backgroundColor: $.surface,
+    marginBottom: 12,
+    overflow: 'hidden',
   },
-  segmentButton: {
+  editorialTab: {
     flex: 1,
-    borderRadius: 14,
-    minHeight: 44,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
   },
-  segmentButtonActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
+  editorialTabActive: {
+    backgroundColor: $.ink,
   },
-  segmentText: {
-    color: '#64748B',
-    fontWeight: '600',
+  editorialTabRight: {
+    borderLeftWidth: 1,
+    borderLeftColor: $.line,
   },
-  segmentTextActive: {
-    color: '#1E293B',
+  editorialTabText: {
+    ...MONO,
+    fontSize: 10,
     fontWeight: '700',
+    color: $.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 1.4,
   },
+  editorialTabTextActive: {
+    color: $.paper,
+  },
+
+  // ── Search input ────────────────────────────────────────────────────────
   searchInput: {
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
+    borderRadius: 3,
     borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#1E293B',
-    fontWeight: '600',
+    borderColor: $.ink,
+    backgroundColor: $.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: $.ink,
+    fontSize: 14,
+    marginBottom: 12,
   },
+
+  // ── Filter toolbar ──────────────────────────────────────────────────────
   filterToolbar: {
-    marginTop: 14,
+    marginBottom: 16,
     gap: 10,
   },
   filterTrigger: {
-    minHeight: 46,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    minHeight: 44,
+    borderRadius: 3,
     borderWidth: 1,
-    paddingHorizontal: 16,
+    borderColor: $.ink,
+    backgroundColor: $.surface,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   filterTriggerText: {
-    color: '#1E293B',
-    fontSize: 15,
+    ...MONO,
+    fontSize: 10,
     fontWeight: '700',
+    color: $.ink,
+    textTransform: 'uppercase',
+    letterSpacing: 1.4,
   },
   filterBadge: {
-    minWidth: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: colors.primary,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 2,
+    backgroundColor: $.sienna,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
   },
   filterBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '900',
+    ...MONO,
+    fontSize: 10,
+    fontWeight: '700',
+    color: $.paper,
   },
   filterSummaryRow: {
     gap: 8,
     paddingRight: 10,
+    paddingBottom: 4,
   },
   summaryChip: {
     maxWidth: 168,
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
+    borderRadius: 3,
     borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderColor: $.line,
+    backgroundColor: $.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   summaryChipLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '800',
+    ...MONO,
+    fontSize: 9,
+    fontWeight: '700',
+    color: $.sienna,
     textTransform: 'uppercase',
   },
   summaryChipValue: {
-    color: colors.ink,
-    fontSize: 13,
-    fontWeight: '900',
+    ...MONO,
+    fontSize: 11,
+    fontWeight: '700',
+    color: $.ink,
     marginTop: 2,
+    letterSpacing: 0.8,
   },
   summaryChipMuted: {
-    borderRadius: 18,
-    backgroundColor: '#F4F7FB',
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.line,
+    backgroundColor: $.surface,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   summaryChipMutedText: {
-    color: colors.muted,
+    ...MONO,
+    fontSize: 10,
     fontWeight: '700',
-  },
-  filterBlock: {
-    marginTop: 16,
-  },
-  filterLabel: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '800',
+    color: $.muted,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 12,
   },
-  filterChip: {
-    borderRadius: 14,
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  filterChipActive: {
-    backgroundColor: '#2563EB',
-  },
-  filterText: {
-    color: '#475569',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  filterTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  emptyState: {
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    
-    
-    padding: 18,
+
+  // ── State panels ───────────────────────────────────────────────────────
+  statePanel: {
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.line,
+    backgroundColor: $.surface,
+    padding: 16,
+    marginHorizontal: 16,
     marginTop: 14,
     gap: 6,
   },
-  statePanel: {
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    
-    
-    padding: 18,
-    marginTop: 12,
-    gap: 8,
-    alignItems: 'flex-start',
-  },
-  sectionStrip: {
-    marginTop: 12,
-    borderRadius: 16,
-    backgroundColor: '#F8FBFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+  emptyState: {
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.line,
+    backgroundColor: $.surface,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  sectionStripEyebrow: {
-    color: colors.primaryDeep,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  sectionStripTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: '900',
-    marginTop: 4,
-  },
-  sectionStripLink: {
-    minHeight: 40,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionStripLinkText: {
-    color: colors.primaryDeep,
-    fontSize: 12,
-    fontWeight: '900',
+    marginHorizontal: 16,
+    marginTop: 14,
+    gap: 6,
   },
   stateBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: '#EFF6FF',
+    width: 40,
+    height: 40,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: $.line,
+    backgroundColor: $.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stateBadgeAlert: {
-    backgroundColor: '#FFF3F3',
+    borderColor: $.sienna,
+    backgroundColor: '#FEF3C7',
   },
-  stateBadgeText: {
-    color: colors.primaryDeep,
+  stateBadgeMono: {
+    ...MONO,
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '700',
+    color: $.sienna,
   },
   stateTitle: {
-    color: colors.ink,
+    ...SERIF_TITLE,
     fontSize: 18,
-    fontWeight: '900',
+    color: $.ink,
+    marginTop: 4,
   },
   retryButton: {
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    marginTop: 4,
+    borderRadius: 3,
+    backgroundColor: $.sienna,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 6,
   },
   retryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '900',
+    ...MONO,
+    fontSize: 10,
+    fontWeight: '700',
+    color: $.paper,
+    textTransform: 'uppercase',
   },
-  packsHero: {
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 18,
+
+  // ── Editorial section strip (hero) ─────────────────────────────────────
+  editorialSectionStrip: {
+    marginHorizontal: 16,
     marginTop: 14,
-    gap: 14,
-  },
-  packsHeroTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-  },
-  packsHeroEyebrow: {
-    color: colors.primaryDeep,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  packsHeroTitle: {
-    color: colors.ink,
-    fontSize: 24,
-    fontWeight: '900',
-    marginTop: 6,
-  },
-  packsHeroBadge: {
-    width: 82,
-    height: 82,
-    borderRadius: 16,
-    backgroundColor: '#E7F3FF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  packsHeroBadgeValue: {
-    color: colors.primaryDeep,
-    fontSize: 28,
-    fontWeight: '900',
-  },
-  packsHeroBadgeLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  packsHeroStats: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  packsHeroStatCard: {
-    flex: 1,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.ink,
+    backgroundColor: $.surface,
     padding: 14,
-    minHeight: 84,
-    justifyContent: 'space-between',
-  },
-  packsHeroStatValue: {
-    color: colors.ink,
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  packsHeroStatLabel: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '800',
-    lineHeight: 16,
-  },
-  featuredPackCard: {
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 16,
-    gap: 10,
-  },
-  featuredPackTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
   },
-  featuredPackEyebrow: {
-    color: colors.primaryDeep,
-    fontSize: 11,
-    fontWeight: '900',
+  editorialLink: {
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.ink,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignSelf: 'flex-start',
+  },
+  editorialLinkText: {
+    ...MONO,
+    fontSize: 9,
+    fontWeight: '700',
+    color: $.ink,
     textTransform: 'uppercase',
   },
-  featuredPackTitle: {
-    color: colors.ink,
-    fontSize: 20,
-    fontWeight: '900',
+
+  // ── Editorial card ──────────────────────────────────────────────────────
+  editorialCard: {
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.ink,
+    backgroundColor: $.surface,
+    marginHorizontal: 16,
+    marginTop: 10,
+    padding: 14,
+    gap: 12,
+  },
+  editorialCardOwned: {
+    borderColor: $.emd,
+    backgroundColor: '#F0FDF4',
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  folioIconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.line,
+    backgroundColor: $.cream,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  folioDash: {
+    ...MONO,
+    fontSize: 12,
+    color: $.sienna,
+    lineHeight: 14,
+  },
+  folioNumber: {
+    ...MONO,
+    fontSize: 13,
+    fontWeight: '700',
+    color: $.sienna,
+    lineHeight: 16,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  cardTitle: {
+    flex: 1,
+    minWidth: 0,
+    ...SERIF_TITLE,
+    fontSize: 16,
+    color: $.ink,
+    lineHeight: 22,
+  },
+  cardMeta: {
+    ...MONO,
+    fontSize: 10,
+    fontWeight: '600',
+    color: $.muted,
     marginTop: 4,
-  },
-  featuredPackPrice: {
-    color: colors.primaryDeep,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  featuredPackButton: {
-    minHeight: 48,
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  featuredPackButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-  },
-  explorerHero: {
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 18,
-    marginTop: 14,
-    gap: 14,
-  },
-  explorerHeroTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-  },
-  explorerHeroEyebrow: {
-    color: colors.primaryDeep,
-    fontSize: 11,
-    fontWeight: '900',
+    letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
-  explorerHeroTitle: {
-    color: colors.ink,
-    fontSize: 24,
-    fontWeight: '900',
+  cardDescription: {
+    color: $.muted,
+    fontSize: 13,
+    lineHeight: 19,
     marginTop: 6,
   },
-  explorerHeroBadge: {
-    width: 82,
-    height: 82,
-    borderRadius: 16,
-    backgroundColor: '#E7F3FF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+  priceBadge: {
+    borderRadius: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+    flexShrink: 0,
   },
-  explorerHeroBadgeValue: {
-    color: colors.primaryDeep,
-    fontSize: 28,
-    fontWeight: '900',
+  priceBadgeBuy: {
+    backgroundColor: $.paper,
+    borderColor: $.ink,
   },
-  explorerHeroBadgeLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '800',
+  priceBadgeOwned: {
+    backgroundColor: $.emdBg,
+    borderColor: $.emd,
+  },
+  priceBadgeText: {
+    ...MONO,
+    fontSize: 10,
+    fontWeight: '700',
     textTransform: 'uppercase',
   },
-  explorerHeroStats: {
-    flexDirection: 'row',
-    gap: 10,
+  priceBadgeTextBuy: {
+    color: $.ink,
   },
-  explorerHeroStatCard: {
-    flex: 1,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 14,
-    minHeight: 84,
-    justifyContent: 'space-between',
+  priceBadgeTextOwned: {
+    color: $.emd,
   },
-  explorerHeroStatValue: {
-    color: colors.ink,
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  explorerHeroStatLabel: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '800',
-    lineHeight: 16,
-  },
-  featuredDocumentCard: {
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 16,
-    gap: 10,
-  },
-  featuredDocumentTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  featuredDocumentEyebrow: {
-    color: colors.primaryDeep,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  featuredDocumentTitle: {
-    color: colors.ink,
-    fontSize: 20,
-    fontWeight: '900',
-    marginTop: 4,
-  },
-  featuredDocumentPrice: {
-    color: colors.primaryDeep,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  libraryHero: {
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 18,
-    marginTop: 14,
-    gap: 14,
-  },
-  libraryHeroTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-  },
-  libraryEyebrow: {
-    color: colors.primaryDeep,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  libraryTitle: {
-    color: colors.ink,
-    fontSize: 24,
-    fontWeight: '900',
-    marginTop: 6,
-  },
-  libraryCountBubble: {
-    width: 84,
-    height: 84,
-    borderRadius: 28,
-    backgroundColor: '#E7F3FF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  libraryCountBubbleValue: {
-    color: colors.primaryDeep,
-    fontSize: 28,
-    fontWeight: '900',
-  },
-  libraryCountBubbleLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  libraryStatsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  libraryStatCard: {
-    flex: 1,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 12,
-    minHeight: 78,
-    justifyContent: 'space-between',
-  },
-  libraryStatValue: {
-    color: colors.ink,
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  libraryStatLabel: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '800',
-    lineHeight: 16,
-  },
-  documentCard: {
-    borderRadius: 8,
-    backgroundColor: colors.surface,
-    borderColor: colors.line,
-    
-    marginTop: 12,
-    padding: 12,
-    flexDirection: 'row',
-    gap: 12,
-    shadowColor: '#111827',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 1,
-  },
-  libraryDocumentCard: {
-    borderRadius: 20,
-    
-    padding: 14,
-    shadowColor: '#168CF2',
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
-  },
-  packCard: {
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    
-    
-    marginTop: 14,
-    padding: 16,
-    gap: 12,
-    shadowColor: '#168CF2',
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
-  },
-  libraryPackCard: {
-    
-    shadowOpacity: 0.09,
-  },
-  packRibbonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  packRibbon: {
-    borderRadius: 999,
-    overflow: 'hidden',
-    backgroundColor: '#EAF5FF',
-    color: colors.primaryDeep,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  packRibbonMuted: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'capitalize',
-  },
+
+  // ── Badges ─────────────────────────────────────────────────────────────
   badgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
   },
-  packBadge: {
-    borderRadius: 999,
-    overflow: 'hidden',
-    backgroundColor: '#F3F8FF',
-    color: colors.primaryDeep,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    fontSize: 11,
-    fontWeight: '900',
+  editorialBadge: {
+    borderRadius: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
   },
-  featuredBadge: {
-    borderRadius: 999,
-    overflow: 'hidden',
-    backgroundColor: '#EAF5FF',
-    color: colors.primaryDeep,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    fontSize: 11,
-    fontWeight: '900',
+  editorialBadgeMuted: {
+    backgroundColor: $.paper,
+    borderColor: $.line,
   },
-  packTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  editorialBadgeSienna: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
   },
-  packIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: '#DDF2FF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+  editorialBadgeActive: {
+    backgroundColor: $.ink,
+    borderColor: $.ink,
   },
-  libraryPackIcon: {
-    backgroundColor: '#F3FAFF',
-    
-  },
-  packIconText: {
-    color: colors.primaryDeep,
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  packTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  packProgressTrack: {
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: '#E7F3FF',
-    overflow: 'hidden',
-  },
-  packProgressFill: {
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
-  },
-  packBenefitRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 2,
-  },
-  packBenefitCard: {
-    flex: 1,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 10,
-    minHeight: 72,
-    justifyContent: 'space-between',
-  },
-  packBenefitValue: {
-    color: colors.ink,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  packBenefitLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '800',
-    lineHeight: 15,
-  },
-  packHero: {
-    borderRadius: 18,
-    backgroundColor: '#F0F8FF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 18,
-    marginTop: 14,
-    alignItems: 'center',
-  },
-  packHeroNumber: {
-    color: colors.primaryDeep,
-    fontSize: 42,
-    fontWeight: '900',
-  },
-  packHeroLabel: {
-    color: colors.ink,
-    fontSize: 14,
-    fontWeight: '900',
-    marginTop: 2,
-  },
-  packHeroSave: {
-    color: '#0F8A5F',
-    fontSize: 13,
-    fontWeight: '900',
-    marginTop: 8,
-  },
-  packDocumentsList: {
-    marginTop: 12,
-    gap: 8,
-  },
-  packDocumentRow: {
-    minHeight: 58,
-    borderRadius: 12,
-    backgroundColor: '#F8FCFF',
-    
-    borderColor: colors.line,
-    padding: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  packDocumentIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  packDocumentIconText: {
-    color: colors.primaryDeep,
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  ownedMini: {
-    color: '#0F8A5F',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  priceMini: {
-    color: colors.ink,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  documentCardCompact: {
-    flexDirection: 'row',
-  },
-  preview: {
-    width: 92,
-    minHeight: 138,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    
-    borderColor: colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 8,
-  },
-  previewCompact: {
-    width: 82,
-    minHeight: 124,
-  },
-  libraryPreview: {
-    backgroundColor: '#FFFFFF',
-    
-  },
-  previewTop: {
-    position: 'absolute',
-    top: 9,
-    color: colors.primaryDeep,
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  previewTitle: {
-    color: colors.ink,
-    fontSize: 24,
-    fontWeight: '900',
-  },
-  previewFoot: {
-    position: 'absolute',
-    bottom: 9,
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  libraryResume: {
-    color: colors.primaryDeep,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 6,
+  editorialBadgeText: {
+    ...MONO,
+    fontSize: 9,
     fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
-  documentBody: {
-    flex: 1,
+  editorialBadgeTextMuted: {
+    color: $.muted,
   },
-  documentBodyCompact: {
-    flex: 1,
-    minWidth: 0,
+  editorialBadgeTextSienna: {
+    color: '#B45309',
   },
-  titleRow: {
+  editorialBadgeTextActive: {
+    color: $.paper,
+  },
+
+  // ── Progress ───────────────────────────────────────────────────────────
+  progressTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: $.line,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: 4,
+    borderRadius: 2,
+  },
+  progressMeta: {
+    ...MONO,
+    fontSize: 9,
+    fontWeight: '600',
+    color: $.soft,
+    marginTop: -4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+
+  // ── Actions ────────────────────────────────────────────────────────────
+  actionRow: {
     flexDirection: 'row',
-    gap: 8,
-    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 4,
   },
-  cardTitle: {
+  btnPrimary: {
     flex: 1,
-    minWidth: 0,
-    color: colors.ink,
-    fontSize: 15,
-    fontWeight: '900',
-    lineHeight: 20,
+    borderRadius: 3,
+    backgroundColor: $.ink,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  bodyMuted: {
-    color: colors.muted,
-    fontSize: 13,
-    lineHeight: 19,
+  btnPrimaryText: {
+    ...MONO,
+    fontSize: 10,
+    fontWeight: '700',
+    color: $.paper,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
   },
-  metaText: {
-    color: colors.muted,
-    fontSize: 12,
-    lineHeight: 18,
+  btnSecondary: {
+    flex: 1,
+    borderRadius: 3,
+    backgroundColor: $.surface,
+    borderWidth: 1,
+    borderColor: $.ink,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  description: {
-    color: colors.ink,
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 8,
+  btnSecondaryText: {
+    ...MONO,
+    fontSize: 10,
+    fontWeight: '700',
+    color: $.ink,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
   },
-  priceBadge: {
-    borderRadius: 999,
+  btnPressed: {
+    opacity: 0.72,
+  },
+  btnDisabled: {
+    backgroundColor: $.soft,
+  },
+  btnOwned: {
+    backgroundColor: $.sienna,
+  },
+  btnOwnedLibrary: {
+    backgroundColor: $.emd,
+  },
+
+  // ── Pack detail modal ──────────────────────────────────────────────────
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.48)',
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+  editorialModalCard: {
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: $.ink,
+    backgroundColor: $.surface,
+    padding: 16,
+    gap: 14,
+    maxHeight: '85%',
+  },
+  modalHeroRow: {
+    flexDirection: 'row',
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.line,
+    backgroundColor: $.paper,
     overflow: 'hidden',
-    backgroundColor: colors.primarySoft,
-    color: colors.primaryDeep,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    fontSize: 12,
-    fontWeight: '900',
   },
-  ownedBadge: {
-    borderRadius: 999,
-    overflow: 'hidden',
-    backgroundColor: colors.primarySoft,
-    color: colors.primaryDeep,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    fontSize: 12,
-    fontWeight: '900',
+  modalHeroStat: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+  },
+  modalHeroDivider: {
+    width: 1,
+    backgroundColor: $.line,
+  },
+  modalHeroValue: {
+    ...SERIF_TITLE,
+    fontSize: 22,
+    color: $.ink,
+  },
+  modalHeroLabel: {
+    ...MONO,
+    fontSize: 9,
+    fontWeight: '700',
+    color: $.muted,
+    textTransform: 'uppercase',
+    marginTop: 4,
+    letterSpacing: 0.8,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginTop: 9,
   },
-  chip: {
-    borderRadius: 999,
-    overflow: 'hidden',
-    backgroundColor: '#F3F4F6',
-    color: colors.muted,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    fontSize: 11,
-    fontWeight: '800',
+  packDocumentsList: {
+    gap: 8,
   },
-  actionRow: {
+  packDocumentRow: {
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.line,
+    backgroundColor: $.paper,
+    padding: 10,
     flexDirection: 'row',
-    gap: 9,
-    marginTop: 12,
-  },
-  primaryButton: {
-    flex: 1,
-    borderRadius: 7,
-    backgroundColor: colors.primary,
-    paddingVertical: 11,
     alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-  },
-  secondaryButton: {
-    flex: 1,
-    borderRadius: 7,
-    backgroundColor: '#FFFFFF',
-    borderColor: colors.line,
-    
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: colors.ink,
-    fontWeight: '900',
-  },
-  ownedButton: {
-    flex: 1,
-    borderRadius: 7,
-    backgroundColor: colors.primarySoft,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-  ownedButtonText: {
-    color: colors.primaryDeep,
-    fontWeight: '900',
-  },
-  disabledButton: {
-    opacity: 0.55,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(17,24,39,0.32)',
-    justifyContent: 'flex-end',
-    padding: 16,
-  },
-  modalCard: {
-    borderRadius: 8,
-    backgroundColor: colors.surface,
-    borderColor: colors.line,
-    
-    padding: 16,
-    gap: 12,
-  },
-  modalTitle: {
-    color: colors.ink,
-    fontSize: 21,
-    lineHeight: 26,
-    fontWeight: '900',
-  },
-  filterSheet: {
-    borderRadius: 28,
-    backgroundColor: colors.surface,
-    borderColor: colors.line,
-    
-    padding: 18,
-    maxHeight: '80%',
     gap: 10,
   },
+  packDocIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: $.line,
+    backgroundColor: $.cream,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  packDocIconText: {
+    ...MONO,
+    fontSize: 10,
+    fontWeight: '700',
+    color: $.sienna,
+  },
+  ownedMini: {
+    ...MONO,
+    fontSize: 10,
+    fontWeight: '700',
+    color: $.emd,
+    flexShrink: 0,
+  },
+  priceMini: {
+    ...MONO,
+    fontSize: 10,
+    fontWeight: '700',
+    color: $.ink,
+    flexShrink: 0,
+  },
+
+  // ── Filter sheet ───────────────────────────────────────────────────────
   filterSheetHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -2328,717 +2014,373 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   filterSheetClose: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F1F5F9',
+    width: 32,
+    height: 32,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: $.line,
+    backgroundColor: $.paper,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   filterSheetCloseText: {
-    color: '#64748B',
-    fontWeight: '800',
-    fontSize: 16,
+    ...MONO,
+    fontSize: 18,
+    fontWeight: '700',
+    color: $.muted,
+    lineHeight: 20,
   },
   sheetActions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-  },
-  sheetGhostButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sheetGhostButtonText: {
-    color: '#475569',
-    fontWeight: '700',
-  },
-  sheetPrimaryButton: {
-    flex: 1.5,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#2563EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  sheetPrimaryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  largePreview: {
-    minHeight: 210,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    borderColor: colors.line,
-    
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  largePreviewLabel: {
-    position: 'absolute',
-    top: 14,
-    color: colors.primaryDeep,
-    fontWeight: '900',
-  },
-  largePreviewTitle: {
-    color: colors.ink,
-    fontSize: 30,
-    fontWeight: '900',
-  },
-  largePreviewText: {
-    color: colors.muted,
+    gap: 10,
     marginTop: 8,
-    fontWeight: '800',
   },
-  watermark: {
-    color: '#CBD5E1',
-    fontSize: 18,
-    fontWeight: '900',
-    marginTop: 22,
+  filterBlock: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: $.line,
   },
+  filterLabel: {
+    ...MONO,
+    fontSize: 9,
+    fontWeight: '700',
+    color: $.sienna,
+    textTransform: 'uppercase',
+    letterSpacing: 1.4,
+    marginBottom: 10,
+  },
+
+  // ── Reader ──────────────────────────────────────────────────────────────
   readerScreen: {
     flex: 1,
-    backgroundColor: colors.soft,
+    backgroundColor: $.paper,
   },
   fullscreenPdfReaderWrapper: {
     flex: 1,
     width: '100%',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: $.paper,
     position: 'relative',
   },
   readerTopBar: {
     paddingTop: 52,
     paddingHorizontal: 14,
-    paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.line,
+    paddingBottom: 10,
+    backgroundColor: $.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: $.ink,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
   readerClose: {
-    borderRadius: 8,
-    backgroundColor: colors.primarySoft,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.ink,
+    backgroundColor: $.paper,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
   },
   readerCloseText: {
-    color: colors.primaryDeep,
-    fontWeight: '900',
+    ...MONO,
+    fontSize: 9,
+    fontWeight: '700',
+    color: $.ink,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
   },
   readerTitle: {
-    color: colors.ink,
-    fontSize: 16,
-    fontWeight: '900',
+    ...SERIF_TITLE,
+    fontSize: 15,
+    color: $.ink,
   },
   readerMeta: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '700',
+    ...MONO,
+    fontSize: 10,
+    fontWeight: '600',
+    color: $.muted,
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   readerBody: {
     flex: 1,
     padding: 14,
   },
-  readerHero: {
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 18,
-    marginBottom: 14,
-    gap: 14,
-  },
-  readerHeroTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  readerHeroEyebrow: {
-    color: colors.primaryDeep,
-    fontSize: 11,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  readerHeroTitle: {
-    color: colors.ink,
-    fontSize: 24,
-    lineHeight: 30,
-    fontWeight: '900',
-    marginTop: 6,
-  },
-  readerHeroText: {
-    color: colors.muted,
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 6,
-    fontWeight: '600',
-  },
-  readerHeroBadge: {
-    width: 82,
-    height: 82,
-    borderRadius: 26,
-    backgroundColor: '#E7F3FF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  readerHeroBadgeValue: {
-    color: colors.primaryDeep,
-    fontSize: 28,
-    fontWeight: '900',
-  },
-  readerHeroBadgeLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  readerStatsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  readerStatCard: {
-    flex: 1,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 12,
-    minHeight: 76,
-    justifyContent: 'space-between',
-  },
-  readerStatValue: {
-    color: colors.ink,
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  readerStatLabel: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  readerPage: {
-    minHeight: 430,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 18,
-    marginBottom: 14,
-  },
-  layoutModeBar: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 16,
-    gap: 4,
-  },
-  layoutModeButton: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  layoutModeButtonActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  layoutModeText: {
-    color: '#64748B',
-    fontWeight: '800',
-    fontSize: 13,
-  },
-  layoutModeTextActive: {
-    color: '#3B82F6',
-  },
-  readerPageTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 16,
-    width: '100%',
-  },
-  readerPageHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  pdfFrameFallback: {
-    minHeight: 220,
-    borderRadius: 18,
-    
-    borderColor: colors.line,
-    backgroundColor: '#F8FAFC',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: 12,
-    padding: 14,
-  },
-  readerSecureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  expandButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 99,
-    backgroundColor: '#E0F2FE',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  expandButtonText: {
-    color: '#0369A1',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  fullscreenContainer: {
-    flex: 1,
-    backgroundColor: '#0F172A',
-  },
-  fullscreenHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#1E293B',
-    borderBottomWidth: 0.5,
-    
-    gap: 12,
-  },
-  fullscreenCloseButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#EF4444',
-  },
-  fullscreenCloseButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  fullscreenTitle: {
-    flex: 1,
-    color: '#F8FAFC',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  fullscreenWebViewWrapper: {
-    flex: 1,
-    width: '100%',
-    backgroundColor: '#000000',
-  },
-  fullscreenWebView: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  inAppPdfPreview: {
-    width: '100%',
-    height: 380,
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    backgroundColor: '#F8FAFC',
-    marginBottom: 14,
-  },
   readerBodyContainer: {
     flex: 1,
     width: '100%',
     height: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: $.surface,
   },
-  androidFallbackContainer: {
+  readerWatermark: {
+    ...MONO,
+    fontSize: 14,
+    fontWeight: '700',
+    color: $.line,
+    marginTop: 28,
+    textAlign: 'center',
+    letterSpacing: 3,
+  },
+
+  // ── Tool segment ────────────────────────────────────────────────────────
+  toolSegment: {
+    flexDirection: 'row',
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.ink,
+    backgroundColor: $.surface,
+    marginVertical: 12,
+    marginHorizontal: 14,
+    overflow: 'hidden',
+  },
+  toolSegmentButton: {
     flex: 1,
+    minWidth: '20%',
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolSegmentButtonActive: {
+    backgroundColor: $.ink,
+  },
+  toolSegmentText: {
+    ...MONO,
+    fontSize: 9,
+    fontWeight: '700',
+    color: $.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  toolSegmentTextActive: {
+    color: $.paper,
+  },
+
+  // ── Preview badge ───────────────────────────────────────────────────────
+  previewModeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: $.sienna,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginHorizontal: 14,
+    marginTop: 10,
+    borderRadius: 2,
+  },
+  previewModeBadgeText: {
+    ...MONO,
+    fontSize: 9,
+    fontWeight: '700',
+    color: $.paper,
+    textTransform: 'uppercase',
+    letterSpacing: 1.4,
+  },
+
+  // ── PDF fallback / loading ──────────────────────────────────────────────
+  pdfFrameFallback: {
+    minHeight: 200,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.line,
+    backgroundColor: $.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 20,
+    margin: 14,
+  },
+  webViewLoading: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-    backgroundColor: '#F8FAFC',
-  },
-  androidFallbackEmoji: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  androidFallbackTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: colors.ink,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  androidFallbackText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.muted,
-    textAlign: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 16,
-  },
-  inAppPdfReader: {
-    width: '100%',
-    height: 520,
-    borderRadius: 18,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    backgroundColor: '#F8FAFC',
-    marginVertical: 14,
-  },
-  inAppWebView: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
+    backgroundColor: $.paper,
+    zIndex: 10,
+    gap: 10,
   },
   inAppWebViewFull: {
     flex: 1,
     width: '100%',
     height: '100%',
   },
-  webViewLoading: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
+
+  // ── Preview unlock ─────────────────────────────────────────────────────
+  previewUnlockBanner: {
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.sienna,
+    backgroundColor: '#FEF3C7',
+    padding: 16,
+    marginHorizontal: 14,
+    marginTop: 14,
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    zIndex: 10,
     gap: 10,
   },
-  readerPageLabel: {
-    color: colors.primaryDeep,
-    fontWeight: '900',
-  },
-  readerPageTitle: {
-    flex: 1,
-    color: colors.ink,
-    fontSize: 18,
-    lineHeight: 22,
-    fontWeight: '900',
-  },
-  readerSecurePill: {
-    borderRadius: 999,
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  readerSecurePillText: {
-    color: colors.primaryDeep,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  readerParagraph: {
-    color: colors.ink,
-    fontSize: 15,
-    lineHeight: 24,
-    marginBottom: 12,
-  },
-  readerWatermark: {
-    color: '#CBD5E1',
-    fontSize: 18,
-    fontWeight: '900',
-    marginTop: 32,
-    textAlign: 'center',
-  },
-  studyBox: {
-    borderRadius: 18,
-    backgroundColor: '#F8FAFC',
-    
-    borderColor: colors.line,
-    padding: 12,
-    marginTop: 10,
-  },
-  studyBoxFeatured: {
-    backgroundColor: '#F3FAFF',
-    
-  },
-  studyBoxTitle: {
-    color: colors.primaryDeep,
-    fontWeight: '900',
-    marginBottom: 8,
-  },
-  readerTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 8,
-  },
-  readerTag: {
-    borderRadius: 999,
-    overflow: 'hidden',
-    backgroundColor: colors.primarySoft,
-    color: colors.primaryDeep,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  quizItem: {
-    borderTopWidth: 0.5,
-    borderTopColor: colors.line,
-    paddingTop: 8,
-    marginTop: 8,
-  },
-  quizQuestion: {
-    color: colors.ink,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-  aiPanel: {
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 16,
-    marginBottom: 28,
-  },
-  aiHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  aiTitle: {
-    color: colors.ink,
-    fontSize: 19,
-    fontWeight: '900',
-  },
-  aiSubtitle: {
-    color: colors.muted,
+  previewUnlockText: {
+    color: '#92400E',
     fontSize: 13,
     lineHeight: 19,
-    marginTop: 4,
-    fontWeight: '600',
-  },
-  aiBadge: {
-    borderRadius: 999,
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  aiBadgeText: {
-    color: colors.primaryDeep,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  quickPromptRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginVertical: 12,
-  },
-  quickPrompt: {
-    borderRadius: 999,
-    backgroundColor: colors.primarySoft,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  quickPromptText: {
-    color: colors.primaryDeep,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  assistantBubble: {
-    alignSelf: 'flex-start',
-    maxWidth: '92%',
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    
-    borderColor: colors.line,
-    padding: 10,
-    marginBottom: 8,
-  },
-  assistantBubbleText: {
-    color: colors.ink,
-    lineHeight: 20,
-  },
-  userBubble: {
-    alignSelf: 'flex-end',
-    maxWidth: '92%',
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    padding: 10,
-    marginBottom: 8,
-  },
-  userBubbleText: {
-    color: '#FFFFFF',
-    lineHeight: 20,
-    fontWeight: '700',
-  },
-  aiInputRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  aiInput: {
-    flex: 1,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    
-    borderColor: colors.line,
-    paddingHorizontal: 12,
-    color: colors.ink,
-  },
-  aiSendButton: {
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-  },
-  aiSendText: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-  },
-  toolSegment: {
-    flexDirection: 'row',
-    borderRadius: 14,
-    backgroundColor: '#EEF2F7',
-    padding: 3,
-    marginVertical: 14,
-    flexWrap: 'wrap',
-    gap: 4,
-  },
-  toolSegmentButton: {
-    flex: 1,
-    minWidth: '22%',
-    borderRadius: 11,
-    paddingVertical: 10,
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  toolSegmentButtonActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  toolSegmentText: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '700',
-  },
-  toolSegmentTextActive: {
-    color: '#2563EB',
-    fontWeight: '900',
-  },
-  toolContent: {
-    marginTop: 6,
-  },
-  androidFallbackMini: {
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: '#EFF6FF',
-    
-    
-    alignItems: 'center',
-    marginVertical: 14,
-  },
-  androidFallbackMiniText: {
-    fontSize: 14,
-    color: '#1E40AF',
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  androidFallbackMiniButton: {
-    backgroundColor: '#3B82F6',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  androidFallbackMiniButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  previewModeBadge: {
-    backgroundColor: '#F59E0B',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  previewModeBadgeText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 12,
-    letterSpacing: 0.5,
-  },
-  previewUnlockBanner: {
-    backgroundColor: '#FDF2F8',
-    
-    
-    borderRadius: 14,
-    padding: 16,
-    alignItems: 'center',
-    marginVertical: 14,
-    gap: 12,
-  },
-  previewUnlockText: {
-    color: '#9D174D',
-    fontSize: 13,
-    lineHeight: 18,
     fontWeight: '600',
     textAlign: 'center',
   },
   previewUnlockButton: {
-    backgroundColor: '#EC4899',
+    borderRadius: 3,
+    backgroundColor: $.sienna,
     paddingVertical: 10,
-    paddingHorizontal: 22,
-    borderRadius: 8,
-    shadowColor: '#EC4899',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    paddingHorizontal: 20,
   },
   previewUnlockButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    ...MONO,
+    fontSize: 10,
+    fontWeight: '700',
+    color: $.paper,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+
+  // ── Study tool content ─────────────────────────────────────────────────
+  toolContent: {
+    marginTop: 6,
+  },
+  studyBox: {
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.line,
+    backgroundColor: $.surface,
+    padding: 12,
+    marginTop: 10,
+  },
+  studyBoxFeatured: {
+    borderColor: $.sienna,
+    backgroundColor: '#FEF3C7',
+  },
+  studyBoxTitle: {
+    ...MONO,
+    fontSize: 9,
+    fontWeight: '700',
+    color: $.sienna,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 8,
+  },
+  readerParagraph: {
+    color: $.ink,
     fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 10,
+  },
+  quizItem: {
+    borderTopWidth: 1,
+    borderTopColor: $.line,
+    paddingTop: 10,
+    marginTop: 10,
+  },
+  quizQuestion: {
+    ...SERIF_TITLE,
+    fontSize: 14,
+    color: $.ink,
+    marginBottom: 4,
+  },
+
+  // ── AI chat ────────────────────────────────────────────────────────────
+  aiHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 14,
+    backgroundColor: $.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: $.ink,
+  },
+  aiHeaderIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  aiTitle: {
+    ...SERIF_TITLE,
+    fontSize: 18,
+  },
+  aiSubtitle: {
+    color: $.muted,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  aiBubbleIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    marginTop: 4,
+    flexShrink: 0,
+  },
+  assistantBubble: {
+    alignSelf: 'flex-start',
+    maxWidth: '90%',
+    borderRadius: 3,
+    padding: 12,
+    marginBottom: 6,
+  },
+  assistantBubbleText: {
+    lineHeight: 20,
+  },
+  quickPrompt: {
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: $.line,
+    backgroundColor: $.surface,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  quickPromptText: {
+    ...MONO,
+    fontSize: 11,
+    fontWeight: '600',
+    color: $.muted,
+  },
+  aiInputRow: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 12,
+    backgroundColor: $.surface,
+    borderTopWidth: 1,
+    borderTopColor: $.ink,
+  },
+  aiInput: {
+    flex: 1,
+    borderRadius: 3,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    minHeight: 44,
+    maxHeight: 100,
+  },
+  aiSendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 3,
+    backgroundColor: $.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  aiSendButtonDisabled: {
+    backgroundColor: $.soft,
+  },
+  aiSendButtonText: {
+    ...MONO,
+    fontSize: 16,
+    fontWeight: '700',
+    color: $.paper,
+    lineHeight: 18,
   },
 });
