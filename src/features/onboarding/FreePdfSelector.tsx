@@ -9,7 +9,6 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import type { CampusDocument } from '../../types';
 import { purchasePdfDocument } from '../pdf/pdfApi';
 import { recordPdfAnalyticsEvent } from '../pdf/pdfApi';
@@ -17,20 +16,29 @@ import { recordPdfAnalyticsEvent } from '../pdf/pdfApi';
 const { width } = Dimensions.get('window');
 const MAX_FREE_PDFS = 3;
 
-interface FreePdfSelectorProps {
-  visible: boolean;
-  documents: CampusDocument[];
-  onComplete: () => void;
-  onClose: () => void;
-  studentSession: any;
+// ─── Editorial palette ─────────────────────────────────────────────────────────
+const INK     = '#0F172A';
+const PAPER   = '#F6F1E7';
+const SIENNA  = '#B7410E';
+const EMERALD = '#047857';
+const MUTED   = '#475569';
+const SOFT    = '#94A3B8';
+const WHITE   = '#FFFFFF';
+
+// ─── Folio counter ───────────────────────────────────────────────────────────
+function folioLabel(index: number): string {
+  return `— ${String(index + 1).padStart(2, '0')}`;
 }
 
+// ─── Single PDF card (editorial poster style) ─────────────────────────────────
 function FreePdfCard({
   document,
+  index,
   selected,
   onToggle,
 }: {
   document: CampusDocument;
+  index: number;
   selected: boolean;
   onToggle: () => void;
 }) {
@@ -39,39 +47,42 @@ function FreePdfCard({
       style={[styles.pdfCard, selected && styles.pdfCardSelected]}
       onPress={onToggle}
     >
-      <LinearGradient
-        colors={selected ? ['#1D4ED8', '#2563EB'] : ['#F8FAFC', '#F1F5F9']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.pdfCardInner}
-      >
-        <View style={styles.pdfCardContent}>
-          <View style={styles.pdfCardIcon}>
-            <Text style={styles.pdfCardIconText}>📄</Text>
+      {/* Left: folio */}
+      <View style={styles.folioCol}>
+        <Text style={styles.folioNum}>{folioLabel(index)}</Text>
+        <View style={styles.folioRule} />
+      </View>
+
+      {/* Center: info */}
+      <View style={styles.pdfInfo}>
+        <Text
+          style={[styles.pdfTitle, selected && styles.pdfTitleSelected]}
+          numberOfLines={2}
+        >
+          {document.title}
+        </Text>
+        <Text style={styles.pdfMeta}>
+          {document.university} &middot; {document.level}
+        </Text>
+        <Text style={styles.pdfSubject}>{document.subject}</Text>
+      </View>
+
+      {/* Right: selector mark */}
+      <View style={[styles.selectMark, selected && styles.selectMarkActive]}>
+        {selected ? (
+          <View style={styles.checkMark} />
+        ) : (
+          <View style={styles.plusMark}>
+            <View style={styles.plusMarkH} />
+            <View style={styles.plusMarkV} />
           </View>
-          <View style={styles.pdfCardInfo}>
-            <Text
-              style={[styles.pdfCardTitle, selected && styles.pdfCardTitleSelected]}
-              numberOfLines={2}
-            >
-              {document.title}
-            </Text>
-            <Text style={styles.pdfCardMeta}>
-              {document.university} • {document.level}
-            </Text>
-            <Text style={styles.pdfCardSubject}>{document.subject}</Text>
-          </View>
-        </View>
-        <View style={[styles.selectIndicator, selected && styles.selectIndicatorActive]}>
-          <Text style={[styles.selectCheck, selected && styles.selectCheckActive]}>
-            {selected ? '✓' : '+'}
-          </Text>
-        </View>
-      </LinearGradient>
+        )}
+      </View>
     </Pressable>
   );
 }
 
+// ─── Main selector modal ──────────────────────────────────────────────────────
 export function FreePdfSelector({
   visible,
   documents,
@@ -130,7 +141,7 @@ export function FreePdfSelector({
 
     if (successCount > 0) {
       Alert.alert(
-        ' PDFs réclamés ! 🎉',
+        'PDFs réclamés',
         `${successCount} PDF${successCount > 1 ? 's' : ''} ajouté${successCount > 1 ? 's' : ''} à ta bibliothèque. Bonne révision !`,
         [{ text: 'Parfait !', onPress: onComplete }]
       );
@@ -155,103 +166,98 @@ export function FreePdfSelector({
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalBackdrop}>
         <View style={styles.modalContainer}>
-          {/* Header */}
+          {/* ── Header ── */}
           <View style={styles.modalHeader}>
-            <View style={styles.giftBadge}>
-              <Text style={styles.giftBadgeText}>🎁</Text>
-            </View>
-            <View style={styles.modalHeaderText}>
-              <Text style={styles.modalTitle}>Bienvenue !</Text>
-              <Text style={styles.modalSubtitle}>
-                Choisis {MAX_FREE_PDFS} PDFs gratuits pour démarrer
-              </Text>
+            <View style={styles.headerMeta}>
+              <Text style={styles.headerEyebrow}>BIENVENUE</Text>
+              <Text style={styles.headerTitle}>Choisis tes gratuits</Text>
             </View>
             <Pressable onPress={handleClose} style={styles.closeButton}>
               <Text style={styles.closeButtonText}>✕</Text>
             </Pressable>
           </View>
 
-          {/* Progress indicator */}
-          <View style={styles.progressBar}>
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${(selectedCount / MAX_FREE_PDFS) * 100}%` },
-                ]}
-              />
+          {/* Thin rule */}
+          <View style={styles.headerRule} />
+
+          {/* ── Progress / selection indicator ── */}
+          <View style={styles.selectionBar}>
+            <View style={styles.selectionRules}>
+              {Array.from({ length: MAX_FREE_PDFS }).map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.selectionRule,
+                    i < selectedCount && styles.selectionRuleActive,
+                  ]}
+                />
+              ))}
             </View>
-            <Text style={styles.progressLabel}>
-              {selectedCount} / {MAX_FREE_PDFS} PDFs sélectionnés
+            <Text style={styles.selectionLabel}>
+              {selectedCount === 0
+                ? `Sélectionne jusqu'à ${MAX_FREE_PDFS} PDFs`
+                : `${selectedCount} / ${MAX_FREE_PDFS} sélectionnés`}
             </Text>
           </View>
 
-          {/* Document list */}
+          {/* ── Document list ── */}
           <ScrollView
             style={styles.documentList}
             contentContainerStyle={styles.documentListContent}
             showsVerticalScrollIndicator={false}
           >
-            {documents.slice(0, 20).map((doc) => (
+            {documents.slice(0, 20).map((doc, i) => (
               <FreePdfCard
                 key={doc.id}
                 document={doc}
+                index={i}
                 selected={selectedIds.has(doc.id)}
                 onToggle={() => toggleDocument(doc.id)}
               />
             ))}
             {documents.length === 0 && (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyIcon}>📭</Text>
+                <View style={styles.emptyRule} />
                 <Text style={styles.emptyTitle}>Aucun document disponible</Text>
                 <Text style={styles.emptySubtitle}>
                   Reviens bientôt — le catalogue s'enrichit régulièrement.
                 </Text>
+                <View style={styles.emptyRule} />
               </View>
             )}
           </ScrollView>
 
-          {/* CTA */}
+          {/* ── Footer CTA ── */}
           <View style={styles.ctaArea}>
-            {selectedCount === 0 && (
-              <Text style={styles.ctaHint}>
-                Sélectionne jusqu'à {MAX_FREE_PDFS} PDFs dans la liste ci-dessus
-              </Text>
-            )}
-            {selectedCount > 0 && selectedCount < MAX_FREE_PDFS && (
-              <Text style={styles.ctaHint}>
-                Plus que {MAX_FREE_PDFS - selectedCount} à choisir 👇
-              </Text>
-            )}
-            {selectedCount === MAX_FREE_PDFS && (
-              <Text style={styles.ctaHint}>
-                Sélection complète ! Tu peux reclamar tes {MAX_FREE_PDFS} PDFs gratuits 🎉
-              </Text>
-            )}
+            {/* Selection hint */}
+            <Text style={styles.ctaHint}>
+              {selectedCount === 0 && `Sélectionne jusqu'à ${MAX_FREE_PDFS} PDFs dans la liste`}
+              {selectedCount > 0 && selectedCount < MAX_FREE_PDFS && (
+                <>Plus que {MAX_FREE_PDFS - selectedCount} à choisir</>
+              )}
+              {selectedCount === MAX_FREE_PDFS && (
+                <>Sélection complète</>
+              )}
+            </Text>
+
+            {/* Claim button */}
             <Pressable
-              style={[
-                styles.claimButton,
-                !canClaim && styles.claimButtonDisabled,
-              ]}
+              style={[styles.claimButton, !canClaim && styles.claimButtonDisabled]}
               onPress={claimAllFree}
               disabled={!canClaim || claimingAll}
             >
-              <LinearGradient
-                colors={canClaim ? ['#059669', '#047857'] : ['#94A3B8', '#64748B']}
-                style={styles.claimButtonGradient}
-              >
-                <Text style={styles.claimButtonText}>
-                  {claimingAll
-                    ? 'Réclamation en cours...'
-                    : `Réclamer ${selectedCount > 0 ? selectedCount : MAX_FREE_PDFS} PDFs gratuits`}
-                </Text>
-              </LinearGradient>
+              <Text style={[styles.claimButtonText, !canClaim && styles.claimButtonTextDisabled]}>
+                {claimingAll
+                  ? 'Réclamation en cours...'
+                  : selectedCount > 0
+                  ? `RÉCLAMER ${selectedCount} PDF${selectedCount > 1 ? 'S' : ''}`
+                  : `RÉCLAMER ${MAX_FREE_PDFS} PDFs`}
+              </Text>
             </Pressable>
 
+            {/* Skip link */}
             <Pressable onPress={handleClose} style={styles.skipButton}>
-              <Text style={styles.skipButtonText}>
-                Plus tard — je choisirai moi-même
-              </Text>
+              <Text style={styles.skipButtonText}>Plus tard — je choisirai moi-même</Text>
             </Pressable>
           </View>
         </View>
@@ -260,239 +266,309 @@ export function FreePdfSelector({
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  // Modal shell
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: '#0F172A',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    backgroundColor: PAPER,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    borderTopWidth: 2,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: INK,
     maxHeight: '92%',
     overflow: 'hidden',
   },
+
+  // Header
   modalHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 24,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
     paddingTop: 28,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
-    gap: 14,
+    paddingBottom: 16,
   },
-  giftBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#059669',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#059669',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  giftBadgeText: {
-    fontSize: 26,
-  },
-  modalHeaderText: {
+  headerMeta: {
     flex: 1,
   },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#F8FAFC',
-    letterSpacing: -0.5,
+  headerEyebrow: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 2,
+    color: SOFT,
+    textTransform: 'uppercase',
+    marginBottom: 6,
   },
-  modalSubtitle: {
-    fontSize: 13,
-    color: '#94A3B8',
-    marginTop: 2,
-    lineHeight: 18,
+  headerTitle: {
+    fontFamily: 'serif',
+    fontSize: 28,
+    fontWeight: '900',
+    color: INK,
+    letterSpacing: -0.5,
+    lineHeight: 34,
+  },
+  headerRule: {
+    height: 1,
+    backgroundColor: INK,
+    marginHorizontal: 24,
   },
   closeButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: '#1E293B',
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: INK,
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeButtonText: {
-    color: '#94A3B8',
-    fontSize: 16,
+    fontFamily: 'monospace',
+    fontSize: 14,
     fontWeight: '700',
+    color: INK,
   },
-  progressBar: {
+
+  // Selection indicator
+  selectionBar: {
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 8,
-    gap: 8,
+    gap: 10,
   },
-  progressTrack: {
-    height: 6,
-    backgroundColor: '#1E293B',
-    borderRadius: 3,
-    overflow: 'hidden',
+  selectionRules: {
+    flexDirection: 'row',
+    gap: 6,
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#059669',
-    borderRadius: 3,
+  selectionRule: {
+    flex: 1,
+    height: 3,
+    backgroundColor: SOFT,
+    borderRadius: 1,
+    opacity: 0.5,
   },
-  progressLabel: {
-    fontSize: 12,
-    color: '#64748B',
+  selectionRuleActive: {
+    backgroundColor: EMERALD,
+    opacity: 1,
+  },
+  selectionLabel: {
+    fontFamily: 'monospace',
+    fontSize: 10,
     fontWeight: '600',
-    textAlign: 'center',
+    letterSpacing: 1.2,
+    color: MUTED,
+    textTransform: 'uppercase',
   },
+
+  // Document list
   documentList: {
     flex: 1,
   },
   documentListContent: {
     padding: 16,
-    gap: 10,
+    gap: 0,
   },
+
+  // PDF card
   pdfCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: INK + '1A',
+    backgroundColor: PAPER,
+    gap: 16,
   },
   pdfCardSelected: {
-    borderColor: '#2563EB',
+    backgroundColor: INK,
   },
-  pdfCardInner: {
-    padding: 14,
-    flexDirection: 'row',
+  folioCol: {
     alignItems: 'center',
+    width: 40,
+    paddingTop: 2,
   },
-  pdfCardContent: {
+  folioNum: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    color: SIENNA,
+    marginBottom: 6,
+  },
+  folioRule: {
+    width: 1,
+    height: 36,
+    backgroundColor: SOFT,
+    opacity: 0.4,
+  },
+  pdfInfo: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
   },
-  pdfCardIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#FEE2E2',
+  pdfTitle: {
+    fontFamily: 'serif',
+    fontSize: 15,
+    fontWeight: '700',
+    color: INK,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  pdfTitleSelected: {
+    color: PAPER,
+  },
+  pdfMeta: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    color: MUTED,
+    marginBottom: 2,
+  },
+  pdfSubject: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    color: SOFT,
+    textTransform: 'uppercase',
+  },
+  selectMark: {
+    width: 28,
+    height: 28,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: INK,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  pdfCardIconText: {
-    fontSize: 22,
-  },
-  pdfCardInfo: {
-    flex: 1,
-  },
-  pdfCardTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1E293B',
-    lineHeight: 18,
-  },
-  pdfCardTitleSelected: {
-    color: '#FFFFFF',
-  },
-  pdfCardMeta: {
-    fontSize: 11,
-    color: '#64748B',
     marginTop: 2,
   },
-  pdfCardSubject: {
-    fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 1,
+  selectMarkActive: {
+    backgroundColor: EMERALD,
+    borderColor: EMERALD,
   },
-  selectIndicator: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#E2E8F0',
+  checkMark: {
+    width: 12,
+    height: 6,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: PAPER,
+    transform: [{ rotate: '-45deg' }, { translateY: -1 }],
+  },
+  plusMark: {
+    width: 10,
+    height: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  selectIndicatorActive: {
-    backgroundColor: '#FFFFFF',
+  plusMarkH: {
+    position: 'absolute',
+    width: 10,
+    height: 2,
+    backgroundColor: INK,
+    borderRadius: 1,
   },
-  selectCheck: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#94A3B8',
+  plusMarkV: {
+    position: 'absolute',
+    width: 2,
+    height: 10,
+    backgroundColor: INK,
+    borderRadius: 1,
   },
-  selectCheckActive: {
-    color: '#2563EB',
-  },
+
+  // Empty state
   emptyState: {
     alignItems: 'center',
     paddingVertical: 48,
-    gap: 12,
+    gap: 14,
   },
-  emptyIcon: {
-    fontSize: 48,
+  emptyRule: {
+    width: 40,
+    height: 1,
+    backgroundColor: SOFT,
+    opacity: 0.4,
   },
   emptyTitle: {
+    fontFamily: 'serif',
     fontSize: 18,
-    fontWeight: '800',
-    color: '#F8FAFC',
+    fontWeight: '700',
+    color: INK,
   },
   emptySubtitle: {
-    fontSize: 14,
-    color: '#64748B',
+    fontFamily: 'serif',
+    fontSize: 13,
+    fontStyle: 'italic',
+    color: MUTED,
     textAlign: 'center',
     lineHeight: 20,
-  },
-  ctaArea: {
-    padding: 24,
-    paddingBottom: 36,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#1E293B',
-  },
-  ctaHint: {
-    fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  claimButton: {
-    height: 54,
-    borderRadius: 27,
-    overflow: 'hidden',
-    shadowColor: '#059669',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  claimButtonDisabled: {
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  claimButtonGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: 24,
   },
+
+  // CTA area
+  ctaArea: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 36,
+    gap: 14,
+    borderTopWidth: 1,
+    borderTopColor: INK,
+  },
+  ctaHint: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1.2,
+    color: MUTED,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  },
+  claimButton: {
+    width: '100%',
+    paddingVertical: 16,
+    backgroundColor: INK,
+    borderRadius: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  claimButtonDisabled: {
+    backgroundColor: SOFT,
+    opacity: 0.4,
+  },
   claimButtonText: {
-    color: '#FFFFFF',
+    fontFamily: 'serif',
     fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+    fontWeight: '700',
+    color: PAPER,
+    letterSpacing: 0.5,
+  },
+  claimButtonTextDisabled: {
+    color: MUTED,
   },
   skipButton: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   skipButtonText: {
-    color: '#475569',
-    fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1,
+    color: SOFT,
+    textTransform: 'uppercase',
   },
 });
+
+// ─── Prop type (already exported from the original) ───────────────────────────
+interface FreePdfSelectorProps {
+  visible: boolean;
+  documents: CampusDocument[];
+  onComplete: () => void;
+  onClose: () => void;
+  studentSession: any;
+}

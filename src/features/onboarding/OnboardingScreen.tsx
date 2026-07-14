@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,117 +7,168 @@ import {
   Dimensions,
   ScrollView,
   Animated,
-  Easing,
+  SafeAreaView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
-interface Benefit {
-  icon: string;
+// ─── Editorial palette ───────────────────────────────────────────────────────
+const INK     = '#0F172A';
+const PAPER   = '#F6F1E7';
+const SIENNA  = '#B7410E';
+const EMERALD = '#047857';
+const MUTED   = '#475569';
+const SOFT    = '#94A3B8';
+
+// ─── Visual element styles ─────────────────────────────────────────────────────
+const vs = StyleSheet.create({
+  catalogVisual: { paddingVertical: 24, paddingHorizontal: 8, alignItems: 'flex-start' },
+  docRow:        { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 },
+  docLine:       { height: 8, backgroundColor: INK, borderRadius: 1, opacity: 0.7 },
+  cursorBar:     { width: 24, height: 3, borderRadius: 1, backgroundColor: INK, marginTop: 8 },
+
+  previewVisual:  { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 24, gap: 16 },
+  previewLeft:     { flex: 1, gap: 6, position: 'relative', overflow: 'hidden' },
+  previewLine:     { height: 7, backgroundColor: INK, borderRadius: 1, opacity: 0.6 },
+  previewFade:     { position: 'absolute', bottom: 0, left: 0, right: 0, height: 30, backgroundColor: PAPER, opacity: 0.85 },
+  previewDivider:  { width: 1, height: 90, backgroundColor: SOFT, marginTop: 4 },
+  previewRight:    { alignItems: 'center', paddingTop: 8, gap: 4 },
+  priceTag:        { borderWidth: 2, borderColor: SIENNA, borderRadius: 2, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' },
+  priceText:       { fontFamily: 'serif', fontSize: 28, fontWeight: '900', color: SIENNA, lineHeight: 30 },
+  priceUnit:       { fontFamily: 'monospace', fontSize: 9, letterSpacing: 1.5, color: SIENNA, fontWeight: '700' },
+
+  readVisual:  { flexDirection: 'row', alignItems: 'flex-end', paddingVertical: 24, gap: 12 },
+  bookLeft:    { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 90 },
+  bookSpine:   { width: 6, borderRadius: 1, opacity: 0.85 },
+  bookRight:   { flex: 1, gap: 6, paddingBottom: 4 },
+  readLine:    { height: 7, backgroundColor: INK, borderRadius: 1, opacity: 0.55 },
+});
+
+// ─── Slide content ────────────────────────────────────────────────────────────
+interface Slide {
+  folio: string;
+  eyebrow: string;
   title: string;
-  description: string;
-  accent: string;
-  bgGradient: [string, string];
+  body: string;
+  visual: React.ReactNode;
 }
 
-const BENEFITS: Benefit[] = [
+const SLIDES: Slide[] = [
   {
-    icon: '🎁',
-    title: '3 PDFs gratuits',
-    description: 'Choisis tes 3 premiers cours gratuits dans le catalogue complet',
-    accent: '#F59E0B',
-    bgGradient: ['#FFFBEB', '#FEF3C7'],
+    folio: '— 01',
+    eyebrow: 'CHAPITRE 01',
+    title: 'Trouve le bon PDF',
+    body: 'Parcourez le catalogue complet par université, filière et matière. Chaque document est indexé et accessible en un instant.',
+    visual: (
+      <View style={vs.catalogVisual}>
+        <View style={[vs.docRow, { marginLeft: 0 }]}>
+          <View style={[vs.docLine, { width: 160 }]} />
+          <View style={[vs.docLine, { width: 100, backgroundColor: SIENNA }]} />
+        </View>
+        <View style={vs.docRow}>
+          <View style={[vs.docLine, { width: 140 }]} />
+          <View style={[vs.docLine, { width: 80 }]} />
+        </View>
+        <View style={[vs.docRow, { marginLeft: 20 }]}>
+          <View style={[vs.docLine, { width: 120 }]} />
+          <View style={[vs.docLine, { width: 90 }]} />
+        </View>
+        <View style={vs.docRow}>
+          <View style={[vs.docLine, { width: 150 }]} />
+          <View style={[vs.docLine, { width: 60 }]} />
+        </View>
+        <View style={[vs.docRow, { marginLeft: 10 }]}>
+          <View style={[vs.docLine, { width: 130 }]} />
+          <View style={[vs.docLine, { width: 70 }]} />
+        </View>
+        <View style={vs.docRow}>
+          <View style={[vs.docLine, { width: 110 }]} />
+          <View style={[vs.docLine, { width: 50 }]} />
+        </View>
+        <View style={[vs.docRow, { marginLeft: 5 }]}>
+          <View style={[vs.docLine, { width: 145 }]} />
+          <View style={[vs.docLine, { width: 65 }]} />
+        </View>
+        <View style={[vs.cursorBar, { backgroundColor: INK }]} />
+      </View>
+    ),
   },
   {
-    icon: '📚',
-    title: '3 500+ PDFs',
-    description: 'Accès instantané à tout le catalogue Universités & Filières',
-    accent: '#2563EB',
-    bgGradient: ['#EFF6FF', '#DBEAFE'],
+    folio: '— 02',
+    eyebrow: 'CHAPITRE 02',
+    title: 'Preview puis achat',
+    body: "Feuilletez un extrait gratuit avant d'acheter. Pas de surprise — vous voyez exactement ce que vous payez.",
+    visual: (
+      <View style={vs.previewVisual}>
+        <View style={vs.previewLeft}>
+          <View style={[vs.previewLine, { width: 80 }]} />
+          <View style={[vs.previewLine, { width: 70 }]} />
+          <View style={[vs.previewLine, { width: 75 }]} />
+          <View style={[vs.previewLine, { width: 60 }]} />
+          <View style={[vs.previewLine, { width: 78 }]} />
+          <View style={[vs.previewLine, { width: 55 }]} />
+          <View style={[vs.previewLine, { width: 65 }]} />
+          <View style={vs.previewFade} />
+        </View>
+        <View style={vs.previewDivider} />
+        <View style={vs.previewRight}>
+          <View style={[vs.priceTag, { borderColor: SIENNA }]}>
+            <Text style={vs.priceText}>500</Text>
+            <Text style={vs.priceUnit}>FCFA</Text>
+          </View>
+          <View style={[vs.docLine, { width: 60, marginTop: 8 }]} />
+        </View>
+      </View>
+    ),
   },
   {
-    icon: '🤖',
-    title: '5 requêtes IA/jour',
-    description: 'Fiches, résumés et quiz générés automatiquement sur tes PDF',
-    accent: '#7C3AED',
-    bgGradient: ['#F5F3FF', '#EDE9FE'],
-  },
-  {
-    icon: '💳',
-    title: 'Wallet dès 500 FCFA',
-    description: 'Recharge MTN MoMo ou Orange Money — minimum super accessible',
-    accent: '#059669',
-    bgGradient: ['#ECFDF5', '#D1FAE5'],
-  },
-  {
-    icon: '📱',
-    title: 'Sync multi-appareils',
-    description: 'Ton compte, tes achats et ta bibliothèque synchronisés partout',
-    accent: '#0891B2',
-    bgGradient: ['#ECFEFF', '#CFFAFE'],
-  },
-  {
-    icon: '📥',
-    title: 'Mode hors-ligne',
-    description: 'Télécharge un PDF une fois, lis-le sans connexion partout',
-    accent: '#DC2626',
-    bgGradient: ['#FEF2F2', '#FEE2E2'],
+    folio: '— 03',
+    eyebrow: 'CHAPITRE 03',
+    title: 'Lis et révise',
+    body: 'Accédez à vos achats dans votre bibliothèque personnelle. Téléchargez pour le mode hors-ligne et révisez à votre rythme.',
+    visual: (
+      <View style={vs.readVisual}>
+        <View style={vs.bookLeft}>
+          {[
+            { w: 50, c: INK },
+            { w: 60, c: SIENNA },
+            { w: 45, c: EMERALD },
+            { w: 55, c: MUTED },
+            { w: 40, c: SOFT },
+          ].map((b, i) => (
+            <View key={i} style={[vs.bookSpine, { backgroundColor: b.c, width: b.w }]} />
+          ))}
+        </View>
+        <View style={vs.bookRight}>
+          <View style={[vs.readLine, { width: 100 }]} />
+          <View style={[vs.readLine, { width: 90 }]} />
+          <View style={[vs.readLine, { width: 80 }]} />
+          <View style={[vs.readLine, { width: 95 }]} />
+          <View style={[vs.readLine, { width: 70 }]} />
+          <View style={[vs.readLine, { width: 85 }]} />
+          <View style={[vs.readLine, { width: 60 }]} />
+          <View style={[vs.readLine, { width: 78 }]} />
+          <View style={[vs.readLine, { width: 50 }]} />
+        </View>
+      </View>
+    ),
   },
 ];
 
-const GLOW_COLORS = ['#2563EB', '#7C3AED', '#059669', '#F59E0B', '#0891B2', '#DC2626'];
-
-function BenefitCard({ benefit, index, scrollX }: { benefit: Benefit; index: number; scrollX: Animated.Value }) {
-  const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
-  
-  const scale = scrollX.interpolate({
-    inputRange,
-    outputRange: [0.88, 1, 0.88],
-    extrapolate: 'clamp',
-  });
-
-  const opacity = scrollX.interpolate({
-    inputRange,
-    outputRange: [0.4, 1, 0.4],
-    extrapolate: 'clamp',
-  });
-
-  const translateY = scrollX.interpolate({
-    inputRange,
-    outputRange: [20, 0, 20],
-    extrapolate: 'clamp',
-  });
-
+// ─── Slide renderer ───────────────────────────────────────────────────────────
+function SlidePage({ slide }: { slide: Slide }) {
   return (
-    <Animated.View
-      style={[
-        styles.benefitCard,
-        {
-          transform: [{ scale }, { translateY }],
-          opacity,
-        },
-      ]}
-    >
-      <LinearGradient
-        colors={benefit.bgGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.benefitCardInner}
-      >
-        <View style={[styles.iconBadge, { backgroundColor: benefit.accent + '20' }]}>
-          <Text style={styles.benefitIcon}>{benefit.icon}</Text>
-        </View>
-        <Text style={[styles.benefitTitle, { color: benefit.accent }]}>{benefit.title}</Text>
-        <Text style={styles.benefitDescription}>{benefit.description}</Text>
-        
-        {/* Decorative glow dot */}
-        <View style={[styles.glowDot, { backgroundColor: benefit.accent }]} />
-      </LinearGradient>
-    </Animated.View>
+    <View style={styles.slidePage}>
+      <Text style={styles.folio}>{slide.folio}</Text>
+      <Text style={styles.eyebrow}>{slide.eyebrow}</Text>
+      <Text style={styles.slideTitle}>{slide.title}</Text>
+      <Text style={styles.slideBody}>{slide.body}</Text>
+      <View style={styles.visualContainer}>{slide.visual}</View>
+    </View>
   );
 }
 
+// ─── Progress dots as 1px ink rules ─────────────────────────────────────────
 function ProgressDots({ scrollX, total }: { scrollX: Animated.Value; total: number }) {
   return (
     <View style={styles.dotsContainer}>
@@ -125,15 +176,9 @@ function ProgressDots({ scrollX, total }: { scrollX: Animated.Value; total: numb
         const inputRange = [(i - 1) * width, i * width, (i + 1) * width];
         const dotWidth = scrollX.interpolate({
           inputRange,
-          outputRange: [8, 24, 8],
+          outputRange: [6, 24, 6],
           extrapolate: 'clamp',
         });
-        const opacity = scrollX.interpolate({
-          inputRange,
-          outputRange: [0.3, 1, 0.3],
-          extrapolate: 'clamp',
-        });
-
         return (
           <Animated.View
             key={i}
@@ -141,8 +186,11 @@ function ProgressDots({ scrollX, total }: { scrollX: Animated.Value; total: numb
               styles.dot,
               {
                 width: dotWidth,
-                opacity,
-                backgroundColor: i === 0 ? '#2563EB' : '#94A3B8',
+                backgroundColor: scrollX.interpolate({
+                  inputRange,
+                  outputRange: [SOFT, SIENNA, SOFT],
+                  extrapolate: 'clamp',
+                }),
               },
             ]}
           />
@@ -152,38 +200,10 @@ function ProgressDots({ scrollX, total }: { scrollX: Animated.Value; total: numb
   );
 }
 
+// ─── Main screen ─────────────────────────────────────────────────────────────
 export function OnboardingScreen({ onFinish }: { onFinish: () => void }) {
   const scrollX = useRef(new Animated.Value(0)).current;
   const [currentIndex, setCurrentIndex] = useState(0);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    // Pulse animation for the CTA button
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.03,
-          duration: 1200,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1200,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Fade in animation
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-  }, []);
 
   const scrollHandler = Animated.event(
     [{ nativeEvent: { contentOffset: { x: scrollX } } }],
@@ -196,274 +216,232 @@ export function OnboardingScreen({ onFinish }: { onFinish: () => void }) {
     }
   );
 
-  const isLast = currentIndex === BENEFITS.length - 1;
+  const isLast = currentIndex === SLIDES.length - 1;
 
   return (
-    <View style={styles.container}>
-      {/* Background gradient */}
-      <LinearGradient
-        colors={['#0F172A', '#1E293B', '#0F172A']}
-        style={styles.background}
-      />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.paperBg} />
 
       {/* Header */}
-      <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-        <View style={styles.logoBadge}>
-          <Text style={styles.logoText}>📘</Text>
-        </View>
-        <Text style={styles.brandName}>Campus-Bordes</Text>
-        <View style={styles.freeBadge}>
-          <Text style={styles.freeBadgeText}>GRATUIT</Text>
-        </View>
-      </Animated.View>
+      <View style={styles.header}>
+        <Text style={styles.logoMark}>C</Text>
+        {!isLast && (
+          <Pressable onPress={onFinish} style={styles.passButton}>
+            <Text style={styles.passButtonText}>PASSER</Text>
+          </Pressable>
+        )}
+      </View>
 
-      {/* Scrollable benefits */}
+      <View style={styles.topRule} />
+
+      {/* Slide view */}
       <Animated.ScrollView
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
-        contentContainerStyle={styles.scrollContent}
         decelerationRate="fast"
         snapToInterval={width}
+        contentContainerStyle={styles.scrollContent}
       >
-        {BENEFITS.map((benefit, index) => (
-          <BenefitCard
-            key={benefit.icon}
-            benefit={benefit}
-            index={index}
-            scrollX={scrollX}
-          />
+        {SLIDES.map((slide) => (
+          <View key={slide.eyebrow} style={styles.slideWrapper}>
+            <SlidePage slide={slide} />
+          </View>
         ))}
       </Animated.ScrollView>
 
-      {/* Pagination dots */}
-      <ProgressDots scrollX={scrollX} total={BENEFITS.length} />
+      <View style={styles.bottomRule} />
+      <ProgressDots scrollX={scrollX} total={SLIDES.length} />
 
-      {/* Current benefit counter */}
-      <Animated.View style={[styles.counterBadge, { opacity: fadeAnim }]}>
+      <View style={styles.counterRow}>
         <Text style={styles.counterText}>
-          {currentIndex + 1} / {BENEFITS.length}
+          {String(currentIndex + 1).padStart(2, '0')} / {String(SLIDES.length).padStart(2, '0')}
         </Text>
-      </Animated.View>
+      </View>
 
-      {/* CTA */}
-      <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-        <Text style={styles.ctaText}>
-          {isLast
-            ? 'Prêt à démarrer ?'
-            : `Dans ${BENEFITS.length - currentIndex - 1} écran${BENEFITS.length - currentIndex - 1 > 1 ? 's' : ''} encore...`}
-        </Text>
-        
-        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          <Pressable
-            style={[
-              styles.ctaButton,
-              isLast && styles.ctaButtonFinal,
-            ]}
-            onPress={onFinish}
-          >
-            <LinearGradient
-              colors={isLast ? ['#2563EB', '#1D4ED8'] : ['#334155', '#1E293B']}
-              style={styles.ctaGradient}
-            >
-              <Text style={styles.ctaButtonText}>
-                {isLast ? "C'est parti ! 🎉" : 'Suivant'}
-              </Text>
-              {!isLast && <Text style={styles.ctaArrow}>→</Text>}
-            </LinearGradient>
-          </Pressable>
-        </Animated.View>
-
-        {!isLast && (
-          <Pressable onPress={onFinish} style={styles.skipLink}>
-            <Text style={styles.skipLinkText}>Passer l'introduction</Text>
-          </Pressable>
-        )}
-      </Animated.View>
-    </View>
+      <View style={styles.footer}>
+        <Pressable
+          style={[styles.ctaButton, isLast && styles.ctaButtonFinal]}
+          onPress={onFinish}
+        >
+          <Text style={styles.ctaButtonText}>
+            {isLast ? 'COMMENCER' : 'SUIVANT'}
+          </Text>
+          {!isLast && <Text style={styles.ctaArrow}>→</Text>}
+        </Pressable>
+      </View>
+    </SafeAreaView>
   );
 }
 
+// ─── Component styles ─────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    position: 'relative',
   },
-  background: {
+  paperBg: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: PAPER,
   },
+
+  // Header
   header: {
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 20,
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  logoBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#2563EB20',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#2563EB40',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 0,
   },
-  logoText: {
-    fontSize: 24,
-  },
-  brandName: {
+  logoMark: {
+    fontFamily: 'serif',
     fontSize: 22,
     fontWeight: '900',
-    color: '#F8FAFC',
-    letterSpacing: -0.5,
+    color: INK,
+    lineHeight: 26,
   },
-  freeBadge: {
-    backgroundColor: '#059669',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  freeBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  scrollContent: {
-    alignItems: 'center',
-  },
-  benefitCard: {
-    width: width - 48,
-    marginHorizontal: 24,
-    height: height * 0.48,
-    borderRadius: 28,
-    overflow: 'hidden',
-  },
-  benefitCardInner: {
-    flex: 1,
-    padding: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 28,
+  passButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    position: 'relative',
-    overflow: 'hidden',
+    borderColor: INK,
+    borderRadius: 2,
   },
-  iconBadge: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 8,
+  passButtonText: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    color: MUTED,
   },
-  benefitIcon: {
-    fontSize: 52,
+
+  // Rules
+  topRule: {
+    height: 1,
+    backgroundColor: INK,
+    marginHorizontal: 24,
+    marginTop: 12,
   },
-  benefitTitle: {
-    fontSize: 26,
-    fontWeight: '900',
+  bottomRule: {
+    height: 1,
+    backgroundColor: INK,
+    marginHorizontal: 24,
+  },
+
+  // Scroll
+  scrollContent: {
+    alignItems: 'stretch',
+  },
+  slideWrapper: {
+    width,
+  },
+
+  // Slide content
+  slidePage: {
+    flex: 1,
+    paddingHorizontal: 32,
+    paddingTop: 32,
+    paddingBottom: 16,
+  },
+  folio: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 2,
+    color: SIENNA,
+    marginBottom: 8,
+  },
+  eyebrow: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 2,
+    color: MUTED,
+    textTransform: 'uppercase',
     marginBottom: 12,
-    textAlign: 'center',
+  },
+  slideTitle: {
+    fontFamily: 'serif',
+    fontSize: 34,
+    fontWeight: '900',
+    color: INK,
+    lineHeight: 40,
     letterSpacing: -0.5,
+    marginBottom: 14,
   },
-  benefitDescription: {
-    fontSize: 15,
-    color: '#475569',
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 8,
+  slideBody: {
+    fontFamily: 'serif',
+    fontSize: 16,
+    fontWeight: '400',
+    fontStyle: 'italic',
+    color: MUTED,
+    lineHeight: 24,
+    marginBottom: 32,
   },
-  glowDot: {
-    position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    opacity: 0.06,
-    bottom: -20,
-    right: -20,
+  visualContainer: {
+    flex: 1,
   },
+
+  // Dots
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 16,
+    gap: 8,
+    paddingVertical: 12,
   },
   dot: {
-    height: 8,
-    borderRadius: 4,
+    height: 2,
+    borderRadius: 1,
   },
-  counterBadge: {
+
+  // Counter
+  counterRow: {
     alignItems: 'center',
-    marginBottom: 8,
+    paddingBottom: 4,
   },
   counterText: {
-    color: '#64748B',
-    fontSize: 13,
+    fontFamily: 'monospace',
+    fontSize: 11,
     fontWeight: '600',
+    letterSpacing: 1.5,
+    color: SOFT,
   },
+
+  // Footer CTA
   footer: {
-    paddingHorizontal: 32,
-    paddingBottom: 52,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 28,
     alignItems: 'center',
-    gap: 16,
-  },
-  ctaText: {
-    color: '#94A3B8',
-    fontSize: 14,
-    fontWeight: '500',
   },
   ctaButton: {
-    width: width - 64,
-    height: 58,
-    borderRadius: 29,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  ctaButtonFinal: {
-    shadowColor: '#2563EB',
-    shadowOpacity: 0.4,
-  },
-  ctaGradient: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    paddingHorizontal: 24,
+    width: '100%',
+    paddingVertical: 16,
+    backgroundColor: INK,
+    borderRadius: 2,
+  },
+  ctaButtonFinal: {
+    backgroundColor: SIENNA,
   },
   ctaButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+    fontFamily: 'serif',
+    fontSize: 16,
+    fontWeight: '700',
+    color: PAPER,
+    letterSpacing: 0.5,
   },
   ctaArrow: {
-    color: '#FFFFFF',
+    fontFamily: 'serif',
     fontSize: 18,
     fontWeight: '700',
-  },
-  skipLink: {
-    paddingVertical: 4,
-  },
-  skipLinkText: {
-    color: '#475569',
-    fontSize: 13,
-    fontWeight: '500',
+    color: PAPER,
   },
 });
