@@ -686,7 +686,7 @@ export function PdfStudentSection({
             <LinearGradient
               key={pack.id}
               colors={inLibrary ? ['#F4FAFF', '#FFFFFF'] : ['#FFFFFF', '#F8FCFF']}
-              style={[styles.packCard, inLibrary && styles.libraryPackCard, { flexDirection: 'column', gap: 16, padding: 20, borderRadius: 24, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 }]}
+              style={[styles.packCard, inLibrary && styles.libraryPackCard, { flexDirection: 'column', gap: 16, padding: 20, borderRadius: 16, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 }]}
             >
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16 }}>
                 <View style={{ width: 60, height: 60, borderRadius: 16, backgroundColor: inLibrary ? '#E0F2FE' : '#F8FAFC', alignItems: 'center', justifyContent: 'center' }}>
@@ -770,7 +770,7 @@ export function PdfStudentSection({
             <LinearGradient
               key={document.id}
               colors={inLibrary ? ['#F4FAFF', '#FFFFFF'] : ['#FFFFFF', '#F8FCFF']}
-              style={[styles.documentCard, inLibrary && styles.libraryDocumentCard, { flexDirection: 'column', gap: 16, padding: 20, borderRadius: 24, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 }]}
+              style={[styles.documentCard, inLibrary && styles.libraryDocumentCard, { flexDirection: 'column', gap: 16, padding: 20, borderRadius: 16, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 }]}
             >
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16 }}>
                 <View style={{ width: 60, height: 60, borderRadius: 16, backgroundColor: inLibrary ? '#E0F2FE' : '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
@@ -1482,7 +1482,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   emptyState: {
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: colors.surface,
     
     
@@ -1491,7 +1491,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statePanel: {
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: colors.surface,
     
     
@@ -1502,7 +1502,7 @@ const styles = StyleSheet.create({
   },
   sectionStrip: {
     marginTop: 12,
-    borderRadius: 22,
+    borderRadius: 16,
     backgroundColor: '#F8FBFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -1577,7 +1577,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   packsHero: {
-    borderRadius: 24,
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
@@ -1607,7 +1607,7 @@ const styles = StyleSheet.create({
   packsHeroBadge: {
     width: 82,
     height: 82,
-    borderRadius: 26,
+    borderRadius: 16,
     backgroundColor: '#E7F3FF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -1657,7 +1657,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   featuredPackCard: {
-    borderRadius: 20,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -1702,7 +1702,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   explorerHero: {
-    borderRadius: 24,
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
@@ -1732,7 +1732,7 @@ const styles = StyleSheet.create({
   explorerHeroBadge: {
     width: 82,
     height: 82,
-    borderRadius: 26,
+    borderRadius: 16,
     backgroundColor: '#E7F3FF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
