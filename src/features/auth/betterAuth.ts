@@ -61,8 +61,19 @@ export type AuthCapabilities = {
 const getAuthBaseUrl = () => {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     try {
-      const base = new URL(publicEnv.authWebUrl || publicEnv.authUrl);
       const current = window.location;
+      // If we are running the frontend locally, we should default to the local backend on port 3001
+      const isLocalhost = current.hostname === 'localhost' || current.hostname === '127.0.0.1';
+      const isLocalLan = current.hostname.startsWith('192.168.') || 
+                         current.hostname.startsWith('10.') || 
+                         current.hostname.startsWith('172.');
+      
+      const baseUrlString = (isLocalhost || isLocalLan)
+        ? `http://${current.hostname}:3001`
+        : (publicEnv.authWebUrl || publicEnv.authUrl);
+
+      const base = new URL(baseUrlString);
+
       // Only rewrite the host when the configured base is a loopback address.
       // Otherwise the URL might legitimately be production (e.g. campus-360.fr)
       // and we must NOT swap its host.
@@ -70,7 +81,9 @@ const getAuthBaseUrl = () => {
           current.hostname !== 'localhost' && current.hostname !== '127.0.0.1') {
         base.hostname = current.hostname;
         base.protocol = current.protocol;
-        if (current.port) base.port = current.port;
+        if (current.port) {
+          base.port = current.port === '8081' ? '3001' : current.port;
+        }
       }
       return base.toString().replace(/\/$/, '');
     } catch {

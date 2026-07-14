@@ -423,7 +423,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         onRequestClose={resetForm}
       >
         <Pressable style={styles.modalBackdrop} onPress={resetForm}>
-          <View style={[styles.modalCard, { paddingBottom: 40 }]} onStartShouldSetResponder={() => true}>
+          <Pressable style={[styles.modalCard, { paddingBottom: 40 }]} onPress={() => {}}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalHeading}>Choisir le type de document</Text>
 
@@ -452,7 +452,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
             <Pressable style={styles.cancelLink} onPress={resetForm}>
               <Text style={styles.cancelLinkText}>Annuler</Text>
             </Pressable>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
 
@@ -467,7 +467,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
           style={{ flex: 1 }}
         >
           <Pressable style={styles.modalBackdrop} onPress={resetForm}>
-            <View style={[styles.modalCard, styles.formModalCard]} onStartShouldSetResponder={() => true}>
+            <Pressable style={[styles.modalCard, styles.formModalCard]} onPress={() => {}}>
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
                 <View style={styles.modalHandle} />
                 <Text style={styles.modalHeading}>
@@ -610,7 +610,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                   )}
                 </View>
               </ScrollView>
-            </View>
+            </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>

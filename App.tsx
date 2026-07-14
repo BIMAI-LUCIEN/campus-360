@@ -2343,7 +2343,7 @@ export default function App() {
           style={styles.modalBackdrop}
           onPress={() => setUniversityModalVisible(false)}
         >
-          <View style={styles.dropdownModalCard} onStartShouldSetResponder={() => true}>
+          <Pressable style={styles.dropdownModalCard} onPress={() => {}}>
             <Text style={styles.dropdownModalTitle}>Choisis ton université</Text>
             <ScrollView style={styles.dropdownScrollView} showsVerticalScrollIndicator={false}>
               {CAMEROON_UNIVERSITIES.map((univ) => (
@@ -2375,7 +2375,7 @@ export default function App() {
             >
               <Text style={styles.dropdownCloseButtonText}>Fermer</Text>
             </Pressable>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
 
@@ -2389,7 +2389,7 @@ export default function App() {
           style={styles.modalBackdrop}
           onPress={() => setFacultyModalVisible(false)}
         >
-          <View style={styles.dropdownModalCard} onStartShouldSetResponder={() => true}>
+          <Pressable style={styles.dropdownModalCard} onPress={() => {}}>
             <Text style={styles.dropdownModalTitle}>Choisis ta filière</Text>
             <ScrollView style={styles.dropdownScrollView} showsVerticalScrollIndicator={false}>
               {CAMEROON_FACULTIES.map((fac) => (
@@ -2421,7 +2421,7 @@ export default function App() {
             >
               <Text style={styles.dropdownCloseButtonText}>Fermer</Text>
             </Pressable>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
 
@@ -2435,7 +2435,7 @@ export default function App() {
           style={styles.modalBackdrop}
           onPress={() => setLevelModalVisible(false)}
         >
-          <View style={styles.dropdownModalCard} onStartShouldSetResponder={() => true}>
+          <Pressable style={styles.dropdownModalCard} onPress={() => {}}>
             <Text style={styles.dropdownModalTitle}>Choisis ton niveau</Text>
             <ScrollView style={styles.dropdownScrollView} showsVerticalScrollIndicator={false}>
               {CAMEROON_LEVELS.map((lvl) => (
@@ -2467,7 +2467,7 @@ export default function App() {
             >
               <Text style={styles.dropdownCloseButtonText}>Fermer</Text>
             </Pressable>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
 
@@ -2481,7 +2481,7 @@ export default function App() {
           style={styles.modalBackdrop}
           onPress={() => setNotificationsVisible(false)}
         >
-          <View style={[styles.dropdownModalCard, { height: '60%', padding: 0 }]} onStartShouldSetResponder={() => true}>
+          <Pressable style={[styles.dropdownModalCard, { height: '60%', padding: 0 }]} onPress={() => {}}>
             <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={{ fontSize: 20, fontWeight: '800', color: '#1E293B' }}>Notifications</Text>
               <Pressable onPress={() => setNotificationsVisible(false)}>
@@ -2546,7 +2546,7 @@ export default function App() {
                 )}
               </View>
             </ScrollView>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
 
@@ -2558,7 +2558,7 @@ export default function App() {
         onRequestClose={() => setNotificationsSettingsVisible(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setNotificationsSettingsVisible(false)}>
-          <View style={[styles.dropdownModalCard, { height: '50%', padding: 0 }]} onStartShouldSetResponder={() => true}>
+          <Pressable style={[styles.dropdownModalCard, { height: '50%', padding: 0 }]} onPress={() => {}}>
             <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={{ fontSize: 20, fontWeight: '800', color: '#1E293B' }}>Gérer les notifications</Text>
               <Pressable onPress={() => setNotificationsSettingsVisible(false)}>
@@ -2594,7 +2594,7 @@ export default function App() {
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View style={{ flex: 1, paddingRight: 16 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#1E293B' }}>Alertes Compte</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#1E293B' }}>Alertes Compes</Text>
                   <Text style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>Informations sur tes achats et recharges de coins.</Text>
                 </View>
                 <Switch 
@@ -2605,7 +2605,7 @@ export default function App() {
                 />
               </View>
             </ScrollView>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
 
@@ -2617,7 +2617,7 @@ export default function App() {
         onRequestClose={() => setSecuritySettingsVisible(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setSecuritySettingsVisible(false)}>
-          <View style={[styles.dropdownModalCard, { height: '85%', padding: 0 }]} onStartShouldSetResponder={() => true}>
+          <Pressable style={[styles.dropdownModalCard, { height: '85%', padding: 0 }]} onPress={() => {}}>
             <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={{ fontSize: 20, fontWeight: '800', color: '#1E293B' }}>Sécurité</Text>
               <Pressable onPress={() => setSecuritySettingsVisible(false)}>
@@ -2672,7 +2672,7 @@ export default function App() {
                 <Text style={{ fontSize: 12, color: '#059669', fontWeight: '700' }}>Actif</Text>
               </View>
             </ScrollView>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
 
@@ -2684,7 +2684,7 @@ export default function App() {
         onRequestClose={() => setSupportModalVisible(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setSupportModalVisible(false)}>
-          <View style={[styles.dropdownModalCard, { padding: 0 }]} onStartShouldSetResponder={() => true}>
+          <Pressable style={[styles.dropdownModalCard, { padding: 0 }]} onPress={() => {}}>
             <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={{ fontSize: 20, fontWeight: '800', color: '#1E293B' }}>Support Client</Text>
               <Pressable onPress={() => setSupportModalVisible(false)}>
@@ -2709,7 +2709,7 @@ export default function App() {
                 <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>Discuter sur WhatsApp</Text>
               </Pressable>
             </View>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
 
@@ -2969,7 +2969,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   accountSurface: {
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -3013,7 +3013,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   accountFocusStrip: {
-    borderRadius: 22,
+    borderRadius: 16,
     backgroundColor: '#F8FBFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -3034,7 +3034,7 @@ const styles = StyleSheet.create({
   accountFocusBadge: {
     width: 88,
     minHeight: 88,
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: '#EEF5FF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -3057,7 +3057,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   accountSummaryCard: {
-    borderRadius: 22,
+    borderRadius: 16,
     backgroundColor: '#F8FBFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -3082,7 +3082,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   accountSupportCard: {
-    borderRadius: 22,
+    borderRadius: 16,
     backgroundColor: '#F8FBFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -3122,7 +3122,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   dashboardHero: {
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -3270,7 +3270,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   dashboardActionCard: {
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -3308,7 +3308,7 @@ const styles = StyleSheet.create({
   dashboardFeatureImageWrap: {
     width: 104,
     aspectRatio: 1,
-    borderRadius: 22,
+    borderRadius: 14,
     overflow: 'hidden',
     backgroundColor: '#E8F1FF',
     shadowColor: '#000',
@@ -3386,7 +3386,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   homeLeadCard: {
-    borderRadius: 24,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
