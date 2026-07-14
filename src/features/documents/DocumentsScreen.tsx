@@ -4,7 +4,7 @@ import {
   ActivityIndicator, Alert, Modal, TextInput, Linking, KeyboardAvoidingView, Platform
 } from 'react-native';
 
-import { authBaseUrl, authFetch, type StudentProfile } from '../auth/betterAuth';
+import { authBaseUrl, authFetch, authClient, type StudentProfile } from '../auth/betterAuth';
 
 type Document = {
   id: string;
@@ -384,7 +384,10 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                     <Text style={styles.editButtonText}>Modifier</Text>
                   </Pressable>
                   <Pressable style={[styles.actionButton, styles.pdfButton]} onPress={() => {
-                    Linking.openURL(`${authBaseUrl}/api/mobile/documents/${doc.id}/export/pdf`).catch(() => {
+                    const cookie = authClient.getCookie();
+                    const token = cookie?.split('better-auth.session_token=')[1]?.split(';')[0] || '';
+                    const url = `${authBaseUrl}/api/mobile/documents/${doc.id}/export/pdf${token ? `?token=${token}` : ''}`;
+                    Linking.openURL(url).catch(() => {
                       Alert.alert('Erreur', "Impossible d'ouvrir le PDF.");
                     });
                   }}>

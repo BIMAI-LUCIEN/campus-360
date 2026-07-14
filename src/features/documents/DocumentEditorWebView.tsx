@@ -19,9 +19,10 @@ export function DocumentEditorWebView({ documentId, onClose }: DocumentEditorWeb
   const cookie = Platform.OS !== 'web' && typeof (authClient as any).getCookie === 'function'
     ? (authClient as any).getCookie()
     : '';
+  const token = cookie?.split('better-auth.session_token=')[1]?.split(';')[0] || '';
   
   // Construct the URL
-  const editorUrl = `${publicEnv.adminUrl}/documents/${documentId}?mode=mobile`;
+  const editorUrl = `${publicEnv.adminUrl}/documents/${documentId}?mode=mobile${token ? `&token=${token}` : ''}`;
   
   console.log(`[WebView Editor] Loading URL: ${editorUrl}`);
 

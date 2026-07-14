@@ -73,6 +73,16 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
   const searchParams = useSearchParams();
   const isMobileMode = searchParams.get('mode') === 'mobile';
 
+  // Sync token from URL query params to document cookies (crucial for mobile WebView session persistence)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const token = searchParams.get('token');
+      if (token) {
+        window.document.cookie = `better-auth.session_token=${token}; path=/; max-age=604800; secure; samesite=lax`;
+      }
+    }
+  }, [searchParams]);
+
   const { data: session, isPending: sessionLoading } = authClient.useSession();
 
   // Mobile view: 0 = control panel (chat/style/cover), 1 = editor. The two

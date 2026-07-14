@@ -162,7 +162,18 @@ export const requireMobileUser = async (
   request: NextRequest,
   options: MobileAccessOptions = {},
 ) => {
-  const session = await auth.api.getSession({ headers: request.headers });
+  let headers = request.headers;
+  
+  // Support session token in query parameter for Linking.openURL on mobile PDF exports
+  const { searchParams } = new URL(request.url);
+  const token = searchParams.get('token');
+  if (token) {
+    const newHeaders = new Headers(request.headers);
+    newHeaders.set('Authorization', `Bearer ${token}`);
+    headers = newHeaders;
+  }
+
+  const session = await auth.api.getSession({ headers });
   if (!session?.user) {
     return {
       user: null,
