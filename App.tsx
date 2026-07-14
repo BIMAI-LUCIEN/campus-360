@@ -2872,15 +2872,24 @@ export default function App() {
 }
 
 const colors = {
-  ink: '#0F172A',         // Slate 900 (softer dark)
-  muted: '#64748B',       // Slate 500
-  line: '#E2E8F0',        // Slate 200
-  soft: '#F8FAFC',        // Slate 50
-  primary: '#3B82F6',     // Premium Electric Blue
-  primaryDeep: '#1E40AF', // Deep Royal Blue
-  primarySoft: '#EFF6FF', // Soft Sky Tint
-  green: '#10B981',       // Softer Emerald Green
-  red: '#EF4444',         // Premium Red Accent
+  ink:        '#0F172A',
+  inkSoft:    '#1E293B',
+  paper:      '#F6F1E7',  // warm off-white body
+  paperSoft:  '#EDE6D3',  // deeper paper for hovers
+  sienna:     '#B7410E',  // burnt orange accent
+  emerald:    '#047857',  // deep emerald
+  muted:      '#475569',
+  soft:       '#94A3B8',
+  line:       '#D6CFB8',  // paper-tinted rule
+  lineInk:    '#0F172A',  // ink rule
+  surface:    '#FFFFFF',
+  // legacy aliases — kept so the older sections that still reference
+  // `colors.primary*` don't crash, but they map to the editorial ink now
+  primary:     '#0F172A',
+  primaryDeep: '#0F172A',
+  primarySoft: '#F6F1E7',
+  green:       '#047857',
+  red:         '#B7410E',
 };
 
 const styles = StyleSheet.create({
@@ -3836,7 +3845,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
     borderColor: '#0F172A',
-    padding: 20,
+    padding: 24,
   },
   homeHeroTopRow: {
     flexDirection: 'row',
@@ -3845,72 +3854,72 @@ const styles = StyleSheet.create({
   },
   homeHeroEyebrow: {
     fontFamily: 'monospace',
-    fontSize: 10,
-    letterSpacing: 1.8,
+    fontSize: 9,
+    letterSpacing: 2,
     color: '#B7410E',
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   homeHeroRule: {
     height: 1,
     backgroundColor: '#0F172A',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   homeHeroGreeting: {
     fontFamily: 'serif',
-    fontSize: 28,
+    fontSize: 36,
     fontWeight: '900',
     color: '#0F172A',
-    lineHeight: 32,
-    letterSpacing: -0.5,
+    lineHeight: 40,
+    letterSpacing: -0.02,
   },
   homeWalletChip: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#0F172A',
     borderRadius: 2,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 10,
   },
   homeWalletCoin: {
     fontFamily: 'serif',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900',
     color: '#B7410E',
   },
   homeWalletAmount: {
     fontFamily: 'serif',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: '#F6F1E7',
-    lineHeight: 18,
+    lineHeight: 19,
   },
   homeWalletLabel: {
     fontFamily: 'monospace',
     fontSize: 8,
     color: '#94A3B8',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
     marginTop: 1,
   },
   homeHeroSubtitle: {
     fontFamily: 'serif',
-    fontSize: 14,
+    fontSize: 15,
     fontStyle: 'italic',
     color: '#475569',
-    lineHeight: 21,
-    marginTop: 14,
+    lineHeight: 23,
+    marginTop: 16,
   },
   homeHeroFootnote: {
-    marginTop: 14,
-    paddingTop: 12,
+    marginTop: 16,
+    paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: '#0F172A',
   },
   homeHeroFootnoteText: {
     fontFamily: 'monospace',
     fontSize: 10,
-    letterSpacing: 1.2,
+    letterSpacing: 1.4,
     color: '#0F172A',
     fontWeight: '600',
   },
@@ -3921,7 +3930,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     borderWidth: 1,
     borderColor: '#0F172A',
-    paddingVertical: 14,
+    paddingVertical: 16,
   },
   homePerk: {
     flex: 1,
@@ -3934,61 +3943,64 @@ const styles = StyleSheet.create({
   },
   homePerkNum: {
     fontFamily: 'serif',
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '900',
     color: '#B7410E',
-    lineHeight: 26,
+    lineHeight: 30,
+    letterSpacing: -0.02,
   },
   homePerkLabel: {
     fontFamily: 'monospace',
-    fontSize: 9,
+    fontSize: 8,
     color: '#0F172A',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
     fontWeight: '600',
+    textTransform: 'uppercase',
     textAlign: 'center',
-    marginTop: 4,
-    lineHeight: 12,
+    marginTop: 5,
+    lineHeight: 11,
   },
   // Main cards
-  homeMainStack: { gap: 12 },
+  homeMainStack: { gap: 16 },
   homeCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 4,
     borderWidth: 1,
     borderColor: '#0F172A',
-    padding: 20,
+    padding: 24,
   },
   homeCardFeatureRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 14,
+    gap: 16,
   },
   homeCardKicker: {
     fontFamily: 'monospace',
-    fontSize: 10,
-    letterSpacing: 1.5,
+    fontSize: 9,
+    letterSpacing: 1.8,
     color: '#0F172A',
     fontWeight: '700',
-    marginBottom: 8,
+    textTransform: 'uppercase',
+    marginBottom: 10,
   },
   homeCardTitle: {
     fontFamily: 'serif',
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
     color: '#0F172A',
-    lineHeight: 26,
-    letterSpacing: -0.3,
-    marginBottom: 8,
+    lineHeight: 30,
+    letterSpacing: -0.02,
+    marginBottom: 10,
   },
   homeCardBody: {
     fontFamily: 'serif',
-    fontSize: 14,
+    fontSize: 15,
     color: '#475569',
-    lineHeight: 21,
+    lineHeight: 23,
   },
   homeCardImageWrap: {
-    width: 84,
-    height: 100,
+    width: 88,
+    height: 110,
     borderRadius: 2,
     overflow: 'hidden',
     borderWidth: 1,
@@ -4003,7 +4015,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginTop: 16,
+    marginTop: 20,
   },
   homeCardTag: {
     borderWidth: 1,
@@ -4018,15 +4030,16 @@ const styles = StyleSheet.create({
   },
   homeCardTagText: {
     fontFamily: 'monospace',
-    fontSize: 10,
+    fontSize: 9,
     color: '#0F172A',
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
   homeCardTagTextEm: { color: '#F6F1E7' },
   homeCardActions: {
-    marginTop: 20,
-    paddingTop: 16,
+    marginTop: 24,
+    paddingTop: 20,
     borderTopWidth: 1,
     borderTopColor: '#0F172A',
     gap: 10,
@@ -4034,7 +4047,7 @@ const styles = StyleSheet.create({
   homeCardCta: {
     backgroundColor: '#0F172A',
     borderRadius: 2,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
@@ -4042,9 +4055,10 @@ const styles = StyleSheet.create({
   },
   homeCardCtaText: {
     fontFamily: 'serif',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: '#F6F1E7',
+    letterSpacing: 0.2,
   },
   homeCardCtaArrow: {
     fontFamily: 'serif',
