@@ -511,14 +511,23 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         visible={createStep === 'form'}
         transparent animationType="slide"
         onRequestClose={resetForm}
+        statusBarTranslucent
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
         >
-          <Pressable style={styles.modalBackdrop} onPress={resetForm}>
-            <Pressable style={[styles.formSheet]} onPress={() => {}}>
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+          <View style={styles.modalBackdrop}>
+            {/* Backdrop tap area — top half dismisses */}
+            <Pressable style={styles.modalBackdropDismiss} onPress={resetForm} />
+            <View style={styles.formSheet}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.formScrollContent}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="interactive"
+              >
                 <View style={styles.modalHandle} />
 
                 {/* Editorial header for form */}
@@ -678,8 +687,8 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                   )}
                 </View>
               </ScrollView>
-            </Pressable>
-          </Pressable>
+            </View>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
     </View>
@@ -1151,15 +1160,25 @@ const styles = StyleSheet.create({
   },
 
   // ── Editorial form sheet (creation form) ────────────────────────────────
+  modalBackdropDismiss: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   formSheet: {
     backgroundColor: '#F6F1E7',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    borderWidth: 1,
+    borderColor: '#0F172A',
     paddingHorizontal: 22,
     paddingTop: 14,
     paddingBottom: 16,
     maxHeight: '92%',
   },
+  formScrollContent: { paddingBottom: 40 },
   formHeader: { marginTop: 12, marginBottom: 18 },
   formHeaderTopRow: {
     flexDirection: 'row',
