@@ -436,9 +436,11 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         transparent animationType="slide"
         onRequestClose={resetForm}
       >
-        <Pressable style={styles.modalBackdrop} onPress={resetForm}>
-          <Pressable style={[styles.posterSheet]} onPress={() => {}}>
-            <View style={styles.modalHandle} />
+        <View style={styles.modalBackdrop}>
+          <Pressable style={styles.modalBackdropDismiss} onPress={resetForm} />
+          <View style={[styles.posterSheet]}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHandle} />
 
             {/* Editorial header */}
             <View style={styles.posterHeader}>
@@ -499,11 +501,12 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
               ))}
             </View>
 
-            <Pressable style={styles.cancelLink} onPress={resetForm}>
-              <Text style={styles.cancelLinkText}>Annuler</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
+              <Pressable style={styles.cancelLink} onPress={resetForm}>
+                <Text style={styles.cancelLinkText}>Annuler</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
 
       {/* ─── FORM MODAL — Editorial form ────────────────────────────────── */}

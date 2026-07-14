@@ -49,7 +49,7 @@ import { OnboardingScreen } from './src/features/onboarding/OnboardingScreen';
 import { FreePdfSelector } from './src/features/onboarding/FreePdfSelector';
 import { PdfStudentSection } from './src/features/pdf/PdfStudentSection';
 import { DocumentsScreen } from './src/features/documents/DocumentsScreen';
-import { DocumentEditorWebView } from './src/features/documents/DocumentEditorWebView';
+import { DocumentEditorScreen } from './src/features/documents/DocumentEditorScreen';
 import {
   buildSuggestedPacks,
   listPublishedPdfDocuments,
@@ -1432,7 +1432,7 @@ export default function App() {
 
   if (editingDocumentId) {
     return (
-      <DocumentEditorWebView
+      <DocumentEditorScreen
         documentId={editingDocumentId}
         onClose={() => setEditingDocumentId(null)}
       />
