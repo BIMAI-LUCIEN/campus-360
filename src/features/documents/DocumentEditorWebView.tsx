@@ -1,9 +1,17 @@
 import React, { useState, useRef } from 'react';
-import { StyleSheet, View, Text, Pressable, SafeAreaView, ActivityIndicator, Platform } from 'react-native';
+import { StyleSheet, View, Text, Pressable, SafeAreaView, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 import { authBaseUrl, authClient } from '../auth/betterAuth';
 import { publicEnv } from '../../config/env';
+
+// ─── Design tokens ────────────────────────────────────────────────────────────
+const INK     = '#0F172A';
+const PAPER   = '#F6F1E7';
+const SIENNA  = '#B7410E';
+const EMERALD = '#047857';
+const MUTED   = '#475569';
+const SOFT    = '#94A3B8';
 
 type DocumentEditorWebViewProps = {
   documentId: string;
@@ -20,10 +28,10 @@ export function DocumentEditorWebView({ documentId, onClose }: DocumentEditorWeb
     ? (authClient as any).getCookie()
     : '';
   const token = cookie?.split('better-auth.session_token=')[1]?.split(';')[0] || '';
-  
+
   // Construct the URL
   const editorUrl = `${publicEnv.adminUrl}/documents/${documentId}?mode=mobile${token ? `&token=${token}` : ''}`;
-  
+
   console.log(`[WebView Editor] Loading URL: ${editorUrl}`);
 
   const handleRetry = () => {
@@ -34,32 +42,61 @@ export function DocumentEditorWebView({ documentId, onClose }: DocumentEditorWeb
 
   const WebViewComponent = WebView as any;
 
+  // ─── Markup ───────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container}>
-      {/* Mini Native Header */}
-      <View style={styles.header}>
-        <Pressable onPress={onClose} style={styles.backButton}>
-          <Text style={styles.backButtonText}>✕ Quitter</Text>
+
+      {/* ── Manuscript header ─────────────────────────────────────────────── */}
+      <View style={styles.manuscriptHeader}>
+        {/* Close / Quitter */}
+        <Pressable onPress={onClose} style={styles.closePill}>
+          <Text style={styles.closePillText}>Fermer</Text>
         </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>Édition du document</Text>
-        <Pressable onPress={handleRetry} style={styles.reloadHeaderButton} disabled={isLoading}>
-          <Text style={styles.reloadHeaderText}>🔄</Text>
+
+        {/* Document title — placeholder, serif italic like a manuscript */}
+        <Text style={styles.docTitle} numberOfLines={1}>
+          Sans titre
+        </Text>
+
+        {/* Status badge — monospace sienna, editorial */}
+        <View style={styles.statusBadge}>
+          <Text style={styles.statusBadgeText}>EN COURS D'ÉCRITURE</Text>
+        </View>
+      </View>
+
+      {/* ── Folio / breadcrumb strip ─────────────────────────────────────── */}
+      <View style={styles.folioStrip}>
+        <Text style={styles.folioLabel}>
+          Document
+          <Text style={styles.folioSep}> / </Text>
+          <Text style={styles.folioSection}>Rédiger</Text>
+        </Text>
+
+        {/* Reload — minimal ink pill on the right */}
+        <Pressable onPress={handleRetry} style={styles.reloadPill} disabled={isLoading}>
+          <Text style={styles.reloadPillText}>Recharger</Text>
         </Pressable>
       </View>
 
-      {/* WebView or Connection Error screen */}
+      {/* ── WebView or error ─────────────────────────────────────────────── */}
       <View style={styles.webViewContainer}>
         {connectionError ? (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorIcon}>📡</Text>
-            <Text style={styles.errorTitle}>Connexion impossible</Text>
+
+            {/* Editorial rule mark */}
+            <View style={styles.errorRule} />
+            <Text style={styles.errorEyebrow}>CONNEXION INTERROMPUE</Text>
+            <View style={styles.errorRule} />
+
+            <Text style={styles.errorTitle}>L'éditeur n'est pas accessible</Text>
             <Text style={styles.errorDesc}>
-              L'éditeur de rapport nécessite une connexion active pour charger l'interface et enregistrer vos modifications en temps réel.
+              L'éditeur de rapport nécessite une connexion active pour charger l'interface
+              et enregistrer vos modifications en temps réel.
             </Text>
-            <Text style={styles.errorSubDesc}>
+            <Text style={styles.errorHint}>
               Vérifiez que le serveur est démarré ou que vous êtes connecté au même réseau wifi.
             </Text>
-            
+
             <View style={styles.errorActions}>
               <Pressable style={styles.retryButton} onPress={handleRetry}>
                 <Text style={styles.retryButtonText}>Réessayer</Text>
@@ -71,6 +108,12 @@ export function DocumentEditorWebView({ documentId, onClose }: DocumentEditorWeb
           </View>
         ) : (
           <View style={{ flex: 1, position: 'relative' }}>
+
+            {/* Web loading bar — thin editorial line at top */}
+            {isLoading && (
+              <View style={styles.loadingBar} />
+            )}
+
             {Platform.OS === 'web' ? (
               <iframe
                 src={editorUrl}
@@ -95,18 +138,12 @@ export function DocumentEditorWebView({ documentId, onClose }: DocumentEditorWeb
                 domStorageEnabled={true}
                 sharedCookiesEnabled={true}
                 thirdPartyCookiesEnabled={true}
-                startInLoadingState={true}
+                startInLoadingState={false}
                 onLoadStart={() => {
                   setIsLoading(true);
                   setConnectionError(false);
                 }}
                 onLoadEnd={() => setIsLoading(false)}
-                renderLoading={() => (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#059669" />
-                    <Text style={styles.loadingText}>Chargement de l'éditeur guidé...</Text>
-                  </View>
-                )}
                 onError={(syntheticEvent: any) => {
                   const { nativeEvent } = syntheticEvent;
                   console.warn('[WebView Editor] Error loading editor page:', nativeEvent);
@@ -123,13 +160,6 @@ export function DocumentEditorWebView({ documentId, onClose }: DocumentEditorWeb
                 }}
               />
             )}
-            
-            {isLoading && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#059669" />
-                <Text style={styles.loadingText}>Chargement de l'éditeur guidé...</Text>
-              </View>
-            )}
           </View>
         )}
       </View>
@@ -137,50 +167,111 @@ export function DocumentEditorWebView({ documentId, onClose }: DocumentEditorWeb
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A', // Slate 900
+    backgroundColor: '#090D16', // deep writing-surface dark
   },
-  header: {
-    height: 50,
+
+  // ── Manuscript header ──────────────────────────────────────────────────────
+  manuscriptHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PAPER,
+    borderBottomWidth: 1,
+    borderBottomColor: INK,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+  },
+
+  closePill: {
+    borderWidth: 1,
+    borderColor: INK,
+    borderRadius: 3,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    flexShrink: 0,
+  },
+  closePillText: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '700',
+    color: INK,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+
+  docTitle: {
+    flex: 1,
+    fontFamily: 'serif',
+    fontSize: 15,
+    fontWeight: '700',
+    fontStyle: 'italic',
+    color: INK,
+    textAlign: 'left',
+  },
+
+  statusBadge: {
+    borderWidth: 1,
+    borderColor: SIENNA,
+    borderRadius: 3,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    flexShrink: 0,
+  },
+  statusBadgeText: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    fontWeight: '700',
+    color: SIENNA,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+
+  // ── Folio strip ──────────────────────────────────────────────────────────
+  folioStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1E293B', // Slate 800
+    backgroundColor: INK,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-    paddingHorizontal: 16,
+    borderBottomColor: '#1E293B',
   },
-  backButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#334155',
+  folioLabel: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
-  backButtonText: {
-    color: '#F8FAFC',
-    fontSize: 13,
-    fontWeight: '700',
+  folioSep: {
+    color: SOFT,
   },
-  headerTitle: {
-    color: '#F8FAFC',
-    fontSize: 15,
-    fontWeight: '700',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 10,
+  folioSection: {
+    color: SOFT,
   },
-  reloadHeaderButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#334155',
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  reloadPill: {
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 3,
+    paddingVertical: 3,
+    paddingHorizontal: 9,
   },
-  reloadHeaderText: {
-    fontSize: 14,
+  reloadPillText: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    fontWeight: '600',
+    color: SOFT,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
+
+  // ── WebView ───────────────────────────────────────────────────────────────
   webViewContainer: {
     flex: 1,
   },
@@ -188,80 +279,103 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#090D16',
   },
-  loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#0F172A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
+
+  // ── Loading bar ───────────────────────────────────────────────────────────
+  loadingBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: EMERALD,
+    zIndex: 10,
   },
-  loadingText: {
-    color: '#94A3B8',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  // Error state styles
+
+  // ── Error state ───────────────────────────────────────────────────────────
   errorContainer: {
     flex: 1,
     backgroundColor: '#0F172A',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    gap: 16,
+    paddingHorizontal: 40,
+    paddingVertical: 48,
+    gap: 0,
   },
-  errorIcon: {
-    fontSize: 48,
-    marginBottom: 8,
+
+  errorRule: {
+    width: 32,
+    height: 1,
+    backgroundColor: MUTED,
+    marginVertical: 10,
+  },
+  errorEyebrow: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '700',
+    color: SIENNA,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    marginVertical: 6,
   },
   errorTitle: {
-    color: '#F8FAFC',
-    fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'serif',
+    fontSize: 20,
+    fontWeight: '900',
+    color: PAPER,
     textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 16,
   },
   errorDesc: {
-    color: '#94A3B8',
+    color: SOFT,
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 20,
     textAlign: 'center',
   },
-  errorSubDesc: {
-    color: '#64748B',
+  errorHint: {
+    color: MUTED,
     fontSize: 11,
-    lineHeight: 16,
+    lineHeight: 17,
     textAlign: 'center',
     fontStyle: 'italic',
-    marginTop: 4,
+    marginTop: 10,
   },
+
   errorActions: {
     width: '100%',
-    gap: 12,
-    marginTop: 24,
+    marginTop: 32,
+    gap: 10,
   },
   retryButton: {
-    backgroundColor: '#10B981', // Emerald 500
-    borderRadius: 12,
+    backgroundColor: EMERALD,
+    borderRadius: 3,
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    fontFamily: 'monospace',
+    fontSize: 11,
     fontWeight: '700',
+    color: PAPER,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   exitButton: {
     backgroundColor: 'transparent',
-    borderColor: '#334155',
     borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderColor: '#334155',
+    borderRadius: 3,
+    paddingVertical: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   exitButtonText: {
-    color: '#94A3B8',
-    fontSize: 14,
+    fontFamily: 'monospace',
+    fontSize: 10,
     fontWeight: '600',
+    color: SOFT,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
 });
