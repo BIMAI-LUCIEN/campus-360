@@ -1655,228 +1655,217 @@ export default function App() {
           {activeSection === 'account' ? (
             <View style={styles.accountSection}>
               <View style={styles.accountSurface}>
-                <View style={[styles.accountHeroRow, narrowScreen && styles.accountHeroRowCompact]}>
-                  <View style={styles.avatarLarge}>
-                    <Text style={styles.avatarLargeText}>
-                      {studentProfile?.name?.slice(0, 2).toUpperCase() ?? 'ET'}
-                    </Text>
-                  </View>
-                  <View style={styles.flex}>
-                    <Text style={[styles.dashboardSectionTitle, { fontSize: 13, textTransform: 'none', color: '#64748B' }]}>Espace Compte</Text>
-                    <Text style={[styles.accountSurfaceTitle, { fontSize: 22, fontWeight: '700' }]}>{studentProfile?.name ?? 'Étudiant Campus-Bordes'}</Text>
-                    <Text style={[styles.dashboardInfoSub, { fontSize: 15, color: '#94A3B8' }]}>
-                      {studentProfile?.email ?? studentSession.user.email ?? 'Connecte'}
-                    </Text>
-                    {studentProfile?.university ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 6, flexWrap: 'wrap' }}>
-                        <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                          <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600' }}>{studentProfile.university}</Text>
+                {/* Editorial profile card */}
+                <View style={styles.accountProfileCard}>
+                  <View style={[styles.accountHeroRow, narrowScreen && styles.accountHeroRowCompact]}>
+                    <View style={styles.avatarLarge}>
+                      <Text style={styles.avatarLargeText}>
+                        {studentProfile?.name?.slice(0, 2).toUpperCase() ?? 'ET'}
+                      </Text>
+                    </View>
+                    <View style={styles.flex}>
+                      <Text style={styles.accountProfileEyebrow}>CAMPUS 360 — FICHE LECTEUR</Text>
+                      <View style={styles.accountProfileRule} />
+                      <Text style={styles.accountProfileName}>{studentProfile?.name ?? 'Étudiant Campus-Bordes'}</Text>
+                      <Text style={styles.accountProfileEmail}>
+                        {studentProfile?.email ?? studentSession.user.email ?? 'Connecte'}
+                      </Text>
+                      {studentProfile?.university ? (
+                        <View style={styles.accountProfileTagsRow}>
+                          <View style={styles.accountProfileTag}><Text style={styles.accountProfileTagText}>{studentProfile.university}</Text></View>
+                          {studentProfile.faculty && (
+                            <View style={styles.accountProfileTag}><Text style={styles.accountProfileTagText}>{studentProfile.faculty}</Text></View>
+                          )}
+                          {studentProfile.level && (
+                            <View style={[styles.accountProfileTag, styles.accountProfileTagEm]}>
+                              <Text style={[styles.accountProfileTagText, styles.accountProfileTagTextEm]}>{studentProfile.level}</Text>
+                            </View>
+                          )}
                         </View>
-                        {studentProfile.faculty && (
-                          <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                            <Text style={{ fontSize: 12, color: '#2563EB', fontWeight: '600' }}>{studentProfile.faculty}</Text>
-                          </View>
-                        )}
-                        {studentProfile.level && (
-                          <View style={{ backgroundColor: '#F4FBF8', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                            <Text style={{ fontSize: 12, color: '#059669', fontWeight: '600' }}>{studentProfile.level}</Text>
-                          </View>
-                        )}
-                      </View>
-                    ) : null}
+                      ) : null}
+                    </View>
                   </View>
                 </View>
 
-                <View style={[styles.accountSummaryGrid, narrowScreen && styles.accountSummaryGridCompact, { marginTop: 16 }]}>
-                  <View style={[styles.accountSummaryCard, narrowScreen && styles.accountSummaryCardCompact, { borderRadius: 24, padding: 20 }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                      <Wallet size={14} color="#64748B" style={{ marginRight: 6 }} />
-                      <Text style={[styles.dashboardSectionTitle, { fontSize: 13, textTransform: 'none', color: '#64748B', marginBottom: 0 }]}>Solde PDF & IA</Text>
-                    </View>
-                    <Text style={[styles.accountSummaryValue, { fontSize: 24 }]}>{formatCoins(balance)} C</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8, flexWrap: 'wrap' }}>
-                      <View style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: subscriptionTier === 'premium' ? '#FDF2F8' : subscriptionTier === 'basic' ? '#EFF6FF' : '#F1F5F9',
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: subscriptionTier === 'premium' ? '#FBCFE8' : subscriptionTier === 'basic' ? '#BFDBFE' : '#E2E8F0'
-                      }}>
+                <View style={[styles.accountSummaryGrid, narrowScreen && styles.accountSummaryGridCompact, { marginTop: 14 }]}>
+                  <View style={styles.accountSummaryCard}>
+                    <Text style={styles.accountSummaryLabel}>— SOLDE</Text>
+                    <Text style={styles.accountSummaryValue}>{formatCoins(balance)}</Text>
+                    <Text style={styles.accountSummaryUnit}>Coins</Text>
+                    <View style={styles.accountSummaryTagsRow}>
+                      <View style={[
+                        styles.accountSummaryTier,
+                        subscriptionTier === 'premium' && { backgroundColor: '#0F172A', borderColor: '#0F172A' },
+                        subscriptionTier === 'basic' && { backgroundColor: '#F6F1E7', borderColor: '#0F172A' },
+                      ]}>
                         {subscriptionTier === 'premium' ? (
-                          <Crown size={12} color="#DB2777" style={{ marginRight: 4 }} />
+                          <Crown size={11} color="#F6F1E7" style={{ marginRight: 4 }} />
                         ) : (
-                          <Shield size={12} color={subscriptionTier === 'basic' ? '#2563EB' : '#64748B'} style={{ marginRight: 4 }} />
+                          <Shield size={11} color={subscriptionTier === 'basic' ? '#0F172A' : '#475569'} style={{ marginRight: 4 }} />
                         )}
-                        <Text style={{
-                          fontSize: 11,
-                          fontWeight: 'bold',
-                          color: subscriptionTier === 'premium' ? '#DB2777' : subscriptionTier === 'basic' ? '#2563EB' : '#64748B'
-                        }}>
-                          {subscriptionTier === 'premium' ? 'Premium' : subscriptionTier === 'basic' ? 'Basic' : 'Gratuit'}
+                        <Text style={[
+                          styles.accountSummaryTierText,
+                          subscriptionTier === 'premium' && { color: '#F6F1E7' },
+                        ]}>
+                          {subscriptionTier === 'premium' ? 'Bibliothécaire' : subscriptionTier === 'basic' ? 'Étudiant' : 'Découverte'}
                         </Text>
                       </View>
-
-                      <View style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: '#F5F3FF',
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: '#DDD6FE'
-                      }}>
-                        <Sparkles size={12} color="#7C3AED" style={{ marginRight: 4 }} />
-                        <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#7C3AED' }}>
-                          {iaCredits} cr. IA
-                        </Text>
+                      <View style={styles.accountSummaryIa}>
+                        <Sparkles size={11} color="#7C3AED" style={{ marginRight: 4 }} />
+                        <Text style={styles.accountSummaryIaText}>{iaCredits} cr. IA</Text>
                       </View>
                     </View>
                   </View>
-                  <View style={[styles.accountSummaryCard, narrowScreen && styles.accountSummaryCardCompact, { borderRadius: 24, padding: 20 }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                      <BookOpen size={14} color="#64748B" style={{ marginRight: 6 }} />
-                      <Text style={[styles.dashboardSectionTitle, { fontSize: 13, textTransform: 'none', color: '#64748B', marginBottom: 0 }]}>Bibliothèque</Text>
-                    </View>
-                    <Text style={[styles.accountSummaryValue, { fontSize: 24 }]}>{hasSubscription ? 'Illimite' : purchasedDocuments.length}</Text>
-                    <Text style={[styles.dashboardInfoSub, { marginTop: 8, fontSize: 13, color: '#94A3B8' }]}>{hasSubscription ? 'Abonnement actif.' : 'PDF débloqués.'}</Text>
+                  <View style={styles.accountSummaryCard}>
+                    <Text style={styles.accountSummaryLabel}>— BIBLIOTHÈQUE</Text>
+                    <Text style={styles.accountSummaryValue}>
+                      {hasSubscription ? '∞' : purchasedDocuments.length}
+                    </Text>
+                    <Text style={styles.accountSummaryUnit}>
+                      {hasSubscription ? 'Abonnement actif' : 'PDF débloqués'}
+                    </Text>
                   </View>
                 </View>
 
-                {/* Perks / Advantages dashboard */}
-                <View style={{ marginTop: 24, gap: 10 }}>
-                  <Text style={[styles.dashboardSectionTitle, { fontSize: 16, textTransform: 'none', color: '#1E293B', marginBottom: 4 }]}>✨ Tes avantages Campus-Bordes</Text>
-                  
+                {/* Avantages — editorial list */}
+                <View style={styles.accountPerksBlock}>
+                  <Text style={styles.accountPerksHeading}>— Tes avantages Campus-Bordes</Text>
                   {[
-                    { icon: '🎁', title: '3 PDFs gratuits', desc: 'Choisis tes premiers cours dans le catalogue', color: '#F59E0B', bg: '#FFFBEB' },
-                    { icon: '📚', title: '3 500+ PDFs disponibles', desc: 'Accès à tout le catalogue Universités & Filières', color: '#2563EB', bg: '#EFF6FF' },
-                    { icon: '🤖', title: '5 requetes IA/jour', desc: 'Fiches, resumes et quiz sur tes PDF', color: '#7C3AED', bg: '#F5F3FF' },
-                    { icon: '💳', title: 'Wallet des 500 FCFA', desc: 'Recharge via MTN MoMo ou Orange Money', color: '#059669', bg: '#ECFDF5' },
-                    { icon: '📱', title: 'Sync multi-appareils', desc: 'Ton compte et tes achats synchronises', color: '#0891B2', bg: '#ECFEFF' },
-                    { icon: '📥', title: 'Mode hors-ligne', desc: 'Lis tes PDF sans connexion après téléchargement', color: '#DC2626', bg: '#FEF2F2' },
-                  ].map((perk) => (
-                    <View key={perk.title} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: perk.bg, borderRadius: 14, padding: 12, gap: 12 }}>
-                      <Text style={{ fontSize: 24 }}>{perk.icon}</Text>
+                    { num: '3', title: 'PDFs gratuits', desc: 'Choisis tes premiers cours dans le catalogue' },
+                    { num: '3 500+', title: 'PDFs disponibles', desc: 'Catalogue Universités & Filières' },
+                    { num: '5', title: 'Requêtes IA par jour', desc: 'Fiches, résumés et quiz sur tes PDF' },
+                    { num: '500', title: 'FCFA min. wallet', desc: 'Recharge via MTN MoMo ou Orange Money' },
+                    { num: '∞', title: 'Sync multi-appareils', desc: 'Compte et achats synchronisés' },
+                    { num: '↓', title: 'Mode hors-ligne', desc: 'Lis tes PDF sans connexion après téléchargement' },
+                  ].map((perk, i) => (
+                    <View key={perk.title} style={[styles.accountPerkRow, i !== 0 && styles.accountPerkRowBorder]}>
+                      <Text style={styles.accountPerkNum}>{perk.num}</Text>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E293B' }}>{perk.title}</Text>
-                        <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{perk.desc}</Text>
+                        <Text style={styles.accountPerkTitle}>{perk.title}</Text>
+                        <Text style={styles.accountPerkDesc}>{perk.desc}</Text>
                       </View>
                     </View>
                   ))}
                 </View>
 
-                <View style={[styles.accountActionStack, { marginTop: 32 }]}>
-                  <PrimaryButton 
-                    label="👑 Passer en Premium" 
-                    fluid 
-                    onPress={() => openSection('premium')} 
-                    style={{ backgroundColor: '#FCD34D' }}
-                    textStyle={{ color: '#1E3A8A', fontSize: 16, fontWeight: 'bold' }}
-                  />
-                  <PrimaryButton 
-                    label="Recharger le wallet" 
-                    fluid 
-                    onPress={() => setRechargeVisible(true)} 
-                    variant="secondary"
-                    style={{ backgroundColor: 'transparent', borderColor: '#E2E8F0', borderWidth: 1 }}
-                  />
-                </View>
-
-                <View style={{ marginTop: 32, gap: 12 }}>
-                  <Text style={[styles.dashboardSectionTitle, { fontSize: 16, textTransform: 'none', color: '#1E293B', marginBottom: 4 }]}>Rédaction & Documents</Text>
-                  
-                  <Pressable style={styles.accountMenuItem} onPress={() => openSection('documents')}>
-                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#EFF6FF', marginRight: 12, alignItems: 'center', justifyContent: 'center' }}>
-                      <BookOpen size={18} color="#2563EB" />
-                    </View>
-                    <Text style={[styles.accountMenuItemText, styles.flex]}>Mes documents rédigés</Text>
-                    <Text style={styles.accountMenuItemArrow}>›</Text>
+                <View style={styles.accountActionStack}>
+                  <Pressable
+                    style={({ pressed }) => [styles.accountCtaPrimary, pressed && { opacity: 0.85 }]}
+                    onPress={() => openSection('premium')}
+                  >
+                    <Text style={styles.accountCtaPrimaryText}>Passer Bibliothécaire</Text>
+                    <Text style={styles.accountCtaPrimaryArrow}>→</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.accountCtaSecondary, pressed && { opacity: 0.85 }]}
+                    onPress={() => setRechargeVisible(true)}
+                  >
+                    <Text style={styles.accountCtaSecondaryText}>Recharger le wallet</Text>
                   </Pressable>
                 </View>
 
-                <View style={{ marginTop: 32, gap: 12 }}>
-                  <Text style={[styles.dashboardSectionTitle, { fontSize: 16, textTransform: 'none', color: '#1E293B', marginBottom: 4 }]}>Réglages & Sécurité</Text>
-                  
-                  <Pressable style={styles.accountMenuItem} onPress={() => setNotificationsSettingsVisible(true)}>
-                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEF2F2', marginRight: 12, alignItems: 'center', justifyContent: 'center' }}>
-                      <Bell size={18} color="#EF4444" />
-                    </View>
-                    <Text style={[styles.accountMenuItemText, styles.flex]}>Gérer les notifications</Text>
-                    <Text style={styles.accountMenuItemArrow}>›</Text>
-                  </Pressable>
-
-                  <Pressable style={styles.accountMenuItem} onPress={() => setSecuritySettingsVisible(true)}>
-                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F0FDF4', marginRight: 12, alignItems: 'center', justifyContent: 'center' }}>
-                      <Shield size={18} color="#10B981" />
-                    </View>
-                    <Text style={[styles.accountMenuItemText, styles.flex]}>Sécurité & Mot de passe</Text>
-                    <Text style={styles.accountMenuItemArrow}>›</Text>
-                  </Pressable>
-                  
-                  <Pressable style={styles.accountMenuItem} onPress={() => setSupportModalVisible(true)}>
-                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F8FAFC', marginRight: 12, alignItems: 'center', justifyContent: 'center' }}>
-                      <MessageSquare size={18} color="#64748B" />
-                    </View>
-                    <Text style={[styles.accountMenuItemText, styles.flex]}>Contacter le support</Text>
-                    <Text style={styles.accountMenuItemArrow}>›</Text>
+                {/* Rédaction & Documents */}
+                <View style={styles.accountMenuGroup}>
+                  <Text style={styles.accountMenuGroupHeading}>— Rédaction & Documents</Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.accountMenuItem, pressed && { backgroundColor: '#EDE6D3' }]}
+                    onPress={() => openSection('documents')}
+                  >
+                    <View style={styles.accountMenuItemIcon}><BookOpen size={16} color="#0F172A" /></View>
+                    <Text style={styles.accountMenuItemText}>Mes documents rédigés</Text>
+                    <Text style={styles.accountMenuItemArrow}>→</Text>
                   </Pressable>
                 </View>
 
-                <View style={{ marginTop: 32, gap: 12 }}>
-                  <Text style={[styles.dashboardSectionTitle, { fontSize: 16, textTransform: 'none', color: '#1E293B', marginBottom: 4 }]}>Système</Text>
-                  <Pressable style={styles.accountMenuItem} onPress={() => syncStudentAccount(studentSession ?? undefined)}>
-                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F8FAFC', marginRight: 12, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 18 }}>🔄</Text>
-                    </View>
-                    <Text style={[styles.accountMenuItemText, styles.flex]}>{syncingAccount ? 'Synchronisation...' : 'Synchroniser le compte'}</Text>
-                    <Text style={styles.accountMenuItemArrow}>›</Text>
+                {/* Réglages & Sécurité */}
+                <View style={styles.accountMenuGroup}>
+                  <Text style={styles.accountMenuGroupHeading}>— Réglages & Sécurité</Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.accountMenuItem, pressed && { backgroundColor: '#EDE6D3' }]}
+                    onPress={() => setNotificationsSettingsVisible(true)}
+                  >
+                    <View style={styles.accountMenuItemIcon}><Bell size={16} color="#0F172A" /></View>
+                    <Text style={styles.accountMenuItemText}>Gérer les notifications</Text>
+                    <Text style={styles.accountMenuItemArrow}>→</Text>
                   </Pressable>
-                  
-                  <Pressable style={[styles.accountMenuItem, { marginTop: 8 }]} onPress={signOutStudent}>
-                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEF2F2', marginRight: 12, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 18 }}>🚪</Text>
-                    </View>
-                    <Text style={[styles.accountMenuItemText, styles.flex, { color: '#EF4444' }]}>Deconnexion</Text>
-                    <Text style={styles.accountMenuItemArrow}>›</Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.accountMenuItem, pressed && { backgroundColor: '#EDE6D3' }]}
+                    onPress={() => setSecuritySettingsVisible(true)}
+                  >
+                    <View style={styles.accountMenuItemIcon}><Shield size={16} color="#0F172A" /></View>
+                    <Text style={styles.accountMenuItemText}>Sécurité & Mot de passe</Text>
+                    <Text style={styles.accountMenuItemArrow}>→</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.accountMenuItem, pressed && { backgroundColor: '#EDE6D3' }]}
+                    onPress={() => setSupportModalVisible(true)}
+                  >
+                    <View style={styles.accountMenuItemIcon}><MessageSquare size={16} color="#0F172A" /></View>
+                    <Text style={styles.accountMenuItemText}>Contacter le support</Text>
+                    <Text style={styles.accountMenuItemArrow}>→</Text>
                   </Pressable>
                 </View>
 
+                {/* Système */}
+                <View style={styles.accountMenuGroup}>
+                  <Text style={styles.accountMenuGroupHeading}>— Système</Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.accountMenuItem, pressed && { backgroundColor: '#EDE6D3' }]}
+                    onPress={() => syncStudentAccount(studentSession ?? undefined)}
+                  >
+                    <View style={styles.accountMenuItemIcon}><Text style={styles.accountMenuItemIconGlyph}>↻</Text></View>
+                    <Text style={styles.accountMenuItemText}>{syncingAccount ? 'Synchronisation...' : 'Synchroniser le compte'}</Text>
+                    <Text style={styles.accountMenuItemArrow}>→</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.accountMenuItem, styles.accountMenuItemDanger, pressed && { backgroundColor: '#FDE2D2' }]}
+                    onPress={signOutStudent}
+                  >
+                    <View style={[styles.accountMenuItemIcon, styles.accountMenuItemIconDanger]}><Text style={[styles.accountMenuItemIconGlyph, { color: '#B7410E' }]}>↗</Text></View>
+                    <Text style={[styles.accountMenuItemText, { color: '#B7410E' }]}>Déconnexion</Text>
+                    <Text style={[styles.accountMenuItemArrow, { color: '#B7410E' }]}>→</Text>
+                  </Pressable>
+                </View>
+
+                {/* Historique */}
                 {studentSession && transactions.length ? (
-                  <View style={[styles.accountHistorySection, { marginTop: 40 }]}>
-                    <Text style={[styles.dashboardSectionTitle, { fontSize: 16, textTransform: 'none', color: '#1E293B', marginBottom: 16 }]}>Historique recent</Text>
+                  <View style={styles.accountHistorySection}>
+                    <Text style={styles.accountMenuGroupHeading}>— Historique récent</Text>
                     {transactions.slice(0, 3).map((transaction) => (
-                      <View key={transaction.id} style={[styles.listRow, { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 16, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 }]}>
-                        <View style={[styles.transactionDot, { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: transaction.amount > 0 ? '#ECFDF5' : '#FEF2F2' }]}>
-                          <Text style={{ fontSize: 18 }}>{transaction.amount > 0 ? '↓' : '↑'}</Text>
+                      <View key={transaction.id} style={styles.accountHistoryRow}>
+                        <View style={[
+                          styles.accountHistoryMarker,
+                          { backgroundColor: transaction.amount > 0 ? '#047857' : '#94A3B8' },
+                        ]}>
+                          <Text style={styles.accountHistoryArrow}>{transaction.amount > 0 ? '↓' : '↑'}</Text>
                         </View>
-                        <View style={[styles.flex, { marginLeft: 12 }]}>
-                          <Text style={[styles.cardTitle, { fontSize: 15, color: '#1E293B' }]}>{transaction.label}</Text>
-                          <Text style={[styles.bodyMuted, { fontSize: 13, marginTop: 2 }]}>
-                            {transaction.date}
-                          </Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.accountHistoryLabel}>{transaction.label}</Text>
+                          <Text style={styles.accountHistoryDate}>{transaction.date}</Text>
                         </View>
-                        <View style={{ backgroundColor: transaction.amount > 0 ? '#D1FAE5' : '#F1F5F9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
-                          <Text style={[transaction.amount > 0 ? styles.amountPositive : styles.amountNegative, { fontSize: 13, fontWeight: '700', color: transaction.amount > 0 ? '#059669' : '#64748B' }]}>
-                            {transaction.amount > 0 ? '+' : ''}
-                            {formatCoins(transaction.amount)} C
-                          </Text>
-                        </View>
+                        <Text style={[
+                          styles.accountHistoryAmount,
+                          { color: transaction.amount > 0 ? '#047857' : '#475569' },
+                        ]}>
+                          {transaction.amount > 0 ? '+' : ''}{formatCoins(transaction.amount)} C
+                        </Text>
                       </View>
                     ))}
                   </View>
                 ) : null}
 
-                <View style={[styles.accountSupportCard, { marginTop: 32, backgroundColor: '#F8FAFC', padding: 24, borderRadius: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 }]}>
-                  <Text style={[styles.accountSupportTitle, { fontSize: 18, color: '#1E293B', marginBottom: 8 }]}>📚 Bibliothèque sécurisée</Text>
-                  <Text style={[styles.dashboardInfoSub, { fontSize: 14, color: '#64748B', lineHeight: 22 }]}>
+                {/* Bibliothèque callout */}
+                <View style={styles.accountSupportCard}>
+                  <Text style={styles.accountSupportTitle}>Bibliothèque sécurisée</Text>
+                  <Text style={styles.accountSupportBody}>
                     Retrouve tes documents achetés pour les relire, générer des quiz ou utiliser l'assistant IA hors catalogue.
                   </Text>
-                  <Pressable style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center' }} onPress={() => openSection('library')}>
-                    <Text style={{ color: '#2563EB', fontWeight: '700', fontSize: 15 }}>Ouvrir ma bibliothèque</Text>
-                    <Text style={{ color: '#2563EB', fontWeight: 'bold', fontSize: 18, marginLeft: 6 }}>→</Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.accountSupportCta, pressed && { opacity: 0.85 }]}
+                    onPress={() => openSection('library')}
+                  >
+                    <Text style={styles.accountSupportCtaText}>Ouvrir ma bibliothèque</Text>
+                    <Text style={styles.accountSupportCtaArrow}>→</Text>
                   </Pressable>
                 </View>
               </View>
@@ -3250,11 +3239,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#B7410E',
   },
-  
-  accountMenuItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 16, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 },
-  accountMenuItemIcon: { fontSize: 20, marginRight: 12 },
-  accountMenuItemText: { flex: 1, fontSize: 16, fontWeight: '600', color: '#1E293B' },
-  accountMenuItemArrow: { fontSize: 20, color: '#CBD5E1', fontWeight: 'bold' },
 
   safeArea: {
     flex: 1,
@@ -3455,19 +3439,22 @@ const styles = StyleSheet.create({
     color: colors.primaryDeep,
     fontWeight: '900',
   },
+  // ── Account section (editorial) ────────────────────────────────────────
   accountSection: {
     gap: 14,
   },
   accountSurface: {
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 18,
-    gap: 16,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    padding: 0,
+    gap: 18,
+  },
+  accountProfileCard: {
+    backgroundColor: '#F6F1E7',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    padding: 20,
   },
   accountHeroRow: {
     flexDirection: 'row',
@@ -3478,134 +3465,366 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   avatarLarge: {
-    width: 62,
-    height: 62,
-    borderRadius: 22,
-    backgroundColor: colors.primarySoft,
+    width: 64,
+    height: 64,
+    borderRadius: 2,
+    backgroundColor: '#0F172A',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarLargeText: {
-    color: colors.primaryDeep,
-    fontSize: 20,
+    color: '#F6F1E7',
+    fontSize: 22,
     fontWeight: '900',
+    fontFamily: 'serif',
   },
-  accountSurfaceTitle: {
-    color: colors.ink,
-    fontSize: 24,
-    fontWeight: '900',
-    marginTop: 6,
+  accountProfileEyebrow: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    letterSpacing: 1.5,
+    color: '#B7410E',
+    fontWeight: '700',
+    marginBottom: 6,
   },
+  accountProfileRule: {
+    height: 1,
+    backgroundColor: '#0F172A',
+    marginBottom: 10,
+  },
+  accountProfileName: {
+    fontFamily: 'serif',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#0F172A',
+    lineHeight: 26,
+    marginBottom: 4,
+  },
+  accountProfileEmail: {
+    fontFamily: 'serif',
+    fontSize: 13,
+    fontStyle: 'italic',
+    color: '#475569',
+    lineHeight: 18,
+  },
+  accountProfileTagsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  accountProfileTag: {
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 2,
+  },
+  accountProfileTagEm: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+  },
+  accountProfileTagText: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    color: '#0F172A',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  accountProfileTagTextEm: { color: '#F6F1E7' },
   accountSummaryGrid: {
     gap: 10,
   },
   accountSummaryGridCompact: {
     gap: 8,
   },
-  accountFocusStrip: {
-    borderRadius: 16,
-    backgroundColor: '#F8FBFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 18,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  accountFocusTitle: {
-    color: colors.ink,
-    fontSize: 18,
-    fontWeight: '900',
-    marginTop: 4,
-  },
-  accountFocusBadge: {
-    width: 88,
-    minHeight: 88,
-    borderRadius: 16,
-    backgroundColor: '#EEF5FF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  accountFocusBadgeValue: {
-    color: colors.primaryDeep,
-    fontSize: 28,
-    fontWeight: '900',
-  },
-  accountFocusBadgeLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
   accountSummaryCard: {
-    borderRadius: 16,
-    backgroundColor: '#F8FBFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    padding: 16,
   },
-  accountSummaryCardCompact: {
-    padding: 14,
+  accountSummaryLabel: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    letterSpacing: 1.5,
+    color: '#B7410E',
+    fontWeight: '700',
+    marginBottom: 8,
   },
   accountSummaryValue: {
-    color: colors.ink,
-    fontSize: 24,
+    fontFamily: 'serif',
+    fontSize: 32,
     fontWeight: '900',
-    marginTop: 8,
+    color: '#0F172A',
+    lineHeight: 36,
+    letterSpacing: -1,
+  },
+  accountSummaryUnit: {
+    fontFamily: 'serif',
+    fontSize: 13,
+    fontStyle: 'italic',
+    color: '#475569',
+    marginTop: 2,
+  },
+  accountSummaryTagsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  accountSummaryTier: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 2,
+  },
+  accountSummaryTierText: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    color: '#0F172A',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  accountSummaryIa: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 2,
+  },
+  accountSummaryIaText: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    color: '#7C3AED',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  accountPerksBlock: {
+    backgroundColor: '#F6F1E7',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    padding: 16,
+  },
+  accountPerksHeading: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#0F172A',
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  accountPerkRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 10,
+    gap: 14,
+  },
+  accountPerkRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: '#0F172A',
+  },
+  accountPerkNum: {
+    fontFamily: 'serif',
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#B7410E',
+    lineHeight: 24,
+    minWidth: 60,
+  },
+  accountPerkTitle: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+    lineHeight: 18,
+  },
+  accountPerkDesc: {
+    fontFamily: 'serif',
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#475569',
+    lineHeight: 16,
+    marginTop: 2,
   },
   accountActionStack: {
     gap: 10,
   },
-  accountHistorySection: {
-    gap: 8,
-  },
-  accountSupportCard: {
-    borderRadius: 16,
-    backgroundColor: '#F8FBFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    padding: 18,
+  accountCtaPrimary: {
+    backgroundColor: '#0F172A',
+    borderRadius: 2,
+    paddingVertical: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
     gap: 10,
   },
-  accountSupportTitle: {
-    color: colors.ink,
-    fontSize: 17,
-    fontWeight: '900',
-    marginTop: 4,
+  accountCtaPrimaryText: {
+    fontFamily: 'serif',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#F6F1E7',
   },
-  accountSupportLink: {
-    alignSelf: 'flex-start',
-    minHeight: 40,
-    borderRadius: 14,
+  accountCtaPrimaryArrow: {
+    fontFamily: 'serif',
+    fontSize: 16,
+    color: '#B7410E',
+  },
+  accountCtaSecondary: {
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  accountCtaSecondaryText: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  accountMenuGroup: {
+    marginTop: 8,
+  },
+  accountMenuGroupHeading: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#0F172A',
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  accountMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    borderRadius: 2,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginBottom: 6,
+    gap: 12,
+  },
+  accountMenuItemIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 2,
+    backgroundColor: '#F6F1E7',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  accountSupportLinkText: {
-    color: colors.primaryDeep,
-    fontSize: 12,
+  accountMenuItemIconDanger: {
+    backgroundColor: '#FDE2D2',
+  },
+  accountMenuItemIconGlyph: {
+    fontFamily: 'serif',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  accountMenuItemText: {
+    flex: 1,
+    fontFamily: 'serif',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  accountMenuItemArrow: {
+    fontFamily: 'serif',
+    fontSize: 16,
+    color: '#475569',
+  },
+  accountMenuItemDanger: {
+    borderColor: '#B7410E',
+  },
+  accountHistorySection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    padding: 14,
+  },
+  accountHistoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: 12,
+  },
+  accountHistoryMarker: {
+    width: 32,
+    height: 32,
+    borderRadius: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accountHistoryArrow: {
+    fontFamily: 'serif',
+    fontSize: 18,
     fontWeight: '900',
+    color: '#F6F1E7',
+  },
+  accountHistoryLabel: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  accountHistoryDate: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    color: '#475569',
+    letterSpacing: 0.5,
+  },
+  accountHistoryAmount: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  accountSupportCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 4,
+    padding: 22,
+  },
+  accountSupportTitle: {
+    fontFamily: 'serif',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#F6F1E7',
+    marginBottom: 8,
+  },
+  accountSupportBody: {
+    fontFamily: 'serif',
+    fontSize: 13,
+    fontStyle: 'italic',
+    color: '#94A3B8',
+    lineHeight: 19,
+  },
+  accountSupportCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  accountSupportCtaText: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#B7410E',
+  },
+  accountSupportCtaArrow: {
+    fontFamily: 'serif',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#B7410E',
   },
   // ── Home dashboard (editorial) ─────────────────────────────────────────
   clientDashboard: {
