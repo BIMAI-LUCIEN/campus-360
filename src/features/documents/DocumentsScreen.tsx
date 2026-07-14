@@ -20,7 +20,7 @@ type Document = {
   updated_at: string;
 };
 
-type CreateStep = 'type-select' | 'form' | 'generating';
+type CreateStep = 'type-select' | 'form' | 'generating' | null;
 
 type DocumentsScreenProps = {
   onEditDocument: (id: string) => void;
@@ -100,7 +100,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   const [error, setError] = useState('');
 
   // Create flow state
-  const [createStep, setCreateStep] = useState<CreateStep>('type-select');
+  const [createStep, setCreateStep] = useState<CreateStep>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
 
   // Form state — shared
@@ -168,7 +168,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
     setLettrePosition(''); setLettreCompany(''); setLettreSector('');
     setLettreMotivation('');
     setSelectedType(null);
-    setCreateStep('type-select');
+    setCreateStep(null);
   };
 
   // ─── Create + generate ──────────────────────────────────────────────────────
