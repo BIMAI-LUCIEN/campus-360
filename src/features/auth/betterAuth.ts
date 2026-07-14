@@ -2,6 +2,8 @@ import { expoClient } from '@better-auth/expo/client';
 import { createAuthClient } from 'better-auth/react';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+import * as Linking from 'expo-linking';
 
 import { publicEnv } from '../../config/env';
 
@@ -58,7 +60,46 @@ export type AuthCapabilities = {
   google: boolean;
 };
 
+const getDevBackendUrl = () => {
+  try {
+    const hostUri =
+      Constants.expoConfig?.hostUri ||
+      (Constants as any).manifest2?.extra?.expoGoLaunchQueryParams?.hostUri;
+    if (hostUri) {
+      const ip = hostUri.split(':')[0];
+      if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
+        return `http://${ip}:3001`;
+      }
+    }
+  } catch (e) {
+    console.warn('[auth] Failed to detect dev backend URL via Constants:', e);
+  }
+
+  try {
+    const url = Linking.createURL('/');
+    if (url) {
+      const parsed = Linking.parse(url);
+      const hostname = parsed.hostname;
+      if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        return `http://${hostname}:3001`;
+      }
+    }
+  } catch (e) {
+    console.warn('[auth] Failed to detect dev backend URL via Linking:', e);
+  }
+
+  return null;
+};
+
 const getAuthBaseUrl = () => {
+  if (typeof __DEV__ !== 'undefined' && __DEV__ && Platform.OS !== 'web') {
+    const devUrl = getDevBackendUrl();
+    if (devUrl) {
+      console.log('[auth] Detected local dev backend URL:', devUrl);
+      return devUrl;
+    }
+  }
+
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     try {
       const current = window.location;
