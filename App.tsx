@@ -1877,95 +1877,253 @@ export default function App() {
             </View>
           ) : activeSection === 'premium' ? (
             <View style={styles.premiumSection}>
-              <View style={styles.premiumHero}>
-                <Text style={styles.premiumCrown}>👑</Text>
-                <Text style={styles.premiumTitle}>Passe en mode Premium</Text>
-                <Text style={styles.premiumSubtitle}>Abonnez-vous pour débloquer tous les documents et profiter de l'IA sans limites.</Text>
+              {/* Editorial hero */}
+              <View style={styles.passHero}>
+                <Text style={styles.passHeroEyebrow}>CAMPUS 360 — CARTE D'ADHÉSION</Text>
+                <View style={styles.passHeroRule} />
+                <Text style={styles.passHeroTitle}>Trois façons de lire.</Text>
+                <Text style={styles.passHeroSubtitle}>
+                  Choisis ton rythme. Tu peux changer ou annuler à tout moment.
+                </Text>
               </View>
 
-              <View style={styles.premiumPlansContainer}>
-                <View style={[styles.premiumPlanCard, subscriptionTier === 'basic' && styles.premiumPlanCardActive]}>
-                  {subscriptionTier === 'basic' && <View style={styles.premiumActiveBadge}><Text style={styles.premiumActiveBadgeText}>Ton forfait</Text></View>}
-                  <Text style={styles.premiumPlanName}>Basic</Text>
-                  <Text style={styles.premiumPlanPrice}>1 000 <Text style={styles.premiumPlanPriceUnit}>C / mois</Text></Text>
-                  <View style={styles.premiumPlanFeatures}>
-                    <Text style={styles.premiumPlanFeature}>✓ Accès ILLIMITE a tous les PDF</Text>
-                    <Text style={styles.premiumPlanFeature}>✓ Lecture sécurisée hors-ligne</Text>
-                    <Text style={[styles.premiumPlanFeature, styles.premiumPlanFeatureMuted]}>✗ Assistant IA inclus</Text>
-                  </View>
-                  <View style={{ marginTop: 20 }}>
-                    <PrimaryButton label={subscriptionTier === 'basic' ? "Actif" : "S'abonner à Basic"} variant={subscriptionTier === 'basic' ? 'secondary' : 'primary'} onPress={() => buySubscription('basic')} />
-                  </View>
-                </View>
+              {/* The three passes */}
+              <View style={styles.passStack}>
+                {[
+                  {
+                    key: 'free' as const,
+                    folio: '— 01',
+                    name: 'Découverte',
+                    price: 'Gratuit',
+                    priceUnit: "toujours",
+                    kicker: 'Pour commencer',
+                    body: "Tu fouilles le catalogue, tu achètes les PDFs à l'unité. C'est le pied dedans.",
+                    bullets: [
+                      "Aperçu gratuit de chaque PDF",
+                      "Achat à l'unité depuis ton wallet",
+                      "5 questions IA par jour",
+                    ],
+                    accent: '#0F172A',
+                    isFeatured: false,
+                    cta: 'Tu es ici',
+                  },
+                  {
+                    key: 'basic' as const,
+                    folio: '— 02',
+                    name: 'Étudiant',
+                    price: '1 000',
+                    priceUnit: 'C / mois',
+                    kicker: 'Pour les sessions intenses',
+                    body: "Tout le catalogue ouvert. Tu lis, tu révises, tu reprends. L'IA attendra l'année prochaine.",
+                    bullets: [
+                      "Tout le catalogue, sans limite",
+                      "Lecture hors-ligne",
+                      "Synchronisation multi-appareils",
+                    ],
+                    accent: '#047857',
+                    isFeatured: false,
+                    cta: "S'abonner",
+                  },
+                  {
+                    key: 'premium' as const,
+                    folio: '— 03',
+                    name: 'Bibliothécaire',
+                    price: '2 000',
+                    priceUnit: 'C / mois',
+                    kicker: 'Pour ceux qui posent les bonnes questions',
+                    body: "Le catalogue entier, plus 100 questions IA par mois. L'assistant te résume, t'explique, te quiz.",
+                    bullets: [
+                      "Tout Découverte et Étudiant inclus",
+                      "100 crédits IA par mois",
+                      "Fiches, résumés et quiz générés",
+                    ],
+                    accent: '#B7410E',
+                    isFeatured: true,
+                    cta: "Passer Bibliothécaire",
+                  },
+                ].map((pass) => {
+                  const isCurrent =
+                    (pass.key === 'free' && subscriptionTier === 'free') ||
+                    (pass.key === 'basic' && subscriptionTier === 'basic') ||
+                    (pass.key === 'premium' && subscriptionTier === 'premium');
+                  return (
+                    <View
+                      key={pass.key}
+                      style={[
+                        styles.passCard,
+                        pass.isFeatured && styles.passCardFeatured,
+                        isCurrent && styles.passCardCurrent,
+                      ]}
+                    >
+                      {pass.isFeatured && (
+                        <View style={styles.passBadgeRibbon}>
+                          <Text style={styles.passBadgeRibbonText}>— LE PLUS CHOISI</Text>
+                        </View>
+                      )}
 
-                <View style={[styles.premiumPlanCard, styles.premiumPlanCardFeatured, subscriptionTier === 'premium' && styles.premiumPlanCardActive]}>
-                  <View style={styles.premiumFeaturedBadge}><Text style={styles.premiumFeaturedBadgeText}>Recommandé</Text></View>
-                  <Text style={[styles.premiumPlanName, { color: '#FFFFFF' }]}>Premium</Text>
-                  <Text style={[styles.premiumPlanPrice, { color: '#FFFFFF' }]}>2 000 <Text style={[styles.premiumPlanPriceUnit, { color: '#E0E7FF' }]}>C / mois</Text></Text>
-                  <View style={styles.premiumPlanFeatures}>
-                    <Text style={[styles.premiumPlanFeature, { color: '#FFFFFF' }]}>✓ Accès ILLIMITE a tous les PDF</Text>
-                    <Text style={[styles.premiumPlanFeature, { color: '#FFFFFF' }]}>✓ Lecture sécurisée hors-ligne</Text>
-                    <Text style={[styles.premiumPlanFeature, { color: '#FFFFFF', fontWeight: 'bold' }]}>✓ 100 Crédits IA / mois inclus</Text>
-                  </View>
-                  <View style={{ marginTop: 20 }}>
-                    <PrimaryButton 
-                      label={subscriptionTier === 'premium' ? "Actif" : "S'abonner à Premium"} 
-                      onPress={() => buySubscription('premium')} 
-                      variant={subscriptionTier === 'premium' ? 'secondary' : 'primary'}
-                      style={subscriptionTier !== 'premium' ? { backgroundColor: '#FCD34D' } : undefined}
-                      textStyle={subscriptionTier !== 'premium' ? { color: '#1E3A8A' } : undefined}
-                    />
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.premiumIaSection}>
-                <Text style={[styles.premiumSectionTitle, { fontSize: 20, color: '#1E293B', fontWeight: '800' }]}>Recharges IA (À la carte)</Text>
-                <Text style={[styles.premiumSectionSubtitle, { fontSize: 14, color: '#64748B', marginTop: 4, marginBottom: 16 }]}>Besoin de plus de questions ? Recharge ton assistant IA directement.</Text>
-                
-                <View style={[styles.premiumIaGrid, { gap: 12 }]}>
-                  {[
-                    { id: 'micro', name: 'Micro', credits: 20, price: 250, highlight: false },
-                    { id: 'standard', name: 'Standard', credits: 50, price: 500, highlight: false },
-                    { id: 'boost', name: 'Boost', credits: 120, price: 1000, highlight: true },
-                  ].map(pack => (
-                    <View key={pack.id} style={[styles.premiumIaCard, { borderRadius: 20, padding: 16, borderTopWidth: pack.highlight ? 4 : 0, borderTopColor: '#3B82F6', shadowOpacity: pack.highlight ? 0.08 : 0.04, elevation: pack.highlight ? 3 : 1 }]}>
-                      <Text style={[styles.premiumIaCardName, { color: pack.highlight ? '#2563EB' : '#64748B', fontSize: 13, textTransform: 'uppercase', fontWeight: '800', letterSpacing: 0.5 }]}>{pack.name}</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginVertical: 8 }}>
-                        <Text style={{ fontSize: 28, color: '#1E293B', fontWeight: '900' }}>{pack.credits}</Text>
-                        <Text style={{ fontSize: 18, color: '#3B82F6' }}>⚡</Text>
+                      <View style={styles.passCardTop}>
+                        <Text style={styles.passFolio}>{pass.folio}</Text>
+                        {isCurrent && (
+                          <View style={styles.passCurrentPill}>
+                            <Text style={styles.passCurrentPillText}>EN COURS</Text>
+                          </View>
+                        )}
                       </View>
-                      <Pressable 
-                        style={({pressed}) => [
-                          styles.premiumIaCardButton, 
-                          { 
-                            backgroundColor: pack.highlight ? '#3B82F6' : '#EFF6FF',
-                            paddingVertical: 10,
-                            borderRadius: 14,
-                            marginTop: 4,
-                            transform: [{ scale: pressed ? 0.96 : 1 }]
-                          }
-                        ]} 
-                        onPress={() => buyIaPack(pack.id as any)}
+
+                      <Text
+                        style={[
+                          styles.passName,
+                          pass.isFeatured && styles.passNameFeatured,
+                        ]}
                       >
-                        <Text style={[styles.premiumIaCardButtonText, { color: pack.highlight ? '#FFFFFF' : '#2563EB', fontSize: 14, fontWeight: '800' }]}>{pack.price} C</Text>
+                        {pass.name}
+                      </Text>
+
+                      <Text style={styles.passKicker}>{pass.kicker.toUpperCase()}</Text>
+
+                      <View style={styles.passPriceRow}>
+                        <Text
+                          style={[
+                            styles.passPrice,
+                            pass.isFeatured && styles.passPriceFeatured,
+                          ]}
+                        >
+                          {pass.price}
+                        </Text>
+                        {pass.priceUnit && (
+                          <Text
+                            style={[
+                              styles.passPriceUnit,
+                              pass.isFeatured && { color: '#F6F1E7' },
+                            ]}
+                          >
+                            {' '}{pass.priceUnit}
+                          </Text>
+                        )}
+                      </View>
+
+                      <Text
+                        style={[
+                          styles.passBody,
+                          pass.isFeatured && { color: '#F6F1E7' },
+                        ]}
+                      >
+                        {pass.body}
+                      </Text>
+
+                      <View style={styles.passBullets}>
+                        {pass.bullets.map((b) => (
+                          <View key={b} style={styles.passBulletRow}>
+                            <View
+                              style={[
+                                styles.passBulletTick,
+                                pass.isFeatured && { backgroundColor: '#F6F1E7' },
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.passBulletText,
+                                pass.isFeatured && { color: '#F6F1E7' },
+                              ]}
+                            >
+                              {b}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+
+                      <Pressable
+                        style={({ pressed }) => [
+                          pass.isFeatured ? styles.passCtaFeatured : styles.passCta,
+                          pressed && { opacity: 0.85 },
+                        ]}
+                        onPress={() => {
+                          if (pass.key === 'free') return;
+                          buySubscription(pass.key as 'basic' | 'premium');
+                        }}
+                        disabled={pass.key === 'free' || isCurrent}
+                      >
+                        <Text
+                          style={[
+                            pass.isFeatured ? styles.passCtaFeaturedText : styles.passCtaText,
+                            isCurrent && { opacity: 0.6 },
+                          ]}
+                        >
+                          {isCurrent ? 'Tu es ici' : pass.cta}
+                        </Text>
                       </Pressable>
                     </View>
+                  );
+                })}
+              </View>
+
+              {/* IA top-up — old-style tickets */}
+              <View style={styles.ticketSection}>
+                <View style={styles.ticketHeader}>
+                  <Text style={styles.ticketEyebrow}>BONS DE RECHARGE IA</Text>
+                  <View style={styles.ticketHeaderRule} />
+                  <Text style={styles.ticketTitle}>À la carte.</Text>
+                  <Text style={styles.ticketSubtitle}>
+                    Pour les sessions de révision qui s'éternisent.
+                  </Text>
+                </View>
+
+                <View style={styles.ticketList}>
+                  {[
+                    { id: 'micro' as const, name: 'Micro', credits: 20, price: 250, note: 'Une soirée' },
+                    { id: 'standard' as const, name: 'Standard', credits: 50, price: 500, note: 'Un weekend' },
+                    { id: 'boost' as const, name: 'Boost', credits: 120, price: 1000, note: 'Une session d\'examen' },
+                  ].map((pack, i) => (
+                    <Pressable
+                      key={pack.id}
+                      style={({ pressed }) => [
+                        styles.ticketRow,
+                        pressed && styles.ticketRowPressed,
+                      ]}
+                      onPress={() => buyIaPack(pack.id)}
+                    >
+                      {/* The perforated edge */}
+                      <View style={styles.ticketPerfLeft} />
+                      <View style={styles.ticketPerfRight} />
+
+                      <View style={styles.ticketLeft}>
+                        <Text style={styles.ticketFolio}>— T0{i + 1}</Text>
+                        <Text style={styles.ticketName}>{pack.name}</Text>
+                        <Text style={styles.ticketNote}>{pack.note}</Text>
+                      </View>
+
+                      <View style={styles.ticketDivider} />
+
+                      <View style={styles.ticketRight}>
+                        <View style={styles.ticketCreditsBlock}>
+                          <Text style={styles.ticketCreditsNum}>{pack.credits}</Text>
+                          <Text style={styles.ticketCreditsLabel}>crédits</Text>
+                        </View>
+                        <Text style={styles.ticketPrice}>{pack.price} C</Text>
+                      </View>
+                    </Pressable>
                   ))}
                 </View>
               </View>
 
-              <View style={[styles.premiumRechargeSection, { backgroundColor: '#F8FAFC', borderRadius: 24, padding: 24, marginTop: 32, marginBottom: 16, borderColor: '#E2E8F0', borderWidth: 1, shadowOpacity: 0 }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                  <Text style={{ fontSize: 28 }}>🪙</Text>
-                  <Text style={[styles.premiumSectionTitle, { fontSize: 20, color: '#1E293B', fontWeight: '800' }]}>Besoin de Coins ?</Text>
+              {/* Wallet callout — reduced to a single line */}
+              <View style={styles.walletNote}>
+                <View style={styles.walletNoteRule} />
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1 }}>
+                  <Text style={styles.walletNoteCoin}>₵</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.walletNoteTitle}>Besoin de Coins ?</Text>
+                    <Text style={styles.walletNoteBody}>
+                      Recharge via Mobile Money (MoMo / Orange Money), puis paie ce que tu veux.
+                    </Text>
+                  </View>
                 </View>
-                <Text style={[styles.premiumSectionSubtitle, { fontSize: 14, color: '#64748B', lineHeight: 20 }]}>
-                  Recharge ton portefeuille via Mobile Money (MoMo/OM) pour souscrire à un abonnement ou acheter des packs IA.
-                </Text>
-                <View style={{ marginTop: 24 }}>
-                  <PrimaryButton label="Recharger mon Wallet" onPress={() => setRechargeVisible(true)} variant="primary" fluid />
-                </View>
+                <Pressable
+                  style={({ pressed }) => [styles.walletNoteCta, pressed && { opacity: 0.85 }]}
+                  onPress={() => setRechargeVisible(true)}
+                >
+                  <Text style={styles.walletNoteCtaText}>Recharger →</Text>
+                </Pressable>
               </View>
             </View>
           ) : activeSection === 'documents' ? (
@@ -2731,35 +2889,361 @@ const colors = {
 };
 
 const styles = StyleSheet.create({
-  premiumSection: { flex: 1, padding: 16, backgroundColor: '#F9FAFB' },
-  premiumHero: { alignItems: 'center', marginBottom: 24, padding: 24, backgroundColor: '#FFFFFF', borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-  premiumCrown: { fontSize: 48, marginBottom: 12 },
-  premiumTitle: { fontSize: 24, fontWeight: '800', color: '#111827', marginBottom: 8, textAlign: 'center' },
-  premiumSubtitle: { fontSize: 15, color: '#6B7280', textAlign: 'center', lineHeight: 22 },
-  premiumPlansContainer: { gap: 16, marginBottom: 32 },
-  premiumPlanCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-  premiumPlanCardActive: { shadowColor: '#3B82F6', shadowOpacity: 0.2, shadowRadius: 15, elevation: 5 },
-  premiumPlanCardFeatured: { backgroundColor: '#1E3A8A' },
-  premiumActiveBadge: { position: 'absolute', top: -12, right: 24, backgroundColor: '#10B981', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
-  premiumActiveBadgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' },
-  premiumFeaturedBadge: { position: 'absolute', top: -12, left: '50%', transform: [{ translateX: -50 }], backgroundColor: '#F59E0B', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
-  premiumFeaturedBadgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' },
-  premiumPlanName: { fontSize: 20, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
-  premiumPlanPrice: { fontSize: 32, fontWeight: '800', color: '#111827', marginBottom: 16 },
-  premiumPlanPriceUnit: { fontSize: 16, fontWeight: 'normal', color: '#6B7280' },
-  premiumPlanFeatures: { gap: 12 },
-  premiumPlanFeature: { fontSize: 15, color: '#4B5563' },
-  premiumPlanFeatureMuted: { color: '#9CA3AF' },
-  premiumIaSection: { marginBottom: 32 },
-  premiumSectionTitle: { fontSize: 20, fontWeight: '700', color: '#111827', marginBottom: 8 },
-  premiumSectionSubtitle: { fontSize: 15, color: '#6B7280', marginBottom: 16 },
-  premiumIaGrid: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
-  premiumIaCard: { flex: 1, minWidth: 100, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-  premiumIaCardName: { fontSize: 14, fontWeight: '600', color: '#4B5563', marginBottom: 4 },
-  premiumIaCardCredits: { fontSize: 24, fontWeight: '800', color: '#111827', marginBottom: 12 },
-  premiumIaCardButton: { backgroundColor: '#EFF6FF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, width: '100%', alignItems: 'center' },
-  premiumIaCardButtonText: { color: '#2563EB', fontWeight: '700', fontSize: 14 },
-  premiumRechargeSection: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2, marginBottom: 40 },
+  // ── Premium / library passes (editorial) ───────────────────────────────
+  premiumSection: { flex: 1, padding: 16, backgroundColor: '#F6F1E7' },
+
+  // Hero
+  passHero: { marginBottom: 28 },
+  passHeroEyebrow: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 2,
+    color: '#B7410E',
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  passHeroRule: { height: 1, backgroundColor: '#0F172A', marginBottom: 16 },
+  passHeroTitle: {
+    fontFamily: 'serif',
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#0F172A',
+    lineHeight: 36,
+    letterSpacing: -1,
+    marginBottom: 8,
+  },
+  passHeroSubtitle: {
+    fontFamily: 'serif',
+    fontSize: 15,
+    fontStyle: 'italic',
+    color: '#475569',
+    lineHeight: 22,
+  },
+
+  // Pass stack
+  passStack: { gap: 14, marginBottom: 36 },
+  passCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    position: 'relative',
+  },
+  passCardFeatured: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+    transform: [{ translateY: -4 }],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  passCardCurrent: {
+    borderColor: '#B7410E',
+    borderWidth: 2,
+  },
+  passBadgeRibbon: {
+    position: 'absolute',
+    top: -10,
+    left: 22,
+    backgroundColor: '#B7410E',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 2,
+  },
+  passBadgeRibbonText: {
+    color: '#F6F1E7',
+    fontFamily: 'monospace',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  passCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  passFolio: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    color: '#B7410E',
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  passCurrentPill: {
+    backgroundColor: '#B7410E',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 2,
+  },
+  passCurrentPillText: {
+    color: '#F6F1E7',
+    fontFamily: 'monospace',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  passName: {
+    fontFamily: 'serif',
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#0F172A',
+    lineHeight: 34,
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  passNameFeatured: { color: '#F6F1E7' },
+  passKicker: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#475569',
+    fontWeight: '700',
+    marginBottom: 14,
+  },
+  passPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 14,
+  },
+  passPrice: {
+    fontFamily: 'serif',
+    fontSize: 38,
+    fontWeight: '900',
+    color: '#0F172A',
+    lineHeight: 40,
+    letterSpacing: -1,
+  },
+  passPriceFeatured: { color: '#F6F1E7' },
+  passPriceUnit: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: '#475569',
+  },
+  passBody: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    color: '#334155',
+    lineHeight: 21,
+    marginBottom: 16,
+  },
+  passBullets: { gap: 8, marginBottom: 20 },
+  passBulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  passBulletTick: {
+    width: 6,
+    height: 6,
+    borderRadius: 1,
+    backgroundColor: '#0F172A',
+    marginTop: 8,
+  },
+  passBulletText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#334155',
+    lineHeight: 19,
+  },
+  passCta: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    borderRadius: 2,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  passCtaText: {
+    color: '#0F172A',
+    fontFamily: 'serif',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  passCtaFeatured: {
+    backgroundColor: '#B7410E',
+    borderRadius: 2,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  passCtaFeaturedText: {
+    color: '#F6F1E7',
+    fontFamily: 'serif',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  // IA top-up tickets
+  ticketSection: { marginBottom: 28 },
+  ticketHeader: { marginBottom: 18 },
+  ticketEyebrow: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 2,
+    color: '#B7410E',
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  ticketHeaderRule: { height: 1, backgroundColor: '#0F172A', marginBottom: 14 },
+  ticketTitle: {
+    fontFamily: 'serif',
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#0F172A',
+    lineHeight: 32,
+    letterSpacing: -0.5,
+    marginBottom: 6,
+  },
+  ticketSubtitle: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: '#475569',
+    lineHeight: 20,
+  },
+  ticketList: { gap: 10 },
+  ticketRow: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#0F172A',
+    borderStyle: 'dashed',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  ticketRowPressed: { backgroundColor: '#EDE6D3' },
+  ticketPerfLeft: {
+    position: 'absolute',
+    left: -4,
+    top: '40%',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F6F1E7',
+    borderWidth: 1,
+    borderColor: '#0F172A',
+  },
+  ticketPerfRight: {
+    position: 'absolute',
+    right: -4,
+    top: '40%',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F6F1E7',
+    borderWidth: 1,
+    borderColor: '#0F172A',
+  },
+  ticketLeft: { flex: 1, paddingRight: 12 },
+  ticketFolio: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    color: '#B7410E',
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  ticketName: {
+    fontFamily: 'serif',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    lineHeight: 24,
+  },
+  ticketNote: {
+    fontFamily: 'serif',
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#475569',
+  },
+  ticketDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: '#0F172A',
+    borderStyle: 'dashed',
+    marginHorizontal: 4,
+  },
+  ticketRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  ticketCreditsBlock: { alignItems: 'flex-end' },
+  ticketCreditsNum: {
+    fontFamily: 'serif',
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#0F172A',
+    lineHeight: 24,
+  },
+  ticketCreditsLabel: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    color: '#475569',
+    letterSpacing: 1,
+  },
+  ticketPrice: {
+    fontFamily: 'serif',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#B7410E',
+  },
+
+  // Wallet note (compact)
+  walletNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    backgroundColor: 'transparent',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#0F172A',
+    marginBottom: 32,
+  },
+  walletNoteRule: {
+    width: 4,
+    alignSelf: 'stretch',
+    backgroundColor: '#B7410E',
+  },
+  walletNoteCoin: {
+    fontFamily: 'serif',
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#B7410E',
+  },
+  walletNoteTitle: {
+    fontFamily: 'serif',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  walletNoteBody: {
+    fontFamily: 'serif',
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#475569',
+    lineHeight: 17,
+  },
+  walletNoteCta: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  walletNoteCtaText: {
+    fontFamily: 'serif',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#B7410E',
+  },
   
   accountMenuItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 16, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 },
   accountMenuItemIcon: { fontSize: 20, marginRight: 12 },
