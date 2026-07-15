@@ -435,76 +435,86 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         visible={createStep === 'type-select'}
         transparent animationType="slide"
         onRequestClose={resetForm}
+        statusBarTranslucent
       >
         <View style={styles.modalBackdrop}>
           <Pressable style={styles.modalBackdropDismiss} onPress={resetForm} />
-          <View style={[styles.posterSheet]}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={styles.modalHandle} />
+          <View style={styles.posterSheet}>
+            <View style={styles.modalHandle} />
 
-            {/* Editorial header */}
-            <View style={styles.posterHeader}>
-              <Text style={styles.posterEyebrow}>CAMPUS 360 — DOSSIER No. 01</Text>
-              <View style={styles.posterHeaderRule} />
-              <Text style={styles.posterTitle}>Que veux-tu écrire ?</Text>
-              <Text style={styles.posterSubtitle}>
-                Quatre intentions, quatre voix. Choisis celle qui te ressemble.
-              </Text>
-            </View>
+            {/* Scrollable content */}
+            <ScrollView
+              style={styles.posterScroll}
+              contentContainerStyle={styles.posterScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Editorial header */}
+              <View style={styles.posterHeader}>
+                <Text style={styles.posterEyebrow}>CAMPUS 360 — DOSSIER No. 01</Text>
+                <View style={styles.posterHeaderRule} />
+                <Text style={styles.posterTitle}>Que veux-tu écrire ?</Text>
+                <Text style={styles.posterSubtitle}>
+                  Quatre intentions, quatre voix. Choisis celle qui te ressemble.
+                </Text>
+              </View>
 
-            {/* The poster grid */}
-            <View style={styles.posterGrid}>
-              {DOCUMENT_TYPES.map((t, i) => (
-                <Pressable
-                  key={t.key}
-                  style={({ pressed }) => [
-                    styles.posterCard,
-                    i % 2 === 0 ? styles.posterCardLeft : styles.posterCardRight,
-                    pressed && styles.posterCardPressed,
-                  ]}
-                  onPress={() => {
-                    setSelectedType(t.key);
-                    setCreateStep('form');
-                  }}
-                >
-                  {/* Folio number — sets the editorial tone */}
-                  <Text style={styles.posterFolio}>— 0{i + 1}</Text>
-
-                  {/* The typographic statement — this is the signature */}
-                  <Text
-                    style={[styles.posterVoice, t.voiceStyle]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
+              {/* The poster grid */}
+              <View style={styles.posterGrid}>
+                {DOCUMENT_TYPES.map((t, i) => (
+                  <Pressable
+                    key={t.key}
+                    style={({ pressed }) => [
+                      styles.posterCard,
+                      i % 2 === 0 ? styles.posterCardLeft : styles.posterCardRight,
+                      pressed && styles.posterCardPressed,
+                    ]}
+                    onPress={() => {
+                      setSelectedType(t.key);
+                      setCreateStep('form');
+                    }}
                   >
-                    {t.label}
-                  </Text>
+                    {/* Folio number — sets the editorial tone */}
+                    <Text style={styles.posterFolio}>— 0{i + 1}</Text>
 
-                  {/* Kicker + description */}
-                  <View style={styles.posterKickerRow}>
-                    <View style={styles.posterKickerRule} />
-                    <Text style={styles.posterKicker}>{t.kicker.toUpperCase()}</Text>
-                  </View>
-                  <Text style={styles.posterDesc}>{t.desc}</Text>
+                    {/* The typographic statement — this is the signature */}
+                    <Text
+                      style={[styles.posterVoice, t.voiceStyle]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      {t.label}
+                    </Text>
 
-                  {/* Footer with IA badge if applicable */}
-                  <View style={styles.posterFooter}>
-                    {t.badge ? (
-                      <View style={styles.posterAiBadge}>
-                        <Text style={styles.posterAiBadgeText}>✦ {t.badge}</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.posterDot} />
-                    )}
-                    <Text style={styles.posterArrow}>→</Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
+                    {/* Kicker + description */}
+                    <View style={styles.posterKickerRow}>
+                      <View style={styles.posterKickerRule} />
+                      <Text style={styles.posterKicker}>{t.kicker.toUpperCase()}</Text>
+                    </View>
+                    <Text style={styles.posterDesc}>{t.desc}</Text>
 
-              <Pressable style={styles.cancelLink} onPress={resetForm}>
-                <Text style={styles.cancelLinkText}>Annuler</Text>
-              </Pressable>
+                    {/* Footer with IA badge if applicable */}
+                    <View style={styles.posterFooter}>
+                      {t.badge ? (
+                        <View style={styles.posterAiBadge}>
+                          <Text style={styles.posterAiBadgeText}>✦ {t.badge}</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.posterDot} />
+                      )}
+                      <Text style={styles.posterArrow}>→</Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
             </ScrollView>
+
+            {/* Sticky footer with the close button — always visible */}
+            <View style={styles.posterFooterBar}>
+              <View style={styles.posterFooterRule} />
+              <Pressable style={styles.posterCloseBtn} onPress={resetForm}>
+                <Text style={styles.posterCloseBtnText}>Annuler</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1045,12 +1055,42 @@ const styles = StyleSheet.create({
   // ── Editorial poster sheet (type selector) ─────────────────────────────
   posterSheet: {
     backgroundColor: '#F6F1E7',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 22,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    borderWidth: 1,
+    borderColor: '#0F172A',
     paddingTop: 14,
-    paddingBottom: 36,
-    maxHeight: '92%',
+    paddingBottom: 0,
+    height: '92%',
+  },
+  posterScroll: {
+    flex: 1,
+    paddingHorizontal: 22,
+  },
+  posterScrollContent: {
+    paddingBottom: 24,
+  },
+  posterFooterBar: {
+    paddingHorizontal: 22,
+    paddingTop: 12,
+    paddingBottom: 28,
+    backgroundColor: '#F6F1E7',
+  },
+  posterFooterRule: {
+    height: 1,
+    backgroundColor: '#0F172A',
+    marginBottom: 12,
+  },
+  posterCloseBtn: {
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  posterCloseBtnText: {
+    fontFamily: 'serif',
+    fontSize: 15,
+    fontStyle: 'italic',
+    color: '#475569',
+    fontWeight: '600',
   },
   posterHeader: { marginTop: 18, marginBottom: 22 },
   posterEyebrow: {
