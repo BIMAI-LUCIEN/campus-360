@@ -8,22 +8,26 @@ import {
   ScrollView,
   Dimensions,
   Alert,
+  Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { CampusDocument } from '../../types';
+import { stitchColors, brandGradient } from '../../theme/stitch';
 import { purchasePdfDocument } from '../pdf/pdfApi';
 import { recordPdfAnalyticsEvent } from '../pdf/pdfApi';
 
 const { width } = Dimensions.get('window');
 const MAX_FREE_PDFS = 3;
 
-// ─── Editorial palette ─────────────────────────────────────────────────────────
-const INK     = '#0F172A';
-const PAPER   = '#F6F1E7';
-const SIENNA  = '#B7410E';
-const EMERALD = '#047857';
-const MUTED   = '#475569';
-const SOFT    = '#94A3B8';
-const WHITE   = '#FFFFFF';
+// ─── Editorial palette — sourced from the shared theme, not duplicated ─────────
+const INK = stitchColors.ink;
+const PAPER = stitchColors.paper;
+const SIENNA = stitchColors.sienna;
+const EMERALD = stitchColors.emerald;
+const MUTED = stitchColors.inkMuted;
+const SOFT = stitchColors.inkSubtle;
+const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia, serif' }) as string;
+const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace' }) as string;
 
 // ─── Folio counter ───────────────────────────────────────────────────────────
 function folioLabel(index: number): string {
@@ -242,17 +246,32 @@ export function FreePdfSelector({
 
             {/* Claim button */}
             <Pressable
-              style={[styles.claimButton, !canClaim && styles.claimButtonDisabled]}
+              style={{ width: '100%' }}
               onPress={claimAllFree}
               disabled={!canClaim || claimingAll}
             >
-              <Text style={[styles.claimButtonText, !canClaim && styles.claimButtonTextDisabled]}>
-                {claimingAll
-                  ? 'Réclamation en cours...'
-                  : selectedCount > 0
-                  ? `RÉCLAMER ${selectedCount} PDF${selectedCount > 1 ? 'S' : ''}`
-                  : `RÉCLAMER ${MAX_FREE_PDFS} PDFs`}
-              </Text>
+              {canClaim ? (
+                <LinearGradient
+                  colors={brandGradient.colors}
+                  start={brandGradient.horizontal.start}
+                  end={brandGradient.horizontal.end}
+                  style={styles.claimButton}
+                >
+                  <Text style={styles.claimButtonText}>
+                    {claimingAll
+                      ? 'Réclamation en cours…'
+                      : selectedCount > 0
+                      ? `RÉCLAMER ${selectedCount} PDF${selectedCount > 1 ? 'S' : ''}`
+                      : `RÉCLAMER ${MAX_FREE_PDFS} PDFs`}
+                  </Text>
+                </LinearGradient>
+              ) : (
+                <View style={[styles.claimButton, styles.claimButtonDisabled]}>
+                  <Text style={[styles.claimButtonText, styles.claimButtonTextDisabled]}>
+                    {`RÉCLAMER ${MAX_FREE_PDFS} PDFs`}
+                  </Text>
+                </View>
+              )}
             </Pressable>
 
             {/* Skip link */}
@@ -299,7 +318,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerEyebrow: {
-    fontFamily: 'monospace',
+    fontFamily: MONO,
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 2,
@@ -308,7 +327,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   headerTitle: {
-    fontFamily: 'serif',
+    fontFamily: SERIF,
     fontSize: 28,
     fontWeight: '900',
     color: INK,
@@ -317,7 +336,7 @@ const styles = StyleSheet.create({
   },
   headerRule: {
     height: 1,
-    backgroundColor: INK,
+    backgroundColor: '#2A2A30',
     marginHorizontal: 24,
   },
   closeButton: {
@@ -330,7 +349,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeButtonText: {
-    fontFamily: 'monospace',
+    fontFamily: MONO,
     fontSize: 14,
     fontWeight: '700',
     color: INK,
@@ -359,7 +378,7 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   selectionLabel: {
-    fontFamily: 'monospace',
+    fontFamily: MONO,
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 1.2,
@@ -388,7 +407,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   pdfCardSelected: {
-    backgroundColor: INK,
+    backgroundColor: 'rgba(168, 85, 247, 0.16)',
+    borderBottomColor: 'rgba(168, 85, 247, 0.4)',
   },
   folioCol: {
     alignItems: 'center',
@@ -396,7 +416,7 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   folioNum: {
-    fontFamily: 'monospace',
+    fontFamily: MONO,
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
@@ -413,7 +433,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pdfTitle: {
-    fontFamily: 'serif',
+    fontFamily: SERIF,
     fontSize: 15,
     fontWeight: '700',
     color: INK,
@@ -424,7 +444,7 @@ const styles = StyleSheet.create({
     color: PAPER,
   },
   pdfMeta: {
-    fontFamily: 'monospace',
+    fontFamily: MONO,
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.8,
@@ -432,7 +452,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   pdfSubject: {
-    fontFamily: 'monospace',
+    fontFamily: MONO,
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.8,
@@ -495,13 +515,13 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   emptyTitle: {
-    fontFamily: 'serif',
+    fontFamily: SERIF,
     fontSize: 18,
     fontWeight: '700',
     color: INK,
   },
   emptySubtitle: {
-    fontFamily: 'serif',
+    fontFamily: SERIF,
     fontSize: 13,
     fontStyle: 'italic',
     color: MUTED,
@@ -517,10 +537,10 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
     gap: 14,
     borderTopWidth: 1,
-    borderTopColor: INK,
+    borderTopColor: '#2A2A30',
   },
   ctaHint: {
-    fontFamily: 'monospace',
+    fontFamily: MONO,
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 1.2,
@@ -531,20 +551,19 @@ const styles = StyleSheet.create({
   claimButton: {
     width: '100%',
     paddingVertical: 16,
-    backgroundColor: INK,
-    borderRadius: 2,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   claimButtonDisabled: {
-    backgroundColor: SOFT,
-    opacity: 0.4,
+    backgroundColor: stitchColors.surfaceContainerHigh,
+    opacity: 0.6,
   },
   claimButtonText: {
-    fontFamily: 'serif',
+    fontFamily: SERIF,
     fontSize: 16,
     fontWeight: '700',
-    color: PAPER,
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
   claimButtonTextDisabled: {
@@ -555,7 +574,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   skipButtonText: {
-    fontFamily: 'monospace',
+    fontFamily: MONO,
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 1,

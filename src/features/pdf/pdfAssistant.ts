@@ -1,5 +1,5 @@
 import type { CampusDocument } from '../../types';
-import { authFetch } from '../auth/betterAuth';
+import { authFetchRaw } from '../auth/betterAuth';
 
 export type PdfAssistantMessage = {
   id: string;
@@ -53,9 +53,9 @@ export const askPdfAssistant = async ({
   question: string;
   messages: PdfAssistantMessage[];
 }) => {
-  let response: Response | null = null;
+  let response: Response;
   try {
-    response = await authFetch('/api/ai/pdf-chat', {
+    response = await authFetchRaw('/api/ai/pdf-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -69,18 +69,22 @@ export const askPdfAssistant = async ({
     return localAnswer(document, question);
   }
 
-  if (!response || !response.ok) {
-    if (response?.status === 403) {
+  if (!response.ok) {
+    // Surface actionable errors (out of credits, rate-limited) to the user
+    // instead of silently masking them behind a generic local answer.
+    if (response.status === 403 || response.status === 429) {
       const payload = (await response.json().catch(() => null)) as
         | { error?: string; message?: string }
         | null;
-      if (payload?.error === 'CREDITS_EXHAUSTED') {
-        throw new Error(payload.message || "Vous n'avez plus de credits IA. Veuillez recharger.");
+      if (payload?.message || payload?.error) {
+        throw new Error(payload.message || payload.error);
       }
     }
     return localAnswer(document, question);
   }
 
-  const payload = (await response.json()) as { answer?: string };
-  return payload.answer ?? localAnswer(document, question);
+  const payload = (await response.json()) as { answer?: string; local?: string };
+  // `local` is only present when the server had no answer worth showing
+  // (e.g. AI not configured) and already computed the useful heuristic reply.
+  return payload.local ?? payload.answer ?? localAnswer(document, question);
 };

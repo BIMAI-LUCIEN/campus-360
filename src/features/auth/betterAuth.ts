@@ -60,16 +60,32 @@ export type AuthCapabilities = {
   google: boolean;
 };
 
+const IPV4_RE = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+
+// Builds the dev backend URL for a given host. Plain LAN IPv4 hosts talk
+// directly to admin-app on port 3001. Anything else (a tunnel hostname like
+// `xxxx.exp.direct`, used when the phone can't reach the dev machine's LAN
+// IP directly — e.g. mobile-hotspot client isolation) has no reachable
+// :3001 port from the client's perspective, so we instead reuse the SAME
+// origin: Metro's dev server (metro.config.js) proxies /api and /auth
+// through to localhost:3001 for us, so a single tunneled port covers both
+// the JS bundle and the backend.
+const resolveDevBackendUrl = (host: string) => {
+  if (!host) return null;
+  if (host === 'localhost' || host === '127.0.0.1') return null;
+  if (IPV4_RE.test(host)) return `http://${host}:3001`;
+  return `https://${host}`;
+};
+
 const getDevBackendUrl = () => {
   try {
     const hostUri =
       Constants.expoConfig?.hostUri ||
       (Constants as any).manifest2?.extra?.expoGoLaunchQueryParams?.hostUri;
     if (hostUri) {
-      const ip = hostUri.split(':')[0];
-      if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
-        return `http://${ip}:3001`;
-      }
+      const host = hostUri.split(':')[0];
+      const resolved = resolveDevBackendUrl(host);
+      if (resolved) return resolved;
     }
   } catch (e) {
     console.warn('[auth] Failed to detect dev backend URL via Constants:', e);
@@ -79,10 +95,8 @@ const getDevBackendUrl = () => {
     const url = Linking.createURL('/');
     if (url) {
       const parsed = Linking.parse(url);
-      const hostname = parsed.hostname;
-      if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
-        return `http://${hostname}:3001`;
-      }
+      const resolved = resolveDevBackendUrl(parsed.hostname ?? '');
+      if (resolved) return resolved;
     }
   } catch (e) {
     console.warn('[auth] Failed to detect dev backend URL via Linking:', e);
@@ -262,7 +276,10 @@ export const clearStudentSession = async () => {
   if (result.error) throw new Error(errorMessage(result.error));
 };
 
-export const authFetch = async (path: string, init: RequestInit = {}) => {
+// Raw variant that never throws on a non-2xx response — callers that need to
+// branch on the actual status code (e.g. 403 CREDITS_EXHAUSTED vs a generic
+// failure) should use this instead of `authFetch`, which always throws.
+export const authFetchRaw = async (path: string, init: RequestInit = {}) => {
   const headers = new Headers(init.headers);
   headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json');
   if (Platform.OS !== 'web') {
@@ -271,11 +288,15 @@ export const authFetch = async (path: string, init: RequestInit = {}) => {
     headers.set('Expo-Origin', 'campus-360://');
   }
 
-  const response = await fetch(`${authBaseUrl}${path}`, {
+  return fetch(`${authBaseUrl}${path}`, {
     ...init,
     headers,
     credentials: 'include',
   });
+};
+
+export const authFetch = async (path: string, init: RequestInit = {}) => {
+  const response = await authFetchRaw(path, init);
   if (!response.ok) {
     const payload = await response.json().catch(() => null) as { error?: string } | null;
     throw new Error(payload?.error || `Erreur serveur (${response.status}).`);

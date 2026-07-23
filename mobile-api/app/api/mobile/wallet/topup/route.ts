@@ -7,8 +7,13 @@ import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limi
 
 const MAX_BODY_BYTES = 8 * 1024; // 8 KB is plenty for {amount, provider, phone}
 
+// Must match the business minimum shown/enforced in the mobile UI
+// (src/AppShell.tsx rechargeWallet) — otherwise it's a client-only rule,
+// trivially bypassed by calling this endpoint directly.
+const MIN_TOPUP_COINS = 500;
+
 const bodySchema = z.object({
-  amountCoins: z.number().int().min(100).max(1_000_000),
+  amountCoins: z.number().int().min(MIN_TOPUP_COINS).max(1_000_000),
   providerName: z.string().min(2).max(80),
   // E.164-ish (looser): digits, spaces, +, -, must be 8-20 chars after trim.
   phoneNumber: z

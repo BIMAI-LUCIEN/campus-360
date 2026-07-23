@@ -6,9 +6,17 @@ const ALLOWED_ORIGIN_PREFIXES = [
   'https://campus-360-hi97.vercel.app',
 ];
 
+// Private LAN IPs (192.168.x.x, 10.x.x.x, 172.16-31.x.x) — needed so a phone
+// on the same Wi-Fi as the dev machine (Expo Go / web dev client hitting the
+// host's LAN IP instead of localhost) can reach this server in development.
+const LAN_ORIGIN_PATTERN =
+  /^http:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}):\d+$/;
+
 const isAllowedOrigin = (origin: string) => {
   if (origin === 'campus-360://') return true;
-  return ALLOWED_ORIGIN_PREFIXES.some((prefix) => origin.startsWith(prefix));
+  if (ALLOWED_ORIGIN_PREFIXES.some((prefix) => origin.startsWith(prefix))) return true;
+  if (process.env.NODE_ENV !== 'production' && LAN_ORIGIN_PATTERN.test(origin)) return true;
+  return false;
 };
 
 // ─────────────────────────────────────────────────────────────────────────

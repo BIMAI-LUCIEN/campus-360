@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EduGlass - Accueil</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Outfit:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-error-container": "#93000a",
+                      "inverse-primary": "#b4c5ff",
+                      "on-surface-variant": "#434655",
+                      "primary-fixed": "#dbe1ff",
+                      "surface-dim": "#d2d9f4",
+                      "on-tertiary": "#ffffff",
+                      "on-tertiary-fixed-variant": "#004c6e",
+                      "on-tertiary-container": "#e4f2ff",
+                      "primary-fixed-dim": "#b4c5ff",
+                      "on-background": "#131b2e",
+                      "on-primary-fixed": "#00174b",
+                      "on-secondary": "#ffffff",
+                      "surface-container-high": "#e2e7ff",
+                      "on-tertiary-fixed": "#001e2f",
+                      "error": "#ba1a1a",
+                      "on-secondary-fixed": "#25005a",
+                      "tertiary": "#005a82",
+                      "background": "#faf8ff",
+                      "on-surface": "#131b2e",
+                      "secondary": "#712ae2",
+                      "surface-container": "#eaedff",
+                      "tertiary-container": "#0074a6",
+                      "inverse-on-surface": "#eef0ff",
+                      "on-primary": "#ffffff",
+                      "on-secondary-container": "#fffbff",
+                      "inverse-surface": "#283044",
+                      "surface-variant": "#dae2fd",
+                      "secondary-container": "#8a4cfc",
+                      "on-primary-container": "#eeefff",
+                      "tertiary-fixed-dim": "#89ceff",
+                      "error-container": "#ffdad6",
+                      "outline": "#737686",
+                      "tertiary-fixed": "#c9e6ff",
+                      "surface-container-highest": "#dae2fd",
+                      "surface": "#faf8ff",
+                      "on-primary-fixed-variant": "#003ea8",
+                      "secondary-fixed": "#eaddff",
+                      "surface-tint": "#0053db",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed-dim": "#d2bbff",
+                      "on-secondary-fixed-variant": "#5a00c6",
+                      "surface-container-low": "#f2f3ff",
+                      "primary-container": "#2563eb",
+                      "primary": "#004ac6",
+                      "on-error": "#ffffff",
+                      "surface-bright": "#faf8ff",
+                      "outline-variant": "#c3c6d7"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-sm": "8px",
+                      "stack-lg": "32px",
+                      "gutter": "16px",
+                      "stack-md": "16px",
+                      "container-margin": "20px"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Outfit"
+                      ],
+                      "headline-lg-mobile": [
+                              "Outfit"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "headline-xl": [
+                              "Outfit"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Outfit"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-xl": [
+                              "40px",
+                              {
+                                      "lineHeight": "48px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-top: 1px solid rgba(255, 255, 255, 0.6);
+            border-left: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        .glass-card {
+            background: rgba(250, 248, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+        
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="font-body-md antialiased pb-24 md:pb-0 pt-16">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 dark:bg-inverse-surface/80 backdrop-blur-xl border-b border-white/20 dark:border-white/10 shadow-sm flex justify-between items-center px-container-margin h-16 max-w-md mx-auto inset-x-0 md:max-w-full">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors scale-95 duration-200 active:scale-90 text-primary dark:text-inverse-primary">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="font-headline-md text-headline-md font-bold text-primary dark:text-inverse-primary text-center flex-1">
+            EduGlass
+        </div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors scale-95 duration-200 active:scale-90">
+<img alt="User profile picture" class="w-8 h-8 rounded-full object-cover" data-alt="A professional headshot of a confident college student with a subtle smile, well-lit in a modern academic setting with a soft blur in the background. The lighting highlights their features, conveying a sense of focus and ambition. Light mode aesthetic, sharp focus on the face." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUShKQxFvgeXCUookd75RUIdlhQ0tR5dc7tvJYsQuwtk-xJn1c2m0fqyOud3IS460t2p_7nMHgPDTP1Nf6dNZcQn1l2zdE16vrFg4zK0vpDuH3rmGhkQNSOP_BI7bUh8LT1p_wiHntN2Fw7LGXqSFvj_5mUyVq9p-GU3p6DCaX6vJWylqsJI7liR_8CkJ-kVpLSRIXhyrb9IbbWgI3qggU1WdUpL4YRB3XJiY_JZLH4YalrxgiEdBptQ"/>
+</button>
+</header>
+<main class="max-w-md mx-auto md:max-w-5xl px-container-margin pt-stack-md pb-stack-lg space-y-stack-lg">
+<!-- Welcome Header -->
+<section class="mt-stack-md">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface">Bonjour, Thomas</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Prêt pour une nouvelle journée d'apprentissage ?</p>
+</section>
+<!-- Wallet Card (Glassmorphism) -->
+<section class="glass-panel rounded-xl p-6 relative overflow-hidden">
+<!-- Decorative gradient orb -->
+<div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 rounded-full blur-2xl"></div>
+<div class="absolute -bottom-10 -left-10 w-32 h-32 bg-secondary/20 rounded-full blur-2xl"></div>
+<div class="relative z-10 flex flex-col gap-stack-md">
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Mon Portefeuille</h2>
+<div class="mt-2 flex items-baseline gap-2">
+<span class="font-headline-xl text-headline-xl text-primary font-black">2,450</span>
+<span class="font-body-md text-body-md text-on-surface-variant font-medium">Coins</span>
+</div>
+</div>
+<div class="bg-white/60 rounded-lg px-3 py-1.5 border border-white/50 flex items-center gap-1">
+<span class="material-symbols-outlined text-secondary" style="font-size: 16px;">bolt</span>
+<span class="font-label-sm text-label-sm font-bold text-secondary">42 Crédits IA</span>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary py-3 rounded-xl font-label-md text-label-md font-bold shadow-md hover:bg-primary/90 transition-transform scale-100 active:scale-95 flex items-center justify-center gap-2 mt-2">
+<span class="material-symbols-outlined" style="font-size: 20px;">add_circle</span>
+                    Recharger
+                </button>
+</div>
+</section>
+<!-- Pour Toi Carousel -->
+<section class="space-y-stack-md">
+<div class="flex justify-between items-end">
+<h2 class="font-headline-md text-headline-md text-on-surface">Pour Toi</h2>
+<button class="font-label-sm text-label-sm text-primary font-semibold hover:underline">Voir tout</button>
+</div>
+<div class="flex gap-gutter overflow-x-auto hide-scrollbar pb-4 -mx-container-margin px-container-margin">
+<!-- Card 1 -->
+<div class="min-w-[240px] glass-card rounded-xl overflow-hidden flex-shrink-0 group cursor-pointer transition-transform hover:-translate-y-1">
+<div class="h-32 bg-surface-variant relative">
+<div class="absolute inset-0 bg-cover bg-center opacity-70" data-alt="A close-up view of an intricate geometric pattern representing advanced mathematics, rendered in soft blue and white tones with subtle lighting. The composition is clean, modern, and abstract, evoking a sense of analytical thought. Light mode aesthetic, high clarity." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAyvxkmUAhhaMqRdkW68l1Vbf2MAC_3f0v2ezHM3avWTdTFZFjNQF7iFagC0E6zZPiNIceKO9G7e50l0GQir6-2asuIlvcp2FgYSkel2KEiJhEBwqe5CBFsR6clvAo5Zx7csgl1wwolvvi25I-HK1kvc22182cTXU8fvm2_3U_T7NLCQLOX7ICfEnHLNzSVRnMMFvQX4Hu4fBSFFCI8zeBjgchTalxUJYGyf43XFWLNsXqjBy-pFhMOMQ')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+<span class="absolute top-3 left-3 bg-white/90 text-primary px-2 py-1 rounded-full font-label-sm text-label-sm font-bold backdrop-blur-sm">Mathématiques</span>
+</div>
+<div class="p-4">
+<h3 class="font-label-md text-label-md text-on-surface font-bold line-clamp-2">Algèbre Linéaire : Pack de Révision Avancé</h3>
+<div class="flex items-center gap-2 mt-3 text-on-surface-variant">
+<span class="material-symbols-outlined" style="font-size: 16px;">picture_as_pdf</span>
+<span class="font-label-sm text-label-sm">12 Docs</span>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<span class="font-label-md text-label-md font-bold text-primary">150 Coins</span>
+<button class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined" style="font-size: 18px;">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="min-w-[240px] glass-card rounded-xl overflow-hidden flex-shrink-0 group cursor-pointer transition-transform hover:-translate-y-1">
+<div class="h-32 bg-surface-variant relative">
+<div class="absolute inset-0 bg-cover bg-center opacity-70" data-alt="A stylized digital illustration of a DNA double helix glowing subtly against a clean, minimal white and light blue background. Represents modern biology and life sciences. The style is sleek, academic, and highly polished. Light mode aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB5TmNqKiMy5LNUNGNrWZeddU-EyEs7inRS2ZHkzKxk6NYb3dRp_X9-gkpKuGrED2-NrGLccrPPWKGzEFb0Exn2A4QusAEL0zrRGVyGFHisV8jhGb2jIADQP17WtO7_NGCOyXXNtZS7biMf1RBekKkFf7G9IJnwNUYbkOivQyZzvyfT30ujZVL5zsPQgYRRbrsddM644cr7W_15f9wKel3lpgko02zirm5AjgtRugTe9_065009sBIL4w')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+<span class="absolute top-3 left-3 bg-white/90 text-secondary px-2 py-1 rounded-full font-label-sm text-label-sm font-bold backdrop-blur-sm">Biologie</span>
+</div>
+<div class="p-4">
+<h3 class="font-label-md text-label-md text-on-surface font-bold line-clamp-2">Génétique : Notes de Cours Complètes</h3>
+<div class="flex items-center gap-2 mt-3 text-on-surface-variant">
+<span class="material-symbols-outlined" style="font-size: 16px;">picture_as_pdf</span>
+<span class="font-label-sm text-label-sm">8 Docs</span>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<span class="font-label-md text-label-md font-bold text-primary">100 Coins</span>
+<button class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined" style="font-size: 18px;">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Nouveautés List -->
+<section class="space-y-stack-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">Nouveautés</h2>
+<div class="flex flex-col gap-3">
+<!-- List Item 1 -->
+<div class="glass-card rounded-lg p-3 flex items-center gap-4 cursor-pointer hover:bg-white/80 transition-colors">
+<div class="w-12 h-12 rounded-lg bg-tertiary-container/30 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">science</span>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-label-md text-label-md text-on-surface font-bold truncate">Physique Quantique - Chapitre 4</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate mt-0.5">Ajouté il y a 2 heures</p>
+</div>
+<button class="text-primary hover:bg-primary/10 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+<!-- List Item 2 -->
+<div class="glass-card rounded-lg p-3 flex items-center gap-4 cursor-pointer hover:bg-white/80 transition-colors">
+<div class="w-12 h-12 rounded-lg bg-error-container/50 flex items-center justify-center text-error">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-label-md text-label-md text-on-surface font-bold truncate">Littérature : Fiches de Synthèse</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate mt-0.5">Ajouté hier</p>
+</div>
+<button class="text-primary hover:bg-primary/10 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-surface/80 dark:bg-inverse-surface/80 backdrop-blur-2xl border-t border-white/20 dark:border-white/10 shadow-[0px_-4px_20px_rgba(0,0,0,0.05)] md:hidden">
+<div class="flex justify-around items-center px-4 pb-safe h-20">
+<!-- Active: Accueil -->
+<button class="flex flex-col items-center justify-center bg-secondary-container/20 dark:bg-secondary-container/40 text-secondary dark:text-secondary-fixed-dim rounded-xl px-3 py-1 hover:opacity-80 transition-opacity scale-110 duration-300 active:scale-95 font-label-sm text-label-sm w-16">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="mt-1 font-semibold">Accueil</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-3 py-1 hover:opacity-80 transition-opacity font-label-sm text-label-sm w-16">
+<span class="material-symbols-outlined">explore</span>
+<span class="mt-1">Explorer</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-3 py-1 hover:opacity-80 transition-opacity font-label-sm text-label-sm w-16">
+<span class="material-symbols-outlined">local_library</span>
+<span class="mt-1 truncate w-full text-center">Bibliothèque</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-3 py-1 hover:opacity-80 transition-opacity font-label-sm text-label-sm w-16">
+<span class="material-symbols-outlined">description</span>
+<span class="mt-1 truncate w-full text-center">Documents</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-3 py-1 hover:opacity-80 transition-opacity font-label-sm text-label-sm w-16">
+<span class="material-symbols-outlined">person</span>
+<span class="mt-1">Profil</span>
+</button>
+</div>
+</nav>
+<!-- Desktop Side Nav (Hidden on Mobile) -->
+<aside class="hidden md:flex fixed inset-y-0 left-0 z-40 w-64 flex-col bg-surface/90 backdrop-blur-xl border-r border-white/20 pt-20 pb-8 shadow-xl">
+<div class="px-6 flex flex-col gap-2">
+<!-- Mirror bottom nav structure for desktop -->
+<button class="flex items-center gap-3 bg-secondary-container/20 text-secondary rounded-xl px-4 py-3 font-label-md text-label-md font-bold transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+                Accueil
+            </button>
+<button class="flex items-center gap-3 text-on-surface-variant hover:bg-surface-variant rounded-xl px-4 py-3 font-label-md text-label-md transition-colors">
+<span class="material-symbols-outlined">explore</span>
+                Explorer
+            </button>
+<button class="flex items-center gap-3 text-on-surface-variant hover:bg-surface-variant rounded-xl px-4 py-3 font-label-md text-label-md transition-colors">
+<span class="material-symbols-outlined">local_library</span>
+                Bibliothèque
+            </button>
+<button class="flex items-center gap-3 text-on-surface-variant hover:bg-surface-variant rounded-xl px-4 py-3 font-label-md text-label-md transition-colors">
+<span class="material-symbols-outlined">description</span>
+                Documents
+            </button>
+</div>
+<div class="mt-auto px-6">
+<button class="w-full flex items-center gap-3 text-on-surface-variant hover:bg-surface-variant rounded-xl px-4 py-3 font-label-md text-label-md transition-colors">
+<span class="material-symbols-outlined">person</span>
+                Profil
+            </button>
+</div>
+</aside>
+<!-- Add margin for desktop sidebar -->
+<style>
+        @media (min-width: 768px) {
+            main {
+                margin-left: 16rem; /* 64 * 0.25rem = 16rem */
+            }
+        }
+    </style>
+</body></html>

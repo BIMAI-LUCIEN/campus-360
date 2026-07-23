@@ -299,8 +299,17 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
 
   const analyzePdf = async (file: File) => {
     const pdfjs = await import('pdfjs-dist');
+    // pdfjs-dist requires a worker script to be configured — without this it
+    // throws 'No "GlobalWorkerOptions.workerSrc" specified.' on every call,
+    // which silently aborts analysis (no auto-fill, pageCount stays unset).
+    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.mjs',
+        import.meta.url,
+      ).toString();
+    }
     const data = new Uint8Array(await file.arrayBuffer());
-    const pdf = await pdfjs.getDocument({ data, disableWorker: true } as object).promise;
+    const pdf = await pdfjs.getDocument({ data }).promise;
     const pageTexts: string[] = [];
     const maxPages = Math.min(pdf.numPages, 5);
     for (let pageNumber = 1; pageNumber <= maxPages; pageNumber += 1) {
@@ -633,201 +642,134 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
         </div>
       </div>
 
-      {/* ── Table Card ──────────────────────────────────────────── */}
-      <div className="mb-6 bg-white rounded-xl border border-stitch-outline-variant shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-stitch-outline-variant bg-stitch-surface-container-low">
-                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase w-10">
-                  <input className="rounded border-stitch-outline-variant text-stitch-primary focus:ring-stitch-primary/15" type="checkbox" />
-                </th>
-                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase">Aperçu</th>
-                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase">Titre</th>
-                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase">Faculté</th>
-                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase">Niveau</th>
-                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase">Prix</th>
-                <th className="p-4 font-label-md text-stitch-on-surface-variant uppercase">Statut</th>
-                <th className="p-4 w-10" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stitch-outline-variant">
-              {paginatedDocuments.map((document) => (
-                <tr
-                  key={document.id}
-                  className="hover:bg-stitch-surface-container-low transition-colors group"
-                >
-                  <td className="p-4">
-                    <input className="rounded border-stitch-outline-variant text-stitch-primary focus:ring-stitch-primary/15" type="checkbox" />
-                  </td>
-                  <td className="p-4">
-                    <div className="w-12 h-16 bg-stitch-surface-container-high rounded border border-stitch-outline-variant flex items-center justify-center overflow-hidden">
-                      <FileText size={20} className="text-stitch-on-surface-variant" />
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="font-semibold text-stitch-on-surface">{document.title}</div>
-                    <div className="mt-1 flex flex-wrap gap-1.5">
-                      {[document.subject, document.level, document.teacher].filter(Boolean).map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-flex rounded-full border border-stitch-outline-variant bg-stitch-surface-container px-2 py-0.5 text-[11px] font-medium text-stitch-on-surface-variant"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="p-4 text-sm text-stitch-on-surface-variant">{document.faculty}</td>
-                  <td className="p-4 text-sm text-stitch-on-surface-variant">{document.level}</td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        defaultValue={document.priceCoins}
-                        step="50"
-                        min="0"
-                        aria-label={`Prix de ${document.title}`}
-                        onBlur={(e) => {
-                          const newPrice = parseInt(e.target.value, 10);
-                          if (!isNaN(newPrice) && newPrice !== document.priceCoins) {
-                            updatePrice(document.id, newPrice);
-                          }
-                        }}
-                        className="w-20 rounded border border-stitch-outline-variant bg-stitch-surface px-2 py-1 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none"
-                      />
-                      <span className="text-sm text-stitch-on-surface-variant">C</span>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ${badgeClass[document.status] ?? ''}`}
-                    >
-                      {document.status.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => reanalyze(document.id)}
-                        aria-label="Reanalyser avec IA"
-                        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stitch-surface-container-high text-stitch-primary transition-colors"
-                        title="Réanalyser IA"
-                      >
-                        <Sparkles size={15} />
-                      </button>
-                      <button
-                        onClick={() => updateStatus(document.id, 'published')}
-                        aria-label="Publier"
-                        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stitch-surface-container-high text-stitch-success transition-colors"
-                        title="Publier"
-                      >
-                        <Check size={15} />
-                      </button>
-                      <button
-                        onClick={() => updateStatus(document.id, 'needs_review')}
-                        aria-label="Marquer à corriger"
-                        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stitch-surface-container-high text-orange-700 transition-colors"
-                        title="À corriger"
-                      >
-                        <CircleAlert size={15} />
-                      </button>
-                      <button
-                        onClick={() => updateStatus(document.id, 'archived')}
-                        aria-label="Archiver"
-                        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stitch-surface-container-high text-stitch-on-surface-variant transition-colors"
-                        title="Archiver"
-                      >
-                        <Archive size={15} />
-                      </button>
-                      <button
-                        onClick={() => remove(document.id)}
-                        aria-label="Supprimer"
-                        className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stitch-error-light text-stitch-error transition-colors"
-                        title="Supprimer"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                    {/* Always-visible more menu */}
-                    <button
-                      className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-stitch-surface-container-high text-stitch-on-surface-variant"
-                      aria-label="Plus d'actions"
-                    >
-                      <FilePenLine size={15} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {paginatedDocuments.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-stitch-on-surface-variant">
-                    Aucun PDF trouvé.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* ── Grid Layout ──────────────────────────────────────────── */}
+      <div className="mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+        {paginatedDocuments.map((document) => (
+          <div
+            key={document.id}
+            className="group relative flex flex-col overflow-hidden rounded-xl border border-stitch-outline-variant bg-white shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
+          >
+            {/* Aspect ratio cover / preview area */}
+            <div className="relative aspect-[3/4] w-full bg-stitch-surface-container flex items-center justify-center p-4">
+               <FileText size={48} className="text-stitch-on-surface-variant opacity-30" />
+               <div className="absolute top-2 left-2 z-10">
+                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shadow-sm ${badgeClass[document.status] ?? ''}`}>
+                   {document.status.replace('_', ' ')}
+                 </span>
+               </div>
+               {/* Overlay actions */}
+               <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 backdrop-blur rounded-lg shadow-sm border border-black/5 p-1 flex flex-col gap-1 z-20">
+                  <button onClick={() => reanalyze(document.id)} className="p-1.5 rounded hover:bg-stitch-surface-container-high text-stitch-primary" title="Réanalyser IA"><Sparkles size={14} /></button>
+                  <button onClick={() => updateStatus(document.id, 'published')} className="p-1.5 rounded hover:bg-stitch-surface-container-high text-stitch-success" title="Publier"><Check size={14} /></button>
+                  <button onClick={() => updateStatus(document.id, 'needs_review')} className="p-1.5 rounded hover:bg-stitch-surface-container-high text-orange-700" title="À corriger"><CircleAlert size={14} /></button>
+                  <button onClick={() => updateStatus(document.id, 'archived')} className="p-1.5 rounded hover:bg-stitch-surface-container-high text-stitch-on-surface-variant" title="Archiver"><Archive size={14} /></button>
+                  <button onClick={() => remove(document.id)} className="p-1.5 rounded hover:bg-stitch-error-light text-stitch-error" title="Supprimer"><Trash2 size={14} /></button>
+               </div>
+            </div>
 
-        {/* ── Pagination ─────────────────────────────────────────── */}
-        <div className="p-4 border-t border-stitch-outline-variant flex items-center justify-between bg-stitch-surface">
-          <div className="font-label-md text-stitch-on-surface-variant">
-            {visibleDocuments.length} PDF
+            {/* Content area */}
+            <div className="flex flex-1 flex-col p-3 md:p-4">
+              <h3 className="font-semibold text-stitch-on-surface line-clamp-2 text-sm mb-2" title={document.title}>
+                {document.title}
+              </h3>
+              
+              <div className="flex flex-wrap gap-1 mb-3">
+                {[document.subject, document.level].filter(Boolean).map((tag) => (
+                  <span key={tag} className="inline-flex rounded text-[10px] bg-stitch-surface-container-high px-1.5 py-0.5 text-stitch-on-surface-variant font-medium line-clamp-1 max-w-[100px]">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-auto pt-3 flex items-center justify-between border-t border-stitch-outline-variant">
+                <div className="text-[11px] md:text-xs text-stitch-on-surface-variant line-clamp-1 flex-1 pr-2" title={document.faculty}>
+                  {document.faculty}
+                </div>
+                <div className="flex items-center gap-1 bg-stitch-surface-container-low px-1.5 py-1 rounded border border-stitch-outline-variant">
+                  <input
+                    type="number"
+                    defaultValue={document.priceCoins}
+                    step="50"
+                    min="0"
+                    onBlur={(e) => {
+                      const newPrice = parseInt(e.target.value, 10);
+                      if (!isNaN(newPrice) && newPrice !== document.priceCoins) {
+                        updatePrice(document.id, newPrice);
+                      }
+                    }}
+                    className="w-10 md:w-12 bg-transparent text-[11px] md:text-xs font-bold text-stitch-on-surface text-right focus:outline-none"
+                  />
+                  <span className="text-[11px] md:text-xs font-bold text-stitch-primary">C</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              aria-label="Page précédente"
-              className="flex h-8 w-8 items-center justify-center rounded hover:bg-stitch-surface-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-stitch-on-surface-variant"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              let page: number;
-              if (totalPages <= 5) {
-                page = i + 1;
-              } else if (currentPage <= 3) {
-                page = i + 1;
-              } else if (currentPage >= totalPages - 2) {
-                page = totalPages - 4 + i;
-              } else {
-                page = currentPage - 2 + i;
-              }
-              return (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  aria-label={`Page ${page}`}
-                  aria-current={currentPage === page ? 'page' : undefined}
-                  className={
-                    currentPage === page
-                      ? 'flex h-8 w-8 items-center justify-center rounded bg-stitch-primary text-stitch-on-primary font-label-md'
-                      : 'flex h-8 w-8 items-center justify-center rounded hover:bg-stitch-surface-container font-label-md text-stitch-on-surface-variant transition-colors'
-                  }
-                >
-                  {page}
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              aria-label="Page suivante"
-              className="flex h-8 w-8 items-center justify-center rounded hover:bg-stitch-surface-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-stitch-on-surface-variant"
-            >
-              <ChevronRight size={18} />
-            </button>
+        ))}
+        {paginatedDocuments.length === 0 && (
+          <div className="col-span-full py-20 text-center text-stitch-on-surface-variant bg-white rounded-xl border border-stitch-outline-variant shadow-sm">
+            Aucun PDF trouvé.
           </div>
-          <div className="flex items-center gap-2 font-label-md text-stitch-on-surface-variant">
-            <span>Afficher:</span>
-            <select className="bg-transparent border-none focus:ring-0 cursor-pointer pr-8 py-0 font-label-md">
-              <option>{ITEMS_PER_PAGE} / page</option>
-              <option>20 / page</option>
-              <option>50 / page</option>
-            </select>
-          </div>
+        )}
+      </div>
+
+      {/* ── Pagination ─────────────────────────────────────────── */}
+      <div className="mb-6 p-4 rounded-xl border border-stitch-outline-variant flex flex-wrap items-center justify-between bg-white shadow-sm gap-4">
+        <div className="font-label-md text-stitch-on-surface-variant">
+          {visibleDocuments.length} PDF
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            aria-label="Page précédente"
+            className="flex h-8 w-8 items-center justify-center rounded hover:bg-stitch-surface-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-stitch-on-surface-variant"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let page: number;
+            if (totalPages <= 5) {
+              page = i + 1;
+            } else if (currentPage <= 3) {
+              page = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              page = totalPages - 4 + i;
+            } else {
+              page = currentPage - 2 + i;
+            }
+            return (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                aria-label={`Page ${page}`}
+                aria-current={currentPage === page ? 'page' : undefined}
+                className={
+                  currentPage === page
+                    ? 'flex h-8 w-8 items-center justify-center rounded bg-stitch-primary text-stitch-on-primary font-label-md'
+                    : 'flex h-8 w-8 items-center justify-center rounded hover:bg-stitch-surface-container font-label-md text-stitch-on-surface-variant transition-colors'
+                }
+              >
+                {page}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            aria-label="Page suivante"
+            className="flex h-8 w-8 items-center justify-center rounded hover:bg-stitch-surface-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-stitch-on-surface-variant"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+        <div className="flex items-center gap-2 font-label-md text-stitch-on-surface-variant">
+          <span>Afficher:</span>
+          <select className="bg-transparent border-none focus:ring-0 cursor-pointer pr-8 py-0 font-label-md">
+            <option>{ITEMS_PER_PAGE} / page</option>
+            <option>20 / page</option>
+            <option>50 / page</option>
+          </select>
         </div>
       </div>
 
@@ -1075,6 +1017,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
                 className="mb-1 w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface file:mr-3 file:rounded-lg file:border-0 file:bg-stitch-primary-fixed file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-stitch-primary file:cursor-pointer"
               />
 
+              <input type="hidden" name="pageCount" defaultValue={1} />
               <input type="hidden" name="aiSummary" />
               <input type="hidden" name="aiTags" />
               <input type="hidden" name="aiDifficulty" />

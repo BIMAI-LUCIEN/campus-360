@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
 import { databasePool } from '@/lib/database';
+import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -9,6 +10,15 @@ const MAX_BODY_BYTES = 64 * 1024; // 64 KB — webhooks are small
 
 export async function POST(request: NextRequest) {
   try {
+    // Unauthenticated route (no user session to key off of) — bound by IP.
+    try {
+      await enforceRateLimit(request, { bucket: 'wallet-webhook', max: 30, windowMs: 60_000 });
+    } catch (error) {
+      const response = rateLimitFailedResponse(error);
+      if (response) return response;
+      throw error;
+    }
+
     const signature = request.headers.get('x-notch-signature');
     const rawBody = await request.text();
 
@@ -17,16 +27,24 @@ export async function POST(request: NextRequest) {
     }
 
     const webhookSecret = process.env.NOTCHPAY_WEBHOOK_SECRET;
+    // Same convention used by topup/route.ts and topup/[reference]/route.ts:
+    // a configured NOTCHPAY_PRIVATE_KEY means a real payment provider is wired
+    // up. Trusting NODE_ENV alone to decide "is this really dev" is fragile
+    // (a staging/preview deploy can easily run with NODE_ENV !== 'production'
+    // while still being reachable by the public internet with real money
+    // flowing through it) — require the signature whenever a real provider is
+    // configured, and only skip it in genuine mock/sandbox mode.
+    const hasRealPaymentProvider = Boolean(process.env.NOTCHPAY_PRIVATE_KEY);
 
     // Webhook signing secret MUST be configured. If we ever ship without one,
     // refuse webhooks outright instead of crediting wallets on unauthenticated
     // requests.
     if (!webhookSecret) {
-      if (process.env.NODE_ENV === 'production') {
-        console.error('[Webhook Wallet] NOTCHPAY_WEBHOOK_SECRET missing in production.');
+      if (hasRealPaymentProvider || process.env.NODE_ENV === 'production') {
+        console.error('[Webhook Wallet] NOTCHPAY_WEBHOOK_SECRET missing while a real payment provider is configured.');
         return NextResponse.json({ error: 'Webhook non configure.' }, { status: 503 });
       }
-      console.warn('[Webhook Wallet] NOTCHPAY_WEBHOOK_SECRET not set; signature check skipped (dev only).');
+      console.warn('[Webhook Wallet] NOTCHPAY_WEBHOOK_SECRET not set; signature check skipped (mock sandbox only).');
     } else {
       if (!signature) {
         return NextResponse.json({ error: 'Signature manquante.' }, { status: 401 });

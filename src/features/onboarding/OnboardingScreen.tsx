@@ -8,17 +8,22 @@ import {
   ScrollView,
   Animated,
   SafeAreaView,
+  Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { stitchColors, brandGradient } from '../../theme/stitch';
 
 const { width } = Dimensions.get('window');
 
-// ─── Editorial palette ───────────────────────────────────────────────────────
-const INK     = '#0F172A';
-const PAPER   = '#F6F1E7';
-const SIENNA  = '#B7410E';
-const EMERALD = '#047857';
-const MUTED   = '#475569';
-const SOFT    = '#94A3B8';
+// ─── Editorial palette — sourced from the shared theme, not duplicated ─────────
+const INK = stitchColors.ink;
+const PAPER = stitchColors.paper;
+const SIENNA = stitchColors.sienna;
+const EMERALD = stitchColors.emerald;
+const MUTED = stitchColors.inkMuted;
+const SOFT = stitchColors.inkSubtle;
+const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia, serif' }) as string;
+const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace' }) as string;
 
 // ─── Visual element styles ─────────────────────────────────────────────────────
 const vs = StyleSheet.create({
@@ -34,8 +39,8 @@ const vs = StyleSheet.create({
   previewDivider:  { width: 1, height: 90, backgroundColor: SOFT, marginTop: 4 },
   previewRight:    { alignItems: 'center', paddingTop: 8, gap: 4 },
   priceTag:        { borderWidth: 2, borderColor: SIENNA, borderRadius: 2, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' },
-  priceText:       { fontFamily: 'serif', fontSize: 28, fontWeight: '900', color: SIENNA, lineHeight: 30 },
-  priceUnit:       { fontFamily: 'monospace', fontSize: 9, letterSpacing: 1.5, color: SIENNA, fontWeight: '700' },
+  priceText:       { fontFamily: SERIF, fontSize: 28, fontWeight: '900', color: SIENNA, lineHeight: 30 },
+  priceUnit:       { fontFamily: MONO, fontSize: 9, letterSpacing: 1.5, color: SIENNA, fontWeight: '700' },
 
   readVisual:  { flexDirection: 'row', alignItems: 'flex-end', paddingVertical: 24, gap: 12 },
   bookLeft:    { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 90 },
@@ -262,14 +267,18 @@ export function OnboardingScreen({ onFinish }: { onFinish: () => void }) {
       </View>
 
       <View style={styles.footer}>
-        <Pressable
-          style={[styles.ctaButton, isLast && styles.ctaButtonFinal]}
-          onPress={onFinish}
-        >
-          <Text style={styles.ctaButtonText}>
-            {isLast ? 'COMMENCER' : 'SUIVANT'}
-          </Text>
-          {!isLast && <Text style={styles.ctaArrow}>→</Text>}
+        <Pressable style={{ width: '100%' }} onPress={onFinish}>
+          <LinearGradient
+            colors={brandGradient.colors}
+            start={brandGradient.horizontal.start}
+            end={brandGradient.horizontal.end}
+            style={styles.ctaButton}
+          >
+            <Text style={styles.ctaButtonText}>
+              {isLast ? 'COMMENCER' : 'SUIVANT'}
+            </Text>
+            {!isLast && <Text style={styles.ctaArrow}>→</Text>}
+          </LinearGradient>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -297,7 +306,7 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   logoMark: {
-    fontFamily: 'serif',
+    fontFamily: SERIF,
     fontSize: 22,
     fontWeight: '900',
     color: INK,
@@ -306,12 +315,9 @@ const styles = StyleSheet.create({
   passButton: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: INK,
-    borderRadius: 2,
   },
   passButtonText: {
-    fontFamily: 'monospace',
+    fontFamily: MONO,
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1.5,
@@ -347,7 +353,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   folio: {
-    fontFamily: 'monospace',
+    fontFamily: MONO,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 2,
@@ -355,7 +361,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   eyebrow: {
-    fontFamily: 'monospace',
+    fontFamily: MONO,
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 2,
@@ -364,16 +370,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   slideTitle: {
-    fontFamily: 'serif',
-    fontSize: 34,
+    fontFamily: SERIF,
+    fontSize: 38,
     fontWeight: '900',
     color: INK,
-    lineHeight: 40,
-    letterSpacing: -0.5,
+    lineHeight: 42,
+    letterSpacing: -1,
     marginBottom: 14,
   },
   slideBody: {
-    fontFamily: 'serif',
+    fontFamily: SERIF,
     fontSize: 16,
     fontWeight: '400',
     fontStyle: 'italic',
@@ -404,7 +410,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   counterText: {
-    fontFamily: 'monospace',
+    fontFamily: MONO,
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 1.5,
@@ -424,24 +430,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     width: '100%',
-    paddingVertical: 16,
-    backgroundColor: INK,
-    borderRadius: 2,
-  },
-  ctaButtonFinal: {
-    backgroundColor: SIENNA,
+    paddingVertical: 18,
+    borderRadius: 14,
   },
   ctaButtonText: {
-    fontFamily: 'serif',
+    fontFamily: SERIF,
     fontSize: 16,
     fontWeight: '700',
-    color: PAPER,
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
   ctaArrow: {
-    fontFamily: 'serif',
+    fontFamily: SERIF,
     fontSize: 18,
     fontWeight: '700',
-    color: PAPER,
+    color: '#FFFFFF',
   },
 });

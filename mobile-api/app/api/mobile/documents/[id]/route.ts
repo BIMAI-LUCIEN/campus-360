@@ -29,11 +29,20 @@ const updateDocumentSchema = z.object({
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+// Document ids are Postgres uuids. Guard against non-uuid path segments (e.g. a
+// stale "new" placeholder) so they resolve to a clean 404 instead of a 500
+// ("invalid input syntax for type uuid") bubbling up from the DB driver.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
     const access = await requireMobileUser(request);
     if (access.response) return access.response;
+
+    if (!UUID_RE.test(id)) {
+      return NextResponse.json({ error: 'Document introuvable.' }, { status: 404 });
+    }
 
     const document = await getDocumentById(id, access.user.id);
     if (!document) {
@@ -53,6 +62,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const access = await requireMobileUser(request);
     if (access.response) return access.response;
 
+    if (!UUID_RE.test(id)) {
+      return NextResponse.json({ error: 'Document introuvable.' }, { status: 404 });
+    }
+
     const body = await request.json().catch(() => null);
     const parsed = updateDocumentSchema.safeParse(body);
     if (!parsed.success) {
@@ -71,6 +84,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const access = await requireMobileUser(request);
     if (access.response) return access.response;
+
+    if (!UUID_RE.test(id)) {
+      return NextResponse.json({ error: 'Document introuvable.' }, { status: 404 });
+    }
 
     const success = await deleteDocument(id, access.user.id);
     if (!success) {

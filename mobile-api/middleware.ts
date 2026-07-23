@@ -17,10 +17,18 @@ const ALLOWED_ORIGINS = [
   'http://127.0.0.1:8081',
 ];
 
+// Private LAN IPs (192.168.x.x, 10.x.x.x, 172.16-31.x.x) — needed so a phone
+// on the same Wi-Fi as the dev machine (Expo Go / web dev client hitting the
+// host's LAN IP instead of localhost) can reach this server in development.
+const LAN_ORIGIN_PATTERN =
+  /^http:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}):\d+$/;
+
 const isAllowedOrigin = (origin: string) => {
   if (!origin || origin === 'null') return true; // server-side calls
   if (origin === 'campus-bordes://') return true;
-  return ALLOWED_ORIGINS.some((prefix) => origin.startsWith(prefix));
+  if (ALLOWED_ORIGINS.some((prefix) => origin.startsWith(prefix))) return true;
+  if (process.env.NODE_ENV !== 'production' && LAN_ORIGIN_PATTERN.test(origin)) return true;
+  return false;
 };
 
 export function middleware(request: NextRequest) {

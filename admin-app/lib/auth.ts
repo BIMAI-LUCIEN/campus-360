@@ -36,6 +36,24 @@ const LOCAL_DEV_ORIGINS = [
   'http://127.0.0.1:8082',
 ];
 
+// LAN IP wildcards (dev only) — a phone on the same Wi-Fi as the dev machine
+// hits the host's LAN IP (e.g. http://10.66.47.18:8081) instead of localhost,
+// so those origins need to be trusted too. Better Auth supports glob patterns
+// here (see trusted-origins.mjs / wildcardMatch).
+const LAN_DEV_ORIGINS =
+  process.env.NODE_ENV === 'production'
+    ? []
+    : [
+        'http://192.168.*:*',
+        'http://10.*:*',
+        'http://172.16.*:*',
+        'http://172.17.*:*',
+        'http://172.18.*:*',
+        'http://172.19.*:*',
+        'http://172.2*.*:*',
+        'http://172.3*.*:*',
+      ];
+
 const parseOriginList = (raw: string | undefined): string[] =>
   (raw ?? '')
     .split(',')
@@ -44,7 +62,15 @@ const parseOriginList = (raw: string | undefined): string[] =>
 
 const detectBaseUrl = (): string => {
   const envUrl = process.env.BETTER_AUTH_URL;
-  if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+  const isLocalUrl = envUrl && (envUrl.includes('localhost') || envUrl.includes('127.0.0.1'));
+  // The "ignore localhost, fall back to prod" safety net only makes sense in
+  // production (guards against a Vercel deploy where the env var was left
+  // pointing at a dev template value). In development this must NOT trigger:
+  // a locally-configured baseURL is legitimate there, and silently swapping
+  // it for the production domain breaks session/cookie context (the
+  // configured baseURL and the actual request host diverge), which makes
+  // Better Auth reject otherwise-valid sessions issued by the other service.
+  if (envUrl && (process.env.NODE_ENV !== 'production' || !isLocalUrl)) {
     return envUrl;
   }
   // Default to the custom production domain.
@@ -55,6 +81,7 @@ const detectBaseUrl = (): string => {
 // regardless of env. Local dev origins are added too so developers can test.
 const trustedOrigins = [
   ...LOCAL_DEV_ORIGINS,
+  ...LAN_DEV_ORIGINS,
   ...PRODUCTION_ORIGINS,
   // Env var overrides — only if set to a non-localhost URL.
   process.env.BETTER_AUTH_URL && !process.env.BETTER_AUTH_URL.includes('localhost')

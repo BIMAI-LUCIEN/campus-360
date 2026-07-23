@@ -83,7 +83,13 @@ export async function listUserDocuments(userId: string): Promise<Document[]> {
   }));
 }
 
+// Postgres uuid guard — a non-uuid id (e.g. a stale "new" placeholder) must
+// resolve to "not found" rather than throwing "invalid input syntax for type
+// uuid" from the driver, which would surface as a 500.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function getDocumentById(documentId: string, userId: string): Promise<Document | null> {
+  if (!UUID_RE.test(documentId)) return null;
   const res = await databasePool.query(
     'select * from public.app_documents where id = $1 and user_id = $2 limit 1',
     [documentId, userId]
@@ -113,12 +119,28 @@ export async function createDocument(
   try {
     await client.query('begin');
 
-    // 1. Insert document
+    // 1. Insert document with all columns explicitly set so the row is complete
+    // regardless of what NOT NULL constraints or column defaults exist in prod.
     const documentRes = await client.query(
-      `insert into public.app_documents (user_id, title, description, template_type)
-       values ($1, $2, $3, $4)
+      `insert into public.app_documents
+         (user_id, title, description, template_type,
+          font_family, line_spacing, margins, cover_template, cover_data,
+          primary_color, secondary_color)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        returning *`,
-      [userId, title, description || null, templateType]
+      [
+        userId,
+        title,
+        description || null,
+        templateType,
+        'Lora',           // font_family
+        1.5,              // line_spacing
+        'normal',         // margins
+        'classic',        // cover_template
+        {},               // cover_data
+        '#2563EB',        // primary_color
+        '#0D9488',        // secondary_color
+      ]
     );
 
     const document = documentRes.rows[0];

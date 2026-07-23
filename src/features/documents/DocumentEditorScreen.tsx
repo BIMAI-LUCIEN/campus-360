@@ -10,7 +10,10 @@ import {
   Platform, Linking, Keyboard, TouchableWithoutFeedback
 } from 'react-native';
 import { WebView } from 'react-native-webview';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { authFetch, authBaseUrl, authClient } from '../auth/betterAuth';
+import { stitchColors } from '../../theme/stitch';
 
 type Document = {
   id: string;
@@ -47,8 +50,8 @@ const EDITOR_HTML = (sectionTitles: string[]) => `
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  background: #0F172A;
-  color: #CBD5E1;
+  background: ${stitchColors.ink};
+  color: ${stitchColors.inkFaint};
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 15px;
   line-height: 1.6;
@@ -61,7 +64,7 @@ body {
 .toolbar {
   position: sticky; top: 0;
   display: flex; gap: 4px; flex-wrap: wrap;
-  background: #1E293B;
+  background: ${stitchColors.inkSoft};
   padding: 10px 12px;
   border-radius: 12px;
   margin-bottom: 16px;
@@ -70,21 +73,21 @@ body {
 .tool-btn {
   width: 36px; height: 36px;
   border: none; border-radius: 8px;
-  background: #334155; color: #94A3B8;
+  background: #334155; color: ${stitchColors.inkSubtle};
   font-size: 14px; font-weight: 700;
   cursor: pointer; display: flex;
   align-items: center; justify-content: center;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s;
 }
-.tool-btn:active { background: #475569; }
-.tool-btn.active { background: #10B981; color: #fff; }
+.tool-btn:active { background: ${stitchColors.inkMuted}; }
+.tool-btn.active { background: ${stitchColors.emeraldTone}; color: ${stitchColors.white}; }
 .sep { width: 1px; height: 28px; background: #334155; margin: 4px 2px; }
 
 /* Section nav pills */
 .section-nav {
   display: flex; gap: 6px; flex-wrap: wrap;
-  background: #1E293B;
+  background: ${stitchColors.inkSoft};
   padding: 10px 12px;
   border-radius: 12px;
   margin-bottom: 12px;
@@ -93,11 +96,11 @@ body {
   padding: 6px 12px;
   border-radius: 20px;
   font-size: 12px; font-weight: 600;
-  background: #334155; color: #94A3B8;
+  background: #334155; color: ${stitchColors.inkSubtle};
   border: none; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.sec-pill.active { background: #2563EB; color: #fff; }
+.sec-pill.active { background: #2563EB; color: ${stitchColors.white}; }
 
 /* Cover form */
 .cover-form { display: flex; flex-direction: column; gap: 12px; }
@@ -112,7 +115,7 @@ body {
 }
 .cover-form input, .cover-form textarea {
   width: 100%;
-  background: #1E293B;
+  background: ${stitchColors.inkSoft};
   border: 1px solid #334155;
   border-radius: 10px;
   color: #F8FAFC;
@@ -121,7 +124,7 @@ body {
   outline: none;
 }
 .cover-form input:focus, .cover-form textarea:focus {
-  border-color: #10B981;
+  border-color: ${stitchColors.emeraldTone};
 }
 .cover-form textarea { resize: none; height: 64px; }
 .cover-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -129,13 +132,13 @@ body {
 
 /* Rich editor area */
 .editor-area {
-  background: #1E293B;
+  background: ${stitchColors.inkSoft};
   border-radius: 14px;
   padding: 16px;
   min-height: 300px;
   border: 1px solid #334155;
 }
-.editor-area:focus-within { border-color: #10B981; }
+.editor-area:focus-within { border-color: ${stitchColors.emeraldTone}; }
 .section-heading {
   font-size: 18px; font-weight: 800;
   color: #F8FAFC; margin-bottom: 12px;
@@ -147,13 +150,13 @@ body {
   outline: none;
   -webkit-user-select: text;
   user-select: text;
-  color: #CBD5E1;
+  color: ${stitchColors.inkFaint};
   font-size: 15px;
   line-height: 1.7;
 }
 #editor:empty:before {
   content: 'Commencez à rédiger ici...';
-  color: #475569;
+  color: ${stitchColors.inkMuted};
 }
 #editor p { margin-bottom: 8px; }
 #editor h2 { font-size: 18px; font-weight: 800; color: #F8FAFC; margin: 12px 0 6px; }
@@ -161,11 +164,11 @@ body {
 #editor ul, #editor ol { padding-left: 20px; margin-bottom: 8px; }
 #editor li { margin-bottom: 4px; }
 #editor strong, #editor b { color: #F8FAFC; font-weight: 700; }
-#editor em, #editor i { color: #94A3B8; font-style: italic; }
+#editor em, #editor i { color: ${stitchColors.inkSubtle}; font-style: italic; }
 
 /* AI panel */
 .ai-panel {
-  background: #1E293B;
+  background: ${stitchColors.inkSoft};
   border-radius: 14px;
   padding: 14px;
   margin-top: 16px;
@@ -173,10 +176,10 @@ body {
 }
 .ai-panel h3 { color: #FCD34D; font-size: 13px; font-weight: 800; margin-bottom: 8px; }
 .ai-panel textarea {
-  width: 100%; background: #0F172A;
+  width: 100%; background: ${stitchColors.ink};
   border: 1px solid #334155;
   border-radius: 10px;
-  color: #CBD5E1; font-size: 13px;
+  color: ${stitchColors.inkFaint}; font-size: 13px;
   padding: 10px 12px; resize: none; height: 70px;
   outline: none;
 }
@@ -188,8 +191,8 @@ body {
   font-size: 12px; font-weight: 700;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.ai-btn-draft { background: #FCD34D; color: #1E293B; }
-.ai-btn-improve { background: #334155; color: #CBD5E1; }
+.ai-btn-draft { background: #FCD34D; color: ${stitchColors.inkSoft}; }
+.ai-btn-improve { background: #334155; color: ${stitchColors.inkFaint}; }
 .ai-credit-note {
   font-size: 11px; color: #64748B;
   margin-top: 6px; text-align: center;
@@ -197,10 +200,10 @@ body {
 
 /* Settings panel */
 .settings-panel {
-  background: #1E293B; border-radius: 14px;
+  background: ${stitchColors.inkSoft}; border-radius: 14px;
   padding: 14px; margin-top: 16px; border: 1px solid #334155;
 }
-.settings-panel h3 { color: #10B981; font-size: 13px; font-weight: 800; margin-bottom: 10px; }
+.settings-panel h3 { color: ${stitchColors.emeraldTone}; font-size: 13px; font-weight: 800; margin-bottom: 10px; }
 .settings-row { margin-bottom: 10px; }
 .settings-row label {
   font-size: 11px; font-weight: 700;
@@ -209,10 +212,10 @@ body {
 }
 .settings-row select {
   width: 100%;
-  background: #0F172A;
+  background: ${stitchColors.ink};
   border: 1px solid #334155;
   border-radius: 10px;
-  color: #CBD5E1; font-size: 13px;
+  color: ${stitchColors.inkFaint}; font-size: 13px;
   padding: 8px 10px;
   outline: none;
 }
@@ -224,14 +227,14 @@ body {
   align-items: center;
   padding: 6px 0;
   border-bottom: 1px dashed #334155;
-  font-size: 13px; color: #94A3B8;
+  font-size: 13px; color: ${stitchColors.inkSubtle};
 }
-.toc-item span:last-child { font-size: 11px; color: #475569; }
+.toc-item span:last-child { font-size: 11px; color: ${stitchColors.inkMuted}; }
 
 /* Auto-save indicator */
 .save-indicator {
   position: fixed; bottom: 20px; right: 20px;
-  background: #10B981; color: #fff;
+  background: ${stitchColors.emeraldTone}; color: ${stitchColors.white};
   padding: 6px 14px; border-radius: 20px;
   font-size: 12px; font-weight: 700;
   opacity: 0; transition: opacity 0.3s;
@@ -796,14 +799,36 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
     );
   }, [sections, currentSectionId, documentId, report]);
 
-  // Export PDF
-  const handleExportPdf = useCallback(() => {
+  // Export PDF natively
+  const handleExportPdf = useCallback(async () => {
+    if (!report || sections.length === 0) return;
     setExporting(true);
-    const token = authClient.getCookie();
-    Linking.openURL(`${authBaseUrl}/api/mobile/documents/${documentId}/export/pdf${token ? `?token=${token}` : ''}`)
-      .catch(() => Alert.alert('Erreur', 'Impossible d\'ouvrir l\'export PDF.'))
-      .finally(() => setExporting(false));
-  }, [documentId]);
+    try {
+      const htmlContent = EDITOR_HTML(sections.map(s => s.title)); // We could inject full content here if needed
+      
+      Alert.alert('Génération', 'Préparation du PDF natif en cours...');
+      
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false
+      });
+      
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Exporter le document',
+          UTI: 'com.adobe.pdf'
+        });
+      } else {
+        Alert.alert('Partage indisponible', 'Le partage n\'est pas disponible sur cet appareil.');
+      }
+    } catch (err) {
+      console.warn(err);
+      Alert.alert('Erreur', 'Impossible de générer le PDF.');
+    } finally {
+      setExporting(false);
+    }
+  }, [documentId, report, sections]);
 
   // Get current section title
   const currentSection = sections.find(s => s.id === currentSectionId);
@@ -815,7 +840,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#10B981" />
+          <ActivityIndicator size="large" color={stitchColors.emeraldTone} />
           <Text style={styles.loadingText}>Chargement de l'éditeur...</Text>
         </View>
       </SafeAreaView>
@@ -862,7 +887,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
             disabled={exporting}
           >
             {exporting
-              ? <ActivityIndicator size="small" color="#fff" />
+              ? <ActivityIndicator size="small" color={stitchColors.white} />
               : <Text style={styles.pdfBtnText}>📄 PDF</Text>
             }
           </Pressable>
@@ -972,7 +997,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
                 disabled={addingSection}
               >
                 {addingSection
-                  ? <ActivityIndicator size="small" color="#fff" />
+                  ? <ActivityIndicator size="small" color={stitchColors.white} />
                   : <Text style={styles.modalConfirmText}>Ajouter</Text>
                 }
               </Pressable>
@@ -997,7 +1022,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: stitchColors.ink,
   },
   centered: {
     flex: 1,
@@ -1007,7 +1032,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   loadingText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1017,13 +1042,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   retryBtn: {
-    backgroundColor: '#1E293B',
+    backgroundColor: stitchColors.inkSoft,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
   },
   retryBtnText: {
-    color: '#fff',
+    color: stitchColors.white,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -1034,7 +1059,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1E293B',
+    backgroundColor: stitchColors.inkSoft,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#334155',
@@ -1062,7 +1087,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   saveStatus: {
-    color: '#10B981',
+    color: stitchColors.emeraldTone,
     fontSize: 10,
     fontWeight: '600',
     marginTop: 2,
@@ -1079,18 +1104,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   pdfBtn: {
-    backgroundColor: '#10B981',
+    backgroundColor: stitchColors.emeraldTone,
     minWidth: 56,
   },
   pdfBtnText: {
-    color: '#fff',
+    color: stitchColors.white,
     fontSize: 12,
     fontWeight: '700',
   },
 
   // Section tabs
   sectionTabs: {
-    backgroundColor: '#1E293B',
+    backgroundColor: stitchColors.inkSoft,
     borderBottomWidth: 1,
     borderBottomColor: '#334155',
   },
@@ -1115,12 +1140,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
   },
   sectionTabText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 12,
     fontWeight: '600',
   },
   sectionTabTextActive: {
-    color: '#fff',
+    color: stitchColors.white,
   },
   deleteSectionBtn: {
     padding: 2,
@@ -1136,11 +1161,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#334155',
     borderWidth: 1,
-    borderColor: '#10B981',
+    borderColor: stitchColors.emeraldTone,
     borderStyle: 'dashed',
   },
   addSectionBtnText: {
-    color: '#10B981',
+    color: stitchColors.emeraldTone,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -1151,7 +1176,7 @@ const styles = StyleSheet.create({
   },
   webView: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: stitchColors.ink,
   },
 
   // Add section modal
@@ -1163,7 +1188,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: stitchColors.inkSoft,
     borderRadius: 20,
     padding: 24,
     width: '100%',
@@ -1178,7 +1203,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalInput: {
-    backgroundColor: '#0F172A',
+    backgroundColor: stitchColors.ink,
     borderWidth: 1,
     borderColor: '#334155',
     borderRadius: 12,
@@ -1201,7 +1226,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalCancelText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -1209,7 +1234,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#10B981',
+    backgroundColor: stitchColors.emeraldTone,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1217,7 +1242,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   modalConfirmText: {
-    color: '#fff',
+    color: stitchColors.white,
     fontSize: 14,
     fontWeight: '700',
   },

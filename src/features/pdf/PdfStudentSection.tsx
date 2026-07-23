@@ -21,28 +21,30 @@ import type { CampusDocument, CampusPdfPack } from '../../types';
 import { createSignedPdfUrl, recordPdfAnalyticsEvent } from './pdfApi';
 import { askPdfAssistant, type PdfAssistantMessage } from './pdfAssistant';
 import { FileText, Sparkles, Calendar, HelpCircle, MessageSquare, Lock } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { stitchColors, brandGradient } from '../../theme/stitch';
 
-// ─── Editorial colour tokens ─────────────────────────────────────────────────
+// ─── Editorial colour tokens — aliased onto the shared theme, not duplicated ──
 const $ = {
-  ink:    '#0F172A',
-  paper:  '#F6F1E7',
-  sienna: '#B7410E',
-  emd:    '#047857',   // emerald-deep: owned / success
-  muted:  '#475569',
-  soft:   '#94A3B8',
-  line:   '#CBD5E1',
-  surface:'#FFFFFF',
+  ink:    stitchColors.ink,
+  paper:  stitchColors.paper,
+  sienna: stitchColors.sienna,
+  emd:    stitchColors.emerald,   // emerald-deep: owned / success
+  muted:  stitchColors.inkMuted,
+  soft:   stitchColors.inkSubtle,
+  line:   stitchColors.inkFaint,
+  surface:stitchColors.surface,
   // pack icon BG: warm cream to contrast with paper
-  cream:  '#EDE8DC',
+  cream:  stitchColors.paperDeep,
   // owned tint
-  emdBg:  '#D1FAE5',
-  // sienna tint
-  siennaBg: '#FEF3C7',
+  emdBg:  stitchColors.emeraldBg,
+  // warning tint (quality/review badges)
+  siennaBg: stitchColors.warningBg,
 } as const;
 
 // ─── Shared typography helpers ────────────────────────────────────────────────
-const MONO = { fontFamily: 'monospace', letterSpacing: 1.4 } as const;
-const SERIF_TITLE = { fontFamily: 'serif', fontWeight: '700' as const };
+const MONO = { fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace' }) as string, letterSpacing: 1.4 } as const;
+const SERIF_TITLE = { fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia, serif' }) as string, fontWeight: '700' as const };
 
 type PdfStudentSectionProps = {
   documents: CampusDocument[];
@@ -325,9 +327,9 @@ export function PdfStudentSection({
     level !== allValue;
   const activeFilterCount = [university, faculty, subject, level].filter((item) => item !== allValue).length;
   const filterSections = [
-    { key: 'university', label: 'Universite', options: universities, value: university, onChange: setUniversity },
+    { key: 'university', label: 'Université', options: universities, value: university, onChange: setUniversity },
     { key: 'faculty', label: 'Filière', options: faculties, value: faculty, onChange: setFaculty },
-    { key: 'subject', label: 'Matiere', options: subjects, value: subject, onChange: setSubject },
+    { key: 'subject', label: 'Matière', options: subjects, value: subject, onChange: setSubject },
     { key: 'level', label: 'Niveau', options: levels, value: level, onChange: setLevel },
   ] as const;
   const filterSummary = filterSections.filter((section) => section.value !== allValue);
@@ -567,7 +569,7 @@ export function PdfStudentSection({
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Titre, matiere, prof..."
+          placeholder="Titre, matière, prof…"
           placeholderTextColor={$.muted}
           style={styles.searchInput}
         />
@@ -596,7 +598,7 @@ export function PdfStudentSection({
               ))
             ) : (
               <View style={styles.summaryChipMuted}>
-                <Text style={styles.summaryChipMutedText}>Tous les etablissements</Text>
+                <Text style={styles.summaryChipMutedText}>Tous les établissements</Text>
               </View>
             )}
           </ScrollView>
@@ -610,7 +612,7 @@ export function PdfStudentSection({
             <Text style={styles.stateBadgeMono}>...</Text>
           </View>
           <Text style={styles.stateTitle}>Chargement du catalogue</Text>
-          <Text style={styles.bodyMuted}>On recupere les PDF, packs et filtres disponibles.</Text>
+          <Text style={styles.bodyMuted}>On récupère les PDF, packs et filtres disponibles.</Text>
         </View>
       ) : null}
 
@@ -624,7 +626,7 @@ export function PdfStudentSection({
           <Text style={styles.bodyMuted}>{error}</Text>
           {onRefresh ? (
             <Pressable style={styles.retryButton} onPress={onRefresh}>
-              <Text style={styles.retryButtonText}>Reessayer</Text>
+              <Text style={styles.retryButtonText}>Réessayer</Text>
             </Pressable>
           ) : null}
         </View>
@@ -637,7 +639,7 @@ export function PdfStudentSection({
             <Text style={styles.stateBadgeMono}>0</Text>
           </View>
           <Text style={styles.stateTitle}>
-            {viewMode === 'library' ? 'aucun pack achete' : 'aucun pack trouve'}
+            {viewMode === 'library' ? 'aucun pack acheté' : 'aucun pack trouvé'}
           </Text>
           <Text style={styles.bodyMuted}>
             {viewMode === 'library' ? "Tu n'as pas encore acheté de pack." : "Essaie une autre recherche ou regarde les PDF."}
@@ -652,10 +654,10 @@ export function PdfStudentSection({
             <Text style={styles.stateBadgeMono}>0</Text>
           </View>
           <Text style={styles.stateTitle}>
-            {viewMode === 'library' ? 'aucun PDF debloque' : 'aucun PDF trouve'}
+            {viewMode === 'library' ? 'aucun PDF débloqué' : 'aucun PDF trouvé'}
           </Text>
           <Text style={styles.bodyMuted}>
-            {viewMode === 'library' ? "Tu n'as pas encore debloque de PDF." : "Essaie une autre recherche."}
+            {viewMode === 'library' ? "Tu n'as pas encore débloqué de PDF." : "Essaie une autre recherche."}
           </Text>
         </View>
       ) : null}
@@ -667,7 +669,7 @@ export function PdfStudentSection({
             <Text style={styles.stateBadgeMono}>0</Text>
           </View>
           <Text style={styles.stateTitle}>Aucun achat</Text>
-          <Text style={styles.bodyMuted}>Tu n'as pas encore de PDF ou de Pack achete.</Text>
+          <Text style={styles.bodyMuted}>Tu n'as pas encore de PDF ou de Pack acheté.</Text>
         </View>
       ) : null}
 
@@ -677,7 +679,7 @@ export function PdfStudentSection({
           <View style={styles.flex}>
             <Text style={styles.eyebrow}>Bibliothèque</Text>
             <View style={styles.rule} />
-            <Text style={styles.editorialTitle}>Tes contenus debloques</Text>
+            <Text style={styles.editorialTitle}>Tes contenus débloqués</Text>
             <Text style={styles.bodyMuted}>
               {purchasedCount} PDF, {purchasedPackIds.length} packs et {ownedPageCount} pages disponibles.
             </Text>
@@ -689,11 +691,11 @@ export function PdfStudentSection({
       {!loading && !error && activeTab === 'packs' && visiblePacks.length > 0 ? (
         <View style={styles.editorialSectionStrip}>
           <View style={styles.flex}>
-            <Text style={styles.eyebrow}>Packs academiques</Text>
+            <Text style={styles.eyebrow}>Packs académiques</Text>
             <View style={styles.rule} />
             <Text style={[styles.editorialTitle, { fontSize: 17 }]}>Des lots plus rentables pour ton semestre</Text>
             <Text style={[styles.bodyMuted, { marginTop: 6 }]}>
-              {visiblePacks.length} packs · econ. potentielle {formatCoins(
+              {visiblePacks.length} packs · écon. potentielle {formatCoins(
                 Math.max(0, visiblePacks.reduce((sum, pack) => sum + Math.max(0, pack.originalPrice - pack.price), 0)),
               )} C
             </Text>
@@ -714,12 +716,12 @@ export function PdfStudentSection({
             <View style={styles.rule} />
             <Text style={[styles.editorialTitle, { fontSize: 17 }]}>Trouve rapidement le bon support</Text>
             <Text style={[styles.bodyMuted, { marginTop: 6 }]}>
-              {visibleDocuments.length} PDF visibles, {subjects.length - 1} matieres, filtres appliques.
+              {visibleDocuments.length} PDF visibles, {subjects.length - 1} matières, filtres appliqués.
             </Text>
           </View>
           {featuredDocument ? (
             <Pressable style={styles.editorialLink} onPress={() => openPreview(featuredDocument)}>
-              <Text style={styles.editorialLinkText}>Apercu</Text>
+              <Text style={styles.editorialLinkText}>Aperçu</Text>
             </Pressable>
           ) : null}
         </View>
@@ -754,7 +756,7 @@ export function PdfStudentSection({
                     <Text style={styles.cardTitle} numberOfLines={2}>{pack.title}</Text>
                     <View style={[styles.priceBadge, owned ? styles.priceBadgeOwned : styles.priceBadgeBuy]}>
                       <Text style={[styles.priceBadgeText, owned ? styles.priceBadgeTextOwned : styles.priceBadgeTextBuy]}>
-                        {owned ? 'Achete' : `${formatCoins(pack.price)} C`}
+                        {owned ? 'Acheté' : `${formatCoins(pack.price)} C`}
                       </Text>
                     </View>
                   </View>
@@ -835,93 +837,59 @@ export function PdfStudentSection({
 
       {/* ── Document cards ────────────────────────────────────────────────── */}
       {!loading && !error && activeTab === 'catalog' ? (
-        visibleDocuments.map((document, idx) => {
-          const owned = ownedDocumentIds.includes(document.id);
-          const purchasing = purchasingDocumentId === document.id;
-          const inLibrary = viewMode === 'library';
-          const di = folioNum(idx + 1);
-          const initials = document.subject.slice(0, 2).toUpperCase();
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: 4 }}>
+          {visibleDocuments.map((document, idx) => {
+            const owned = ownedDocumentIds.includes(document.id);
+            const purchasing = purchasingDocumentId === document.id;
+            const inLibrary = viewMode === 'library';
+            const initials = document.subject.slice(0, 2).toUpperCase();
 
-          return (
-            <View
-              key={document.id}
-              style={[styles.editorialCard, inLibrary && styles.editorialCardOwned]}
-            >
-              {/* Card header row */}
-              <View style={styles.cardHeaderRow}>
-                {/* Folio icon */}
-                <View style={[styles.folioIconBox, { backgroundColor: inLibrary ? $.emdBg : $.cream }]}>
-                  <Text style={[styles.folioNumber, { color: inLibrary ? $.emd : $.sienna }]}>{initials}</Text>
-                </View>
-
-                <View style={styles.flex}>
-                  <View style={styles.cardTitleRow}>
-                    <Text style={styles.cardTitle} numberOfLines={2}>{document.title}</Text>
-                    <View style={[styles.priceBadge, owned ? styles.priceBadgeOwned : styles.priceBadgeBuy]}>
-                      <Text style={[styles.priceBadgeText, owned ? styles.priceBadgeTextOwned : styles.priceBadgeTextBuy]}>
-                        {owned ? 'Achete' : `${formatCoins(document.price)} C`}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.cardMeta}>{document.subject} · {document.level}</Text>
-                  <Text style={styles.cardMeta}>{document.teacher} · {document.university}</Text>
-                  {inLibrary ? (
-                    <Text style={[styles.cardMeta, { color: $.emd, marginTop: 4, fontFamily: 'monospace', fontSize: 10 }]}>
-                      — securise pour lecture
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-
-              {/* Badges row */}
-              <View style={styles.badgeRow}>
-                {getDocumentBadges(document).map((badge) => (
-                  <View key={badge} style={[styles.editorialBadge, styles.editorialBadgeMuted]}>
-                    <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextMuted]}>{badge}</Text>
-                  </View>
-                ))}
-                <View style={[styles.editorialBadge, styles.editorialBadgeMuted]}>
-                  <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextMuted]}>{document.pageCount} p.</Text>
-                </View>
-                <View style={[styles.editorialBadge, styles.editorialBadgeMuted]}>
-                  <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextMuted]}>{document.fileSize}</Text>
-                </View>
-                {document.rating > 0 ? (
-                  <View style={[styles.editorialBadge, styles.editorialBadgeSienna]}>
-                    <Text style={[styles.editorialBadgeText, styles.editorialBadgeTextSienna]}>★ {document.rating}</Text>
-                  </View>
-                ) : null}
-              </View>
-
-              {/* Actions */}
-              <View style={styles.actionRow}>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.btnSecondary,
-                    pressed && styles.btnPressed,
-                  ]}
-                  onPress={() => openPreview(document)}
-                >
-                  <Text style={styles.btnSecondaryText}>{inLibrary ? 'Apercu' : 'Voir details'}</Text>
-                </Pressable>
-                <Pressable
-                  disabled={purchasing}
-                  style={({ pressed }) => [
-                    styles.btnPrimary,
-                    purchasing && styles.btnDisabled,
-                    owned && inLibrary && styles.btnOwnedLibrary,
-                    (pressed || purchasing) && styles.btnPressed,
-                  ]}
-                  onPress={() => (owned ? openDocument(document) : onBuyDocument(document))}
-                >
-                  <Text style={styles.btnPrimaryText}>
-                    {purchasing ? 'Achat...' : owned ? (inLibrary ? 'Continuer' : 'Lire') : 'Acheter'}
+            return (
+              <Pressable
+                key={document.id}
+                style={({ pressed }) => [
+                  {
+                    width: '48%',
+                    backgroundColor: stitchColors.surface,
+                    borderRadius: 16,
+                    overflow: 'hidden',
+                    marginBottom: 16,
+                    borderWidth: 1,
+                    borderColor: 'rgba(0,0,0,0.05)',
+                    shadowColor: stitchColors.ink,
+                    shadowOpacity: 0.05,
+                    shadowRadius: 10,
+                    shadowOffset: { width: 0, height: 4 },
+                    elevation: 2,
+                  },
+                  pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }
+                ]}
+                onPress={() => (owned ? openDocument(document) : openPreview(document))}
+              >
+                {/* Square Cover */}
+                <View style={{ aspectRatio: 1, backgroundColor: inLibrary ? stitchColors.emeraldBg : `${stitchColors.ink}0D`, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  <Text style={{ fontSize: 40, fontWeight: '900', color: inLibrary ? stitchColors.emerald : stitchColors.inkSubtle, opacity: 0.4 }}>
+                    {initials}
                   </Text>
-                </Pressable>
-              </View>
-            </View>
-          );
-        })
+                  
+                  {/* Badges */}
+                  <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: owned ? stitchColors.emerald : stitchColors.sienna, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+                    <Text style={{ color: stitchColors.paper, fontSize: 10, fontWeight: 'bold' }}>
+                      {owned ? 'Acquis' : `${formatCoins(document.price)} C`}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Content */}
+                <View style={{ padding: 12 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: stitchColors.ink, marginBottom: 4 }} numberOfLines={2}>{document.title}</Text>
+                  <Text style={{ fontSize: 12, color: stitchColors.inkMuted, marginBottom: 2 }} numberOfLines={1}>{document.subject}</Text>
+                  <Text style={{ fontSize: 10, color: stitchColors.inkSubtle }} numberOfLines={1}>{document.level}</Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
       ) : null}
 
       {/* ── Pack detail modal ─────────────────────────────────────────────── */}
@@ -930,7 +898,7 @@ export function PdfStudentSection({
           <View style={styles.editorialModalCard}>
             {selectedPack ? (
               <>
-                <Text style={styles.eyebrow}>Pack detail</Text>
+                <Text style={styles.eyebrow}>Détail du pack</Text>
                 <View style={styles.rule} />
                 <Text style={styles.editorialTitle}>{selectedPack.title}</Text>
                 <Text style={[styles.bodyMuted, { marginTop: 4 }]}>
@@ -997,24 +965,27 @@ export function PdfStudentSection({
                   <Pressable style={styles.btnSecondary} onPress={() => setSelectedPack(null)}>
                     <Text style={styles.btnSecondaryText}>Fermer</Text>
                   </Pressable>
-                  <Pressable
-                    disabled={purchasingPackId === selectedPack.id}
-                    style={[
-                      styles.btnPrimary,
-                      purchasedPackIds.includes(selectedPack.id) ? styles.btnOwned : null,
-                      purchasingPackId === selectedPack.id && styles.btnDisabled,
-                    ]}
-                    onPress={() => {
-                      if (!purchasedPackIds.includes(selectedPack.id)) onBuyPack(selectedPack);
-                      setSelectedPack(null);
-                    }}
-                  >
-                    <Text style={styles.btnPrimaryText}>
-                      {purchasedPackIds.includes(selectedPack.id)
-                        ? 'Deja achete'
-                        : `${formatCoins(selectedPack.price)} Coins`}
-                    </Text>
-                  </Pressable>
+                  {purchasedPackIds.includes(selectedPack.id) || purchasingPackId === selectedPack.id ? (
+                    <View style={[styles.btnPrimary, purchasedPackIds.includes(selectedPack.id) ? styles.btnOwned : styles.btnDisabled]}>
+                      <Text style={styles.btnPrimaryText}>
+                        {purchasedPackIds.includes(selectedPack.id) ? 'Déjà acheté' : `${formatCoins(selectedPack.price)} Coins`}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      style={{ flex: 1 }}
+                      onPress={() => { onBuyPack(selectedPack); setSelectedPack(null); }}
+                    >
+                      <LinearGradient
+                        colors={brandGradient.colors}
+                        start={brandGradient.horizontal.start}
+                        end={brandGradient.horizontal.end}
+                        style={styles.btnPrimary}
+                      >
+                        <Text style={styles.btnPrimaryText}>{`${formatCoins(selectedPack.price)} Coins`}</Text>
+                      </LinearGradient>
+                    </Pressable>
+                  )}
                 </View>
               </>
             ) : null}
@@ -1046,7 +1017,7 @@ export function PdfStudentSection({
                     const iconColor = active ? $.sienna : $.muted;
                     const label =
                       tool === 'pdf' ? 'PDF'
-                      : tool === 'summary' ? 'Resume'
+                      : tool === 'summary' ? 'Résumé'
                       : tool === 'plan' ? 'Plan'
                       : tool === 'quiz' ? 'Quiz'
                       : 'Chat';
@@ -1072,8 +1043,8 @@ export function PdfStudentSection({
                 </View>
               ) : (
                 <View style={styles.previewModeBadge}>
-                  <Lock size={12} color={$.paper} />
-                  <Text style={styles.previewModeBadgeText}>MODE APERCU — PAGE 1</Text>
+                  <Lock size={12} color="#FFFFFF" />
+                  <Text style={styles.previewModeBadgeText}>MODE APERÇU — PAGE 1</Text>
                 </View>
               )}
 
@@ -1125,7 +1096,7 @@ export function PdfStudentSection({
                     <View style={styles.previewUnlockBanner}>
                       <Lock size={20} color={$.sienna} style={{ marginBottom: 6 }} />
                       <Text style={styles.previewUnlockText}>
-                        Ce document contient {readerDocument.pageCount} pages. Debloque-le pour y acceder et utiliser les outils IA.
+                        Ce document contient {readerDocument.pageCount} pages. Débloque-le pour y accéder et utiliser les outils IA.
                       </Text>
                       <Pressable
                         style={styles.previewUnlockButton}
@@ -1151,7 +1122,7 @@ export function PdfStudentSection({
                     <View style={styles.flex}>
                       <Text style={[styles.aiTitle, { ...SERIF_TITLE, fontSize: 16, color: $.ink }]}>Campus AI</Text>
                       <Text style={[styles.aiSubtitle, { fontSize: 12, color: $.muted, marginTop: 2 }]}>
-                        Ton assistant personnel de revision.
+                        Ton assistant personnel de révision.
                       </Text>
                     </View>
                   </View>
@@ -1159,7 +1130,7 @@ export function PdfStudentSection({
                   <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 32 }}>
                     {assistantMessages.length === 0 ? (
                       <View style={{ marginTop: 8, gap: 8 }}>
-                        {['Fais-moi un resume', 'Genere un quiz de 5 questions', 'Explique-moi les concepts cles'].map((prompt) => (
+                        {['Fais-moi un résumé', 'Génère un quiz de 5 questions', 'Explique-moi les concepts clés'].map((prompt) => (
                           <Pressable key={prompt} style={styles.quickPrompt} onPress={() => askAssistant(prompt)}>
                             <Text style={styles.quickPromptText}>{prompt}</Text>
                           </Pressable>
@@ -1248,7 +1219,7 @@ export function PdfStudentSection({
                       <View style={styles.toolContent}>
                         {readerDocument.aiSummary ? (
                           <View style={[styles.studyBox, styles.studyBoxFeatured]}>
-                            <Text style={styles.studyBoxTitle}>Resume de l'IA</Text>
+                            <Text style={styles.studyBoxTitle}>Résumé de l'IA</Text>
                             <Text style={styles.readerParagraph}>{readerDocument.aiSummary}</Text>
                           </View>
                         ) : null}
@@ -1263,14 +1234,14 @@ export function PdfStudentSection({
                       <View style={styles.toolContent}>
                         {readerDocument.studyPlan?.length ? (
                           <View style={styles.studyBox}>
-                            <Text style={styles.studyBoxTitle}>Plan de revision recommande</Text>
+                            <Text style={styles.studyBoxTitle}>Plan de révision recommandé</Text>
                             {readerDocument.studyPlan.map((step, index) => (
                               <Text style={styles.readerParagraph} key={step}>{index + 1}. {step}</Text>
                             ))}
                           </View>
                         ) : (
                           <View style={styles.studyBox}>
-                            <Text style={styles.bodyMuted}>Aucun plan de revision disponible pour ce document.</Text>
+                            <Text style={styles.bodyMuted}>Aucun plan de révision disponible pour ce document.</Text>
                           </View>
                         )}
                       </View>
@@ -1402,7 +1373,7 @@ const styles = StyleSheet.create({
   },
   rule: {
     height: 1,
-    backgroundColor: $.ink,
+    backgroundColor: '#2E2E33',
     marginVertical: 6,
   },
   editorialTitle: {
@@ -1455,7 +1426,7 @@ const styles = StyleSheet.create({
   clearButton: {
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: $.ink,
+    borderColor: $.line,
     paddingHorizontal: 10,
     paddingVertical: 5,
     backgroundColor: $.surface,
@@ -1473,7 +1444,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: $.ink,
+    borderColor: $.line,
     backgroundColor: $.surface,
     marginBottom: 12,
     overflow: 'hidden',
@@ -1485,7 +1456,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   editorialTabActive: {
-    backgroundColor: $.ink,
+    backgroundColor: '#2E2E33',
   },
   editorialTabRight: {
     borderLeftWidth: 1,
@@ -1500,21 +1471,23 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
   },
   editorialTabTextActive: {
-    color: $.paper,
+    color: '#FFFFFF',
   },
 
   // ── Search input ────────────────────────────────────────────────────────
   searchInput: {
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: $.ink,
+    borderColor: $.line,
     backgroundColor: $.surface,
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: $.ink,
     fontSize: 14,
     marginBottom: 12,
-  },
+    outlineStyle: 'none',
+    outlineWidth: 0,
+  } as any,
 
   // ── Filter toolbar ──────────────────────────────────────────────────────
   filterToolbar: {
@@ -1525,7 +1498,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: $.ink,
+    borderColor: $.line,
     backgroundColor: $.surface,
     paddingHorizontal: 14,
     flexDirection: 'row',
@@ -1553,7 +1526,7 @@ const styles = StyleSheet.create({
     ...MONO,
     fontSize: 10,
     fontWeight: '700',
-    color: $.paper,
+    color: '#FFFFFF',
   },
   filterSummaryRow: {
     gap: 8,
@@ -1633,7 +1606,7 @@ const styles = StyleSheet.create({
   },
   stateBadgeAlert: {
     borderColor: $.sienna,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: stitchColors.warningBg,
   },
   stateBadgeMono: {
     ...MONO,
@@ -1658,7 +1631,7 @@ const styles = StyleSheet.create({
     ...MONO,
     fontSize: 10,
     fontWeight: '700',
-    color: $.paper,
+    color: '#FFFFFF',
     textTransform: 'uppercase',
   },
 
@@ -1668,7 +1641,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: $.ink,
+    borderColor: $.line,
     backgroundColor: $.surface,
     padding: 14,
     flexDirection: 'row',
@@ -1678,7 +1651,7 @@ const styles = StyleSheet.create({
   editorialLink: {
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: $.ink,
+    borderColor: $.line,
     paddingHorizontal: 12,
     paddingVertical: 8,
     alignSelf: 'flex-start',
@@ -1695,7 +1668,7 @@ const styles = StyleSheet.create({
   editorialCard: {
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: $.ink,
+    borderColor: $.line,
     backgroundColor: $.surface,
     marginHorizontal: 16,
     marginTop: 10,
@@ -1704,7 +1677,7 @@ const styles = StyleSheet.create({
   },
   editorialCardOwned: {
     borderColor: $.emd,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: stitchColors.emeraldBg,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -1774,7 +1747,7 @@ const styles = StyleSheet.create({
   },
   priceBadgeBuy: {
     backgroundColor: $.paper,
-    borderColor: $.ink,
+    borderColor: $.line,
   },
   priceBadgeOwned: {
     backgroundColor: $.emdBg,
@@ -1810,12 +1783,12 @@ const styles = StyleSheet.create({
     borderColor: $.line,
   },
   editorialBadgeSienna: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
+    backgroundColor: stitchColors.warningBg,
+    borderColor: stitchColors.warningTone,
   },
   editorialBadgeActive: {
-    backgroundColor: $.ink,
-    borderColor: $.ink,
+    backgroundColor: stitchColors.siennaBg,
+    borderColor: $.sienna,
   },
   editorialBadgeText: {
     ...MONO,
@@ -1828,10 +1801,10 @@ const styles = StyleSheet.create({
     color: $.muted,
   },
   editorialBadgeTextSienna: {
-    color: '#B45309',
+    color: stitchColors.warning,
   },
   editorialBadgeTextActive: {
-    color: $.paper,
+    color: '#FFFFFF',
   },
 
   // ── Progress ───────────────────────────────────────────────────────────
@@ -1864,7 +1837,7 @@ const styles = StyleSheet.create({
   btnPrimary: {
     flex: 1,
     borderRadius: 3,
-    backgroundColor: $.ink,
+    backgroundColor: '#2E2E33',
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1873,7 +1846,7 @@ const styles = StyleSheet.create({
     ...MONO,
     fontSize: 10,
     fontWeight: '700',
-    color: $.paper,
+    color: '#FFFFFF',
     textTransform: 'uppercase',
     letterSpacing: 1.2,
   },
@@ -1882,7 +1855,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: $.surface,
     borderWidth: 1,
-    borderColor: $.ink,
+    borderColor: $.line,
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1918,7 +1891,7 @@ const styles = StyleSheet.create({
   editorialModalCard: {
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: $.ink,
+    borderColor: $.line,
     backgroundColor: $.surface,
     padding: 16,
     gap: 14,
@@ -2069,7 +2042,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     backgroundColor: $.surface,
     borderBottomWidth: 1,
-    borderBottomColor: $.ink,
+    borderBottomColor: $.line,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -2077,7 +2050,7 @@ const styles = StyleSheet.create({
   readerClose: {
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: $.ink,
+    borderColor: $.line,
     backgroundColor: $.paper,
     paddingHorizontal: 10,
     paddingVertical: 7,
@@ -2129,7 +2102,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: $.ink,
+    borderColor: $.line,
     backgroundColor: $.surface,
     marginVertical: 12,
     marginHorizontal: 14,
@@ -2143,7 +2116,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   toolSegmentButtonActive: {
-    backgroundColor: $.ink,
+    backgroundColor: '#2E2E33',
   },
   toolSegmentText: {
     ...MONO,
@@ -2154,7 +2127,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   toolSegmentTextActive: {
-    color: $.paper,
+    color: '#FFFFFF',
   },
 
   // ── Preview badge ───────────────────────────────────────────────────────
@@ -2174,7 +2147,7 @@ const styles = StyleSheet.create({
     ...MONO,
     fontSize: 9,
     fontWeight: '700',
-    color: $.paper,
+    color: '#FFFFFF',
     textTransform: 'uppercase',
     letterSpacing: 1.4,
   },
@@ -2212,7 +2185,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     borderWidth: 1,
     borderColor: $.sienna,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: stitchColors.warningBg,
     padding: 16,
     marginHorizontal: 14,
     marginTop: 14,
@@ -2220,7 +2193,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   previewUnlockText: {
-    color: '#92400E',
+    color: stitchColors.warningDeep,
     fontSize: 13,
     lineHeight: 19,
     fontWeight: '600',
@@ -2236,7 +2209,7 @@ const styles = StyleSheet.create({
     ...MONO,
     fontSize: 10,
     fontWeight: '700',
-    color: $.paper,
+    color: '#FFFFFF',
     textTransform: 'uppercase',
     letterSpacing: 1.2,
   },
@@ -2255,7 +2228,7 @@ const styles = StyleSheet.create({
   },
   studyBoxFeatured: {
     borderColor: $.sienna,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: stitchColors.warningBg,
   },
   studyBoxTitle: {
     ...MONO,
@@ -2293,7 +2266,7 @@ const styles = StyleSheet.create({
     padding: 14,
     backgroundColor: $.surface,
     borderBottomWidth: 1,
-    borderBottomColor: $.ink,
+    borderBottomColor: $.line,
   },
   aiHeaderIcon: {
     width: 36,
@@ -2352,7 +2325,7 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: $.surface,
     borderTopWidth: 1,
-    borderTopColor: $.ink,
+    borderTopColor: $.line,
   },
   aiInput: {
     flex: 1,
@@ -2363,12 +2336,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     minHeight: 44,
     maxHeight: 100,
-  },
+    outlineStyle: 'none',
+    outlineWidth: 0,
+  } as any,
   aiSendButton: {
     width: 44,
     height: 44,
     borderRadius: 3,
-    backgroundColor: $.ink,
+    backgroundColor: '#2E2E33',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -2380,7 +2355,7 @@ const styles = StyleSheet.create({
     ...MONO,
     fontSize: 16,
     fontWeight: '700',
-    color: $.paper,
+    color: '#FFFFFF',
     lineHeight: 18,
   },
 });

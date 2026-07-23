@@ -34,7 +34,8 @@
             "preview"
           ]
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {
