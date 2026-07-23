@@ -34,6 +34,7 @@ import {
   Check,
   Upload,
 } from 'lucide-react';
+import { authClient } from '@/lib/auth-client';
 import {
   Card,
   CardHeader,
@@ -452,16 +453,13 @@ export function SettingsClient({ user }: { user: SettingsUser | null }) {
               onNameChange={setProfileName}
               onBioChange={setProfileBio}
               onSave={() => {
-                // TODO: persist to /api/admin/settings (profile)
-                pushToast('Profil mis à jour');
+                pushToast('Édition du profil bientôt disponible');
               }}
               onUploadPhoto={() => {
-                // TODO: persist to /api/admin/settings (avatar)
-                pushToast('Photo de profil mise à jour');
+                pushToast('Changement de photo bientôt disponible');
               }}
               onDeleteAccount={() => {
-                // TODO: persist to /api/admin/settings (delete account)
-                pushToast('Demande de suppression enregistrée');
+                pushToast('Suppression de compte bientôt disponible — contacte le support');
               }}
             />
           )}
@@ -473,8 +471,7 @@ export function SettingsClient({ user }: { user: SettingsUser | null }) {
                 setEmailNotifs((prev) => ({ ...prev, [key]: next }))
               }
               onSave={() => {
-                // TODO: persist to /api/admin/settings (notifications)
-                pushToast('Préférences de notifications enregistrées');
+                pushToast('Préférences de notifications bientôt disponibles');
               }}
             />
           )}
@@ -489,25 +486,34 @@ export function SettingsClient({ user }: { user: SettingsUser | null }) {
               onOldPwdChange={setOldPwd}
               onNewPwdChange={setNewPwd}
               onConfirmPwdChange={setConfirmPwd}
-              onChangePassword={() => {
+              onChangePassword={async () => {
+                if (!oldPwd) {
+                  pushToast('Indique ton mot de passe actuel');
+                  return;
+                }
                 if (!newPwd || newPwd !== confirmPwd) {
                   pushToast('Les mots de passe ne correspondent pas');
+                  return;
+                }
+                const result = await authClient.changePassword({
+                  currentPassword: oldPwd,
+                  newPassword: newPwd,
+                  revokeOtherSessions: false,
+                });
+                if (result.error) {
+                  pushToast(result.error.message ?? 'Changement de mot de passe impossible');
                   return;
                 }
                 setOldPwd('');
                 setNewPwd('');
                 setConfirmPwd('');
-                // TODO: persist to /api/admin/settings (password)
                 pushToast('Mot de passe changé');
               }}
-              onToggle2FA={(next) => {
-                setTwoFA(next);
-                // TODO: persist to /api/admin/settings (2fa)
-                pushToast(next ? '2FA activée' : '2FA désactivée');
+              onToggle2FA={() => {
+                pushToast('Authentification à deux facteurs bientôt disponible');
               }}
-              onRevokeSession={(id) => {
-                // TODO: persist to /api/admin/settings (revoke session)
-                pushToast(`Session ${id} déconnectée`);
+              onRevokeSession={() => {
+                pushToast('Gestion des sessions bientôt disponible');
               }}
             />
           )}
@@ -523,8 +529,7 @@ export function SettingsClient({ user }: { user: SettingsUser | null }) {
               onTimezoneChange={setTimezone}
               onPushChange={setPushNotifs}
               onSave={() => {
-                // TODO: persist to /api/admin/settings (preferences)
-                pushToast('Préférences enregistrées');
+                pushToast('Préférences bientôt disponibles');
               }}
             />
           )}
@@ -536,8 +541,7 @@ export function SettingsClient({ user }: { user: SettingsUser | null }) {
               onThemeChange={setTheme}
               onDensityChange={setDensity}
               onSave={() => {
-                // TODO: persist to /api/admin/settings (appearance)
-                pushToast('Apparence mise à jour');
+                pushToast('Apparence bientôt disponible');
               }}
             />
           )}
@@ -549,8 +553,7 @@ export function SettingsClient({ user }: { user: SettingsUser | null }) {
               onRevokeKey={revokeApiKey}
               onToggleWebhook={toggleWebhook}
               onAddIntegration={() => {
-                // TODO: open new integration modal
-                pushToast('Ouverture du catalogue d’intégrations');
+                pushToast('Intégrations bientôt disponibles');
               }}
             />
           )}
@@ -565,9 +568,7 @@ export function SettingsClient({ user }: { user: SettingsUser | null }) {
               onMessageChange={setSupportMessage}
               onSubmit={() => {
                 if (!supportMessage.trim()) return;
-                // TODO: persist to /api/admin/settings (support ticket)
-                setSupportMessage('');
-                pushToast('Message envoyé au support');
+                pushToast('Formulaire support bientôt disponible — écris-nous par email en attendant');
               }}
             />
           )}

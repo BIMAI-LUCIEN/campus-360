@@ -35,20 +35,26 @@ export const syncProfile = async (user: SessionUser) => {
   
   if (pool) {
     try {
-      const existing = await pool.query('select id from public.profiles where id = $1', [user.id]);
+      // `profiles.id` is a uuid column (legacy Supabase Auth schema), but
+      // Better Auth's `user.id` is not a uuid — passing it directly always
+      // threw "invalid input syntax for type uuid" here, silently caught
+      // below, which meant admin profiles/wallets were NEVER actually
+      // synced. Look up by email (the stable natural key) instead, and let
+      // Postgres generate a real uuid for new rows.
+      const existing = await pool.query('select id from public.profiles where lower(email) = lower($1)', [user.email]);
       if (existing.rows.length > 0) {
         await pool.query(
           'update public.profiles set email = $1, name = $2, role = $3, updated_at = now() where id = $4',
-          [user.email, user.name ?? user.email, role, user.id]
+          [user.email, user.name ?? user.email, role, existing.rows[0].id]
         );
       } else {
-        await pool.query(
-          'insert into public.profiles (id, email, name, role) values ($1, $2, $3, $4)',
-          [user.id, user.email, user.name ?? user.email, role]
+        const inserted = await pool.query(
+          'insert into public.profiles (id, email, name, role) values (gen_random_uuid(), $1, $2, $3) returning id',
+          [user.email, user.name ?? user.email, role]
         );
         await pool.query(
           'insert into public.wallets (user_id, balance_coins) values ($1, $2) on conflict (user_id) do nothing',
-          [user.id, role === 'admin' ? 0 : 5000]
+          [inserted.rows[0].id, role === 'admin' ? 0 : 5000]
         );
       }
     } catch (err) {

@@ -15,9 +15,9 @@ import { authClient } from '@/lib/auth-client';
 export function LoginClient() {
   const router = useRouter();
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
-  const [name, setName] = useState('Admin Campus-Bordes');
-  const [email, setEmail] = useState('admin@campus360.local');
-  const [password, setPassword] = useState('Admin123456!');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
