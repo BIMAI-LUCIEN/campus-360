@@ -48,11 +48,11 @@ export default async function ComptePage() {
                 {user?.email}
               </p>
               <div className="flex flex-wrap items-center gap-2 mt-3">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[var(--color-emerald-bg)] text-[var(--color-emerald)] text-xs font-bold rounded-full">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   Étudiant
                 </span>
-                <span className="text-xs text-[var(--color-ink-lighter)]">
+                <span className="text-xs text-[var(--color-ink-subtle)]">
                   Membre depuis le {formatDate(user?.createdAt as string | Date | undefined)}
                 </span>
               </div>
@@ -78,7 +78,8 @@ export default async function ComptePage() {
             </Link>
             <Link
               href="/tarifs"
-              className="p-6 bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              className="p-6 text-white rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              style={{ background: "var(--gradient-brand)" }}
             >
               <Sparkles className="w-8 h-8 mb-3" />
               <h3 className="font-bold font-display mb-1">Passer Premium</h3>

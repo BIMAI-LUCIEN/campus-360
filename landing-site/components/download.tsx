@@ -23,8 +23,8 @@ export function Download() {
           width: 240,
           margin: 2,
           color: {
-            dark: "#0F172A",
-            light: "#F6F1E7",
+            dark: "#0E0E10",
+            light: "#FFFFFF",
           },
         });
         setQrDataUrl(dataUrl);
@@ -57,7 +57,7 @@ export function Download() {
 
             <div className="flex flex-col sm:flex-row gap-3">
               <a href={APK_URL} download="campus-360.apk">
-                <Button size="lg" variant="secondary" className="gap-2">
+                <Button size="lg" variant="primary" className="gap-2">
                   <Smartphone className="w-5 h-5" />
                   Télécharger l&apos;APK
                 </Button>
@@ -72,7 +72,7 @@ export function Download() {
 
           {/* Right — QR */}
           <div className="flex justify-center lg:justify-end">
-            <div className="bg-[var(--color-paper)] border border-[var(--color-ink)]/10 p-8">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-ink-faint)] rounded-[var(--radius-editorial)] p-8">
               <div className="flex flex-col items-center gap-4">
                 <div className="flex items-center gap-2 text-[var(--color-ink-subtle)]">
                   <QrCode className="w-5 h-5" />

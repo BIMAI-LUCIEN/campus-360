@@ -98,7 +98,7 @@ const categories = [
 export default function AidePage() {
   return (
     <SiteShell>
-      <section className="py-16 lg:py-24 border-b border-[var(--color-ink)]">
+      <section className="py-16 lg:py-24 border-b border-[var(--color-ink-faint)]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display mb-6">
             Comment on peut{" "}

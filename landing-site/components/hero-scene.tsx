@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Image from "next/image";
+import { Sparkles, Wallet } from "lucide-react";
 
 export default function HeroScene() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -32,6 +33,12 @@ export default function HeroScene() {
 
   return (
     <div className="relative">
+      {/* Ambient gradient glow behind the phone */}
+      <div
+        className="absolute -inset-10 rounded-full blur-3xl opacity-40 -z-10"
+        style={{ background: "var(--gradient-brand)" }}
+      />
+
       {/* Phone frame */}
       <div
         ref={containerRef}
@@ -39,33 +46,36 @@ export default function HeroScene() {
         style={{ transformStyle: "preserve-3d" }}
       >
         {/* Phone body */}
-        <div className="relative w-[280px] sm:w-[300px] rounded-[2rem] bg-[var(--color-ink)] p-2">
+        <div className="relative w-[280px] sm:w-[300px] rounded-[2rem] bg-[var(--color-paper-deep)] border border-[var(--color-ink-faint)] p-2">
           {/* Notch */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-6 bg-[var(--color-ink)] rounded-full z-10" />
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-6 bg-[var(--color-paper)] rounded-full z-10" />
 
-          {/* Screen */}
-          <div className="relative rounded-[1.6rem] overflow-hidden bg-[var(--color-paper)] aspect-[9/19]">
+          {/* Screen — real app screenshot */}
+          <div className="relative rounded-[1.6rem] overflow-hidden bg-[var(--color-paper)] aspect-[9/19.5]">
             <Image
-              src="/images/screenshot-hero.jpg"
-              alt="Campus 360 app screenshot"
+              src="/images/app-home.png"
+              alt="Écran d'accueil de l'app Campus 360"
               fill
-              className="object-cover"
+              className="object-cover object-top"
               priority
             />
           </div>
         </div>
 
-        {/* Floating badges */}
-        <div className="absolute -top-4 -right-4 bg-[var(--color-paper)] border border-[var(--color-ink)] rounded-[4px] px-3 py-2 flex items-center gap-2 text-xs font-semibold">
-          <div className="w-5 h-5 bg-[var(--color-sienna)] rounded-[3px] flex items-center justify-center">
-            <span className="text-white text-[10px]">✨</span>
+        {/* Floating badges — dark chips with gradient icon */}
+        <div className="absolute -top-4 -right-4 bg-[var(--color-paper-deep)] border border-[var(--color-ink-faint)] rounded-[10px] px-3 py-2 flex items-center gap-2 text-xs font-semibold shadow-xl">
+          <div
+            className="w-5 h-5 rounded-[6px] flex items-center justify-center"
+            style={{ background: "var(--gradient-brand)" }}
+          >
+            <Sparkles className="w-3 h-3 text-white" strokeWidth={2.5} />
           </div>
           <span className="text-[var(--color-ink)]">IA activée</span>
         </div>
 
-        <div className="absolute -bottom-4 -left-4 bg-[var(--color-paper)] border border-[var(--color-ink)] rounded-[4px] px-3 py-2 flex items-center gap-2 text-xs font-semibold">
-          <div className="w-5 h-5 bg-[var(--color-emerald)] rounded-[3px] flex items-center justify-center">
-            <span className="text-white text-[10px]">✓</span>
+        <div className="absolute -bottom-4 -left-4 bg-[var(--color-paper-deep)] border border-[var(--color-ink-faint)] rounded-[10px] px-3 py-2 flex items-center gap-2 text-xs font-semibold shadow-xl">
+          <div className="w-5 h-5 rounded-[6px] bg-[var(--color-emerald)]/20 flex items-center justify-center">
+            <Wallet className="w-3 h-3 text-[var(--color-emerald)]" strokeWidth={2.5} />
           </div>
           <span className="text-[var(--color-ink)]">Wallet chargé</span>
         </div>

@@ -78,14 +78,14 @@ export default function HomePage() {
 
                 <div className="flex flex-col sm:flex-row gap-3 mb-9">
                   <a href={APK_URL} download="campus-360.apk">
-                    <Button size="lg" variant="secondary" className="gap-2 w-full sm:w-auto">
+                    <Button size="lg" variant="primary" className="gap-2 w-full sm:w-auto">
                       <BookOpen className="w-4 h-4" />
                       Télécharger l&apos;APK
                       <ArrowRight className="w-4 h-4" />
                     </Button>
                   </a>
                   <Link href="/fonctionnalites">
-                    <Button size="lg" variant="ghost" className="w-full sm:w-auto">
+                    <Button size="lg" variant="secondary" className="w-full sm:w-auto">
                       Voir les fonctionnalités
                     </Button>
                   </Link>
@@ -105,12 +105,12 @@ export default function HomePage() {
         </section>
 
         {/* ─── MASTHEAD STRIP ───────────────────────────────────── */}
-        <section className="border-y border-[var(--color-ink)]">
+        <section className="border-y border-[var(--color-ink-faint)]">
           <div className="max-w-6xl mx-auto px-6">
-            <div className="grid grid-cols-3 divide-x divide-[var(--color-ink)]/15">
+            <div className="grid grid-cols-3 divide-x divide-[var(--color-ink-faint)]">
               {stats.map((s) => (
                 <div key={s.label} className="py-8 sm:py-10 text-center">
-                  <div className="font-display text-3xl sm:text-5xl font-extrabold tracking-[-0.02em] mb-1">
+                  <div className="font-display text-3xl sm:text-5xl font-extrabold tracking-[-0.02em] mb-1 text-gradient-brand">
                     {s.value}
                   </div>
                   <div className="font-mono text-[0.6875rem] font-semibold tracking-[0.14em] uppercase text-[var(--color-ink-subtle)]">
@@ -163,17 +163,21 @@ export default function HomePage() {
         <Screenshots />
 
         {/* ─── DOWNLOAD CTA ──────────────────────────────────────── */}
-        <section className="py-24 lg:py-32 bg-[var(--color-ink)] text-[var(--color-paper)]">
-          <div className="max-w-4xl mx-auto px-6 text-center">
+        <section className="relative py-24 lg:py-32 bg-[var(--color-paper-deep)] overflow-hidden">
+          <div
+            className="absolute inset-x-0 top-0 h-px"
+            style={{ background: "var(--gradient-brand)" }}
+          />
+          <div className="max-w-4xl mx-auto px-6 text-center relative">
             <Sparkles className="w-8 h-8 mx-auto mb-6 text-[var(--color-sienna-tone)]" strokeWidth={1.5} />
             <h2 className="font-display text-4xl sm:text-5xl font-extrabold tracking-[-0.02em] mb-4">
               Télécharge l&apos;app.
             </h2>
-            <p className="text-[var(--color-paper)]/60 mb-10 max-w-md mx-auto">
+            <p className="text-[var(--color-ink-muted)] mb-10 max-w-md mx-auto">
               Disponible sur Android. APK gratuit, sans pub, sans engagement.
             </p>
             <a href={APK_URL} download="campus-360.apk">
-              <Button size="lg" variant="secondary" className="gap-2">
+              <Button size="lg" variant="primary" className="gap-2">
                 <BookOpen className="w-5 h-5" />
                 Télécharger l&apos;APK gratuit
                 <ArrowRight className="w-4 h-4" />

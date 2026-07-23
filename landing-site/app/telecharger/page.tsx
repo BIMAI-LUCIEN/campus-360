@@ -48,7 +48,7 @@ const requirements = [
 export default function TelechargerPage() {
   return (
     <SiteShell>
-      <section className="py-20 lg:py-28 border-b border-[var(--color-ink)]">
+      <section className="py-20 lg:py-28 border-b border-[var(--color-ink-faint)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="kicker justify-center flex mb-6">Téléchargement direct APK</p>
           <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] mb-6">
@@ -61,7 +61,7 @@ export default function TelechargerPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
             <a href={APK_URL} download="campus-360.apk">
-              <Button size="lg" variant="secondary" className="gap-2 w-full sm:w-auto">
+              <Button size="lg" variant="primary" className="gap-2 w-full sm:w-auto">
                 <Download className="w-5 h-5" />
                 campus-360.apk (71,5 Mo)
               </Button>
@@ -113,7 +113,10 @@ export default function TelechargerPage() {
               },
             ].map((s, i, arr) => (
               <div key={s.step} className={`flex gap-5 py-6 ${i < arr.length - 1 ? "border-b border-[var(--color-ink)]/10" : ""}`}>
-                <div className="w-11 h-11 flex-shrink-0 rounded-[4px] bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center font-display font-bold text-lg">
+                <div
+                  className="w-11 h-11 flex-shrink-0 rounded-[10px] text-white flex items-center justify-center font-display font-bold text-lg"
+                  style={{ background: "var(--gradient-brand)" }}
+                >
                   {s.step}
                 </div>
                 <div className="flex-1">
@@ -183,17 +186,17 @@ export default function TelechargerPage() {
         </div>
       </section>
 
-      <section className="py-16 bg-[var(--color-ink)] text-[var(--color-paper)]">
+      <section className="py-16 bg-[var(--color-paper-deep)] border-t border-[var(--color-ink-faint)]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Apple className="w-10 h-10 text-[var(--color-paper)]/50 mx-auto mb-4" strokeWidth={1.5} />
+          <Apple className="w-10 h-10 text-[var(--color-ink-subtle)] mx-auto mb-4" strokeWidth={1.5} />
           <h2 className="font-display text-2xl font-extrabold tracking-[-0.02em] mb-3">
             iOS arrive bientôt
           </h2>
-          <p className="text-[var(--color-paper)]/60 mb-6">
+          <p className="text-[var(--color-ink-muted)] mb-6">
             On prépare la version iPhone / iPad. Inscris-toi pour être prévenu.
           </p>
           <Link href="/inscription">
-            <Button variant="secondary">Être notifié à la sortie iOS</Button>
+            <Button variant="primary">Être notifié à la sortie iOS</Button>
           </Link>
         </div>
       </section>

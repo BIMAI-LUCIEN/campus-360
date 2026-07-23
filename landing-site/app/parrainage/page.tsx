@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function ParrainagePage() {
   return (
     <SiteShell>
-      <section className="py-16 lg:py-24 border-b border-[var(--color-ink)]">
+      <section className="py-16 lg:py-24 border-b border-[var(--color-ink-faint)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-sienna-bg)] text-[var(--color-sienna-deep)] text-sm font-bold rounded-full mb-6">
             <Gift className="w-4 h-4" />

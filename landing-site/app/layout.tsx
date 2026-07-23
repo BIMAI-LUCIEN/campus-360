@@ -97,10 +97,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F6F1E7" },
-    { media: "(prefers-color-scheme: dark)", color: "#0F172A" },
-  ],
+  themeColor: "#0E0E10",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -187,7 +184,7 @@ export default function RootLayout({
         <meta name="geo.region" content="CM" />
         <meta name="geo.placename" content="Cameroun" />
       </head>
-      <body className="font-sans antialiased bg-white text-[var(--color-ink)]">
+      <body className="font-sans antialiased bg-[var(--color-paper)] text-[var(--color-ink)]">
         <Script
           id="ld-json-org"
           type="application/ld+json"

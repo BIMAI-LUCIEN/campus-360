@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default function ConnexionPage() {
   return (
     <SiteShell hidePromo>
-      <section className="min-h-[calc(100vh-4rem)] flex items-center py-12 border-b border-[var(--color-ink)]">
+      <section className="min-h-[calc(100vh-4rem)] flex items-center py-12 border-b border-[var(--color-ink-faint)]">
         <div className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="bg-[var(--color-paper)] rounded-3xl  border border-[var(--color-border)] p-8">
             <div className="text-center mb-8">

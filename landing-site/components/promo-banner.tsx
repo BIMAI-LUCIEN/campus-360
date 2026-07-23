@@ -41,11 +41,11 @@ export function PromoBanner({
   if (dismissed) return null;
 
   return (
-    <div className="bg-[var(--color-ink)] text-white">
-      <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center justify-center gap-3 text-sm">
+    <div className="relative" style={{ background: "var(--gradient-brand)" }}>
+      <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center justify-center gap-3 text-sm text-white">
         <span className="font-medium hidden sm:inline">{title}</span>
         <span className="font-medium sm:hidden">Promo Rentrée</span>
-        <span className="font-mono tabular-nums text-white/60">
+        <span className="font-mono tabular-nums text-white/70">
           {String(timeLeft.d).padStart(2, "0")}j{" "}
           {String(timeLeft.h).padStart(2, "0")}:
           {String(timeLeft.m).padStart(2, "0")}:

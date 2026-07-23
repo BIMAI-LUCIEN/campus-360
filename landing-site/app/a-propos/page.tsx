@@ -103,7 +103,7 @@ export default function AProposPage() {
                     idx % 2 === 0 ? "" : "sm:flex-row-reverse"
                   }`}
                 >
-                  <div className="absolute left-6 sm:left-1/2 w-3 h-3 -ml-1.5 bg-[var(--color-sienna)] rounded-full ring-4 ring-white" />
+                  <div className="absolute left-6 sm:left-1/2 w-3 h-3 -ml-1.5 bg-[var(--color-sienna)] rounded-full ring-4 ring-[var(--color-paper)]" />
                   <div className="ml-14 sm:ml-0 sm:w-1/2">
                     <div className="p-5 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)]">
                       <div className="text-sm font-bold text-[var(--color-sienna)] mb-1">{t.year}</div>
@@ -118,24 +118,24 @@ export default function AProposPage() {
         </div>
       </section>
 
-      <section className="py-20 bg-[var(--color-ink)] text-white">
+      <section className="py-20 bg-[var(--color-paper-deep)] border-t border-[var(--color-ink-faint)]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-extrabold font-display mb-4">
             Rejoins l&apos;aventure
           </h2>
-          <p className="text-lg text-white/70 mb-8">
+          <p className="text-lg text-[var(--color-ink-muted)] mb-8">
             Que tu sois étudiant, université ou investisseur, on a besoin de
             toi pour aller plus loin.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/contact">
-              <Button size="lg" className="bg-amber-cta hover:bg-amber-cta-hover gap-2 w-full sm:w-auto">
+              <Button size="lg" variant="primary" className="gap-2 w-full sm:w-auto">
                 <Mail className="w-5 h-5" />
                 Nous contacter
               </Button>
             </Link>
             <Link href="/blog">
-              <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white/10 gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="lg" className="gap-2 w-full sm:w-auto">
                 Lire le blog
                 <ArrowRight className="w-4 h-4" />
               </Button>

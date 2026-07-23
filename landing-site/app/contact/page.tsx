@@ -51,7 +51,7 @@ const channels = [
 export default function ContactPage() {
   return (
     <SiteShell>
-      <section className="py-16 lg:py-24 border-b border-[var(--color-ink)]">
+      <section className="py-16 lg:py-24 border-b border-[var(--color-ink-faint)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-100 text-brand-700 text-sm font-semibold rounded-full mb-6">
             <MessageCircle className="w-4 h-4" />

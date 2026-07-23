@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 export default function InscriptionPage() {
   return (
     <SiteShell hidePromo>
-      <section className="min-h-[calc(100vh-4rem)] py-12 border-b border-[var(--color-ink)]">
+      <section className="min-h-[calc(100vh-4rem)] py-12 border-b border-[var(--color-ink-faint)]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-5 gap-8 items-start">
             <div className="lg:col-span-3">

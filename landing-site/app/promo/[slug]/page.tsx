@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function PromoRentreePage() {
   return (
     <SiteShell hidePromo>
-      <section className="py-16 lg:py-24 border-b border-[var(--color-ink)]">
+      <section className="py-16 lg:py-24 border-b border-[var(--color-ink-faint)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--color-sienna-bg)] text-[var(--color-sienna-deep)] text-sm font-bold rounded-full mb-6">
             <Sparkles className="w-4 h-4" />
@@ -28,11 +28,11 @@ export default function PromoRentreePage() {
           <p className="text-2xl sm:text-3xl font-bold font-display mb-2">
             Pour la rentrée 2026
           </p>
-          <p className="text-lg text-[var(--color-ink-light)] max-w-2xl mx-auto mb-8">
-            <span className="line-through text-[var(--color-ink-lighter)]">9 900 FCFA/mois</span>{" "}
-            <span className="font-bold text-amber-600">4 950 FCFA/mois</span> — sans engagement, garanti 14 jours.
+          <p className="text-lg text-[var(--color-ink-muted)] max-w-2xl mx-auto mb-8">
+            <span className="line-through text-[var(--color-ink-subtle)]">9 900 FCFA/mois</span>{" "}
+            <span className="font-bold text-[var(--color-sienna)]">4 950 FCFA/mois</span> — sans engagement, garanti 14 jours.
           </p>
-          <div className="flex items-center justify-center gap-3 mb-8 text-sm text-amber-800">
+          <div className="flex items-center justify-center gap-3 mb-8 text-sm text-[var(--color-sienna-tone)]">
             <Clock className="w-4 h-4" />
             <span className="font-semibold">Offre valable jusqu&apos;au 30 septembre 2026</span>
           </div>
@@ -41,7 +41,7 @@ export default function PromoRentreePage() {
               href="https://campus360b.site/downloads/campus-360.apk"
               download="campus-360.apk"
             >
-              <Button size="lg" className="bg-amber-cta hover:bg-amber-cta-hover gap-2 w-full sm:w-auto">
+              <Button size="lg" variant="primary" className="gap-2 w-full sm:w-auto">
                 <BookOpen className="w-5 h-5" />
                 Télécharger et activer l&apos;offre
               </Button>
@@ -52,8 +52,8 @@ export default function PromoRentreePage() {
               </Button>
             </Link>
           </div>
-          <p className="text-xs text-[var(--color-ink-lighter)] mt-4">
-            Code <span className="font-mono font-bold bg-amber-100 px-2 py-0.5 rounded">RENTREE2026</span> appliqué automatiquement
+          <p className="text-xs text-[var(--color-ink-subtle)] mt-4">
+            Code <span className="font-mono font-bold bg-[var(--color-sienna-bg)] text-[var(--color-sienna)] px-2 py-0.5 rounded">RENTREE2026</span> appliqué automatiquement
           </p>
         </div>
       </section>

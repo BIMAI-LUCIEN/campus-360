@@ -95,7 +95,7 @@ const faq = [
 export default function TarifsPage() {
   return (
     <SiteShell>
-      <section className="py-20 lg:py-28 border-b border-[var(--color-ink)]">
+      <section className="py-20 lg:py-28 border-b border-[var(--color-ink-faint)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="kicker justify-center flex mb-6">Promo Rentrée · -50% sur Premium</p>
           <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] mb-6">

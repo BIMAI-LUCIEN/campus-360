@@ -9,14 +9,16 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants = {
+  // Primary — the signature violet→pink→blue gradient CTA.
   primary:
-    "bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-ink-soft)] active:translate-y-px",
+    "text-white bg-[image:var(--gradient-brand)] hover:brightness-110 active:translate-y-px shadow-[0_8px_24px_-8px_oklch(0.64_0.22_307_/_50%)]",
+  // Secondary — solid dark surface, used next to a primary gradient CTA.
   secondary:
-    "bg-[var(--color-sienna)] text-white hover:bg-[var(--color-sienna-deep)] active:translate-y-px",
+    "bg-[var(--color-paper-deep)] text-[var(--color-ink)] border border-[var(--color-ink-faint)] hover:bg-[var(--color-paper-soft)] active:translate-y-px",
   ghost:
     "bg-transparent text-[var(--color-ink)] hover:bg-[var(--color-ink)]/[0.06]",
   outline:
-    "bg-transparent text-[var(--color-ink)] border border-[var(--color-ink)] hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)]",
+    "bg-transparent text-[var(--color-ink)] border border-[var(--color-ink-faint)] hover:border-[var(--color-ink-subtle)]",
 };
 
 const sizes = {

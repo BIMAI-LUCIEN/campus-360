@@ -57,7 +57,7 @@ export default function ConnexionForm() {
       {error && (
         <div
           role="alert"
-          className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-2 text-sm text-rose-700"
+          className="mb-4 p-3 bg-rose-500/10 border border-rose-500/25 rounded-lg flex items-start gap-2 text-sm text-rose-300"
         >
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>{error}</span>
