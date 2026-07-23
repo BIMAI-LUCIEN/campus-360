@@ -413,10 +413,22 @@ export function AppShell() {
 
   React.useEffect(() => {
     if (Platform.OS === 'web') return;
+    // Skip when running in Expo Go / dev where updates are managed by the packager.
+    if (__DEV__ || !Updates.isEnabled) return;
     const checkForUpdates = async () => {
       try {
         const update = await Updates.checkForUpdateAsync();
-        if (update.isAvailable) setUpdateAvailable(true);
+        if (!update.isAvailable) return;
+        // Seamless OTA: download and apply silently at launch so the user always
+        // runs the latest code without reinstalling. The banner below is only a
+        // fallback if the automatic apply fails.
+        setUpdateAvailable(true);
+        try {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        } catch {
+          // Leave the banner up so the user can retry manually.
+        }
       } catch {}
     };
     checkForUpdates();
