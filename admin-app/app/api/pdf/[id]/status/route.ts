@@ -8,8 +8,9 @@ import { upsertSupabasePdf } from '@/lib/supabase-pdf';
 export const runtime = 'nodejs';
 
 const MAX_BODY_BYTES = 4 * 1024;
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Resource ids are app-generated (e.g. "pdf_ab12cd...", "pack-...", legacy slugs),
+// not RFC UUIDs. Keep this permissive but strict enough to be a sane path guard.
+const ID_REGEX = /^[A-Za-z0-9_-]{1,64}$/;
 
 const schema = z.object({
   status: z.enum(['draft', 'analyzing', 'needs_review', 'published', 'archived']),
@@ -25,7 +26,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     if (response) return response;
 
     const { id } = await context.params;
-    if (!UUID_REGEX.test(id)) {
+    if (!ID_REGEX.test(id)) {
       return NextResponse.json({ error: 'Identifiant invalide.' }, { status: 400 });
     }
     const body = schema.safeParse(await request.json());

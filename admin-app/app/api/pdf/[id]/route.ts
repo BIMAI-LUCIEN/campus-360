@@ -6,8 +6,9 @@ import { deleteSupabasePdf } from '@/lib/supabase-pdf';
 
 export const runtime = 'nodejs';
 
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Resource ids are app-generated (e.g. "pdf_ab12cd...", "pack-...", legacy slugs),
+// not RFC UUIDs. Keep this permissive but strict enough to be a sane path guard.
+const ID_REGEX = /^[A-Za-z0-9_-]{1,64}$/;
 
 export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -15,7 +16,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     if (response) return response;
 
     const { id } = await context.params;
-    if (!UUID_REGEX.test(id)) {
+    if (!ID_REGEX.test(id)) {
       return NextResponse.json({ error: 'Identifiant invalide.' }, { status: 400 });
     }
 
