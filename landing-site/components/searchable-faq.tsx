@@ -40,7 +40,7 @@ export function SearchableFAQ({ categories }: { categories: Category[] }) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Rechercher dans la FAQ..."
           aria-label="Rechercher"
-          className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-[var(--color-border)] shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-base"
+          className="w-full pl-12 pr-4 py-4 rounded-2xl bg-[var(--color-paper)] border border-[var(--color-border)] shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-base"
         />
       </div>
 
@@ -69,7 +69,7 @@ export function SearchableFAQ({ categories }: { categories: Category[] }) {
                   >
                     <summary className="cursor-pointer font-semibold text-[var(--color-ink)] flex items-center justify-between">
                       {f.q}
-                      <ChevronDown className="w-5 h-5 text-brand-500 group-open:rotate-180 transition-transform" />
+                      <ChevronDown className="w-5 h-5 text-[var(--color-sienna)] group-open:rotate-180 transition-transform" />
                     </summary>
                     <p className="mt-3 text-sm text-[var(--color-ink-light)] leading-relaxed">
                       {f.a}

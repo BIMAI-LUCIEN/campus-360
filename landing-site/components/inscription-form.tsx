@@ -83,7 +83,7 @@ export default function InscriptionForm() {
                 placeholder="Aïcha"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
           </div>
@@ -100,7 +100,7 @@ export default function InscriptionForm() {
               placeholder="Mbarga"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full px-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
         </div>
@@ -119,7 +119,7 @@ export default function InscriptionForm() {
               placeholder="ton.email@universite.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function InscriptionForm() {
               placeholder="Minimum 8 caractères"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
           <p className="text-xs text-[var(--color-ink-lighter)] mt-1">Au moins 8 caractères.</p>
@@ -150,15 +150,15 @@ export default function InscriptionForm() {
             name="terms"
             type="checkbox"
             required
-            className="w-4 h-4 mt-0.5 rounded border-[var(--color-border)] text-brand-500 focus:ring-brand-500 cursor-pointer"
+            className="w-4 h-4 mt-0.5 rounded border-[var(--color-border)] text-[var(--color-sienna)] focus:ring-brand-500 cursor-pointer"
           />
           <label htmlFor="terms" className="text-[var(--color-ink-light)] cursor-pointer">
             J&apos;accepte les{" "}
-            <Link href="/conditions" className="text-brand-600 hover:underline">
+            <Link href="/conditions" className="text-[var(--color-sienna)] hover:underline">
               conditions d&apos;utilisation
             </Link>{" "}
             et la{" "}
-            <Link href="/confidentialite" className="text-brand-600 hover:underline">
+            <Link href="/confidentialite" className="text-[var(--color-sienna)] hover:underline">
               politique de confidentialité
             </Link>
             .
@@ -194,7 +194,7 @@ export default function InscriptionForm() {
 
       <p className="text-center text-sm text-[var(--color-ink-light)] mt-6">
         Déjà un compte ?{" "}
-        <Link href="/connexion" className="text-brand-600 font-semibold hover:underline">
+        <Link href="/connexion" className="text-[var(--color-sienna)] font-semibold hover:underline">
           Se connecter
         </Link>
       </p>

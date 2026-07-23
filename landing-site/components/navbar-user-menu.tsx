@@ -53,7 +53,7 @@ export function NavbarUserMenu({ initial, name, email }: Props) {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-[var(--color-border)] overflow-hidden z-50"
+          className="absolute right-0 mt-2 w-64 bg-[var(--color-paper)] rounded-xl  border border-[var(--color-border)] overflow-hidden z-50"
         >
           <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-paper)]">
             <div className="font-semibold text-sm font-display truncate">{name}</div>

@@ -98,11 +98,11 @@ const categories = [
 export default function AidePage() {
   return (
     <SiteShell>
-      <section className="py-16 lg:py-24 bg-gradient-to-br from-brand-50 via-white to-brand-100">
+      <section className="py-16 lg:py-24 border-b border-[var(--color-ink)]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display mb-6">
             Comment on peut{" "}
-            <span className="bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
+            <span className="text-[var(--color-sienna)]">
               t&apos;aider
             </span>{" "}
             ?
@@ -113,7 +113,7 @@ export default function AidePage() {
         </div>
       </section>
 
-      <section className="py-12 bg-white">
+      <section className="py-12 bg-[var(--color-paper)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <SearchableFAQ categories={categories} />
         </div>
@@ -127,23 +127,23 @@ export default function AidePage() {
           <div className="grid sm:grid-cols-3 gap-4">
             <Link
               href="/contact"
-              className="p-6 bg-white rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
+              className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
             >
-              <MessageCircle className="w-8 h-8 text-brand-500 mx-auto mb-3" />
+              <MessageCircle className="w-8 h-8 text-[var(--color-sienna)] mx-auto mb-3" />
               <h3 className="font-bold font-display mb-1">Formulaire</h3>
               <p className="text-xs text-[var(--color-ink-light)]">Réponse sous 24h</p>
             </Link>
             <a
               href="mailto:support@campus360b.site"
-              className="p-6 bg-white rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
+              className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
             >
-              <Mail className="w-8 h-8 text-brand-500 mx-auto mb-3" />
+              <Mail className="w-8 h-8 text-[var(--color-sienna)] mx-auto mb-3" />
               <h3 className="font-bold font-display mb-1">Email</h3>
               <p className="text-xs text-[var(--color-ink-light)]">support@campus360b.site</p>
             </a>
             <a
               href="https://wa.me/campus360"
-              className="p-6 bg-white rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
+              className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
             >
               <Phone className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
               <h3 className="font-bold font-display mb-1">WhatsApp</h3>

@@ -49,7 +49,7 @@ const timeline = [
 export default function AProposPage() {
   return (
     <SiteShell>
-      <section className="py-16 lg:py-24 bg-gradient-to-br from-brand-50 via-white to-brand-100">
+      <section className="py-16 lg:py-24 border-b border-[var(--color-ink)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-100 text-brand-700 text-sm font-semibold rounded-full mb-6">
             <Heart className="w-4 h-4" />
@@ -57,7 +57,7 @@ export default function AProposPage() {
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display mb-6">
             On a galéré,{" "}
-            <span className="bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
+            <span className="text-[var(--color-sienna)]">
               on a construit la solution
             </span>
           </h1>
@@ -69,14 +69,14 @@ export default function AProposPage() {
         </div>
       </section>
 
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-[var(--color-paper)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {values.map((v) => {
               const Icon = v.icon;
               return (
                 <div key={v.title} className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)]">
-                  <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-brand-50 text-[var(--color-sienna)] flex items-center justify-center mb-4">
                     <Icon className="w-6 h-6" />
                   </div>
                   <h3 className="text-lg font-bold font-display mb-2">{v.title}</h3>
@@ -88,7 +88,7 @@ export default function AProposPage() {
         </div>
       </section>
 
-      <section className="py-20 bg-white border-t border-[var(--color-border)]">
+      <section className="py-20 bg-[var(--color-paper)] border-t border-[var(--color-border)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-extrabold font-display mb-10 text-center">
             Notre parcours
@@ -103,10 +103,10 @@ export default function AProposPage() {
                     idx % 2 === 0 ? "" : "sm:flex-row-reverse"
                   }`}
                 >
-                  <div className="absolute left-6 sm:left-1/2 w-3 h-3 -ml-1.5 bg-brand-500 rounded-full ring-4 ring-white" />
+                  <div className="absolute left-6 sm:left-1/2 w-3 h-3 -ml-1.5 bg-[var(--color-sienna)] rounded-full ring-4 ring-white" />
                   <div className="ml-14 sm:ml-0 sm:w-1/2">
                     <div className="p-5 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)]">
-                      <div className="text-sm font-bold text-brand-600 mb-1">{t.year}</div>
+                      <div className="text-sm font-bold text-[var(--color-sienna)] mb-1">{t.year}</div>
                       <h3 className="text-lg font-bold font-display mb-1">{t.title}</h3>
                       <p className="text-sm text-[var(--color-ink-light)] leading-relaxed">{t.desc}</p>
                     </div>

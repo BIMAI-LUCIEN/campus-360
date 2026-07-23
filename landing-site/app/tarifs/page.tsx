@@ -95,85 +95,73 @@ const faq = [
 export default function TarifsPage() {
   return (
     <SiteShell>
-      <section className="py-16 lg:py-24 bg-gradient-to-br from-brand-50 via-white to-brand-100">
+      <section className="py-20 lg:py-28 border-b border-[var(--color-ink)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full mb-6">
-            <Sparkles className="w-4 h-4" />
-            Promo Rentrée : -50% sur Premium
-          </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display mb-6">
-            Des tarifs{" "}
-            <span className="bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
-              transparents
-            </span>
+          <p className="kicker justify-center flex mb-6">Promo Rentrée · -50% sur Premium</p>
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] mb-6">
+            Des tarifs transparents.
           </h1>
-          <p className="text-lg text-[var(--color-ink-light)] max-w-2xl mx-auto">
+          <p className="text-lg text-[var(--color-ink-muted)] max-w-2xl mx-auto">
             Pas d&apos;engagement. Pas de frais cachés. Tu paies uniquement
             pour ce dont tu as besoin.
           </p>
         </div>
       </section>
 
-      <section className="py-16 bg-white">
+      <section className="py-16 lg:py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+          <div className="grid md:grid-cols-3 gap-px bg-[var(--color-ink)]/10 border border-[var(--color-ink)]/10">
             {plans.map((plan) => {
               const Icon = plan.icon;
               return (
                 <div
                   key={plan.name}
-                  className={`relative rounded-3xl p-6 lg:p-8 flex flex-col transition-all hover:-translate-y-1 ${
+                  className={`relative p-6 lg:p-8 flex flex-col ${
                     plan.popular
-                      ? "bg-brand-500 text-white shadow-xl shadow-brand-500/30 scale-[1.02]"
-                      : "bg-white border border-[var(--color-border)] shadow-sm hover:shadow-lg"
+                      ? "bg-[var(--color-ink)] text-[var(--color-paper)]"
+                      : "bg-[var(--color-paper)]"
                   }`}
                 >
                   {plan.popular && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-xs font-bold px-4 py-1.5 rounded-full shadow-sm">
-                      Le plus populaire
+                    <div className="absolute top-0 right-0 bg-[var(--color-sienna)] text-white text-[0.6875rem] font-mono font-bold tracking-wide uppercase px-3 py-1.5">
+                      Populaire
                     </div>
                   )}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        plan.popular ? "bg-white/20 text-white" : "bg-brand-50 text-brand-600"
-                      }`}
-                    >
-                      <Icon className="w-5 h-5" />
-                    </div>
+                  <div className="flex items-center gap-3 mb-5">
+                    <Icon className={`w-6 h-6 ${plan.popular ? "text-[var(--color-sienna-tone)]" : "text-[var(--color-sienna)]"}`} strokeWidth={1.5} />
                     <div>
-                      <h3 className={`font-bold text-lg font-display ${plan.popular ? "text-white" : "text-[var(--color-ink)]"}`}>
+                      <h3 className="font-display font-bold text-lg">
                         {plan.name}
                       </h3>
-                      <p className={`text-sm ${plan.popular ? "text-white/80" : "text-[var(--color-ink-light)]"}`}>
+                      <p className={`text-sm ${plan.popular ? "text-[var(--color-paper)]/65" : "text-[var(--color-ink-muted)]"}`}>
                         {plan.description}
                       </p>
                     </div>
                   </div>
-                  <div className="mb-6">
+                  <div className="mb-7">
                     {plan.promoPrice ? (
                       <div>
-                        <span className="text-sm line-through text-white/60 mr-2">{plan.oldPrice}</span>
-                        <span className={`text-3xl font-extrabold font-display ${plan.popular ? "text-white" : "text-[var(--color-ink)]"}`}>
+                        <span className={`text-sm line-through mr-2 ${plan.popular ? "text-[var(--color-paper)]/50" : "text-[var(--color-ink-subtle)]"}`}>{plan.oldPrice}</span>
+                        <span className="font-display text-3xl font-extrabold tracking-[-0.02em]">
                           {plan.promoPrice}
                         </span>
                         {plan.period && (
-                          <span className={`text-sm ${plan.popular ? "text-white/70" : "text-[var(--color-ink-light)]"}`}>
+                          <span className={`text-sm ${plan.popular ? "text-[var(--color-paper)]/65" : "text-[var(--color-ink-muted)]"}`}>
                             {" "}
                             {plan.period}
                           </span>
                         )}
-                        <div className="text-xs text-amber-200 mt-1 font-semibold">
-                          🔥 -50% promo rentrée
+                        <div className="font-mono text-xs mt-1.5 font-semibold text-[var(--color-sienna-tone)] tracking-wide uppercase">
+                          -50% promo rentrée
                         </div>
                       </div>
                     ) : (
                       <div>
-                        <span className={`text-3xl font-extrabold font-display ${plan.popular ? "text-white" : "text-[var(--color-ink)]"}`}>
+                        <span className="font-display text-3xl font-extrabold tracking-[-0.02em]">
                           {plan.price}
                         </span>
                         {plan.period && (
-                          <span className={`text-sm ${plan.popular ? "text-white/70" : "text-[var(--color-ink-light)]"}`}>
+                          <span className={`text-sm ${plan.popular ? "text-[var(--color-paper)]/65" : "text-[var(--color-ink-muted)]"}`}>
                             {" "}
                             {plan.period}
                           </span>
@@ -186,10 +174,10 @@ export default function TarifsPage() {
                       <li key={feature} className="flex items-start gap-2.5 text-sm">
                         <Check
                           className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                            plan.popular ? "text-white" : "text-brand-500"
+                            plan.popular ? "text-[var(--color-emerald-tone)]" : "text-[var(--color-emerald)]"
                           }`}
                         />
-                        <span className={plan.popular ? "text-white/90" : "text-[var(--color-ink-light)]"}>
+                        <span className={plan.popular ? "text-[var(--color-paper)]/85" : "text-[var(--color-ink-muted)]"}>
                           {feature}
                         </span>
                       </li>
@@ -197,10 +185,8 @@ export default function TarifsPage() {
                   </ul>
                   <a href={APK_URL} download="campus-360.apk" className="block">
                     <Button
-                      variant={plan.ctaVariant}
-                      className={`w-full ${
-                        plan.popular ? "bg-white text-brand-600 hover:bg-white/90" : ""
-                      }`}
+                      variant={plan.popular ? "secondary" : "outline"}
+                      className={`w-full ${plan.popular ? "" : ""}`}
                     >
                       {plan.cta}
                     </Button>
@@ -212,22 +198,22 @@ export default function TarifsPage() {
         </div>
       </section>
 
-      <section className="py-16 bg-[var(--color-paper)] border-t border-[var(--color-border)]">
+      <section className="py-16 lg:py-24 bg-[var(--color-paper-deep)]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-extrabold font-display mb-8 text-center">
+          <h2 className="font-display text-3xl font-extrabold tracking-[-0.02em] mb-8 text-center">
             Questions fréquentes
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-0 border-t border-[var(--color-ink)]/10">
             {faq.map((item) => (
               <details
                 key={item.q}
-                className="p-5 bg-white rounded-xl border border-[var(--color-border)] group"
+                className="py-5 border-b border-[var(--color-ink)]/10 group"
               >
-                <summary className="cursor-pointer font-semibold text-[var(--color-ink)] flex items-center justify-between">
+                <summary className="cursor-pointer font-display font-semibold text-[var(--color-ink)] flex items-center justify-between list-none">
                   {item.q}
-                  <span className="text-brand-500 text-xl group-open:rotate-45 transition-transform">+</span>
+                  <span className="text-[var(--color-sienna)] text-xl group-open:rotate-45 transition-transform">+</span>
                 </summary>
-                <p className="mt-3 text-sm text-[var(--color-ink-light)] leading-relaxed">
+                <p className="mt-3 text-sm text-[var(--color-ink-muted)] leading-relaxed">
                   {item.a}
                 </p>
               </details>

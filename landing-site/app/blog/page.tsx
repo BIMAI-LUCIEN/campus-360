@@ -26,7 +26,7 @@ export default function BlogIndexPage() {
   const [featured, ...rest] = blogPosts;
   return (
     <SiteShell>
-      <section className="py-16 lg:py-20 bg-gradient-to-br from-brand-50 via-white to-brand-100">
+      <section className="py-16 lg:py-20 border-b border-[var(--color-ink)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-100 text-brand-700 text-sm font-semibold rounded-full mb-6">
             <BookOpen className="w-4 h-4" />
@@ -34,7 +34,7 @@ export default function BlogIndexPage() {
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display mb-6">
             Conseils, méthodes et PDFs{" "}
-            <span className="bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
+            <span className="text-[var(--color-sienna)]">
               pour réussir
             </span>
           </h1>
@@ -46,7 +46,7 @@ export default function BlogIndexPage() {
       </section>
 
       {/* Featured */}
-      <section className="py-12 bg-white">
+      <section className="py-12 bg-[var(--color-paper)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Link
             href={`/blog/${featured.slug}`}
@@ -87,13 +87,13 @@ export default function BlogIndexPage() {
       </section>
 
       {/* Categories */}
-      <section className="py-6 bg-white border-y border-[var(--color-border)]">
+      <section className="py-6 bg-[var(--color-paper)] border-y border-[var(--color-border)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold text-[var(--color-ink-light)] mr-2">
               Catégories :
             </span>
-            <span className="px-3 py-1 bg-brand-500 text-white text-sm font-semibold rounded-full">
+            <span className="px-3 py-1 bg-[var(--color-sienna)] text-white text-sm font-semibold rounded-full">
               Tous
             </span>
             {categories.map((c) => (
@@ -109,7 +109,7 @@ export default function BlogIndexPage() {
       </section>
 
       {/* Posts grid */}
-      <section className="py-12 bg-white">
+      <section className="py-12 bg-[var(--color-paper)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {rest.map((post) => (
@@ -121,7 +121,7 @@ export default function BlogIndexPage() {
                 <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-brand-50 text-brand-700 text-xs font-bold rounded-full self-start mb-4">
                   {post.category}
                 </div>
-                <h3 className="text-lg font-bold font-display mb-2 group-hover:text-brand-600 transition-colors">
+                <h3 className="text-lg font-bold font-display mb-2 group-hover:text-[var(--color-sienna)] transition-colors">
                   {post.title}
                 </h3>
                 <p className="text-sm text-[var(--color-ink-light)] leading-relaxed flex-1 mb-4">
@@ -156,12 +156,12 @@ export default function BlogIndexPage() {
               type="email"
               required
               placeholder="ton.email@universite.com"
-              className="flex-1 px-4 py-3 rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="flex-1 px-4 py-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] focus:outline-none focus:ring-2 focus:ring-brand-500"
               aria-label="Adresse email"
             />
             <button
               type="submit"
-              className="px-5 py-3 bg-brand-500 text-white font-semibold rounded-lg hover:bg-brand-600 cursor-pointer"
+              className="px-5 py-3 bg-[var(--color-sienna)] text-white font-semibold rounded-lg hover:bg-[var(--color-sienna-deep)] cursor-pointer"
             >
               S&apos;abonner
             </button>

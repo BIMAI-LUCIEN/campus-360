@@ -32,9 +32,6 @@ export default function HeroScene() {
 
   return (
     <div className="relative">
-      {/* Glow behind phone */}
-      <div className="absolute inset-0 bg-brand-400/30 blur-3xl rounded-full scale-75" />
-
       {/* Phone frame */}
       <div
         ref={containerRef}
@@ -42,12 +39,12 @@ export default function HeroScene() {
         style={{ transformStyle: "preserve-3d" }}
       >
         {/* Phone body */}
-        <div className="relative w-[280px] sm:w-[300px] rounded-[3rem] bg-[var(--color-ink)] p-2 shadow-2xl shadow-brand-500/30">
+        <div className="relative w-[280px] sm:w-[300px] rounded-[2rem] bg-[var(--color-ink)] p-2">
           {/* Notch */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-6 bg-[var(--color-ink)] rounded-full z-10" />
 
           {/* Screen */}
-          <div className="relative rounded-[2.4rem] overflow-hidden bg-white aspect-[9/19]">
+          <div className="relative rounded-[1.6rem] overflow-hidden bg-[var(--color-paper)] aspect-[9/19]">
             <Image
               src="/images/screenshot-hero.jpg"
               alt="Campus 360 app screenshot"
@@ -59,15 +56,15 @@ export default function HeroScene() {
         </div>
 
         {/* Floating badges */}
-        <div className="absolute -top-4 -right-4 bg-white rounded-xl shadow-lg px-3 py-2 flex items-center gap-2 text-xs font-semibold">
-          <div className="w-6 h-6 bg-brand-500 rounded-lg flex items-center justify-center">
+        <div className="absolute -top-4 -right-4 bg-[var(--color-paper)] border border-[var(--color-ink)] rounded-[4px] px-3 py-2 flex items-center gap-2 text-xs font-semibold">
+          <div className="w-5 h-5 bg-[var(--color-sienna)] rounded-[3px] flex items-center justify-center">
             <span className="text-white text-[10px]">✨</span>
           </div>
           <span className="text-[var(--color-ink)]">IA activée</span>
         </div>
 
-        <div className="absolute -bottom-4 -left-4 bg-white rounded-xl shadow-lg px-3 py-2 flex items-center gap-2 text-xs font-semibold">
-          <div className="w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center">
+        <div className="absolute -bottom-4 -left-4 bg-[var(--color-paper)] border border-[var(--color-ink)] rounded-[4px] px-3 py-2 flex items-center gap-2 text-xs font-semibold">
+          <div className="w-5 h-5 bg-[var(--color-emerald)] rounded-[3px] flex items-center justify-center">
             <span className="text-white text-[10px]">✓</span>
           </div>
           <span className="text-[var(--color-ink)]">Wallet chargé</span>

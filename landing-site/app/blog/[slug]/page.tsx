@@ -149,11 +149,11 @@ export default async function BlogPostPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
-      <article className="py-16 lg:py-20 bg-white">
+      <article className="py-16 lg:py-20 bg-[var(--color-paper)]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <Link
             href="/blog"
-            className="inline-flex items-center gap-1.5 text-sm text-brand-600 hover:underline mb-8"
+            className="inline-flex items-center gap-1.5 text-sm text-[var(--color-sienna)] hover:underline mb-8"
           >
             <ArrowLeft className="w-4 h-4" />
             Tous les articles
@@ -194,7 +194,7 @@ export default async function BlogPostPage({ params }: PageProps) {
           <div className="prose prose-lg max-w-none">{renderContent(post.content)}</div>
 
           <div className="mt-12 p-6 bg-brand-50 rounded-2xl border border-brand-200 flex flex-col sm:flex-row items-center gap-4">
-            <BookOpen className="w-10 h-10 text-brand-600 flex-shrink-0" />
+            <BookOpen className="w-10 h-10 text-[var(--color-sienna)] flex-shrink-0" />
             <div className="flex-1">
               <h3 className="font-bold font-display mb-1">Applique ça avec Campus 360</h3>
               <p className="text-sm text-[var(--color-ink-light)]">
@@ -224,12 +224,12 @@ export default async function BlogPostPage({ params }: PageProps) {
                 <Link
                   key={p.slug}
                   href={`/blog/${p.slug}`}
-                  className="group p-6 bg-white rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                  className="group p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all"
                 >
                   <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-brand-50 text-brand-700 text-xs font-bold rounded-full mb-3">
                     {p.category}
                   </div>
-                  <h3 className="font-bold font-display mb-2 group-hover:text-brand-600 transition-colors">
+                  <h3 className="font-bold font-display mb-2 group-hover:text-[var(--color-sienna)] transition-colors">
                     {p.title}
                   </h3>
                   <p className="text-sm text-[var(--color-ink-light)] line-clamp-2">

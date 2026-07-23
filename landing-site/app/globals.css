@@ -1,36 +1,67 @@
 @import "tailwindcss";
 
+/* ── Campus 360 editorial system ──────────────────────────────────────────
+   The same identity that ships in the mobile app: ink, paper, sienna,
+   emerald. No glassmorphism, no gradients, no drop-shadow decoration.
+   Ink on paper — an academic document, not a SaaS dashboard. ───────────── */
 @theme {
-  /* Ta charte graphique — bleu Campus 360 */
-  --color-brand-50:  #f0f9ff;
-  --color-brand-100: #e0f2fe;
-  --color-brand-200: #bae6fd;
-  --color-brand-300: #7dd3fc;
-  --color-brand-400: #38bdf8;
-  --color-brand-500: #0ea5e9;
-  --color-brand-600: #0284c7;
-  --color-brand-700: #0369a1;
-  --color-brand-800: #075985;
-  --color-brand-900: #0c4a6e;
+  /* Ink — text + dark surfaces */
+  --color-ink:         oklch(0.2077 0.0398 265.8);
+  --color-ink-soft:     oklch(0.2795 0.0368 260);
+  --color-ink-muted:   oklch(0.4455 0.0374 257.3);
+  --color-ink-subtle:  oklch(0.7107 0.0351 256.8);
+  --color-ink-faint:   oklch(0.869 0.0198 252.9);
 
-  /* CTA amber */
-  --color-amber-cta:     #f59e0b;
-  --color-amber-cta-hover: #d97706;
+  /* Paper — the page itself */
+  --color-paper:      oklch(0.9593 0.0143 84.6);
+  --color-paper-deep:  oklch(0.9254 0.0264 90.1);
+  --color-paper-soft:  oklch(0.968 0.0155 86.4);
+  --color-white:       oklch(1 0 0);
 
-  /* Ink / paper */
-  --color-ink:         #1a1a2e;
-  --color-ink-light:   #4a4a68;
-  --color-ink-lighter: #8888a8;
-  --color-border:      transparent;
-  --color-paper:       #ffffff;
+  /* Sienna — the accent. Every primary action, every CTA. */
+  --color-sienna:      oklch(0.5351 0.1625 39.5);
+  --color-sienna-deep:  oklch(0.4367 0.1331 39.3);
+  --color-sienna-tone:  oklch(0.7557 0.1121 52.2);
+  --color-sienna-bg:    oklch(0.9538 0.0289 55);
+
+  /* Emerald — success, ownership, confirmation. Used sparingly. */
+  --color-emerald:     oklch(0.5081 0.1049 165.6);
+  --color-emerald-deep: oklch(0.4318 0.0865 166.9);
+  --color-emerald-tone: oklch(0.6959 0.1491 162.5);
+  --color-emerald-bg:   oklch(0.9426 0.0492 162);
+
+  /* Legacy aliases so existing `brand-*` / `ink-*` utility classes retint
+     automatically instead of needing every call site rewritten. */
+  --color-brand-50:  oklch(0.9538 0.0289 55);
+  --color-brand-100: oklch(0.9254 0.0264 90.1);
+  --color-brand-200: oklch(0.8459 0.0524 51);
+  --color-brand-300: oklch(0.7557 0.1121 52.2);
+  --color-brand-400: oklch(0.6459 0.1421 45);
+  --color-brand-500: oklch(0.5351 0.1625 39.5);
+  --color-brand-600: oklch(0.4859 0.1521 39.5);
+  --color-brand-700: oklch(0.4367 0.1331 39.3);
+  --color-brand-800: oklch(0.3559 0.109 39);
+  --color-brand-900: oklch(0.2867 0.0871 39);
+
+  --font-serif: var(--font-source-serif), Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jbmono), ui-monospace, "SF Mono", monospace;
+
+  --radius-editorial: 6px;
+
+  /* Legacy CTA alias — some pages still reference `bg-amber-cta`. Tailwind
+     v4 only generates utility classes from tokens declared inside @theme,
+     so this must live here (not :root) for those classes to resolve. */
+  --color-amber-cta:       oklch(0.5351 0.1625 39.5);
+  --color-amber-cta-hover: oklch(0.4367 0.1331 39.3);
 }
 
 :root {
-  --color-ink:         #1a1a2e;
-  --color-ink-light:   #4a4a68;
-  --color-ink-lighter: #8888a8;
-  --color-border:      transparent;
-  --color-paper:       #ffffff;
+  --color-ink-light:   var(--color-ink-muted);
+  --color-ink-lighter: var(--color-ink-subtle);
+  --color-border:      var(--color-ink-faint);
+  --color-amber-cta:       var(--color-sienna);
+  --color-amber-cta-hover: var(--color-sienna-deep);
 }
 
 html { scroll-behavior: smooth; }
@@ -38,32 +69,66 @@ html { scroll-behavior: smooth; }
 body {
   color: var(--color-ink);
   background: var(--color-paper);
-  font-family: var(--font-open-sans), system-ui, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-poppins), system-ui, sans-serif;
+  font-family: var(--font-serif);
   letter-spacing: -0.02em;
   font-weight: 700;
+  text-wrap: balance;
 }
 
-.font-sans   { font-family: var(--font-open-sans), system-ui, sans-serif; }
-.font-display { font-family: var(--font-poppins), system-ui, sans-serif; }
+p { text-wrap: pretty; }
+
+.font-display { font-family: var(--font-serif); }
+.font-sans    { font-family: var(--font-sans); }
+.font-mono    { font-family: var(--font-mono); }
+
+/* Editorial kicker — the em-dash + tracked mono label. A signature device,
+   used deliberately in a few places, never as mechanical section grammar. */
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-sienna);
+}
+.kicker::before { content: "— "; color: var(--color-ink-faint); }
+
+.ink-rule { height: 1px; background: var(--color-ink); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-brand-500);
+  outline: 2px solid var(--color-sienna);
   outline-offset: 2px;
 }
 
 ::selection {
-  background-color: var(--color-brand-200);
-  color: var(--color-brand-900);
+  background-color: var(--color-sienna-bg);
+  color: var(--color-sienna-deep);
+}
+
+/* Reveal-on-load choreography — content is visible by default; motion only
+   enhances devices that support it (see brand.md: never gate visibility). */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.rise-in {
+  animation: rise-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise-in { animation: none; }
 }

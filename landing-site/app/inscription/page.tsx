@@ -22,11 +22,11 @@ export const metadata: Metadata = {
 export default function InscriptionPage() {
   return (
     <SiteShell hidePromo>
-      <section className="min-h-[calc(100vh-4rem)] py-12 bg-gradient-to-br from-brand-50 via-white to-brand-100">
+      <section className="min-h-[calc(100vh-4rem)] py-12 border-b border-[var(--color-ink)]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-5 gap-8 items-start">
             <div className="lg:col-span-3">
-              <div className="bg-white rounded-3xl shadow-xl border border-[var(--color-border)] p-8">
+              <div className="bg-[var(--color-paper)] rounded-3xl  border border-[var(--color-border)] p-8">
                 <div className="text-center mb-8">
                   <h1 className="text-3xl font-extrabold font-display mb-2">
                     Crée ton compte gratuit
@@ -40,7 +40,7 @@ export default function InscriptionPage() {
             </div>
 
             <aside className="lg:col-span-2">
-              <div className="sticky top-24 p-6 bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl text-white shadow-xl">
+              <div className="sticky top-24 p-6 bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl text-white ">
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 backdrop-blur rounded-xl mb-4">
                   <Gift className="w-6 h-6" />
                 </div>

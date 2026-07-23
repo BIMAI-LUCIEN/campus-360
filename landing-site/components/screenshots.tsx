@@ -32,13 +32,8 @@ export function Screenshots() {
       <div className="max-w-6xl mx-auto px-6">
         {/* Header */}
         <div className="text-center mb-16">
-          <p className="text-sm font-medium uppercase tracking-wide text-[var(--color-ink-lighter)] mb-4">
-            Aperçu
-          </p>
-          <h2
-            className="text-4xl sm:text-5xl font-extrabold tracking-tight"
-            style={{ fontFamily: "var(--font-poppins)" }}
-          >
+          <p className="kicker justify-center flex mb-4">Aperçu</p>
+          <h2 className="font-display text-4xl sm:text-5xl font-extrabold tracking-[-0.02em]">
             L&apos;app en images.
           </h2>
         </div>
@@ -46,12 +41,12 @@ export function Screenshots() {
         {/* Carousel */}
         <div className="relative max-w-xs mx-auto">
           {/* Phone frame — minimal, no border */}
-          <div className="relative bg-[var(--color-ink)] rounded-[3rem] p-1.5 shadow-2xl">
+          <div className="relative bg-[var(--color-ink)] rounded-[2rem] p-1.5">
             {/* Notch */}
             <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-5 bg-[var(--color-ink)] rounded-full z-20" />
 
             {/* Image */}
-            <div className="relative rounded-[2.4rem] overflow-hidden bg-zinc-800 aspect-[9/19]">
+            <div className="relative rounded-[1.6rem] overflow-hidden bg-[var(--color-ink-soft)] aspect-[9/19]">
               {screenshots.map((screenshot, i) => (
                 <div
                   key={screenshot.src}
@@ -72,24 +67,24 @@ export function Screenshots() {
           </div>
 
           {/* Label */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-black/70 text-white text-xs font-medium px-3 py-1 rounded-full">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-[var(--color-ink)]/85 text-[var(--color-paper)] text-xs font-mono font-medium tracking-wide px-3 py-1 rounded-[4px]">
             {screenshots[current].label}
           </div>
 
           {/* Arrows */}
           <button
             onClick={prev}
-            className="absolute left-[-1.2rem] top-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg z-20 hover:bg-zinc-100 transition-colors cursor-pointer"
+            className="absolute left-[-1.2rem] top-1/2 -translate-y-1/2 w-10 h-10 bg-[var(--color-paper)] border border-[var(--color-ink)] rounded-full flex items-center justify-center z-20 hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] transition-colors cursor-pointer"
             aria-label="Précédent"
           >
-            <ChevronLeft className="w-5 h-5 text-[var(--color-ink)]" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             onClick={next}
-            className="absolute right-[-1.2rem] top-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg z-20 hover:bg-zinc-100 transition-colors cursor-pointer"
+            className="absolute right-[-1.2rem] top-1/2 -translate-y-1/2 w-10 h-10 bg-[var(--color-paper)] border border-[var(--color-ink)] rounded-full flex items-center justify-center z-20 hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] transition-colors cursor-pointer"
             aria-label="Suivant"
           >
-            <ChevronRight className="w-5 h-5 text-[var(--color-ink)]" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
 
@@ -102,7 +97,7 @@ export function Screenshots() {
               className={`h-1.5 rounded-full transition-all cursor-pointer ${
                 i === current
                   ? "w-6 bg-[var(--color-ink)]"
-                  : "w-1.5 bg-[var(--color-brand-300)]"
+                  : "w-1.5 bg-[var(--color-ink-faint)]"
               }`}
               aria-label={`Screenshot ${i + 1}`}
             />

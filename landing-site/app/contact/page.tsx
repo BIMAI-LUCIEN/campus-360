@@ -33,7 +33,7 @@ const channels = [
     sub: "Réponse sous 24h",
     cta: "Envoyer un email",
     href: "mailto:support@campus360b.site",
-    color: "text-brand-500",
+    color: "text-[var(--color-sienna)]",
     bg: "bg-brand-50",
   },
   {
@@ -51,7 +51,7 @@ const channels = [
 export default function ContactPage() {
   return (
     <SiteShell>
-      <section className="py-16 lg:py-24 bg-gradient-to-br from-brand-50 via-white to-brand-100">
+      <section className="py-16 lg:py-24 border-b border-[var(--color-ink)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-100 text-brand-700 text-sm font-semibold rounded-full mb-6">
             <MessageCircle className="w-4 h-4" />
@@ -59,7 +59,7 @@ export default function ContactPage() {
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display mb-6">
             Comment nous{" "}
-            <span className="bg-gradient-to-r from-brand-500 to-brand-700 bg-clip-text text-transparent">
+            <span className="text-[var(--color-sienna)]">
               contacter
             </span>{" "}
             ?
@@ -71,7 +71,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <section className="py-12 bg-white">
+      <section className="py-12 bg-[var(--color-paper)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-5 mb-12">
             {channels.map((c) => {
@@ -88,7 +88,7 @@ export default function ContactPage() {
                   <h3 className="font-bold font-display mb-1">{c.title}</h3>
                   <p className="text-sm text-[var(--color-ink)] font-semibold mb-1">{c.detail}</p>
                   <p className="text-xs text-[var(--color-ink-lighter)] mb-3">{c.sub}</p>
-                  <span className="text-xs font-semibold text-brand-600 group-hover:underline">
+                  <span className="text-xs font-semibold text-[var(--color-sienna)] group-hover:underline">
                     {c.cta} →
                   </span>
                 </a>
@@ -116,7 +116,7 @@ export default function ContactPage() {
                       type="text"
                       required
                       placeholder="Aïcha"
-                      className="w-full px-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className="w-full px-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] focus:outline-none focus:ring-2 focus:ring-brand-500"
                     />
                   </div>
                   <div>
@@ -129,7 +129,7 @@ export default function ContactPage() {
                       type="email"
                       required
                       placeholder="ton.email@universite.com"
-                      className="w-full px-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      className="w-full px-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] focus:outline-none focus:ring-2 focus:ring-brand-500"
                     />
                   </div>
                 </div>
@@ -141,7 +141,7 @@ export default function ContactPage() {
                     id="contact-subject"
                     name="subject"
                     required
-                    className="w-full px-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full px-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
                     <option value="">Choisis un sujet</option>
                     <option>Question sur l&apos;app</option>
@@ -161,7 +161,7 @@ export default function ContactPage() {
                     required
                     rows={6}
                     placeholder="Dis-nous tout..."
-                    className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full px-4 py-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
                 <Button type="submit" className="gap-2">
@@ -173,7 +173,7 @@ export default function ContactPage() {
 
             <aside className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)]">
               <div className="flex items-start gap-3 mb-6">
-                <Clock className="w-5 h-5 text-brand-500 flex-shrink-0 mt-0.5" />
+                <Clock className="w-5 h-5 text-[var(--color-sienna)] flex-shrink-0 mt-0.5" />
                 <div>
                   <h3 className="font-bold font-display mb-1">Nos horaires</h3>
                   <ul className="text-sm text-[var(--color-ink-light)] space-y-1">
@@ -187,7 +187,7 @@ export default function ContactPage() {
                 <h4 className="font-bold text-sm mb-1">💡 Avant de nous écrire</h4>
                 <p className="text-xs text-[var(--color-ink-light)]">
                   90% des questions ont déjà une réponse dans notre{" "}
-                  <a href="/aide" className="text-brand-600 hover:underline">centre d&apos;aide</a>.
+                  <a href="/aide" className="text-[var(--color-sienna)] hover:underline">centre d&apos;aide</a>.
                   Gain de temps garanti.
                 </p>
               </div>

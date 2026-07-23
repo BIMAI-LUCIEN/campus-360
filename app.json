@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Campus 360",
-    "slug": "campus",
+    "slug": "campus-360",
     "scheme": "campus-bordes",
     "version": "1.1.0",
     "orientation": "portrait",
@@ -39,10 +39,10 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "098589af-cd81-41d3-8c74-173bd02396a5"
+        "projectId": "49ce85c3-c644-4a6c-a492-2596e5047c74"
       }
     },
-    "owner": "campus360s-team",
+    "owner": "miguelvinijr237",
     "runtimeVersion": {
       "policy": "appVersion"
     },

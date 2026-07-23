@@ -79,7 +79,7 @@ export default function ConnexionForm() {
               placeholder="ton.email@universite.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
         </div>
@@ -88,7 +88,7 @@ export default function ConnexionForm() {
             <label htmlFor="password" className="block text-sm font-semibold">
               Mot de passe
             </label>
-            <Link href="/mot-de-passe-oublie" className="text-xs text-brand-600 hover:underline">
+            <Link href="/mot-de-passe-oublie" className="text-xs text-[var(--color-sienna)] hover:underline">
               Mot de passe oublié ?
             </Link>
           </div>
@@ -103,7 +103,7 @@ export default function ConnexionForm() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
         </div>
@@ -114,7 +114,7 @@ export default function ConnexionForm() {
             type="checkbox"
             checked={remember}
             onChange={(e) => setRemember(e.target.checked)}
-            className="w-4 h-4 rounded border-[var(--color-border)] text-brand-500 focus:ring-brand-500 cursor-pointer"
+            className="w-4 h-4 rounded border-[var(--color-border)] text-[var(--color-sienna)] focus:ring-brand-500 cursor-pointer"
           />
           <label htmlFor="remember" className="text-[var(--color-ink-light)] cursor-pointer">
             Rester connecté
@@ -150,7 +150,7 @@ export default function ConnexionForm() {
 
       <p className="text-center text-sm text-[var(--color-ink-light)] mt-6">
         Pas encore de compte ?{" "}
-        <Link href="/inscription" className="text-brand-600 font-semibold hover:underline">
+        <Link href="/inscription" className="text-[var(--color-sienna)] font-semibold hover:underline">
           S&apos;inscrire gratuitement
         </Link>
       </p>

@@ -23,8 +23,8 @@ export function Download() {
           width: 240,
           margin: 2,
           color: {
-            dark: "#0ea5e9",
-            light: "#ffffff",
+            dark: "#0F172A",
+            light: "#F6F1E7",
           },
         });
         setQrDataUrl(dataUrl);
@@ -38,51 +38,43 @@ export function Download() {
   }, []);
 
   return (
-    <section className="py-24 bg-[var(--color-brand-50)]">
+    <section className="py-24 bg-[var(--color-paper-deep)]">
       <div className="max-w-6xl mx-auto px-6">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
 
           {/* Left — text */}
           <div className="space-y-6">
-            <p className="text-sm font-medium uppercase tracking-wide text-[var(--color-ink-lighter)]">
-              Téléchargement
-            </p>
-            <h2
-              className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight"
-              style={{ fontFamily: "var(--font-poppins)" }}
-            >
+            <p className="kicker">Téléchargement</p>
+            <h2 className="font-display text-4xl sm:text-5xl font-extrabold tracking-[-0.02em] leading-[1.05]">
               Scan le QR code
               <br />
               pour installer.
             </h2>
-            <p className="text-[var(--color-ink-light)] max-w-sm leading-relaxed">
+            <p className="text-[var(--color-ink-muted)] max-w-sm leading-relaxed">
               Disponible sur Android. Ouvre le lien dans Expo Go ou ton navigateur mobile
               pour installer Campus 360.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3">
               <a href={APK_URL} download="campus-360.apk">
-                <Button
-                  size="lg"
-                  className="gap-2 bg-[var(--color-amber-cta)] hover:bg-[var(--color-amber-cta-hover)] rounded-full px-8"
-                >
+                <Button size="lg" variant="secondary" className="gap-2">
                   <Smartphone className="w-5 h-5" />
                   Télécharger l&apos;APK
                 </Button>
               </a>
             </div>
 
-            <div className="flex items-center gap-2 text-sm text-[var(--color-ink-lighter)]">
-              <div className="w-2 h-2 bg-[var(--color-ink)] rounded-full" />
+            <div className="flex items-center gap-2 text-sm text-[var(--color-ink-subtle)]">
+              <div className="w-1.5 h-1.5 bg-[var(--color-emerald)] rounded-full" />
               <span>Gratuit · Sans pub · Sans engagement</span>
             </div>
           </div>
 
           {/* Right — QR */}
           <div className="flex justify-center lg:justify-end">
-            <div className="bg-white p-8">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-ink)]/10 p-8">
               <div className="flex flex-col items-center gap-4">
-                <div className="flex items-center gap-2 text-[var(--color-ink-lighter)]">
+                <div className="flex items-center gap-2 text-[var(--color-ink-subtle)]">
                   <QrCode className="w-5 h-5" />
                   <span className="text-sm font-medium">Scanne pour télécharger</span>
                 </div>

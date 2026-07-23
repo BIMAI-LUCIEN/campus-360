@@ -13,15 +13,15 @@ export const metadata: Metadata = {
 export default function ParrainagePage() {
   return (
     <SiteShell>
-      <section className="py-16 lg:py-24 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
+      <section className="py-16 lg:py-24 border-b border-[var(--color-ink)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-800 text-sm font-bold rounded-full mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-sienna-bg)] text-[var(--color-sienna-deep)] text-sm font-bold rounded-full mb-6">
             <Gift className="w-4 h-4" />
             Programme de parrainage
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display mb-6">
             Invite tes amis,{" "}
-            <span className="bg-gradient-to-r from-amber-500 to-rose-500 bg-clip-text text-transparent">
+            <span className="text-[var(--color-sienna)]">
               on vous offre du Premium
             </span>
           </h1>
@@ -32,7 +32,7 @@ export default function ParrainagePage() {
         </div>
       </section>
 
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-[var(--color-paper)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-6">
             {[
@@ -43,10 +43,10 @@ export default function ParrainagePage() {
               const Icon = s.icon;
               return (
                 <div key={s.step} className="text-center p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)]">
-                  <div className="w-12 h-12 mx-auto rounded-full bg-brand-500 text-white flex items-center justify-center font-bold font-display text-xl mb-4">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-[var(--color-sienna)] text-white flex items-center justify-center font-bold font-display text-xl mb-4">
                     {s.step}
                   </div>
-                  <Icon className="w-8 h-8 text-brand-500 mx-auto mb-3" />
+                  <Icon className="w-8 h-8 text-[var(--color-sienna)] mx-auto mb-3" />
                   <h3 className="font-bold font-display mb-2">{s.title}</h3>
                   <p className="text-sm text-[var(--color-ink-light)]">{s.desc}</p>
                 </div>
@@ -66,10 +66,10 @@ export default function ParrainagePage() {
               { q: "Quand est-ce que je reçois mon mois offert ?", a: "Dès que ton filleul active Premium. Tu reçois un email + une notification dans l'app." },
               { q: "Et mon filleul, il reçoit quoi ?", a: "Son premier mois Premium est offert. Au-delà, il paye normalement." },
             ].map((f) => (
-              <details key={f.q} className="p-5 bg-white rounded-xl border border-[var(--color-border)] group">
+              <details key={f.q} className="p-5 bg-[var(--color-paper)] rounded-xl border border-[var(--color-border)] group">
                 <summary className="cursor-pointer font-semibold flex items-center justify-between">
                   {f.q}
-                  <span className="text-brand-500 text-xl group-open:rotate-45 transition-transform">+</span>
+                  <span className="text-[var(--color-sienna)] text-xl group-open:rotate-45 transition-transform">+</span>
                 </summary>
                 <p className="mt-3 text-sm text-[var(--color-ink-light)]">{f.a}</p>
               </details>
@@ -78,7 +78,7 @@ export default function ParrainagePage() {
         </div>
       </section>
 
-      <section className="py-16 bg-gradient-to-br from-amber-400 to-rose-500 text-white text-center">
+      <section className="py-16 bg-[var(--color-ink)] text-[var(--color-paper)] text-center">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-extrabold font-display mb-4">
             Prêt à parrainer ?
@@ -87,7 +87,7 @@ export default function ParrainagePage() {
             Connecte-toi pour récupérer ton lien de parrainage.
           </p>
           <Link href="/connexion">
-            <Button size="lg" className="bg-white text-amber-600 hover:bg-white/90 gap-2">
+            <Button size="lg" className="bg-[var(--color-paper)] text-amber-600 hover:bg-white/90 gap-2">
               Récupérer mon lien
               <ArrowRight className="w-4 h-4" />
             </Button>

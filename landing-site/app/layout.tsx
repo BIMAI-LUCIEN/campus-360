@@ -1,20 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins, Open_Sans } from "next/font/google";
+import { Source_Serif_4, Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
-const poppins = Poppins({
+const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-  variable: "--font-poppins",
+  weight: ["600", "700", "900"],
+  style: ["normal", "italic"],
+  variable: "--font-source-serif",
   display: "swap",
 });
 
-const openSans = Open_Sans({
+const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-open-sans",
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const jbMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["500", "700"],
+  variable: "--font-jbmono",
   display: "swap",
 });
 
@@ -90,8 +98,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0ea5e9" },
-    { media: "(prefers-color-scheme: dark)", color: "#0c4a6e" },
+    { media: "(prefers-color-scheme: light)", color: "#F6F1E7" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F172A" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -165,7 +173,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${poppins.variable} ${openSans.variable} scroll-smooth`}
+      className={`${sourceSerif.variable} ${inter.variable} ${jbMono.variable} scroll-smooth`}
     >
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />

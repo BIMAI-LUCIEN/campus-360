@@ -13,14 +13,14 @@ export const metadata: Metadata = {
 export default function PromoRentreePage() {
   return (
     <SiteShell hidePromo>
-      <section className="py-16 lg:py-24 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
+      <section className="py-16 lg:py-24 border-b border-[var(--color-ink)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-100 text-amber-800 text-sm font-bold rounded-full mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--color-sienna-bg)] text-[var(--color-sienna-deep)] text-sm font-bold rounded-full mb-6">
             <Sparkles className="w-4 h-4" />
             Offre limitée
           </div>
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold font-display mb-6">
-            <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 bg-clip-text text-transparent">
+            <span className="text-[var(--color-sienna)]">
               -50%
             </span>{" "}
             sur Premium
@@ -58,7 +58,7 @@ export default function PromoRentreePage() {
         </div>
       </section>
 
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-[var(--color-paper)]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-extrabold font-display mb-6 text-center">
             Ce qui est inclus dans Premium

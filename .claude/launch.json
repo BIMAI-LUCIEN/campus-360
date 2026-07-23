@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "admin-app", "--", "-p", "3011"],
       "port": 3011
+    },
+    {
+      "name": "landing-site-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "landing-site", "--", "-p", "3012"],
+      "port": 3012
     }
   ]
 }

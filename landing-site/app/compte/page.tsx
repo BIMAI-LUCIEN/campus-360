@@ -32,7 +32,7 @@ export default async function ComptePage() {
 
   return (
     <SiteShell hidePromo>
-      <section className="py-16 lg:py-20 bg-white">
+      <section className="py-16 lg:py-20 bg-[var(--color-paper)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Profile card */}
           <div className="flex items-start gap-5 mb-10">
@@ -70,7 +70,7 @@ export default async function ComptePage() {
               href="/telecharger"
               className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all"
             >
-              <Download className="w-8 h-8 text-brand-500 mb-3" />
+              <Download className="w-8 h-8 text-[var(--color-sienna)] mb-3" />
               <h3 className="font-bold font-display mb-1">Télécharger l&apos;app</h3>
               <p className="text-sm text-[var(--color-ink-light)]">
                 Installe Campus 360 sur ton téléphone pour retrouver tes achats.
@@ -108,7 +108,7 @@ export default async function ComptePage() {
           </div>
 
           <p className="text-center text-xs text-[var(--color-ink-lighter)] mt-8">
-            Besoin d&apos;aide ? <Link href="/aide" className="text-brand-600 hover:underline">Centre d&apos;aide</Link> · <Link href="/contact" className="text-brand-600 hover:underline">Contact</Link>
+            Besoin d&apos;aide ? <Link href="/aide" className="text-[var(--color-sienna)] hover:underline">Centre d&apos;aide</Link> · <Link href="/contact" className="text-[var(--color-sienna)] hover:underline">Contact</Link>
           </p>
         </div>
       </section>

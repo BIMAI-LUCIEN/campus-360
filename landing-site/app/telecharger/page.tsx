@@ -33,6 +33,7 @@ export const metadata: Metadata = {
 };
 
 const changelog = [
+  { version: "1.1.0", date: "23 juillet 2026", changes: ["Correction de la connexion et de la synchronisation du compte", "Éditeur de rédaction (CV, lettres, rapports) fiabilisé", "Assistant IA sur PDF : affichage correct des crédits restants", "Corrections de sécurité sur le portefeuille et les paiements", "Nouveau design épuré sur tout le parcours"] },
   { version: "1.0.1", date: "2 juillet 2026", changes: ["Renommage en Campus 360", "Corrections de bugs mineurs"] },
   { version: "1.0.0", date: "1 juillet 2026", changes: ["Version initiale", "Catalogue de 3 500+ PDFs", "Assistant IA", "Wallet Mobile Money"] },
 ];
@@ -47,28 +48,22 @@ const requirements = [
 export default function TelechargerPage() {
   return (
     <SiteShell>
-      <section className="py-16 lg:py-24 bg-gradient-to-br from-brand-50 via-white to-brand-100">
+      <section className="py-20 lg:py-28 border-b border-[var(--color-ink)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-100 text-brand-700 text-sm font-semibold rounded-full mb-6">
-            <Download className="w-4 h-4" />
-            Téléchargement direct APK
-          </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display mb-6">
+          <p className="kicker justify-center flex mb-6">Téléchargement direct APK</p>
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] mb-6">
             Télécharge Campus 360
-            <span className="block text-brand-600">gratuit pour Android</span>
+            <span className="block text-[var(--color-sienna)]">gratuit pour Android</span>
           </h1>
-          <p className="text-lg text-[var(--color-ink-light)] mb-8 max-w-2xl mx-auto">
+          <p className="text-lg text-[var(--color-ink-muted)] mb-8 max-w-2xl mx-auto">
             APK signé, sans publicité, sans tracking. Fonctionne hors-ligne
             après le premier téléchargement des PDFs.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
             <a href={APK_URL} download="campus-360.apk">
-              <Button
-                size="lg"
-                className="bg-amber-cta hover:bg-amber-cta-hover gap-2 w-full sm:w-auto"
-              >
+              <Button size="lg" variant="secondary" className="gap-2 w-full sm:w-auto">
                 <Download className="w-5 h-5" />
-                campus-360.apk (68.9 Mo)
+                campus-360.apk (69 Mo)
               </Button>
             </a>
             <Link href="/contact">
@@ -77,34 +72,34 @@ export default function TelechargerPage() {
               </Button>
             </Link>
           </div>
-          <div className="flex items-center justify-center gap-6 text-sm text-[var(--color-ink-light)]">
+          <div className="flex items-center justify-center gap-6 text-sm text-[var(--color-ink-muted)]">
             <div className="flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              <ShieldCheck className="w-4 h-4 text-[var(--color-emerald)]" />
               <span>APK vérifié</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-brand-500" />
-              <span>v1.0.1</span>
+              <Sparkles className="w-4 h-4 text-[var(--color-sienna)]" />
+              <span>v1.1.0</span>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="py-16 bg-white">
+      <section className="py-16 lg:py-24 bg-[var(--color-paper)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-extrabold font-display mb-3">
+          <h2 className="font-display text-3xl font-extrabold tracking-[-0.02em] mb-3">
             Installation en 3 étapes
           </h2>
-          <p className="text-[var(--color-ink-light)] mb-10">
+          <p className="text-[var(--color-ink-muted)] mb-10">
             Campus 360 n&apos;est pas encore sur le Play Store, donc tu dois
             autoriser les sources inconnues pour Android.
           </p>
-          <div className="space-y-6">
+          <div className="space-y-0">
             {[
               {
                 step: "1",
                 title: "Télécharge l'APK",
-                desc: "Clique sur le bouton ci-dessus. Le fichier (68.9 Mo) s'enregistre dans ton dossier Téléchargements.",
+                desc: "Clique sur le bouton ci-dessus. Le fichier (69 Mo) s'enregistre dans ton dossier Téléchargements.",
               },
               {
                 step: "2",
@@ -116,22 +111,22 @@ export default function TelechargerPage() {
                 title: "Installe et lance",
                 desc: "Ouvre le fichier .apk → « Installer » → « Ouvrir ». L'app Campus 360 apparaît dans ton menu d'apps.",
               },
-            ].map((s) => (
-              <div key={s.step} className="flex gap-5 p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)]">
-                <div className="w-12 h-12 flex-shrink-0 rounded-full bg-brand-500 text-white flex items-center justify-center font-bold font-display text-xl">
+            ].map((s, i, arr) => (
+              <div key={s.step} className={`flex gap-5 py-6 ${i < arr.length - 1 ? "border-b border-[var(--color-ink)]/10" : ""}`}>
+                <div className="w-11 h-11 flex-shrink-0 rounded-[4px] bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center font-display font-bold text-lg">
                   {s.step}
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-lg font-display mb-1">{s.title}</h3>
-                  <p className="text-sm text-[var(--color-ink-light)] leading-relaxed">{s.desc}</p>
+                  <h3 className="font-display font-bold text-lg mb-1">{s.title}</h3>
+                  <p className="text-sm text-[var(--color-ink-muted)] leading-relaxed">{s.desc}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="mt-8 p-5 bg-amber-50 border border-amber-200 rounded-2xl flex gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-amber-900">
+          <div className="mt-8 p-5 bg-[var(--color-sienna-bg)] border border-[var(--color-sienna)]/25 rounded-[var(--radius-editorial)] flex gap-3">
+            <AlertTriangle className="w-5 h-5 text-[var(--color-sienna-deep)] flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-[var(--color-sienna-deep)]">
               <strong>Pourquoi pas le Play Store ?</strong> Frais d&apos;inscription
               + processus de revue trop long pour nos mises à jour fréquentes.
               On y travaille. En attendant, l&apos;APK est sécurisé par notre
@@ -143,15 +138,16 @@ export default function TelechargerPage() {
 
       <section className="py-16 bg-[var(--color-paper)] border-y border-[var(--color-border)]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-extrabold font-display mb-8">
+          <p className="kicker mb-5">Prérequis</p>
+          <h2 className="font-display text-3xl font-extrabold tracking-[-0.02em] mb-8">
             Configuration requise
           </h2>
           <div className="grid sm:grid-cols-2 gap-4">
             {requirements.map((r) => (
-              <div key={r.label} className="p-5 bg-white rounded-xl border border-[var(--color-border)] flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+              <div key={r.label} className="p-5 bg-[var(--color-paper-soft)] border border-[var(--color-ink)]/10 rounded-[var(--radius-editorial)] flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-[var(--color-emerald)] flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-sm text-[var(--color-ink-light)]">{r.label}</div>
+                  <div className="text-sm text-[var(--color-ink-subtle)]">{r.label}</div>
                   <div className="font-semibold text-[var(--color-ink)]">{r.value}</div>
                 </div>
               </div>
@@ -160,23 +156,23 @@ export default function TelechargerPage() {
         </div>
       </section>
 
-      <section className="py-16 bg-white">
+      <section className="py-16 lg:py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 mb-6">
-            <History className="w-6 h-6 text-brand-500" />
-            <h2 className="text-3xl font-extrabold font-display">Historique des versions</h2>
+          <div className="flex items-center gap-2.5 mb-6">
+            <History className="w-5 h-5 text-[var(--color-sienna)]" />
+            <h2 className="font-display text-3xl font-extrabold tracking-[-0.02em]">Historique des versions</h2>
           </div>
-          <div className="space-y-4">
-            {changelog.map((v) => (
-              <div key={v.version} className="p-5 bg-[var(--color-paper)] rounded-xl border border-[var(--color-border)]">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="font-bold font-display text-lg">v{v.version}</div>
-                  <div className="text-xs text-[var(--color-ink-lighter)]">{v.date}</div>
+          <div className="space-y-0">
+            {changelog.map((v, i) => (
+              <div key={v.version} className={`py-6 ${i < changelog.length - 1 ? "border-b border-[var(--color-ink)]/10" : ""}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="font-display font-bold text-lg">v{v.version}</div>
+                  <div className="font-mono text-xs text-[var(--color-ink-subtle)]">{v.date}</div>
                 </div>
-                <ul className="space-y-1">
+                <ul className="space-y-1.5">
                   {v.changes.map((c) => (
-                    <li key={c} className="flex items-start gap-2 text-sm text-[var(--color-ink-light)]">
-                      <Bug className="w-4 h-4 mt-0.5 text-brand-400" />
+                    <li key={c} className="flex items-start gap-2 text-sm text-[var(--color-ink-muted)]">
+                      <Bug className="w-4 h-4 mt-0.5 text-[var(--color-sienna-tone)] flex-shrink-0" />
                       {c}
                     </li>
                   ))}
@@ -187,17 +183,17 @@ export default function TelechargerPage() {
         </div>
       </section>
 
-      <section className="py-16 bg-[var(--color-paper)] border-t border-[var(--color-border)]">
+      <section className="py-16 bg-[var(--color-ink)] text-[var(--color-paper)]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Apple className="w-12 h-12 text-[var(--color-ink-light)] mx-auto mb-4" />
-          <h2 className="text-2xl font-extrabold font-display mb-3">
+          <Apple className="w-10 h-10 text-[var(--color-paper)]/50 mx-auto mb-4" strokeWidth={1.5} />
+          <h2 className="font-display text-2xl font-extrabold tracking-[-0.02em] mb-3">
             iOS arrive bientôt
           </h2>
-          <p className="text-[var(--color-ink-light)] mb-6">
+          <p className="text-[var(--color-paper)]/60 mb-6">
             On prépare la version iPhone / iPad. Inscris-toi pour être prévenu.
           </p>
           <Link href="/inscription">
-            <Button>Être notifié à la sortie iOS</Button>
+            <Button variant="secondary">Être notifié à la sortie iOS</Button>
           </Link>
         </div>
       </section>

@@ -10,18 +10,19 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants = {
   primary:
-    "bg-brand-500 text-white shadow-md hover:bg-brand-600 hover:shadow-lg active:scale-[0.98] hover:-translate-y-0.5",
+    "bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-ink-soft)] active:translate-y-px",
   secondary:
-    "bg-white text-[var(--color-ink)] border border-[var(--color-border)] hover:border-brand-300 hover:bg-brand-50 active:scale-[0.98]",
-  ghost: "bg-transparent text-[var(--color-ink)] hover:bg-white/70",
+    "bg-[var(--color-sienna)] text-white hover:bg-[var(--color-sienna-deep)] active:translate-y-px",
+  ghost:
+    "bg-transparent text-[var(--color-ink)] hover:bg-[var(--color-ink)]/[0.06]",
   outline:
-    "bg-transparent text-brand-700 border border-brand-200 hover:bg-brand-50",
+    "bg-transparent text-[var(--color-ink)] border border-[var(--color-ink)] hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)]",
 };
 
 const sizes = {
-  sm: "h-9 px-3.5 text-sm rounded-lg",
-  md: "h-11 px-5 text-[0.95rem] rounded-xl",
-  lg: "h-12 px-6 text-base rounded-xl",
+  sm: "h-9 px-3.5 text-sm rounded-[var(--radius-editorial)]",
+  md: "h-11 px-5 text-[0.95rem] rounded-[var(--radius-editorial)]",
+  lg: "h-13 px-7 text-base rounded-[var(--radius-editorial)]",
 };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -30,7 +31,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200",
+          "inline-flex items-center justify-center gap-2 font-sans font-semibold tracking-[0.01em] transition-all duration-150 cursor-pointer",
           variants[variant],
           sizes[size],
           className
