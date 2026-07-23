@@ -1,7 +1,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import { WebView } from 'react-native-webview';
 import { createElement, useEffect, useMemo, useState } from 'react';
-import { authBaseUrl } from '../auth/betterAuth';
+import { authWebBaseUrl } from '../auth/betterAuth';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -1064,7 +1064,7 @@ export function PdfStudentSection({
                   ) : readerUrl ? (
                     Platform.OS === 'web' ? (
                       createElement('iframe', {
-                        src: `${authBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}`,
+                        src: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}`,
                         title: readerDocument.title,
                         style: {
                           width: '100%',
@@ -1075,7 +1075,7 @@ export function PdfStudentSection({
                       })
                     ) : (
                       <WebView
-                        source={{ uri: `${authBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}` }}
+                        source={{ uri: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}` }}
                         style={styles.inAppWebViewFull}
                         startInLoadingState
                         renderLoading={() => (

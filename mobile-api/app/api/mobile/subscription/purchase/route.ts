@@ -82,12 +82,19 @@ export async function POST(request: NextRequest) {
         [access.user.id, -price, tier]
       );
 
-      // Update user profile. Note: parameterized interval via make_interval(days => $3)
+      // Update user profile. Renewing the SAME still-active tier stacks the new
+      // days on top of the remaining time (never discards unused days). Any
+      // other case (no active sub, expired, or tier change) starts a fresh
+      // period from now. Parameterized interval via make_interval(days => $3)
       // to avoid string interpolation.
       const userRes = await client.query(
         `update public.app_users
          set subscription_tier = $2,
-             subscription_expires_at = now() + make_interval(days => $3),
+             subscription_expires_at = case
+               when subscription_tier = $2 and subscription_expires_at > now()
+                 then subscription_expires_at + make_interval(days => $3)
+               else now() + make_interval(days => $3)
+             end,
              updated_at = now()
          where id = $1
          returning subscription_tier, subscription_expires_at`,

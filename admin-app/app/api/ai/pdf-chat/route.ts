@@ -8,7 +8,9 @@ import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limi
 export const runtime = 'nodejs';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const DEFAULT_FREE_MODEL = 'openrouter/free';
+// A real free-tier model id (the previous 'openrouter/free' is not a valid
+// model and made every call fall back to the local heuristic).
+const DEFAULT_FREE_MODEL = 'google/gemini-2.0-flash-exp:free';
 
 const MAX_BODY_BYTES = 32 * 1024;
 

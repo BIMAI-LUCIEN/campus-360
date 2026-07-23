@@ -150,6 +150,34 @@ const getAuthBaseUrl = () => {
 
 export const authBaseUrl = getAuthBaseUrl();
 
+// Base URL that actually serves the static web assets bundled with admin-app
+// (notably `pdf-viewer.html`, the PDF.js shell used by the in-app reader).
+// On native production builds `authBaseUrl` resolves to mobile-api
+// (api.campus360b.site) which does NOT host these files — using it there makes
+// the reader WebView 404 and stay blank. This always resolves to the admin-app
+// origin (authWebUrl) so the viewer works on real devices.
+const getAuthWebBaseUrl = () => {
+  // In dev on a physical device, the detected dev backend (port 3001) IS
+  // admin-app, which serves pdf-viewer.html — reuse it.
+  if (typeof __DEV__ !== 'undefined' && __DEV__ && Platform.OS !== 'web') {
+    const devUrl = getDevBackendUrl();
+    if (devUrl) {
+      return devUrl;
+    }
+  }
+
+  // On web, the existing base-url logic already resolves to the admin-app
+  // origin (authWebUrl / localhost:3001), so reuse it verbatim.
+  if (Platform.OS === 'web') {
+    return authBaseUrl;
+  }
+
+  // Native production: always point at the admin-app web origin.
+  return (publicEnv.authWebUrl || publicEnv.authUrl).replace(/\/$/, '');
+};
+
+export const authWebBaseUrl = getAuthWebBaseUrl();
+
 const authStorage = {
   getItem: (key: string): string | null => {
     if (Platform.OS === 'web') {

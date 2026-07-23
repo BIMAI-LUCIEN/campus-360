@@ -76,6 +76,140 @@ const inferSubject = (text: string, fallback: string) => {
   return subjects.find((subject) => lower.includes(subject.toLowerCase())) ?? clean(fallback).split(' ').slice(0, 3).join(' ');
 };
 
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+// A free-tier model by default; overridable via OPENROUTER_MODEL. Kept in sync
+// with the mobile assistant route so both features share one model config.
+const DEFAULT_FREE_MODEL = 'google/gemini-2.0-flash-exp:free';
+const LLM_TIMEOUT_MS = 20_000;
+
+// Best-effort extraction of a JSON object from an LLM response that may wrap it
+// in prose or ```json fences.
+const parseJsonObject = (raw: string): Record<string, unknown> | null => {
+  if (!raw) return null;
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = (fenced ? fenced[1] : raw).trim();
+  const start = candidate.indexOf('{');
+  const end = candidate.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) return null;
+  try {
+    return JSON.parse(candidate.slice(start, end + 1)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+
+const asString = (value: unknown) => (typeof value === 'string' ? clean(value) : '');
+const asStringArray = (value: unknown, max: number) =>
+  Array.isArray(value)
+    ? value
+        .map((v) => (typeof v === 'string' ? clean(v) : ''))
+        .filter(Boolean)
+        .slice(0, max)
+    : [];
+
+/**
+ * Enriches the deterministic heuristic result with a real LLM pass via
+ * OpenRouter. Non-empty model fields override the heuristic baseline; every
+ * field falls back to the heuristic value on missing/invalid output. If no API
+ * key is set, or the call fails/times out, the baseline is returned unchanged —
+ * so analysis never blocks on the network and never leaves a document stuck.
+ */
+export const enrichPdfIntelligenceWithLLM = async (
+  base: PdfIntelligenceResult,
+): Promise<PdfIntelligenceResult> => {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return base;
+
+  const model = process.env.OPENROUTER_MODEL ?? DEFAULT_FREE_MODEL;
+  const source = (base.extractedText || `${base.title}\n${base.description}`).slice(0, 8000);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.BETTER_AUTH_URL ?? 'http://localhost:3001',
+        'X-OpenRouter-Title': 'Campus 360 Admin',
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.2,
+        max_tokens: 900,
+        messages: [
+          {
+            role: 'system',
+            content:
+              "Tu es un assistant qui catalogue des documents academiques pour des etudiants africains francophones. " +
+              "Tu reponds UNIQUEMENT avec un objet JSON valide, sans texte autour, sans balises Markdown. " +
+              "Tu te bases strictement sur le contenu fourni. Si une information est absente, laisse une chaine vide.",
+          },
+          {
+            role: 'user',
+            content:
+              `Analyse ce document et renvoie un JSON avec exactement ces cles: ` +
+              `title (string, titre clair et court), description (string, 1-2 phrases), ` +
+              `subject (string, la matiere), aiSummary (string, resume de 3-4 phrases), ` +
+              `aiTags (array de 3 a 8 mots-cles), aiDifficulty (une de: "standard", "intermediaire", "avance"), ` +
+              `aiStudyPlan (array de 3 a 5 etapes de revision), ` +
+              `aiQuiz (array de 3 objets {question, answer}).\n\n` +
+              `Titre actuel: ${base.title}\nMatiere supposee: ${base.subject}\nNiveau: ${base.level}\n\n` +
+              `Contenu du document (extrait):\n<<<\n${source}\n>>>`,
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) return base;
+
+    const payload = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const parsed = parseJsonObject(payload.choices?.[0]?.message?.content ?? '');
+    if (!parsed) return base;
+
+    const tags = asStringArray(parsed.aiTags, 8);
+    const studyPlan = asStringArray(parsed.aiStudyPlan, 5);
+    const difficulty = asString(parsed.aiDifficulty).toLowerCase();
+    const quiz = Array.isArray(parsed.aiQuiz)
+      ? (parsed.aiQuiz as unknown[])
+          .map((q) => {
+            const item = q as Record<string, unknown>;
+            return { question: asString(item.question), answer: asString(item.answer) };
+          })
+          .filter((q) => q.question && q.answer)
+          .slice(0, 5)
+      : [];
+
+    const enriched: PdfIntelligenceResult = {
+      ...base,
+      title: asString(parsed.title) || base.title,
+      description: asString(parsed.description) || base.description,
+      subject: asString(parsed.subject) || base.subject,
+      aiSummary: asString(parsed.aiSummary) || base.aiSummary,
+      aiTags: tags.length ? tags : base.aiTags,
+      aiDifficulty: ['standard', 'intermediaire', 'avance'].includes(difficulty)
+        ? difficulty
+        : base.aiDifficulty,
+      aiStudyPlan: studyPlan.length ? studyPlan : base.aiStudyPlan,
+      aiQuiz: quiz.length ? quiz : base.aiQuiz,
+    };
+
+    // A successful LLM pass meaningfully raises confidence in the metadata.
+    enriched.qualityScore = Math.min(100, base.qualityScore + 15);
+    return enriched;
+  } catch {
+    // Timeout, network error, abort — degrade gracefully to the heuristic.
+    return base;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
 export const inferPdfIntelligence = (input: PdfIntelligenceInput): PdfIntelligenceResult => {
   const extractedText = clean(input.rawText).slice(0, 6000);
   const text = [input.title, input.description, input.subject, input.level, input.faculty, extractedText]
