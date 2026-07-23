@@ -63,7 +63,7 @@ export default function TelechargerPage() {
             <a href={APK_URL} download="campus-360.apk">
               <Button size="lg" variant="secondary" className="gap-2 w-full sm:w-auto">
                 <Download className="w-5 h-5" />
-                campus-360.apk (69 Mo)
+                campus-360.apk (71,5 Mo)
               </Button>
             </a>
             <Link href="/contact">
@@ -99,7 +99,7 @@ export default function TelechargerPage() {
               {
                 step: "1",
                 title: "Télécharge l'APK",
-                desc: "Clique sur le bouton ci-dessus. Le fichier (69 Mo) s'enregistre dans ton dossier Téléchargements.",
+                desc: "Clique sur le bouton ci-dessus. Le fichier (71,5 Mo) s'enregistre dans ton dossier Téléchargements.",
               },
               {
                 step: "2",
