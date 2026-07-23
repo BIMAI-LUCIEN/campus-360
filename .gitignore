@@ -60,3 +60,4 @@ admin-app/public/uploads/pdfs/*
 
 
 .vercel
+.env*
