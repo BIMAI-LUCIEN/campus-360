@@ -223,6 +223,10 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
   const [currentPage, setCurrentPage] = useState(1);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  // Batch upload: analyze each PDF and publish it straight away when the AI
+  // score clears the quality bar (else it lands in "à corriger" for review).
+  const [autoPublish, setAutoPublish] = useState(true);
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
     refreshPacks();
@@ -338,8 +342,17 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     return field?.value || fallback;
   };
 
-  const uploadAnalyzedFile = async (file: File, form: HTMLFormElement) => {
+  const uploadAnalyzedFile = async (
+    file: File,
+    form: HTMLFormElement,
+    publishWhenReady: boolean,
+  ): Promise<PdfDocument['status']> => {
     const hints = await analyzePdf(file);
+    // Only auto-publish PDFs the analysis is confident about; the rest go to
+    // "à corriger" so an admin can finish them, never silently to draft-limbo.
+    const publishable = hints.qualityScore >= 70 && Boolean(hints.aiSummary);
+    const status: PdfDocument['status'] =
+      publishWhenReady && publishable ? 'published' : 'needs_review';
     const data = new FormData();
     data.set('title', hints.title || titleFromFileName(file.name));
     data.set('description', hints.description || `Document ${titleFromFileName(file.name)}`);
@@ -369,7 +382,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
       String(hints.suggestedPriceCoins || Number(fieldValue(form, 'priceCoins', '300'))),
     );
     data.set('pageCount', String(hints.pageCount || 1));
-    data.set('status', hints.qualityScore >= 75 ? 'needs_review' : 'draft');
+    data.set('status', status);
     data.set('commissionRate', fieldValue(form, 'commissionRate', '20'));
     data.set('aiSummary', hints.aiSummary);
     data.set('aiTags', JSON.stringify(hints.aiTags));
@@ -389,6 +402,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
           ? JSON.stringify(payload.error)
           : `Upload impossible: ${file.name}`,
       );
+    return status;
   };
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -400,18 +414,34 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     setAnalysisLoading(true);
     setMessage(
       files.length > 1
-        ? `Analyse et téléchargement de ${files.length} PDF...`
+        ? `Analyse de ${files.length} PDF...`
         : 'Analyse du PDF en cours...',
     );
 
     try {
       if (files.length > 1) {
-        for (const item of files) {
-          await uploadAnalyzedFile(item, form);
+        let published = 0;
+        let review = 0;
+        let failed = 0;
+        setBatchProgress({ done: 0, total: files.length });
+        for (let i = 0; i < files.length; i += 1) {
+          try {
+            const resultStatus = await uploadAnalyzedFile(files[i], form, autoPublish);
+            if (resultStatus === 'published') published += 1;
+            else review += 1;
+          } catch {
+            // One bad file must not abort the whole batch.
+            failed += 1;
+          }
+          setBatchProgress({ done: i + 1, total: files.length });
         }
-        setMessage(
-          `${files.length} PDF analysés et enregistrés. Vérifie les packs IA proposés.`,
-        );
+        const parts = [
+          published > 0 ? `${published} publié${published > 1 ? 's' : ''}` : '',
+          review > 0 ? `${review} à corriger` : '',
+          failed > 0 ? `${failed} échec${failed > 1 ? 's' : ''}` : '',
+        ].filter(Boolean);
+        setMessage(`${files.length} PDF traités — ${parts.join(' · ')}.`);
+        setBatchProgress(null);
         await refresh();
         form.reset();
         return;
@@ -1017,6 +1047,11 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
                 className="mb-1 w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface file:mr-3 file:rounded-lg file:border-0 file:bg-stitch-primary-fixed file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-stitch-primary file:cursor-pointer"
               />
 
+              <p className="mb-3 mt-1 text-[12px] text-stitch-on-surface-variant">
+                Astuce : sélectionne <strong>plusieurs PDF à la fois</strong> pour les
+                analyser et les publier en lot.
+              </p>
+
               <input type="hidden" name="pageCount" defaultValue={1} />
               <input type="hidden" name="aiSummary" />
               <input type="hidden" name="aiTags" />
@@ -1026,6 +1061,41 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
               <input type="hidden" name="aiStudyPlan" />
               <input type="hidden" name="aiQuiz" />
               <input type="hidden" name="extractedText" />
+
+              {/* Auto-publish toggle (batch upload) */}
+              <label className="mt-2 flex cursor-pointer items-start gap-3 rounded-xl border border-stitch-outline-variant bg-stitch-surface p-3">
+                <input
+                  type="checkbox"
+                  checked={autoPublish}
+                  onChange={(e) => setAutoPublish(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-stitch-primary"
+                />
+                <span className="text-[13px] text-stitch-on-surface">
+                  <strong className="block font-semibold">Analyser et publier automatiquement</strong>
+                  <span className="text-stitch-on-surface-variant">
+                    En upload multiple, chaque PDF jugé prêt par l&apos;IA (score ≥ 70) est
+                    publié directement ; les autres passent en « à corriger ».
+                  </span>
+                </span>
+              </label>
+
+              {/* Batch progress */}
+              {batchProgress ? (
+                <div className="mt-3">
+                  <div className="mb-1 flex items-center justify-between text-[12px] font-medium text-stitch-on-surface-variant">
+                    <span>Traitement des PDF…</span>
+                    <span className="tabular-nums">
+                      {batchProgress.done}/{batchProgress.total}
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-stitch-surface-container">
+                    <div
+                      className="h-full rounded-full bg-stitch-primary transition-all duration-300"
+                      style={{ width: `${Math.round((batchProgress.done / batchProgress.total) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ) : null}
 
               {/* AI note */}
               <div className="mt-4 grid grid-cols-[34px_1fr] items-center gap-2.5 rounded-xl border border-stitch-outline-variant bg-stitch-primary-fixed p-3 text-stitch-on-surface">

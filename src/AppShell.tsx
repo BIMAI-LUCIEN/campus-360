@@ -60,6 +60,7 @@ import {
 } from './features/auth/betterAuth';
 import { OnboardingScreen } from './features/onboarding/OnboardingScreen';
 import { FreePdfSelector } from './features/onboarding/FreePdfSelector';
+import { Toast, type ToastMessage, type ToastVariant } from './ui/Toast';
 import { PdfStudentSection } from './features/pdf/PdfStudentSection';
 import {
   buildSuggestedPacks,
@@ -251,6 +252,15 @@ export function AppShell() {
   const narrowScreen = width < 460;
 
   // ── State (copied verbatim from App.tsx) ────────────────────────────────
+  const [toast, setToast] = React.useState<ToastMessage | null>(null);
+  const toastId = React.useRef(0);
+  const showToast = React.useCallback(
+    (message: string, variant: ToastVariant = 'info', title?: string) => {
+      toastId.current += 1;
+      setToast({ id: toastId.current, message, variant, title });
+    },
+    [],
+  );
   const [hasSeenOnboarding, setHasSeenOnboarding] = React.useState(false);
   const [notificationsVisible, setNotificationsVisible] = React.useState(false);
   const [notificationsSettingsVisible, setNotificationsSettingsVisible] = React.useState(false);
@@ -669,7 +679,7 @@ export function AppShell() {
   };
 
   const buyDocument = (document: CampusDocument) => {
-    if (purchasedDocuments.includes(document.id)) { Alert.alert('Déjà acheté', 'Ce PDF est déjà dans ta bibliothèque.'); return; }
+    if (purchasedDocuments.includes(document.id)) { showToast('Ce PDF est déjà dans ta bibliothèque.', 'info', 'Déjà dans Mes PDF'); return; }
     if (!studentSession) { setAuthMode('sign-in'); setAuthNotice('Connecte-toi pour acheter ce PDF avec ton wallet.'); setAuthVisible(true); return; }
     setPurchasingDocumentId(document.id);
     recordPdfAnalyticsEvent({ eventType: 'purchase_start', documentId: document.id, accessToken: 'better-auth', metadata: { price: document.price, subject: document.subject, level: document.level } });
@@ -678,13 +688,13 @@ export function AppShell() {
         setPurchasedDocuments((current) => [document.id, ...current.filter((id) => id !== document.id)]);
         await syncStudentAccount(studentSession);
         recordPdfAnalyticsEvent({ eventType: 'purchase_success', documentId: document.id, accessToken: 'better-auth', metadata: { price: document.price, subject: document.subject, level: document.level } });
-        Alert.alert('PDF acheté', `${document.title} est maintenant dans Mes PDF.`);
+        showToast(`${document.title} est maintenant dans Mes PDF.`, 'success', 'PDF acheté 🎉');
       })
       .catch((error) => {
         const message = error instanceof Error ? error.message : '';
         recordPdfAnalyticsEvent({ eventType: 'purchase_failed', documentId: document.id, accessToken: 'better-auth', metadata: { price: document.price, reason: message || 'unknown' } });
         if (message.toLowerCase().includes('insufficient')) { setInsufficientVisible(true); return; }
-        Alert.alert('Achat impossible', message || 'Réessaie dans un instant.');
+        showToast(message || 'Réessaie dans un instant.', 'error', 'Achat impossible');
       })
       .finally(() => { setPurchasingDocumentId(null); });
   };
@@ -714,11 +724,12 @@ export function AppShell() {
       }
       if (unlocked.length === pendingIds.length) {
         setPurchasedPacks((current) => [pack.id, ...current.filter((id) => id !== pack.id)]);
-        Alert.alert('Pack débloqué', `${pack.title} est maintenant dans ta bibliothèque.`);
+        showToast(`${pack.title} est maintenant dans ta bibliothèque.`, 'success', 'Pack débloqué 🎉');
       } else if (unlocked.length > 0) {
-        Alert.alert(
-          'Pack partiellement débloqué',
+        showToast(
           `${unlocked.length}/${pendingIds.length} PDF débloqués. Solde insuffisant pour le reste.`,
+          'warning',
+          'Pack partiellement débloqué',
         );
       } else {
         setInsufficientVisible(true);
@@ -729,14 +740,14 @@ export function AppShell() {
   };
 
   const buyPack = (pack: CampusPdfPack) => {
-    if (purchasedPacks.includes(pack.id)) { Alert.alert('Pack déjà acheté', 'Ce pack est déjà dans ta bibliothèque.'); return; }
+    if (purchasedPacks.includes(pack.id)) { showToast('Ce pack est déjà dans ta bibliothèque.', 'info', 'Pack déjà acheté'); return; }
     if (!studentSession) { setAuthMode('sign-in'); setAuthNotice('Connecte-toi pour acheter ce pack avec ton wallet.'); setAuthVisible(true); return; }
 
     if (isSuggestedPack(pack)) {
       const pendingIds = pack.documentIds.filter((id) => !purchasedDocuments.includes(id));
       if (!pendingIds.length) {
         setPurchasedPacks((current) => [pack.id, ...current.filter((id) => id !== pack.id)]);
-        Alert.alert('Déjà débloqué', 'Tu possèdes déjà tous les PDF de ce pack.');
+        showToast('Tu possèdes déjà tous les PDF de ce pack.', 'info', 'Déjà débloqué');
         return;
       }
       const total = pendingIds.reduce(
@@ -761,12 +772,12 @@ export function AppShell() {
         setPurchasedPacks((current) => [pack.id, ...current.filter((id) => id !== pack.id)]);
         setPurchasedDocuments((current) => Array.from(new Set([...unlockedIds, ...current])));
         await syncStudentAccount(studentSession);
-        Alert.alert('Pack acheté', `${pack.title} est maintenant dans ta bibliothèque.`);
+        showToast(`${pack.title} est maintenant dans ta bibliothèque.`, 'success', 'Pack acheté 🎉');
       })
       .catch((error) => {
         const message = error instanceof Error ? error.message : '';
         if (message.toLowerCase().includes('insufficient')) { setInsufficientVisible(true); return; }
-        Alert.alert('Achat impossible', message || 'Réessaie dans un instant.');
+        showToast(message || 'Réessaie dans un instant.', 'error', 'Achat impossible');
       })
       .finally(() => { setPurchasingPackId(null); });
   };
@@ -913,6 +924,8 @@ export function AppShell() {
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="dark-content" backgroundColor={stitchColors.surface} translucent={false} />
+
+        <Toast toast={toast} onDismiss={() => setToast(null)} />
 
         {/* Update Banner */}
         {updateAvailable && (

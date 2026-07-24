@@ -15,7 +15,8 @@ const eventSchema = z.object({
     'reader_open',
     'assistant_question',
   ]),
-  documentId: z.string().uuid().optional(),
+  // Catalog document ids are app-generated (pdf_…, slugs), not RFC UUIDs.
+  documentId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/).optional(),
   sessionId: z.string().min(1).max(200),
   metadata: z.record(z.string(), z.unknown()).default({}),
 });

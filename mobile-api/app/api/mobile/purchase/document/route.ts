@@ -4,8 +4,14 @@ import { z } from 'zod';
 import { databasePool } from '@/lib/database';
 import { MobileApiError, mobileErrorResponse, requireMobileUser } from '@/lib/mobile-access';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
+import { sendPushToUser } from '@/lib/push';
 
-const bodySchema = z.object({ documentId: z.string().uuid() });
+// Catalog document ids are app-generated (e.g. "pdf_ab12cd...", legacy slugs),
+// not RFC UUIDs — validating as .uuid() rejected every real purchase. Keep it a
+// strict format guard; the id only ever flows into parameterized SQL.
+const bodySchema = z.object({
+  documentId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/, 'Identifiant invalide.'),
+});
 export const runtime = 'nodejs';
 
 const MAX_BODY_BYTES = 4 * 1024;
@@ -75,6 +81,12 @@ export async function POST(request: NextRequest) {
       );
       await client.query('update public.documents set sales_count = sales_count + 1, updated_at = now() where id = $1', [documentId]);
       await client.query('commit');
+      // Fire-and-forget purchase receipt push (never blocks the response).
+      void sendPushToUser(access.user.id, {
+        title: 'Achat confirmé 🎉',
+        body: 'Ton PDF est disponible dans Mes PDF.',
+        data: { type: 'purchase', documentId },
+      });
       return NextResponse.json(purchase.rows[0]);
     } catch (error) {
       await client.query('rollback');

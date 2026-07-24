@@ -4,8 +4,14 @@ import { z } from 'zod';
 import { databasePool } from '@/lib/database';
 import { MobileApiError, mobileErrorResponse, requireMobileUser } from '@/lib/mobile-access';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
+import { sendPushToUser } from '@/lib/push';
 
-const bodySchema = z.object({ packId: z.string().uuid() });
+// Pack ids are app-generated (e.g. "pack_ab12...", legacy slugs), not RFC UUIDs
+// — .uuid() rejected every real pack purchase. Strict format guard only; the id
+// flows into parameterized SQL exclusively.
+const bodySchema = z.object({
+  packId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/, 'Identifiant invalide.'),
+});
 export const runtime = 'nodejs';
 
 const MAX_BODY_BYTES = 4 * 1024;
@@ -86,6 +92,11 @@ export async function POST(request: NextRequest) {
         [price, packId],
       );
       await client.query('commit');
+      void sendPushToUser(access.user.id, {
+        title: 'Pack débloqué 🎉',
+        body: `${documentIds.length} PDF ajoutés à ta bibliothèque.`,
+        data: { type: 'pack_purchase', packId },
+      });
       return NextResponse.json(purchase.rows[0]);
     } catch (error) {
       await client.query('rollback');
