@@ -3,10 +3,18 @@ import { z } from 'zod';
 
 import { databasePool } from '@/lib/database';
 import { requireMobileUser, mobileErrorResponse, MobileApiError } from '@/lib/mobile-access';
+import { sendPushToUser } from '@/lib/push';
 
 export const runtime = 'nodejs';
+// Generating every section takes far longer than the platform default (~10-15s):
+// 6 sections for a "stage", 9 for a "mémoire", at several seconds per LLM call.
+// Without this the request is killed mid-generation and nothing is ever written.
+export const maxDuration = 300;
 
 const IA_CREDITS_PER_GENERATION = 5;
+// Sections are generated concurrently, but kept low so the free OpenRouter tier
+// doesn't rate-limit us.
+const GENERATION_CONCURRENCY = 3;
 
 const generateSchema = z.object({
   messages: z.array(z.object({
@@ -32,6 +40,98 @@ const sanitizeHtmlFragment = (raw: string): string => {
   });
   return html.trim();
 };
+
+// Run an async mapper over items with a bounded number of workers, preserving
+// order. Used so the LLM calls overlap without hammering the free tier.
+async function runWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    for (;;) {
+      const index = cursor++;
+      if (index >= items.length) return;
+      results[index] = await fn(items[index]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+// Keys mirror the cover form rendered in the mobile editor (renderCoverPage).
+const COVER_KEYS = [
+  'school',
+  'title',
+  'subtitle',
+  'studentName',
+  'company',
+  'tutorCorporate',
+  'tutorAcademic',
+  'year',
+] as const;
+
+type ChatMessage = { role: 'user' | 'assistant' | 'system'; content: string };
+
+const formatConversation = (messages: ChatMessage[]) =>
+  messages.map((m) => `${m.role === 'user' ? 'Étudiant' : 'IA'}: ${m.content}`).join('\n');
+
+// Ask the model to pull the cover-page fields out of the onboarding chat so the
+// student doesn't have to retype them. Best-effort: any failure returns {}.
+async function extractCoverData(
+  messages: ChatMessage[],
+  documentTitle: string,
+  apiKey: string,
+  model: string,
+): Promise<Record<string, string>> {
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.BETTER_AUTH_URL ?? 'https://campus-360.local',
+        'X-Title': 'Campus 360 Cover Extractor',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content:
+              `Tu extrais les métadonnées de page de garde d'un document académique. ` +
+              `Réponds UNIQUEMENT par un objet JSON valide contenant exactement ces clés : ` +
+              `${COVER_KEYS.join(', ')}. Mets "" quand l'information est absente. ` +
+              `N'invente jamais un nom ou une entreprise. Aucun texte en dehors du JSON.`,
+          },
+          {
+            role: 'user',
+            content: `Titre du document : ${documentTitle}\n\nConversation :\n${formatConversation(messages)}`,
+          },
+        ],
+        temperature: 0.1,
+      }),
+    });
+    if (!res.ok) return {};
+    const data = await res.json();
+    const raw = String(data.choices?.[0]?.message?.content ?? '');
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) return {};
+    const parsedJson = JSON.parse(match[0]) as Record<string, unknown>;
+    const out: Record<string, string> = {};
+    for (const key of COVER_KEYS) {
+      const value = parsedJson[key];
+      if (typeof value === 'string' && value.trim()) {
+        out[key] = value.trim().slice(0, 300);
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -104,16 +204,19 @@ export async function POST(request: NextRequest) {
         /\b(stage|stagiaire|entreprise|mission|alternance|cdd|cdi|emploi|poste)\b/.test(userMessagesText) &&
         !/(pas de stage|aucun stage|sans stage|pas de stage|n['’]ai pas (fait|effectué))/i.test(userMessagesText);
 
-      // Generate content for each editable section
-      for (const section of sections) {
-        const titleLower = section.title.toLowerCase();
-        // Skip cover page and summary
-        if (titleLower === 'page de garde' || titleLower === 'sommaire') continue;
+      // Generate every editable section with bounded concurrency, then persist.
+      // DB writes stay sequential on purpose: they share a single pooled client
+      // inside this transaction and must not be issued in parallel.
+      const editableSections = sections.filter((s) => {
+        const t = String(s.title).toLowerCase();
+        return t !== 'page de garde' && t !== 'sommaire';
+      });
 
-        const stageGuidance = hasStage
-          ? `L'étudiant a effectué un stage. Rédige cette section en te basant sur son vécu en entreprise : cite des missions concrètes, des outils utilisés, des difficultés rencontrées et les compétences développées. Évite le générique ; ancre chaque paragraphe dans le contexte fourni dans le chat d'onboarding.\n`
-          : `L'étudiant n'a PAS effectué de stage. Rédige cette section de manière académique et théorique : mobilise des références bibliographiques types (auteurs reconnus du domaine), construis une revue de littérature structurée, propose une méthodologie hypothétique rigoureuse, et replace le sujet dans son cadre scientifique. Sois particulièrement détaillé sur les concepts clés et les modèles théoriques pertinents.\n`;
+      const stageGuidance = hasStage
+        ? `L'étudiant a effectué un stage. Rédige cette section en te basant sur son vécu en entreprise : cite des missions concrètes, des outils utilisés, des difficultés rencontrées et les compétences développées. Évite le générique ; ancre chaque paragraphe dans le contexte fourni dans le chat d'onboarding.\n`
+        : `L'étudiant n'a PAS effectué de stage. Rédige cette section de manière académique et théorique : mobilise des références bibliographiques types (auteurs reconnus du domaine), construis une revue de littérature structurée, propose une méthodologie hypothétique rigoureuse, et replace le sujet dans son cadre scientifique. Sois particulièrement détaillé sur les concepts clés et les modèles théoriques pertinents.\n`;
 
+      const buildSection = async (section: { id: string; title: string }) => {
         const systemPrompt =
           `Tu es un rédacteur universitaire et professionnel chevronné.\n` +
           `Rédige le contenu complet de la section : "${section.title}" pour le document "${document.title}" (${documentType}).\n` +
@@ -133,36 +236,57 @@ export async function POST(request: NextRequest) {
           messages.map(m => `${m.role === 'user' ? 'Étudiant' : 'IA'}: ${m.content}`).join('\n') +
           `\n\nIdentifie et rédige le contenu spécifique de la section "${section.title}".`;
 
-        const openrouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': process.env.BETTER_AUTH_URL ?? 'https://campus-360.local',
-            'X-Title': 'Campus 360 Full Document Generator',
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
-            ],
-            temperature: 0.7,
-          }),
-        });
+        try {
+          const openrouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': process.env.BETTER_AUTH_URL ?? 'https://campus-360.local',
+              'X-Title': 'Campus 360 Full Document Generator',
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+              ],
+              temperature: 0.7,
+            }),
+          });
 
-        if (openrouterRes.ok) {
+          if (!openrouterRes.ok) return { id: section.id, html: '' };
           const aiData = await openrouterRes.json();
           const rawContent = aiData.choices?.[0]?.message?.content ?? '';
-          const safeHtml = sanitizeHtmlFragment(rawContent);
-
-          if (safeHtml) {
-            await client.query(
-              'update public.app_document_sections set content_html = $1, updated_at = now() where id = $2',
-              [safeHtml, section.id]
-            );
-          }
+          return { id: section.id, html: sanitizeHtmlFragment(rawContent) };
+        } catch {
+          // One failed section must not abort the whole document.
+          return { id: section.id, html: '' };
         }
+      };
+
+      // Section bodies and the cover-page extraction run together.
+      const [generatedSections, coverData] = await Promise.all([
+        runWithConcurrency(editableSections, GENERATION_CONCURRENCY, buildSection),
+        extractCoverData(messages, String(document.title ?? ''), apiKey, model),
+      ]);
+
+      for (const generated of generatedSections) {
+        if (!generated.html) continue;
+        await client.query(
+          'update public.app_document_sections set content_html = $1, updated_at = now() where id = $2',
+          [generated.html, generated.id],
+        );
+      }
+
+      // Merge extracted cover fields into whatever the student already filled in.
+      if (Object.keys(coverData).length > 0) {
+        await client.query(
+          `update public.app_documents
+             set cover_data = coalesce(cover_data, '{}'::jsonb) || $1::jsonb, updated_at = now()
+           where id = $2`,
+          [JSON.stringify(coverData), documentId],
+        );
       }
 
       // Deduct credits
@@ -179,6 +303,13 @@ export async function POST(request: NextRequest) {
       );
 
       await client.query('commit');
+
+      // Generation takes ~30-60s; the student may have left the app. Fire-and-forget.
+      void sendPushToUser(user.id, {
+        title: 'Ton document est prêt 🎉',
+        body: `${document.title} a été rédigé par l'IA. Ouvre-le pour le personnaliser.`,
+        data: { type: 'document_generated', documentId },
+      });
 
       return NextResponse.json({
         success: true,

@@ -89,6 +89,7 @@ import { TopBar, BottomNav } from './ui/GlassComponents';
 import { HomeScreen } from './ui/screens/HomeScreen';
 import { ExploreScreen } from './ui/screens/ExploreScreen';
 import { LibraryScreen } from './ui/screens/LibraryScreen';
+import { SimplePdfReaderModal } from './features/pdf/SimplePdfReaderModal';
 import { ProfileScreen } from './ui/screens/ProfileScreen';
 import { AuthScreen } from './ui/screens/AuthScreen';
 import { DocumentsScreen } from './features/documents/DocumentsScreen';
@@ -320,6 +321,7 @@ export function AppShell() {
   const [syncingAccount, setSyncingAccount] = React.useState(false);
   const [clientTab, setClientTab] = React.useState<ClientCatalogTab>('packs');
   const [activeSection, setActiveSection] = React.useState<AppSection>('home');
+  const [readingDocument, setReadingDocument] = React.useState<CampusDocument | null>(null);
   const [isSessionRestoring, setIsSessionRestoring] = React.useState(true);
   const [rechargePhone, setRechargePhone] = React.useState('');
   const [rechargeLoading, setRechargeLoading] = React.useState(false);
@@ -1049,7 +1051,7 @@ export function AppShell() {
               {activeSection === 'library' && (
                 <LibraryScreen
                   ownedDocuments={ownedLibrary}
-                  onOpenDocument={buyDocument}
+                  onOpenDocument={setReadingDocument}
                   onExplore={() => openSection('explore')}
                 />
               )}
@@ -1117,6 +1119,12 @@ export function AppShell() {
                 />
               ) : null}
             </ScrollView>
+
+            <SimplePdfReaderModal
+              document={readingDocument}
+              accessToken={studentSession ? 'better-auth' : undefined}
+              onClose={() => setReadingDocument(null)}
+            />
 
             {/* BottomNav */}
             <BottomNav
