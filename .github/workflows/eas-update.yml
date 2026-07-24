@@ -53,6 +53,16 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      # EXPO_PUBLIC_* vars are inlined by Metro at export time from the process
+      # env. `eas update` does NOT read eas.json build-profile env, so without
+      # this the OTA bundle would ship empty public config (blank Supabase =>
+      # broken catalog) and overwrite a correctly-built APK on next launch.
+      # Load them from the production build profile so eas.json stays the single
+      # source of truth.
+      - name: Load EXPO_PUBLIC env from eas.json (production profile)
+        run: |
+          node -e "const e=require('./eas.json').build.production.env||{};const fs=require('fs');const out=Object.entries(e).filter(([k])=>k.startsWith('EXPO_PUBLIC_')).map(([k,v])=>k+'='+v).join('\n');fs.appendFileSync(process.env.GITHUB_ENV, out+'\n');console.log('Loaded',Object.keys(e).length,'vars')"
+
       - name: Publish OTA update
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

@@ -94,6 +94,7 @@ import { DocumentsScreen } from './features/documents/DocumentsScreen';
 
 const logo = require('../assets/icon.png');
 const onboardingStorageKey = 'campus-bordes.onboarding-seen';
+const introSeenStorageKey = 'campus-bordes.intro-seen';
 
 const formatCoins = (value: number) =>
   new Intl.NumberFormat('fr-CM', { maximumFractionDigits: 0 }).format(value);
@@ -439,6 +440,42 @@ export function AppShell() {
     setAuthPhone(''); setAuthWhatsappPhone('');
     setAuthUniversity(''); setAuthFaculty(''); setAuthLevel('');
   }, [authMode]);
+
+  // Load the persisted "intro already seen" flag once at launch so the pre-auth
+  // OnboardingScreen never reappears for a returning user (it used to reset to
+  // false on every launch because the flag lived only in component state).
+  React.useEffect(() => {
+    let mounted = true;
+    const loadIntroSeen = async () => {
+      try {
+        let seen = '0';
+        if (Platform.OS === 'web') {
+          seen = (typeof localStorage !== 'undefined' && localStorage.getItem(introSeenStorageKey)) || '0';
+        } else {
+          seen = (await SecureStore.getItemAsync(introSeenStorageKey)) || '0';
+        }
+        if (mounted && seen === '1') setHasSeenOnboarding(true);
+      } catch {}
+    };
+    loadIntroSeen();
+    return () => { mounted = false; };
+  }, []);
+
+  // Anyone who has a session has, by definition, already passed the intro — mark
+  // it seen (and persist) so it can never come back after the first connection.
+  React.useEffect(() => {
+    if (!studentSession) return;
+    setHasSeenOnboarding(true);
+    (async () => {
+      try {
+        if (Platform.OS === 'web') {
+          if (typeof localStorage !== 'undefined') localStorage.setItem(introSeenStorageKey, '1');
+        } else {
+          await SecureStore.setItemAsync(introSeenStorageKey, '1');
+        }
+      } catch {}
+    })();
+  }, [studentSession]);
 
   React.useEffect(() => {
     if (!studentSession) { setOnboardingVisible(false); return; }
@@ -897,7 +934,20 @@ export function AppShell() {
             <Text style={styles.loadingText}>Chargement de ton espace...</Text>
           </View>
         ) : !hasSeenOnboarding ? (
-          <OnboardingScreen onFinish={() => setHasSeenOnboarding(true)} />
+          <OnboardingScreen
+            onFinish={() => {
+              setHasSeenOnboarding(true);
+              (async () => {
+                try {
+                  if (Platform.OS === 'web') {
+                    if (typeof localStorage !== 'undefined') localStorage.setItem(introSeenStorageKey, '1');
+                  } else {
+                    await SecureStore.setItemAsync(introSeenStorageKey, '1');
+                  }
+                } catch {}
+              })();
+            }}
+          />
         ) : showAuthGate ? (
           <AuthScreen
             mode={authMode}
