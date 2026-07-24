@@ -170,6 +170,7 @@ body {
 #editor li { margin-bottom: 6px; }
 #editor strong, #editor b { color: #111827; font-weight: 700; }
 #editor em, #editor i { color: #4B5563; font-style: italic; }
+#editor img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0; display: block; }
 
 /* AI panel — quick section-level draft/improve */
 .ai-panel {
@@ -265,10 +266,13 @@ body {
   <button class="tool-btn" id="btnH2" title="Titre 2">H2</button>
   <button class="tool-btn" id="btnH3" title="Titre 3">H3</button>
   <button class="tool-btn" id="btnUl" title="Liste">•—</button>
+  <button class="tool-btn" id="btnImage" title="Insérer une image">🖼️</button>
   <div class="sep"></div>
   <button class="tool-btn" id="btnUndo" title="Annuler">↩</button>
   <button class="tool-btn" id="btnRedo" title="Refaire">↪</button>
 </div>
+<input type="file" id="imgInput" accept="image/*" style="display:none">
+<canvas id="imgCanvas" style="display:none"></canvas>
 
 <!-- Main content area -->
 <div id="mainContent">
@@ -524,6 +528,44 @@ document.getElementById('btnUl').addEventListener('click', () => {
 });
 document.getElementById('btnUndo').addEventListener('click', () => document.execCommand('undo'));
 document.getElementById('btnRedo').addEventListener('click', () => document.execCommand('redo'));
+
+// ── Image insertion (pick from device → downscale in-canvas → embed) ─────────
+document.getElementById('btnImage').addEventListener('click', () => {
+  document.getElementById('imgInput').click();
+});
+document.getElementById('imgInput').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file || !file.type || file.type.indexOf('image/') !== 0) { e.target.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1000;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.getElementById('imgCanvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      let dataUrl;
+      try { dataUrl = canvas.toDataURL('image/jpeg', 0.72); }
+      catch (err) { dataUrl = reader.result; }
+      const editor = document.getElementById('editor');
+      if (editor) {
+        editor.focus();
+        document.execCommand('insertHTML', false, '<img src="' + dataUrl + '" alt="image"/><p><br></p>');
+        saveCurrentSection();
+      }
+      e.target.value = '';
+    };
+    img.onerror = () => { e.target.value = ''; };
+    img.src = reader.result;
+  };
+  reader.onerror = () => { e.target.value = ''; };
+  reader.readAsDataURL(file);
+});
 
 function updateToolbarState() {
   document.getElementById('btnBold').classList.toggle('active', document.queryCommandState('bold'));
@@ -829,21 +871,60 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
         s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const font = report.font_family || 'Georgia, serif';
       const lineHeight = report.line_spacing || 1.5;
-      const bodySections = sections
-        .filter(s => !['page de garde', 'sommaire'].includes(s.title.toLowerCase()))
+      const cd = (report.cover_data || {}) as Record<string, string>;
+      // Content sections = everything except the generated cover/TOC placeholders.
+      const contentSections = sections.filter(
+        s => !['page de garde', 'sommaire'].includes(s.title.toLowerCase()),
+      );
+      const bodySections = contentSections
         .map(
           s =>
             `<section><h1>${esc(s.title)}</h1><div class="content">${s.content_html || '<p></p>'}</div></section>`,
         )
         .join('');
+      // Cover page built from the cover_data the student filled in.
+      const metaRow = (labelText: string, value?: string) =>
+        value ? `<p><strong>${labelText} :</strong> ${esc(value)}</p>` : '';
+      const coverHtml = `
+        <div class="cover">
+          <div class="cover-top">${esc(cd.school || '')}</div>
+          <div class="cover-mid">
+            <h1>${esc(cd.title || report.title || 'Document')}</h1>
+            ${cd.subtitle ? `<p class="subtitle">${esc(cd.subtitle)}</p>` : ''}
+          </div>
+          <div class="cover-meta">
+            ${metaRow('Réalisé par', cd.studentName)}
+            ${metaRow("Entreprise d'accueil", cd.company)}
+            ${metaRow('Maître de stage', cd.tutorCorporate)}
+            ${metaRow('Tuteur académique', cd.tutorAcademic)}
+            ${metaRow('Année académique', cd.year)}
+          </div>
+        </div>`;
+      // Numbered table of contents (real page numbers aren't available from the
+      // system print engine, so we list the actual sections in order).
+      const tocHtml = contentSections.length
+        ? `<div class="toc">
+            <h1>Sommaire</h1>
+            <ol class="toc-list">
+              ${contentSections.map(s => `<li>${esc(s.title)}</li>`).join('')}
+            </ol>
+          </div>`
+        : '';
       const htmlContent = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
         <style>
           @page { margin: 2.2cm; }
           * { box-sizing: border-box; }
           body { font-family: ${font}; line-height: ${lineHeight}; color: #111827; font-size: 12pt; margin: 0; }
-          .cover { text-align: center; padding: 34vh 0; page-break-after: always; }
-          .cover h1 { font-size: 26pt; font-weight: 800; margin: 0 0 12pt; }
-          .cover p { font-size: 13pt; color: #4b5563; }
+          .cover { min-height: 88vh; display: flex; flex-direction: column; justify-content: space-between; text-align: center; padding: 5vh 0; page-break-after: always; }
+          .cover-top { font-size: 12.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #374151; }
+          .cover-mid h1 { font-size: 26pt; font-weight: 800; margin: 0 0 10pt; }
+          .cover-mid .subtitle { font-size: 13pt; color: #4b5563; }
+          .cover-meta { text-align: left; display: inline-block; margin: 0 auto; font-size: 12pt; }
+          .cover-meta p { margin: 5pt 0; }
+          .toc { page-break-after: always; }
+          .toc h1 { font-size: 20pt; font-weight: 800; margin: 0 0 16pt; }
+          .toc-list { padding-left: 22pt; }
+          .toc-list li { margin: 7pt 0; font-size: 12.5pt; }
           section { page-break-after: always; }
           section:last-child { page-break-after: auto; }
           h1 { font-size: 17pt; font-weight: 800; margin: 0 0 10pt; color: #111827; }
@@ -851,10 +932,8 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
           img { max-width: 100%; height: auto; }
           p { margin: 0 0 8pt; }
         </style></head><body>
-        <div class="cover">
-          <h1>${esc(report.title || 'Document')}</h1>
-          ${report.description ? `<p>${esc(report.description)}</p>` : ''}
-        </div>
+        ${coverHtml}
+        ${tocHtml}
         ${bodySections}
       </body></html>`;
 
