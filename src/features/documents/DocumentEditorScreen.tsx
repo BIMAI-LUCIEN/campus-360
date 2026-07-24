@@ -12,6 +12,7 @@ import {
 import { WebView } from 'react-native-webview';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import { authFetch, authBaseUrl, authClient } from '../auth/betterAuth';
 import { stitchColors } from '../../theme/stitch';
 import { EditorAiChat } from './EditorAiChat';
@@ -865,6 +866,43 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
     if (!report || sections.length === 0) return;
     setExporting(true);
     try {
+      const safeName = `${String(report.title || 'document')
+        .replace(/[^\p{L}\p{N}_-]+/gu, '_')
+        .slice(0, 60)}.pdf`;
+
+      // Primary: server-rendered PDF (Puppeteer) — pro cover templates, TOC and
+      // real footer page numbers, which the on-device print engine can't do.
+      try {
+        const res = await authFetch(`/api/mobile/documents/${documentId}/export/pdf`);
+        if (res.ok) {
+          const blob = await res.blob();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onload = () => resolve(String(fr.result).split(',')[1] || '');
+            fr.onerror = () => reject(new Error('read-failed'));
+            fr.readAsDataURL(blob);
+          });
+          const fileUri = `${FileSystem.cacheDirectory}${safeName}`;
+          await FileSystem.writeAsStringAsync(fileUri, base64, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(fileUri, {
+              mimeType: 'application/pdf',
+              dialogTitle: 'Exporter le document',
+              UTI: 'com.adobe.pdf',
+            });
+          } else {
+            Alert.alert('Partage indisponible', "Le partage n'est pas disponible sur cet appareil.");
+          }
+          return;
+        }
+        // Non-OK (e.g. 503 cold Chromium) → fall through to the local fallback.
+      } catch {
+        // Network/parse failure → fall through to the local fallback below.
+      }
+
+      // Fallback: local expo-print rendering (works offline; no page numbers).
       // Build a clean, print-ready document from the actual content — the old
       // code printed the editor UI shell (EDITOR_HTML) instead of the report.
       const esc = (s: string) =>

@@ -30,6 +30,9 @@ const SECTION_ALLOWED_TAGS = new Set([
   'H4',
   'BLOCKQUOTE',
   'A',
+  // Images embedded from the editor (base64 data: URIs — network is blocked by
+  // the Puppeteer request interceptor, and javascript: srcs are stripped below).
+  'IMG',
 ]);
 
 // Allowlist of CSS font names. Anything outside this list falls back to
