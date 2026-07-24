@@ -52,12 +52,12 @@ const EDITOR_HTML = (sectionTitles: string[]) => `
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  background: ${stitchColors.ink};
-  color: ${stitchColors.inkFaint};
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #EDEEF2;
+  color: #1F2937;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 15px;
   line-height: 1.6;
-  padding: 16px 20px;
+  padding: 14px 16px 32px;
   -webkit-user-select: text;
   user-select: text;
 }
@@ -65,160 +65,165 @@ body {
 /* Toolbar */
 .toolbar {
   position: sticky; top: 0;
-  display: flex; gap: 4px; flex-wrap: wrap;
-  background: ${stitchColors.inkSoft};
-  padding: 10px 12px;
-  border-radius: 12px;
-  margin-bottom: 16px;
+  display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+  background: #FFFFFF;
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 4px 14px -6px rgba(15,23,42,0.14);
+  margin-bottom: 14px;
   z-index: 10;
 }
 .tool-btn {
-  width: 36px; height: 36px;
-  border: none; border-radius: 8px;
-  background: #334155; color: ${stitchColors.inkSubtle};
-  font-size: 14px; font-weight: 700;
+  width: 38px; height: 38px;
+  border: none; border-radius: 10px;
+  background: #F1F3F7; color: #334155;
+  font-size: 15px; font-weight: 700;
   cursor: pointer; display: flex;
   align-items: center; justify-content: center;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
+  transition: all 0.15s;
 }
-.tool-btn:active { background: ${stitchColors.inkMuted}; }
-.tool-btn.active { background: ${stitchColors.emeraldTone}; color: ${stitchColors.white}; }
-.sep { width: 1px; height: 28px; background: #334155; margin: 4px 2px; }
+.tool-btn:active { background: #E2E6EE; }
+.tool-btn.active { background: #7C3AED; color: #FFFFFF; }
+.sep { width: 1px; height: 24px; background: #E5E7EB; margin: 0 3px; }
 
-/* Section nav pills */
-.section-nav {
-  display: flex; gap: 6px; flex-wrap: wrap;
-  background: ${stitchColors.inkSoft};
-  padding: 10px 12px;
-  border-radius: 12px;
-  margin-bottom: 12px;
-}
+/* Section nav pills — hidden: the native RN tabs above are the single nav now */
+.section-nav { display: none; }
 .sec-pill {
   padding: 6px 12px;
   border-radius: 20px;
   font-size: 12px; font-weight: 600;
-  background: #334155; color: ${stitchColors.inkSubtle};
+  background: #EEF0F4; color: #475569;
   border: none; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.sec-pill.active { background: #2563EB; color: ${stitchColors.white}; }
+.sec-pill.active { background: #7C3AED; color: #FFFFFF; }
 
-/* Cover form */
-.cover-form { display: flex; flex-direction: column; gap: 12px; }
+/* Cover form — white paper card */
+.cover-form {
+  display: flex; flex-direction: column; gap: 14px;
+  background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 14px;
+  padding: 22px 20px;
+  box-shadow: 0 10px 30px -12px rgba(0,0,0,0.45);
+}
 .cover-form h2 {
-  color: #F8FAFC; font-size: 18px; font-weight: 800;
-  margin-bottom: 4px;
+  color: #111827; font-size: 19px; font-weight: 800;
+  margin-bottom: 2px; letter-spacing: -0.02em;
 }
 .cover-form label {
   font-size: 11px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.5px;
-  color: #64748B; margin-bottom: 4px; display: block;
+  color: #6B7280; margin-bottom: 5px; display: block;
 }
 .cover-form input, .cover-form textarea {
   width: 100%;
-  background: ${stitchColors.inkSoft};
-  border: 1px solid #334155;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
   border-radius: 10px;
-  color: #F8FAFC;
+  color: #1F2937;
   font-size: 14px;
-  padding: 10px 12px;
+  padding: 11px 13px;
   outline: none;
 }
 .cover-form input:focus, .cover-form textarea:focus {
-  border-color: ${stitchColors.emeraldTone};
+  border-color: #7C3AED; background: #FFFFFF;
 }
 .cover-form textarea { resize: none; height: 64px; }
 .cover-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .form-group { display: flex; flex-direction: column; }
 
-/* Rich editor area */
+/* Rich editor area — a real white "paper" page floating on the dark desk */
 .editor-area {
-  background: ${stitchColors.inkSoft};
+  background: #FFFFFF;
   border-radius: 14px;
-  padding: 16px;
-  min-height: 300px;
-  border: 1px solid #334155;
+  padding: 28px 26px;
+  min-height: 340px;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 10px 30px -12px rgba(0,0,0,0.45);
 }
-.editor-area:focus-within { border-color: ${stitchColors.emeraldTone}; }
+.editor-area:focus-within { border-color: #C4B5FD; box-shadow: 0 10px 30px -10px rgba(124,58,237,0.28); }
 .section-heading {
-  font-size: 18px; font-weight: 800;
-  color: #F8FAFC; margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #334155;
+  font-size: 20px; font-weight: 800;
+  color: #111827; margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #EEF0F3;
+  letter-spacing: -0.02em;
 }
 #editor {
-  min-height: 240px;
+  min-height: 260px;
   outline: none;
   -webkit-user-select: text;
   user-select: text;
-  color: ${stitchColors.inkFaint};
-  font-size: 15px;
-  line-height: 1.7;
+  color: #1F2937;
+  font-size: 16px;
+  line-height: 1.75;
 }
 #editor:empty:before {
-  content: 'Commencez à rédiger ici...';
-  color: ${stitchColors.inkMuted};
+  content: 'Commencez à rédiger ici…';
+  color: #9CA3AF;
 }
-#editor p { margin-bottom: 8px; }
-#editor h2 { font-size: 18px; font-weight: 800; color: #F8FAFC; margin: 12px 0 6px; }
-#editor h3 { font-size: 16px; font-weight: 700; color: #E2E8F0; margin: 10px 0 4px; }
-#editor ul, #editor ol { padding-left: 20px; margin-bottom: 8px; }
-#editor li { margin-bottom: 4px; }
-#editor strong, #editor b { color: #F8FAFC; font-weight: 700; }
-#editor em, #editor i { color: ${stitchColors.inkSubtle}; font-style: italic; }
+#editor p { margin-bottom: 12px; }
+#editor h2 { font-size: 19px; font-weight: 800; color: #111827; margin: 18px 0 8px; letter-spacing: -0.01em; }
+#editor h3 { font-size: 16px; font-weight: 700; color: #374151; margin: 14px 0 6px; }
+#editor ul, #editor ol { padding-left: 22px; margin-bottom: 12px; }
+#editor li { margin-bottom: 6px; }
+#editor strong, #editor b { color: #111827; font-weight: 700; }
+#editor em, #editor i { color: #4B5563; font-style: italic; }
 
-/* AI panel */
+/* AI panel — quick section-level draft/improve */
 .ai-panel {
-  background: ${stitchColors.inkSoft};
+  background: #FFFFFF;
   border-radius: 14px;
-  padding: 14px;
-  margin-top: 16px;
-  border: 1px solid #334155;
+  padding: 16px;
+  margin-top: 14px;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 4px 14px -8px rgba(15,23,42,0.12);
 }
-.ai-panel h3 { color: #FCD34D; font-size: 13px; font-weight: 800; margin-bottom: 8px; }
+.ai-panel h3 { color: #7C3AED; font-size: 13px; font-weight: 800; margin-bottom: 10px; }
 .ai-panel textarea {
-  width: 100%; background: ${stitchColors.ink};
-  border: 1px solid #334155;
+  width: 100%; background: #F9FAFB;
+  border: 1px solid #E5E7EB;
   border-radius: 10px;
-  color: ${stitchColors.inkFaint}; font-size: 13px;
-  padding: 10px 12px; resize: none; height: 70px;
+  color: #1F2937; font-size: 13px;
+  padding: 11px 13px; resize: none; height: 70px;
   outline: none;
 }
-.ai-panel textarea:focus { border-color: #FCD34D; }
-.ai-btns { display: flex; gap: 8px; margin-top: 8px; }
+.ai-panel textarea:focus { border-color: #7C3AED; background: #FFFFFF; }
+.ai-btns { display: flex; gap: 8px; margin-top: 10px; }
 .ai-btn {
-  flex: 1; padding: 10px;
+  flex: 1; padding: 11px;
   border-radius: 10px; border: none;
-  font-size: 12px; font-weight: 700;
+  font-size: 12.5px; font-weight: 800;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.ai-btn-draft { background: #FCD34D; color: ${stitchColors.inkSoft}; }
-.ai-btn-improve { background: #334155; color: ${stitchColors.inkFaint}; }
+.ai-btn-draft { background: #7C3AED; color: #FFFFFF; }
+.ai-btn-improve { background: #F1F3F7; color: #334155; }
 .ai-credit-note {
-  font-size: 11px; color: #64748B;
-  margin-top: 6px; text-align: center;
+  font-size: 11px; color: #9CA3AF;
+  margin-top: 8px; text-align: center;
 }
 
 /* Settings panel */
 .settings-panel {
-  background: ${stitchColors.inkSoft}; border-radius: 14px;
-  padding: 14px; margin-top: 16px; border: 1px solid #334155;
+  background: #FFFFFF; border-radius: 14px;
+  padding: 16px; margin-top: 14px; border: 1px solid #E5E7EB;
+  box-shadow: 0 4px 14px -8px rgba(15,23,42,0.12);
 }
-.settings-panel h3 { color: ${stitchColors.emeraldTone}; font-size: 13px; font-weight: 800; margin-bottom: 10px; }
-.settings-row { margin-bottom: 10px; }
+.settings-panel h3 { color: #059669; font-size: 13px; font-weight: 800; margin-bottom: 12px; }
+.settings-row { margin-bottom: 12px; }
 .settings-row label {
   font-size: 11px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.5px;
-  color: #64748B; margin-bottom: 4px; display: block;
+  color: #6B7280; margin-bottom: 5px; display: block;
 }
 .settings-row select {
   width: 100%;
-  background: ${stitchColors.ink};
-  border: 1px solid #334155;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
   border-radius: 10px;
-  color: ${stitchColors.inkFaint}; font-size: 13px;
-  padding: 8px 10px;
+  color: #1F2937; font-size: 13px;
+  padding: 10px 12px;
   outline: none;
 }
 
@@ -227,22 +232,24 @@ body {
 .toc-item {
   display: flex; justify-content: space-between;
   align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px dashed #334155;
-  font-size: 13px; color: ${stitchColors.inkSubtle};
+  padding: 9px 0;
+  border-bottom: 1px dashed #E5E7EB;
+  font-size: 13px; color: #374151;
 }
-.toc-item span:last-child { font-size: 11px; color: ${stitchColors.inkMuted}; }
+.toc-item span:last-child { font-size: 11px; color: #9CA3AF; }
 
 /* Auto-save indicator */
 .save-indicator {
   position: fixed; bottom: 20px; right: 20px;
-  background: ${stitchColors.emeraldTone}; color: ${stitchColors.white};
-  padding: 6px 14px; border-radius: 20px;
+  background: #059669; color: #FFFFFF;
+  padding: 8px 16px; border-radius: 20px;
   font-size: 12px; font-weight: 700;
-  opacity: 0; transition: opacity 0.3s;
+  box-shadow: 0 6px 18px -6px rgba(5,150,105,0.5);
+  opacity: 0; transform: translateY(6px);
+  transition: opacity 0.25s, transform 0.25s;
   z-index: 100;
 }
-.save-indicator.show { opacity: 1; }
+.save-indicator.show { opacity: 1; transform: translateY(0); }
 </style>
 </head>
 <body>
@@ -951,11 +958,11 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
               ]}
               onPress={() => {
                 setCurrentSectionId(section.id);
-                if (webViewRef.current && report) {
-                  webViewRef.current.injectJavaScript(
-                    `window.loadReportData(${JSON.stringify({ report, sections })}); true;`
-                  );
-                }
+                // Switch the WebView to this exact section (loadReportData always
+                // reset to the first section, so the tabs never actually moved).
+                webViewRef.current?.injectJavaScript(
+                  `window.switchSection(${JSON.stringify(section.id)}); true;`
+                );
               }}
             >
               <Text
