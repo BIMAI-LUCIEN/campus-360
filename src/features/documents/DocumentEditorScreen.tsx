@@ -892,7 +892,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={stitchColors.emeraldTone} />
+          <ActivityIndicator size="large" color="#7C3AED" />
           <Text style={styles.loadingText}>Chargement de l'éditeur...</Text>
         </View>
       </SafeAreaView>
@@ -1080,7 +1080,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
       {/* ── AI Loading Overlay ─────────────────────────────────────────── */}
       {aiLoading && (
         <View style={styles.aiLoadingOverlay}>
-          <ActivityIndicator size="large" color="#FCD34D" />
+          <ActivityIndicator size="large" color="#C4B5FD" />
           <Text style={styles.aiLoadingText}>Assistant IA en cours...</Text>
         </View>
       )}
@@ -1093,7 +1093,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: stitchColors.ink,
+    backgroundColor: '#EDEEF2',
   },
   centered: {
     flex: 1,
@@ -1113,38 +1113,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   retryBtn: {
-    backgroundColor: stitchColors.inkSoft,
+    backgroundColor: '#7C3AED',
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderRadius: 10,
   },
   retryBtnText: {
-    color: stitchColors.white,
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
   },
 
   // Header
   header: {
-    height: 52,
+    height: 54,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: stitchColors.inkSoft,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: '#E5E7EB',
   },
   headerBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: '#334155',
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 9,
+    backgroundColor: '#F1F3F7',
     minWidth: 60,
   },
   headerBtnText: {
-    color: '#F8FAFC',
-    fontSize: 12,
+    color: '#334155',
+    fontSize: 12.5,
     fontWeight: '700',
   },
   headerCenter: {
@@ -1153,14 +1153,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   headerTitle: {
-    color: '#F8FAFC',
-    fontSize: 14,
-    fontWeight: '700',
+    color: '#111827',
+    fontSize: 14.5,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   saveStatus: {
-    color: stitchColors.emeraldTone,
-    fontSize: 10,
-    fontWeight: '600',
+    color: '#059669',
+    fontSize: 10.5,
+    fontWeight: '700',
     marginTop: 2,
   },
   headerActions: {
@@ -1168,76 +1169,76 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   headerActionBtn: {
-    height: 32,
-    borderRadius: 8,
+    height: 34,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
   pdfBtn: {
-    backgroundColor: stitchColors.emeraldTone,
-    minWidth: 56,
+    backgroundColor: '#059669',
+    minWidth: 58,
   },
   pdfBtnText: {
-    color: stitchColors.white,
-    fontSize: 12,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 12.5,
+    fontWeight: '800',
   },
 
   // Section tabs
   sectionTabs: {
-    backgroundColor: stitchColors.inkSoft,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: '#E5E7EB',
   },
   sectionTabsContent: {
     flexDirection: 'row',
     paddingHorizontal: 10,
-    paddingVertical: 8,
-    gap: 6,
+    paddingVertical: 9,
+    gap: 7,
     alignItems: 'center',
   },
   sectionTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 7,
+    paddingHorizontal: 13,
     borderRadius: 20,
-    backgroundColor: '#334155',
-    gap: 4,
-    maxWidth: 140,
+    backgroundColor: '#F1F3F7',
+    gap: 5,
+    maxWidth: 150,
   },
   sectionTabActive: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#7C3AED',
   },
   sectionTabText: {
-    color: stitchColors.inkSubtle,
-    fontSize: 12,
-    fontWeight: '600',
+    color: '#475569',
+    fontSize: 12.5,
+    fontWeight: '700',
   },
   sectionTabTextActive: {
-    color: stitchColors.white,
+    color: '#FFFFFF',
   },
   deleteSectionBtn: {
     padding: 2,
   },
   deleteSectionBtnText: {
     color: '#EF4444',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
   },
   addSectionBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 7,
+    paddingHorizontal: 13,
     borderRadius: 20,
-    backgroundColor: '#334155',
+    backgroundColor: '#F5F3FF',
     borderWidth: 1,
-    borderColor: stitchColors.emeraldTone,
+    borderColor: '#C4B5FD',
     borderStyle: 'dashed',
   },
   addSectionBtnText: {
-    color: stitchColors.emeraldTone,
-    fontSize: 12,
+    color: '#7C3AED',
+    fontSize: 12.5,
     fontWeight: '700',
   },
 
@@ -1248,7 +1249,7 @@ const styles = StyleSheet.create({
   },
   webView: {
     flex: 1,
-    backgroundColor: stitchColors.ink,
+    backgroundColor: '#EDEEF2',
   },
   aiFab: {
     position: 'absolute',
@@ -1283,29 +1284,29 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalCard: {
-    backgroundColor: stitchColors.inkSoft,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 24,
     width: '100%',
     maxWidth: 340,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E5E7EB',
   },
   modalHeading: {
-    color: '#F8FAFC',
+    color: '#111827',
     fontSize: 18,
     fontWeight: '800',
     marginBottom: 16,
   },
   modalInput: {
-    backgroundColor: stitchColors.ink,
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#F8FAFC',
+    color: '#1F2937',
     marginBottom: 16,
   },
   modalBtns: {
@@ -1314,22 +1315,22 @@ const styles = StyleSheet.create({
   },
   modalCancel: {
     flex: 1,
-    height: 44,
+    height: 46,
     borderRadius: 12,
-    backgroundColor: '#334155',
+    backgroundColor: '#F1F3F7',
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalCancelText: {
-    color: stitchColors.inkSubtle,
+    color: '#334155',
     fontSize: 14,
     fontWeight: '700',
   },
   modalConfirm: {
     flex: 1,
-    height: 44,
+    height: 46,
     borderRadius: 12,
-    backgroundColor: stitchColors.emeraldTone,
+    backgroundColor: '#7C3AED',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1337,21 +1338,21 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   modalConfirmText: {
-    color: stitchColors.white,
+    color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 
   // AI loading
   aiLoadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.82)',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 14,
   },
   aiLoadingText: {
-    color: '#FCD34D',
+    color: '#C4B5FD',
     fontSize: 14,
     fontWeight: '700',
   },
