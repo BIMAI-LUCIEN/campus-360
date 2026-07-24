@@ -347,12 +347,9 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     form: HTMLFormElement,
     publishWhenReady: boolean,
   ): Promise<PdfDocument['status']> => {
+    // 1. Local extraction (pdf.js) pre-fills the row so it's complete even
+    //    before the LLM runs, and gives us the raw text the server AI reuses.
     const hints = await analyzePdf(file);
-    // Only auto-publish PDFs the analysis is confident about; the rest go to
-    // "à corriger" so an admin can finish them, never silently to draft-limbo.
-    const publishable = hints.qualityScore >= 70 && Boolean(hints.aiSummary);
-    const status: PdfDocument['status'] =
-      publishWhenReady && publishable ? 'published' : 'needs_review';
     const data = new FormData();
     data.set('title', hints.title || titleFromFileName(file.name));
     data.set('description', hints.description || `Document ${titleFromFileName(file.name)}`);
@@ -382,7 +379,8 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
       String(hints.suggestedPriceCoins || Number(fieldValue(form, 'priceCoins', '300'))),
     );
     data.set('pageCount', String(hints.pageCount || 1));
-    data.set('status', status);
+    // Created in "analyzing"; the real OpenRouter pass below decides the fate.
+    data.set('status', 'analyzing');
     data.set('commissionRate', fieldValue(form, 'commissionRate', '20'));
     data.set('aiSummary', hints.aiSummary);
     data.set('aiTags', JSON.stringify(hints.aiTags));
@@ -394,6 +392,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     data.set('extractedText', hints.extractedText);
     data.set('file', file);
 
+    // 2. Create the row (returns the generated id).
     const response = await fetch('/api/pdf', { method: 'POST', body: data });
     const payload = await response.json();
     if (!response.ok)
@@ -402,7 +401,37 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
           ? JSON.stringify(payload.error)
           : `Upload impossible: ${file.name}`,
       );
-    return status;
+    const docId: string | undefined = payload.document?.id;
+    if (!docId) throw new Error(`Upload impossible: ${file.name}`);
+
+    // 3. Full OpenRouter analysis on the stored text — better summary, tags,
+    //    difficulty and quality score than the local heuristic. Falls back to
+    //    the heuristic values if the LLM call fails or no key is configured.
+    let qualityScore = Number(hints.qualityScore) || 0;
+    let hasSummary = Boolean(hints.aiSummary);
+    try {
+      const analyzeRes = await fetch(`/api/pdf/${docId}/analyze`, { method: 'POST' });
+      if (analyzeRes.ok) {
+        const analyzed = (await analyzeRes.json())?.document;
+        if (analyzed) {
+          qualityScore = Number(analyzed.qualityScore ?? qualityScore) || 0;
+          hasSummary = Boolean(analyzed.aiSummary);
+        }
+      }
+    } catch {
+      // Keep heuristic values; the row still exists in needs_review below.
+    }
+
+    // 4. Publish only what the AI is confident about; the rest waits in review.
+    const publishable = qualityScore >= 70 && hasSummary;
+    const finalStatus: PdfDocument['status'] =
+      publishWhenReady && publishable ? 'published' : 'needs_review';
+    await fetch(`/api/pdf/${docId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: finalStatus }),
+    });
+    return finalStatus;
   };
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -414,7 +443,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     setAnalysisLoading(true);
     setMessage(
       files.length > 1
-        ? `Analyse de ${files.length} PDF...`
+        ? `Analyse IA de ${files.length} PDF… (cela peut prendre un moment)`
         : 'Analyse du PDF en cours...',
     );
 
