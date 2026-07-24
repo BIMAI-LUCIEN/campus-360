@@ -119,10 +119,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
   const breadcrumb = resolveBreadcrumb(pathname);
   // When collapsed the main content shifts by the strip width only; when
-  // expanded it shifts by strip + sidebar.
-  const mainOffset = collapsed
-    ? 'ml-[68px] w-[calc(100vw-68px)]'
-    : 'ml-[308px] w-[calc(100vw-308px)]';
+  // expanded it shifts by strip + sidebar. Offset with margin-left only and let
+  // width auto-fill the remaining space — using `100vw` here double-counts the
+  // scrollbar gutter and forces a horizontal overflow on desktop.
+  const mainOffset = collapsed ? 'ml-[68px]' : 'ml-[308px]';
 
   const handleLogout = async () => {
     try {
@@ -186,7 +186,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               >
                 <Icon size={18} strokeWidth={1.8} />
                 {isActive ? (
-                  <span className="absolute -left-[18px] top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" />
+                  <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" />
                 ) : null}
               </Link>
             );

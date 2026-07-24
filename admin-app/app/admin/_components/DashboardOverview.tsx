@@ -15,13 +15,12 @@ import {
   ArrowRight,
   BookOpen,
   Calendar,
-  ChevronDown,
   Download,
   Eye,
   FileText,
   GraduationCap,
   Loader2,
-  Package,
+  RefreshCw,
   Search,
   ShoppingCart,
   TrendingUp,
@@ -329,30 +328,57 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
   }, [catalog.studentUsers, catalog.newUsersThisWeek]);
 
   // ── Chart data — use whatever dailyStats we have (last 30d ideally) ──
-  const chartData = useMemo(
-    () =>
-      [...data.dailyStats]
-        .sort(
-          (a, b) =>
-            (parseStatsDate(a.date)?.getTime() ?? 0) -
-            (parseStatsDate(b.date)?.getTime() ?? 0),
-        )
-        .map((d) => ({
-          label: formatShortDate(d.date),
-          revenue: weeklyRevenue,
-          purchases: d.purchases,
-          previews: d.previews,
-        })),
-    [data.dailyStats, weeklyRevenue],
-  );
+  // Revenue isn't stored per day, so distribute totals.revenue across days in
+  // proportion to that day's share of purchases. This yields a real curve that
+  // tracks sales instead of a flat line (the previous code plotted the same
+  // weeklyRevenue constant on every point, so "évolution" showed no evolution).
+  const chartData = useMemo(() => {
+    const sorted = [...data.dailyStats].sort(
+      (a, b) =>
+        (parseStatsDate(a.date)?.getTime() ?? 0) -
+        (parseStatsDate(b.date)?.getTime() ?? 0),
+    );
+    const totalPurchases = sorted.reduce((acc, d) => acc + (d.purchases ?? 0), 0);
+    return sorted.map((d) => ({
+      label: formatShortDate(d.date),
+      revenue:
+        totalPurchases > 0
+          ? Math.round((totals.revenue * (d.purchases ?? 0)) / totalPurchases)
+          : 0,
+      purchases: d.purchases,
+      previews: d.previews,
+    }));
+  }, [data.dailyStats, totals.revenue]);
+
+  // Export the current snapshot (KPIs + daily series) as a CSV download.
+  const handleExport = () => {
+    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const lines: string[] = [];
+    lines.push(['Métrique', 'Valeur'].join(','));
+    lines.push([esc('Revenus (FCFA)'), totals.revenue].join(','));
+    lines.push([esc('PDF publiés'), catalog.publishedPdfs].join(','));
+    lines.push([esc('Étudiants'), catalog.studentUsers].join(','));
+    lines.push([esc('Taux de conversion'), `${conversionRate}%`].join(','));
+    lines.push('');
+    lines.push(['Date', 'Achats', 'Aperçus', 'Revenu estimé (FCFA)'].join(','));
+    chartData.forEach((d) =>
+      lines.push([esc(d.label), d.purchases ?? 0, d.previews ?? 0, d.revenue].join(',')),
+    );
+    // Prepend BOM so Excel reads UTF-8 accents correctly.
+    const blob = new Blob(['﻿' + lines.join('\r\n')], {
+      type: 'text/csv;charset=utf-8;',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `campus360-dashboard-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
 
   const totalChartPoints = chartData.length;
-  const hasAnyData =
-    data.configured &&
-    (catalog.publishedPdfs > 0 ||
-      catalog.studentUsers > 0 ||
-      totals.purchases > 0 ||
-      totals.revenue > 0);
 
   return (
     <div className="flex flex-col gap-8">
@@ -389,23 +415,26 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-surface px-4 text-sm font-medium text-fg-muted">
+            <Calendar size={15} className="text-fg-subtle" />
+            7 derniers jours
+          </span>
           <Button
             type="button"
             variant="secondary"
-            icon={Calendar}
+            icon={RefreshCw}
+            loading={isFetching}
             onClick={refresh}
-          >
-            Cette semaine
-            <ChevronDown size={14} className="text-fg-subtle" />
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            icon={isFetching ? Loader2 : Calendar}
           >
             Rafraîchir
           </Button>
-          <Button type="button" variant="primary" icon={Download}>
+          <Button
+            type="button"
+            variant="primary"
+            icon={Download}
+            onClick={handleExport}
+            disabled={!data.configured || totalChartPoints === 0}
+          >
             Exporter
           </Button>
         </div>
@@ -471,18 +500,6 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
           value={`${conversionRate}%`}
           icon={TrendingUp}
           accent="orange"
-          trend={{
-            value:
-              totals.previews > 0
-                ? `${conversionRate >= 0 ? '' : ''}${conversionRate}%`
-                : '0%',
-            direction:
-              conversionRate >= 20
-                ? 'up'
-                : conversionRate >= 5
-                  ? 'stable'
-                  : 'down',
-          }}
           caption={`${totals.purchases} vente${totals.purchases > 1 ? 's' : ''} sur ${totals.previews} aperçus`}
         />
       </div>
