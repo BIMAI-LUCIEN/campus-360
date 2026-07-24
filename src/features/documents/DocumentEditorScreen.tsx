@@ -14,6 +14,8 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { authFetch, authBaseUrl, authClient } from '../auth/betterAuth';
 import { stitchColors } from '../../theme/stitch';
+import { EditorAiChat } from './EditorAiChat';
+import { Sparkles } from 'lucide-react-native';
 
 type Document = {
   id: string;
@@ -598,6 +600,16 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
   const [exporting, setExporting] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'edit' | 'settings'>('edit');
+  const [chatVisible, setChatVisible] = useState(false);
+
+  const currentSectionTitle = sections.find(s => s.id === currentSectionId)?.title;
+  const insertIntoSection = useCallback((html: string) => {
+    if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(
+        `window.insertAIHtml(${JSON.stringify(html)}); true;`
+      );
+    }
+  }, []);
 
   // Fetch report + sections
   const loadReport = useCallback(async () => {
@@ -804,10 +816,43 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
     if (!report || sections.length === 0) return;
     setExporting(true);
     try {
-      const htmlContent = EDITOR_HTML(sections.map(s => s.title)); // We could inject full content here if needed
-      
-      Alert.alert('Génération', 'Préparation du PDF natif en cours...');
-      
+      // Build a clean, print-ready document from the actual content — the old
+      // code printed the editor UI shell (EDITOR_HTML) instead of the report.
+      const esc = (s: string) =>
+        s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const font = report.font_family || 'Georgia, serif';
+      const lineHeight = report.line_spacing || 1.5;
+      const bodySections = sections
+        .filter(s => !['page de garde', 'sommaire'].includes(s.title.toLowerCase()))
+        .map(
+          s =>
+            `<section><h1>${esc(s.title)}</h1><div class="content">${s.content_html || '<p></p>'}</div></section>`,
+        )
+        .join('');
+      const htmlContent = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+        <style>
+          @page { margin: 2.2cm; }
+          * { box-sizing: border-box; }
+          body { font-family: ${font}; line-height: ${lineHeight}; color: #111827; font-size: 12pt; margin: 0; }
+          .cover { text-align: center; padding: 34vh 0; page-break-after: always; }
+          .cover h1 { font-size: 26pt; font-weight: 800; margin: 0 0 12pt; }
+          .cover p { font-size: 13pt; color: #4b5563; }
+          section { page-break-after: always; }
+          section:last-child { page-break-after: auto; }
+          h1 { font-size: 17pt; font-weight: 800; margin: 0 0 10pt; color: #111827; }
+          .content { text-align: justify; }
+          img { max-width: 100%; height: auto; }
+          p { margin: 0 0 8pt; }
+        </style></head><body>
+        <div class="cover">
+          <h1>${esc(report.title || 'Document')}</h1>
+          ${report.description ? `<p>${esc(report.description)}</p>` : ''}
+        </div>
+        ${bodySections}
+      </body></html>`;
+
+      Alert.alert('Génération', 'Préparation du PDF en cours...');
+
       const { uri } = await Print.printToFileAsync({
         html: htmlContent,
         base64: false
@@ -967,7 +1012,26 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
           keyboardDisplayRequiresUserAction={false}
           hideKeyboardAccessoryView={false}
         />
+
+        {/* ── Floating AI assistant button ───────────────────────────── */}
+        <Pressable
+          style={styles.aiFab}
+          onPress={() => setChatVisible(true)}
+          accessibilityLabel="Ouvrir l'assistant IA"
+        >
+          <Sparkles size={20} color={stitchColors.white} strokeWidth={2.2} />
+          <Text style={styles.aiFabText}>Assistant IA</Text>
+        </Pressable>
       </View>
+
+      {/* ── AI chat assistant ─────────────────────────────────────────── */}
+      <EditorAiChat
+        visible={chatVisible}
+        onClose={() => setChatVisible(false)}
+        documentId={documentId}
+        currentSectionTitle={currentSectionTitle}
+        onInsert={insertIntoSection}
+      />
 
       {/* ── Add Section Modal ─────────────────────────────────────────── */}
       <Modal
@@ -1173,10 +1237,34 @@ const styles = StyleSheet.create({
   // WebView
   webViewContainer: {
     flex: 1,
+    position: 'relative',
   },
   webView: {
     flex: 1,
     backgroundColor: stitchColors.ink,
+  },
+  aiFab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 26,
+    backgroundColor: stitchColors.siennaDeep,
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  aiFabText: {
+    color: stitchColors.white,
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
 
   // Add section modal
