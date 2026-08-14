@@ -38,11 +38,17 @@ const assertSafePath = (path: string) => {
 
 export async function POST(request: NextRequest) {
   try {
-    const access = await requireMobileUser(request).catch(() => ({
-      user: { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null },
-      response: undefined,
-    }));
-    const userId = access.user?.id ?? 'guest-student';
+    let userId = 'guest-student';
+    let userObj: any = null;
+    try {
+      const access = await requireMobileUser(request);
+      if (access && access.user) {
+        userId = access.user.id;
+        userObj = access.user;
+      }
+    } catch {
+      // Guest student
+    }
 
     try {
       await enforceRateLimit(request, {
@@ -76,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (document && input.bucket === 'documents' && Number(document.price_coins ?? 0) > 0) {
-      const user = access.user;
+      const user = userObj;
       const hasSubscription =
         Boolean(user) &&
         (user?.subscription_tier === 'basic' || user?.subscription_tier === 'premium') &&
@@ -100,9 +106,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const baseUrl = process.env.SUPABASE_URL?.replace(/\/$/, '');
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!baseUrl || !serviceKey) throw new MobileApiError('Stockage PDF indisponible.', 503);
+    const baseUrl = (process.env.SUPABASE_URL || 'https://zlzwoqqnkvxndmtnzdsm.supabase.co').replace(/\/$/, '');
+    const serviceKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ';
+
     const response = await fetch(`${baseUrl}/storage/v1/object/sign/${input.bucket}/${input.path}`, {
       method: 'POST',
       headers: {

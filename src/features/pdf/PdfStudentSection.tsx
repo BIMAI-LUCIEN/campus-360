@@ -382,10 +382,17 @@ export function PdfStudentSection({
 
   const openPreview = async (document: CampusDocument) => {
     setReaderDocument(document);
-    setIsReaderPreview(true);
+    setIsReaderPreview(document.price > 0 && !ownedDocumentIds.includes(document.id));
     setReaderUrl('');
     setReaderError('');
     setReaderLoading(true);
+    setAssistantMessages([
+      {
+        id: `assistant-${document.id}`,
+        role: 'assistant',
+        content: `Que veux-tu réviser sur "${document.title}" ?`,
+      },
+    ]);
     recordPdfAnalyticsEvent({
       eventType: 'preview_open',
       documentId: document.id,
@@ -397,17 +404,24 @@ export function PdfStudentSection({
       },
     });
 
-    if (!document.previewPath) {
-      setReaderError("Aperçu non disponible pour ce document.");
-      setReaderLoading(false);
-      return;
-    }
+    const targetBucket = document.previewPath ? 'document-previews' : 'documents';
+    const targetPath = document.previewPath || document.filePath;
 
     try {
-      const url = await createSignedPdfUrl('document-previews', document.previewPath, accessToken, 900);
+      const url = await createSignedPdfUrl(targetBucket, targetPath, accessToken, 1800);
       setReaderUrl(url);
     } catch (openError) {
-      setReaderError(openError instanceof Error ? openError.message : 'Preview indisponible.');
+      if (document.filePath && targetPath !== document.filePath) {
+        try {
+          const fallbackUrl = await createSignedPdfUrl('documents', document.filePath, accessToken, 1800);
+          setReaderUrl(fallbackUrl);
+          return;
+        } catch {
+          // ignore secondary error
+        }
+      }
+      const rawMsg = openError instanceof Error ? openError.message : 'PDF indisponible.';
+      setReaderError(rawMsg);
     } finally {
       setReaderLoading(false);
     }
@@ -424,7 +438,7 @@ export function PdfStudentSection({
   };
 
   const openDocument = async (document: CampusDocument) => {
-    if (ownedDocumentIds.includes(document.id)) {
+    if (document.price === 0 || ownedDocumentIds.includes(document.id)) {
       setReaderDocument(document);
       setIsReaderPreview(false);
       setReaderUrl('');
@@ -1011,42 +1025,42 @@ export function PdfStudentSection({
                 </View>
               </View>
 
-              {/* Tool segment or preview badge */}
-              {!isReaderPreview ? (
-                <View style={styles.toolSegment}>
-                  {(['pdf', 'summary', 'plan', 'quiz', 'assistant'] as const).map((tool) => {
-                    const active = activeTool === tool;
-                    const iconColor = active ? $.sienna : $.muted;
-                    const label =
-                      tool === 'pdf' ? 'PDF'
-                      : tool === 'summary' ? 'Résumé'
-                      : tool === 'plan' ? 'Plan'
-                      : tool === 'quiz' ? 'Quiz'
-                      : 'Chat';
-                    const IconComponent =
-                      tool === 'pdf' ? FileText
-                      : tool === 'summary' ? Sparkles
-                      : tool === 'plan' ? Calendar
-                      : tool === 'quiz' ? HelpCircle
-                      : MessageSquare;
-                    return (
-                      <Pressable
-                        key={tool}
-                        style={[styles.toolSegmentButton, active && styles.toolSegmentButtonActive]}
-                        onPress={() => setActiveTool(tool)}
-                      >
-                        <IconComponent size={13} color={iconColor} style={{ marginBottom: 2 }} />
-                        <Text style={[styles.toolSegmentText, active && styles.toolSegmentTextActive]}>
-                          {label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ) : (
+              {/* Tool segment — ALWAYS VISIBLE so the student can access Résumé, Plan, Quiz, Chat IA */}
+              <View style={styles.toolSegment}>
+                {(['pdf', 'summary', 'plan', 'quiz', 'assistant'] as const).map((tool) => {
+                  const active = activeTool === tool;
+                  const iconColor = active ? $.sienna : $.muted;
+                  const label =
+                    tool === 'pdf' ? 'PDF'
+                    : tool === 'summary' ? 'Résumé'
+                    : tool === 'plan' ? 'Plan'
+                    : tool === 'quiz' ? 'Quiz'
+                    : 'Chat IA';
+                  const IconComponent =
+                    tool === 'pdf' ? FileText
+                    : tool === 'summary' ? Sparkles
+                    : tool === 'plan' ? Calendar
+                    : tool === 'quiz' ? HelpCircle
+                    : MessageSquare;
+                  return (
+                    <Pressable
+                      key={tool}
+                      style={[styles.toolSegmentButton, active && styles.toolSegmentButtonActive]}
+                      onPress={() => setActiveTool(tool)}
+                    >
+                      <IconComponent size={14} color={iconColor} style={{ marginBottom: 2 }} />
+                      <Text style={[styles.toolSegmentText, active && styles.toolSegmentTextActive]}>
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {isReaderPreview && (
                 <View style={styles.previewModeBadge}>
                   <Lock size={12} color="#FFFFFF" />
-                  <Text style={styles.previewModeBadgeText}>MODE APERÇU — PAGE 1</Text>
+                  <Text style={styles.previewModeBadgeText}>MODE APERÇU</Text>
                 </View>
               )}
 
@@ -1066,7 +1080,7 @@ export function PdfStudentSection({
                   ) : readerUrl ? (
                     Platform.OS === 'web' ? (
                       createElement('iframe', {
-                        src: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}`,
+                        src: `/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}`,
                         title: readerDocument.title,
                         style: {
                           width: '100%',
