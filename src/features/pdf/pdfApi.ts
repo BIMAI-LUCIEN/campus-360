@@ -225,19 +225,90 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
   return response.json() as Promise<T>;
 };
 
+const SAMPLE_DOCUMENTS: CampusDocument[] = [
+  {
+    id: 'sample-doc-1',
+    title: 'Droit des Obligations & Contrats Civils',
+    subject: 'Droit Privé',
+    level: 'Licence 2',
+    author: 'Prof. Nguema',
+    pageCount: 38,
+    fileSizeMb: 2.4,
+    status: 'published',
+    previewPages: 5,
+    previewText: "Introduction générale aux obligations et aux conditions de validité des contrats civils et commerciaux.",
+    price: 0,
+    sales: 142,
+    revenue: 0,
+    university: 'Université de Yaoundé II',
+    faculty: 'Sciences Juridiques et Politiques',
+    filePath: 'admin/sample-droit.pdf',
+    createdAt: new Date().toLocaleDateString('fr-FR'),
+    aiSummary: "Ce cours fondamental traite de la formation, de l'exécution et de l'extinction des obligations contractuelles. Il détaille le consentement, la capacité, l'objet et la cause.",
+    studyPlan: [
+      'Chapitre 1 : La notion d’obligation et les sources d’obligations',
+      'Chapitre 2 : La formation du contrat (Offre et Acceptation)',
+      'Chapitre 3 : Les vices du consentement (Erreur, Dol, Violence)',
+      'Chapitre 4 : L’inexécution et les sanctions contractuelles',
+    ],
+    quiz: [
+      { question: 'Quels sont les 3 vices traditionnels du consentement ?', answer: "L'erreur, le dol et la violence." },
+      { question: 'Quelle est la sanction principale de la nullité relative ?', answer: "L'annulation du contrat protégeant l'intérêt privé d'une des parties." },
+    ],
+  },
+  {
+    id: 'sample-doc-2',
+    title: 'Algorithmique & Structures de Données Avancées',
+    subject: 'Informatique',
+    level: 'Licence 3',
+    author: 'Dr. Lucien Pascal',
+    pageCount: 52,
+    fileSizeMb: 3.8,
+    status: 'published',
+    previewPages: 8,
+    previewText: "Arbres binaires, graphes, tables de hachage et complexité algorithmique temporelle et spatiale.",
+    price: 0,
+    sales: 215,
+    revenue: 0,
+    university: 'Polytechnique',
+    faculty: 'Génie Informatique',
+    filePath: 'admin/sample-algo.pdf',
+    createdAt: new Date().toLocaleDateString('fr-FR'),
+    aiSummary: "Synthèse exhaustive sur les structures de données non-linéaires, parcours d'arbres (DFS, BFS), algorithmes de plus court chemin (Dijkstra) et calcul de complexité Big O.",
+    studyPlan: [
+      'Module 1 : Analyse asymptotique et notation Grand O',
+      'Module 2 : Arbres AVL et Arbres Rouges et Noirs',
+      'Module 3 : Graphes et algorithmes de parcours (Largeur & Profondeur)',
+      'Module 4 : Programmation dynamique vs Algorithmes gloutons',
+    ],
+    quiz: [
+      { question: 'Quelle est la complexité moyenne de recherche dans une table de hachage ?', answer: 'O(1) en temps constant.' },
+      { question: 'Quel algorithme trouve le plus court chemin dans un graphe avec poids positifs ?', answer: "L'algorithme de Dijkstra." },
+    ],
+  }
+];
+
 export const listPublishedPdfDocuments = async (): Promise<CampusDocument[]> => {
   if (!isSupabaseConfigured()) {
-    return [];
+    return SAMPLE_DOCUMENTS;
   }
 
-  const url = `${getBaseUrl()}/rest/v1/documents?select=*&order=created_at.desc`;
-  const rows = await handleResponse<SupabaseDocumentRow[]>(
-    await fetch(url, {
+  try {
+    const url = `${getBaseUrl()}/rest/v1/documents?select=*&order=created_at.desc`;
+    const response = await fetch(url, {
       headers: getHeaders(),
-    }),
-  );
-
-  return rows.map(mapDocumentRow);
+    });
+    if (!response.ok) {
+      console.warn('[pdfApi] Supabase non-ok response, fallback to sample documents');
+      return SAMPLE_DOCUMENTS;
+    }
+    const rows = (await response.json()) as SupabaseDocumentRow[];
+    if (!rows || rows.length === 0) return SAMPLE_DOCUMENTS;
+    return rows.map(mapDocumentRow);
+  } catch (err) {
+    console.warn('[pdfApi] Supabase unreachable or paused, using sample documents:', err);
+    return SAMPLE_DOCUMENTS;
+  }
 };
 
 export const listPublishedPdfPacks = async (documents: CampusDocument[]): Promise<CampusPdfPack[]> => {
