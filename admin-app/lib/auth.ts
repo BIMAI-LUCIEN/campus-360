@@ -20,16 +20,25 @@ import { sendPasswordResetEmail, sendVerificationEmail } from './mailer';
 const PRODUCTION_ORIGINS = [
   'https://api.campus360b.site',
   'https://admin.campus360b.site',
+  'https://campus360b.site',
+  'https://www.campus360b.site',
   'https://admin.campus-bordes.com',
   'https://campus-360-hi97.vercel.app',
   'https://campus-360-two.vercel.app',
   'https://campus-360-bimai-s-projects.vercel.app',
+  'https://*.vercel.app',
+  'https://*.expo.dev',
+  'https://*.exp.direct',
+  'exp://*',
+  'campus-bordes://*',
 ];
 
 const LOCAL_DEV_ORIGINS = [
   'campus-bordes://',
   'http://localhost:3001',
   'http://127.0.0.1:3001',
+  'http://localhost:3002',
+  'http://127.0.0.1:3002',
   'http://localhost:8081',
   'http://127.0.0.1:8081',
   'http://localhost:8082',

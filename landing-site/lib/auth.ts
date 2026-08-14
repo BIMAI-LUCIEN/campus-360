@@ -7,8 +7,15 @@ const isProd = process.env.NODE_ENV === "production";
 const PRODUCTION_ORIGINS = [
   "https://campus360b.site",
   "https://www.campus360b.site",
+  "https://api.campus360b.site",
+  "https://admin.campus360b.site",
   "https://campus-360-landing-ke5ahqi0c-bimai-s-projects.vercel.app",
   "https://campus-360-landing.vercel.app",
+  "https://*.vercel.app",
+  "https://*.expo.dev",
+  "https://*.exp.direct",
+  "exp://*",
+  "campus-bordes://*",
 ];
 
 const LOCAL_DEV_ORIGINS = [

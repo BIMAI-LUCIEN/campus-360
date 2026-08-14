@@ -20,16 +20,25 @@ import { sendPasswordResetEmail, sendVerificationEmail } from './mailer';
 const PRODUCTION_ORIGINS = [
   'https://api.campus360b.site',
   'https://admin.campus360b.site',
+  'https://campus360b.site',
+  'https://www.campus360b.site',
   'https://admin.campus-bordes.com',
   'https://campus-360-hi97.vercel.app',
   'https://campus-360-two.vercel.app',
   'https://campus-360-bimai-s-projects.vercel.app',
+  'https://*.vercel.app',
+  'https://*.expo.dev',
+  'https://*.exp.direct',
+  'exp://*',
+  'campus-bordes://*',
 ];
 
 const LOCAL_DEV_ORIGINS = [
   'campus-bordes://',
   'http://localhost:3001',
   'http://127.0.0.1:3001',
+  'http://localhost:3002',
+  'http://127.0.0.1:3002',
   'http://localhost:8081',
   'http://127.0.0.1:8081',
   'http://localhost:8082',
@@ -63,19 +72,11 @@ const parseOriginList = (raw: string | undefined): string[] =>
 const detectBaseUrl = (): string => {
   const envUrl = process.env.BETTER_AUTH_URL;
   const isLocalUrl = envUrl && (envUrl.includes('localhost') || envUrl.includes('127.0.0.1'));
-  // The "ignore localhost, fall back to prod" safety net only makes sense in
-  // production (guards against a Vercel deploy where the env var was left
-  // pointing at a dev template value). In development this must NOT trigger:
-  // mobile-api's baseURL legitimately IS http://localhost:3002 there, and
-  // silently swapping it for the production domain breaks session/cookie
-  // context (the configured baseURL and the actual request host diverge),
-  // which makes Better Auth reject otherwise-valid sessions issued by
-  // admin-app's instance.
   if (envUrl && (process.env.NODE_ENV !== 'production' || !isLocalUrl)) {
     return envUrl;
   }
-  // Default to the custom production domain.
-  return 'https://admin.campus360b.site';
+  // Default to the mobile API production domain.
+  return 'https://api.campus360b.site';
 };
 
 // Build the trusted origins list. Production origins are ALWAYS trusted

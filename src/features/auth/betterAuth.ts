@@ -234,6 +234,9 @@ export const loadStudentSession = loadSession;
 export const signInStudent = async (email: string, password: string) => {
   const result = await authClient.signIn.email({ email, password });
   if (result.error) throw new Error(errorMessage(result.error));
+  if (result.data?.user) {
+    return { user: result.data.user as StudentSession['user'] };
+  }
   const session = await loadSession();
   if (!session) throw new Error('Session indisponible apres la connexion.');
   return session;
@@ -268,7 +271,12 @@ export const signUpStudent = async (
     callbackURL: 'campus-bordes://',
   } as any);
   if (result.error) throw new Error(errorMessage(result.error));
-  return loadSession();
+  if (result.data?.user) {
+    return { user: result.data.user as StudentSession['user'] };
+  }
+  const session = await loadSession();
+  if (!session) throw new Error('Session indisponible apres la connexion.');
+  return session;
 };
 
 export const requestStudentPasswordReset = async (email: string) => {
