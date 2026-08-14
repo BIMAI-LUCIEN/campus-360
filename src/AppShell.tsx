@@ -681,8 +681,12 @@ export function AppShell() {
   };
 
   const buyDocument = (document: CampusDocument) => {
-    if (purchasedDocuments.includes(document.id)) { showToast('Ce PDF est déjà dans ta bibliothèque.', 'info', 'Déjà dans Mes PDF'); return; }
-    if (!studentSession) { setAuthMode('sign-in'); setAuthNotice('Connecte-toi pour acheter ce PDF avec ton wallet.'); setAuthVisible(true); return; }
+    const isOwned = effectivePurchasedDocuments.includes(document.id) || document.price === 0 || subscriptionTier === 'basic' || subscriptionTier === 'premium';
+    if (isOwned) {
+      setReadingDocument(document);
+      return;
+    }
+    if (!studentSession) { setAuthMode('sign-in'); setAuthNotice('Connecte-toi pour débloquer ce PDF.'); setAuthVisible(true); return; }
     setPurchasingDocumentId(document.id);
     recordPdfAnalyticsEvent({ eventType: 'purchase_start', documentId: document.id, accessToken: 'better-auth', metadata: { price: document.price, subject: document.subject, level: document.level } });
     purchasePdfDocument(document.id)
@@ -690,7 +694,8 @@ export function AppShell() {
         setPurchasedDocuments((current) => [document.id, ...current.filter((id) => id !== document.id)]);
         await syncStudentAccount(studentSession);
         recordPdfAnalyticsEvent({ eventType: 'purchase_success', documentId: document.id, accessToken: 'better-auth', metadata: { price: document.price, subject: document.subject, level: document.level } });
-        showToast(`${document.title} est maintenant dans Mes PDF.`, 'success', 'PDF acheté 🎉');
+        showToast(`${document.title} est débloqué !`, 'success', 'PDF Débloqué 🎉');
+        setReadingDocument(document);
       })
       .catch((error) => {
         const message = error instanceof Error ? error.message : '';

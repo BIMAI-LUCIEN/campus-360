@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 52 : 44,
     paddingHorizontal: 16,
     paddingBottom: 10,
-    backgroundColor: stitchColors.surface,
+    backgroundColor: stitchColors.paperDeep,
     borderBottomWidth: 1,
     borderBottomColor: stitchColors.inkFaint,
     flexDirection: 'row',
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   // Tool segment bar
   toolSegment: {
     flexDirection: 'row',
-    backgroundColor: stitchColors.surface,
+    backgroundColor: stitchColors.paperDeep,
     borderBottomWidth: 1,
     borderBottomColor: stitchColors.inkFaint,
     paddingHorizontal: 8,
@@ -597,9 +597,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   toolSegmentButtonActive: {
-    backgroundColor: stitchColors.cream,
+    backgroundColor: stitchColors.paperSoft,
     borderWidth: 1,
-    borderColor: stitchColors.siennaLight,
+    borderColor: stitchColors.siennaSoft,
   },
   toolSegmentText: {
     fontSize: 11,
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
   // Unavailable PDF fallback container
   unavailableContainer: { padding: 16, paddingBottom: 32 },
   statusCard: {
-    backgroundColor: stitchColors.surface,
+    backgroundColor: stitchColors.paperDeep,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
@@ -632,12 +632,12 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: stitchColors.cream,
+    backgroundColor: stitchColors.paperSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: stitchColors.siennaLight,
+    borderColor: stitchColors.siennaSoft,
   },
   statusDescription: {
     fontSize: 13,
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
     marginVertical: 16,
   },
   metaPill: {
-    backgroundColor: stitchColors.cream,
+    backgroundColor: stitchColors.paperSoft,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
@@ -709,11 +709,11 @@ const styles = StyleSheet.create({
   sectionSubtext: { fontSize: 12, color: stitchColors.inkMuted, lineHeight: 16, marginTop: -4 },
 
   cardHighlight: {
-    backgroundColor: stitchColors.cream,
+    backgroundColor: stitchColors.paperSoft,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: stitchColors.siennaLight,
+    borderColor: stitchColors.siennaSoft,
   },
   cardHighlightTitle: {
     fontSize: 14,
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardStandard: {
-    backgroundColor: stitchColors.surface,
+    backgroundColor: stitchColors.paperDeep,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
@@ -764,7 +764,7 @@ const styles = StyleSheet.create({
   timelineNumberText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
   timelineCard: {
     flex: 1,
-    backgroundColor: stitchColors.surface,
+    backgroundColor: stitchColors.paperDeep,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
   // Quiz items
   quizList: { gap: 10, marginTop: 4 },
   quizCard: {
-    backgroundColor: stitchColors.surface,
+    backgroundColor: stitchColors.paperDeep,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: stitchColors.inkFaint,
@@ -789,24 +789,24 @@ const styles = StyleSheet.create({
   },
   quizQuestionLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, paddingRight: 8 },
   quizBadge: {
-    backgroundColor: stitchColors.cream,
+    backgroundColor: stitchColors.paperSoft,
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderWidth: 1,
-    borderColor: stitchColors.siennaLight,
+    borderColor: stitchColors.siennaSoft,
   },
   quizBadgeText: { fontSize: 11, fontWeight: '700', color: stitchColors.sienna },
   quizQuestionText: { fontSize: 13, fontWeight: '600', color: stitchColors.ink, flex: 1, lineHeight: 18 },
   quizAnswerBlock: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: 'rgba(52, 211, 153, 0.12)',
     padding: 14,
     borderTopWidth: 1,
-    borderTopColor: '#DCFCE7',
+    borderTopColor: 'rgba(52, 211, 153, 0.24)',
   },
   answerIconWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  answerLabel: { fontSize: 12, fontWeight: '700', color: '#15803d' },
-  quizAnswerText: { fontSize: 13, color: '#166534', lineHeight: 18 },
+  answerLabel: { fontSize: 12, fontWeight: '700', color: stitchColors.emerald },
+  quizAnswerText: { fontSize: 13, color: stitchColors.emeraldTone, lineHeight: 18 },
 
   // Chat UI
   chatContainer: { flex: 1, backgroundColor: stitchColors.paper },
@@ -814,7 +814,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: stitchColors.surface,
+    backgroundColor: stitchColors.paperDeep,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: 1,
@@ -824,11 +824,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: stitchColors.cream,
+    backgroundColor: stitchColors.paperSoft,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: stitchColors.siennaLight,
+    borderColor: stitchColors.siennaSoft,
   },
   chatHeaderTitle: { fontSize: 13, fontWeight: '700', color: stitchColors.ink },
   chatHeaderSub: { fontSize: 11, color: stitchColors.inkMuted, marginTop: 1 },
@@ -837,7 +837,7 @@ const styles = StyleSheet.create({
   emptyChatPromptBox: { gap: 8, marginTop: 8 },
   emptyChatTitle: { fontSize: 12, fontWeight: '700', color: stitchColors.inkMuted, marginBottom: 4 },
   quickPromptButton: {
-    backgroundColor: stitchColors.surface,
+    backgroundColor: stitchColors.paperDeep,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
@@ -859,7 +859,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   messageBubbleAssistant: {
-    backgroundColor: stitchColors.surface,
+    backgroundColor: stitchColors.paperDeep,
     borderWidth: 1,
     borderColor: stitchColors.inkFaint,
     borderBottomLeftRadius: 4,
@@ -882,7 +882,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: stitchColors.surface,
+    backgroundColor: stitchColors.paperDeep,
     borderTopWidth: 1,
     borderTopColor: stitchColors.inkFaint,
   },
