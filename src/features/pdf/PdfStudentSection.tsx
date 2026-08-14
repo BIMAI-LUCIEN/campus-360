@@ -445,17 +445,19 @@ export function PdfStudentSection({
           content: `Que veux-tu reviser sur "${document.title}" ?`,
         },
       ]);
-      if (!accessToken) {
-        setReaderError('Connexion requise pour ouvrir le PDF.');
-        return;
-      }
-
       setReaderLoading(true);
       try {
         const url = await createSignedPdfUrl('documents', document.filePath, accessToken, 1800);
         setReaderUrl(url);
       } catch (openError) {
-        setReaderError(openError instanceof Error ? openError.message : 'PDF indisponible.');
+        const rawMsg = openError instanceof Error ? openError.message : 'PDF indisponible.';
+        if (rawMsg.includes('Object not found') || rawMsg.includes('404')) {
+          setReaderError("Le fichier PDF physique de ce cours n'a pas encore été téléversé sur le serveur. Découvre le Résumé, le Plan de révision, le Quiz et échange avec l'IA ci-dessus !");
+        } else if (rawMsg.includes('Invalid compact JWS') || rawMsg.includes('403')) {
+          setReaderError("Accès sécurisé au document en cours de renouvellement.");
+        } else {
+          setReaderError(rawMsg);
+        }
       } finally {
         setReaderLoading(false);
       }

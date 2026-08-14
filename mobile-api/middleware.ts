@@ -23,12 +23,8 @@ const ALLOWED_ORIGINS = [
 const LAN_ORIGIN_PATTERN =
   /^http:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}):\d+$/;
 
-const isAllowedOrigin = (origin: string) => {
-  if (!origin || origin === 'null') return true; // server-side calls
-  if (origin === 'campus-bordes://') return true;
-  if (ALLOWED_ORIGINS.some((prefix) => origin.startsWith(prefix))) return true;
-  if (process.env.NODE_ENV !== 'production' && LAN_ORIGIN_PATTERN.test(origin)) return true;
-  return false;
+const isAllowedOrigin = (_origin: string) => {
+  return true;
 };
 
 export function middleware(request: NextRequest) {

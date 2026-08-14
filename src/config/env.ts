@@ -31,7 +31,7 @@ const SUPABASE_ANON_KEY_FALLBACK =
 export const publicEnv: PublicEnv = {
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL || SUPABASE_URL_FALLBACK,
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY_FALLBACK,
-  aiProxyUrl: process.env.EXPO_PUBLIC_AI_PROXY_URL || 'https://admin.campus360b.site/api/ai/pdf-chat',
+  aiProxyUrl: process.env.EXPO_PUBLIC_AI_PROXY_URL || 'https://api.campus360b.site/api/ai/pdf-chat',
   authUrl: process.env.EXPO_PUBLIC_AUTH_URL || 'https://api.campus360b.site',
   authWebUrl: process.env.EXPO_PUBLIC_AUTH_WEB_URL || 'https://admin.campus360b.site',
   adminUrl: process.env.EXPO_PUBLIC_ADMIN_URL || 'https://admin.campus360b.site',

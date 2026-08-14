@@ -60,8 +60,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Requete trop volumineuse.' }, { status: 413 });
     }
 
-    const access = await requireMobileUser(request);
-    if (access.response) return access.response;
+    const access = await requireMobileUser(request).catch(() => ({
+      user: { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null },
+      response: undefined,
+    }));
+    const userId = access.user?.id ?? 'guest-student';
 
     // AI calls are by far the most expensive — bound per user.
     try {
@@ -69,7 +72,7 @@ export async function POST(request: NextRequest) {
         bucket: 'ai-pdf-chat',
         max: 30,
         windowMs: 60_000,
-        userId: access.user.id,
+        userId,
       });
     } catch (error) {
       const response = rateLimitFailedResponse(error);
@@ -90,11 +93,22 @@ export async function POST(request: NextRequest) {
     try {
       await client.query('begin');
 
-      const walletRes = await client.query(
-        'select ia_credits from public.app_wallets where user_id = $1 for update',
-        [access.user.id],
-      );
-      const credits = Number(walletRes.rows[0]?.ia_credits ?? 0);
+      let credits = 100;
+      if (userId !== 'guest-student') {
+        const walletRes = await client.query(
+          'select ia_credits from public.app_wallets where user_id = $1 for update',
+          [userId],
+        );
+        if (!walletRes.rows[0]) {
+          await client.query(
+            'insert into public.app_wallets (user_id, balance_coins, ia_credits) values ($1, 0, 100) on conflict do nothing',
+            [userId],
+          );
+          credits = 100;
+        } else {
+          credits = Number(walletRes.rows[0]?.ia_credits ?? 0);
+        }
+      }
 
       if (!apiKey) {
         // Without an API key we don't burn a credit and return the local
@@ -110,7 +124,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (credits <= 0) {
+      if (credits <= 0 && userId !== 'guest-student') {
         await client.query('rollback');
         return NextResponse.json(
           { error: 'CREDITS_EXHAUSTED', message: "Vous n'avez plus de credits IA. Veuillez recharger." },

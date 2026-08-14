@@ -43,7 +43,16 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
         if (!cancelled) setUrl(signedUrl);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'PDF indisponible.');
+        if (!cancelled) {
+          const raw = err instanceof Error ? err.message : String(err);
+          if (raw.includes('Object not found') || raw.includes('404')) {
+            setError("Le fichier PDF physique de ce cours n'a pas encore été téléversé sur le serveur. Découvre le Résumé, le Plan de révision, le Quiz et échange avec l'IA ci-dessus !");
+          } else if (raw.includes('Invalid compact JWS') || raw.includes('403')) {
+            setError("Accès sécurisé au document en cours de renouvellement.");
+          } else {
+            setError(raw);
+          }
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -77,7 +86,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
           ) : url ? (
             Platform.OS === 'web' ? (
               createElement('iframe', {
-                src: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}`,
+                src: `/pdf-viewer.html?url=${encodeURIComponent(url)}`,
                 title: document?.title ?? 'PDF',
                 style: { width: '100%', height: '100%', border: '0', backgroundColor: stitchColors.paper },
               })

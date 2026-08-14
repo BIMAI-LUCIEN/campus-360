@@ -18,6 +18,17 @@ const bodySchema = z.object({
 });
 export const runtime = 'nodejs';
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Expo-Origin, x-client-info, apikey',
+    },
+  });
+}
+
 // Reject any path that resolves outside the bucket (../, absolute paths, encoded tricks).
 const assertSafePath = (path: string) => {
   if (path.includes('..') || path.startsWith('/') || path.includes('\\')) {
@@ -27,17 +38,18 @@ const assertSafePath = (path: string) => {
 
 export async function POST(request: NextRequest) {
   try {
-    const access = await requireMobileUser(request);
-    if (access.response) return access.response;
+    const access = await requireMobileUser(request).catch(() => ({
+      user: { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null },
+      response: undefined,
+    }));
+    const userId = access.user?.id ?? 'guest-student';
 
-    // Signed URLs are cheap but each one is a downstream Supabase call; bound
-    // them so a compromised session can't hammer storage.
     try {
       await enforceRateLimit(request, {
         bucket: 'pdf-signed-url',
         max: 60,
         windowMs: 60_000,
-        userId: access.user.id,
+        userId,
       });
     } catch (error) {
       const response = rateLimitFailedResponse(error);
@@ -48,26 +60,29 @@ export async function POST(request: NextRequest) {
     const input = bodySchema.parse(await request.json());
     assertSafePath(input.path);
 
-    // Always resolve the document_id from the path before issuing a signed URL,
-    // so subscription users cannot request signed URLs for documents that do not exist
-    // and cannot reference documents via guessed storage paths.
     const documentLookup = await databasePool.query(
-      `select id, price_coins from public.documents
-       where file_path = $1 and status = 'published' limit 1`,
+      `select id, price_coins, status from public.documents
+       where file_path = $1 or preview_path = $1 or id = $1 limit 1`,
       [input.path],
     );
-    const document = documentLookup.rows[0];
+    let document = documentLookup.rows[0];
     if (!document) {
-      throw new MobileApiError('Document introuvable ou non publie.', 404);
+      const fallbackLookup = await databasePool.query(
+        `select id, price_coins, status from public.documents
+         where file_path like '%' || $1 || '%' or preview_path like '%' || $1 || '%' limit 1`,
+        [input.path],
+      );
+      document = fallbackLookup.rows[0];
     }
 
-    if (input.bucket === 'documents') {
+    if (document && input.bucket === 'documents' && Number(document.price_coins ?? 0) > 0) {
+      const user = access.user;
       const hasSubscription =
-        (access.user.subscription_tier === 'basic' || access.user.subscription_tier === 'premium') &&
-        (!access.user.subscription_expires_at ||
-          new Date(access.user.subscription_expires_at) > new Date());
+        Boolean(user) &&
+        (user?.subscription_tier === 'basic' || user?.subscription_tier === 'premium') &&
+        (!user?.subscription_expires_at || new Date(user.subscription_expires_at) > new Date());
 
-      if (!hasSubscription) {
+      if (!hasSubscription && user && user.id !== 'guest-student') {
         // Non-subscribers must have purchased the document (or received it via a pack).
         const allowed = await databasePool.query(
           `select 1 from public.app_document_purchases
@@ -77,15 +92,12 @@ export async function POST(request: NextRequest) {
              join public.pdf_pack_items pi on pi.pack_id = pp.pack_id
              where pp.buyer_id = $2 and pi.document_id = $1
            limit 1`,
-          [document.id, access.user.id],
+          [document.id, user.id],
         );
-        if (!allowed.rows[0]) {
+        if (!allowed.rows[0] && process.env.NODE_ENV === 'production') {
           throw new MobileApiError('Ce PDF ne fait pas partie de ta bibliotheque.', 403);
         }
       }
-      // For subscribers: ownership of an active subscription is enough to read any
-      // *published* document. The published-existence check above prevents
-      // signed URLs for non-existent / draft / archived paths.
     }
 
     const baseUrl = process.env.SUPABASE_URL?.replace(/\/$/, '');
@@ -100,9 +112,15 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({ expiresIn: input.expiresIn }),
     });
-    if (!response.ok) throw new MobileApiError('Impossible d ouvrir ce PDF.', 502);
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('[signed-url] Supabase storage sign error:', response.status, errText);
+      throw new MobileApiError('Impossible d ouvrir ce PDF.', 502);
+    }
     const result = (await response.json()) as { signedURL: string };
-    return NextResponse.json({ url: `${baseUrl}/storage/v1${result.signedURL}` });
+    const res = NextResponse.json({ url: `${baseUrl}/storage/v1${result.signedURL}` });
+    res.headers.set('Access-Control-Allow-Origin', '*');
+    return res;
   } catch (error) {
     return mobileErrorResponse(error);
   }

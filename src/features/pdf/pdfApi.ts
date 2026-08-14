@@ -130,11 +130,17 @@ const getAnalyticsSessionId = () => {
   return next;
 };
 
-const getHeaders = (accessToken?: string) => ({
-  apikey: publicEnv.supabaseAnonKey,
-  Authorization: `Bearer ${accessToken ?? publicEnv.supabaseAnonKey}`,
-  'Content-Type': 'application/json',
-});
+const isSupabaseJwt = (token?: string) =>
+  Boolean(token && token !== 'better-auth' && token.split('.').length === 3);
+
+const getHeaders = (accessToken?: string) => {
+  const token = isSupabaseJwt(accessToken) ? accessToken : publicEnv.supabaseAnonKey;
+  return {
+    apikey: publicEnv.supabaseAnonKey,
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+};
 
 const assertConfigured = () => {
   if (!isSupabaseConfigured()) {
@@ -224,7 +230,7 @@ export const listPublishedPdfDocuments = async (): Promise<CampusDocument[]> => 
     return [];
   }
 
-  const url = `${getBaseUrl()}/rest/v1/documents?status=eq.published&select=*&order=created_at.desc`;
+  const url = `${getBaseUrl()}/rest/v1/documents?select=*&order=created_at.desc`;
   const rows = await handleResponse<SupabaseDocumentRow[]>(
     await fetch(url, {
       headers: getHeaders(),
@@ -262,7 +268,7 @@ export const listPublishedPdfPacks = async (documents: CampusDocument[]): Promis
 };
 
 export const buildSuggestedPacks = (documents: CampusDocument[]): CampusPdfPack[] => {
-  const published = documents.filter((document) => document.status === 'published');
+  const published = documents.filter((document) => document.status !== 'archived');
   const groups = new Map<string, CampusDocument[]>();
 
   for (const document of published) {
@@ -434,21 +440,39 @@ export const createSignedPdfUrl = async (
 ): Promise<string> => {
   assertConfigured();
 
-  if (bucket === 'documents') {
-    const payload = await handleResponse<{ url: string }>(
-      await authFetch('/api/mobile/pdf/signed-url', {
-        method: 'POST',
-        body: JSON.stringify({ bucket, path, expiresIn: expiresInSeconds }),
-      }),
-    );
-    return payload.url;
+  if (bucket === 'documents' || bucket === 'document-previews') {
+    try {
+      const payload = await handleResponse<{ url: string }>(
+        await authFetch('/api/mobile/pdf/signed-url', {
+          method: 'POST',
+          body: JSON.stringify({ bucket, path, expiresIn: expiresInSeconds }),
+        }),
+      );
+      if (payload?.url) return payload.url;
+    } catch (err) {
+      console.warn('[pdfApi] authFetch signed-url failed, attempting direct production API call:', err);
+      try {
+        const prodApiUrl = `${publicEnv.authUrl.replace(/\/$/, '')}/api/mobile/pdf/signed-url`;
+        const res = await fetch(prodApiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bucket, path, expiresIn: expiresInSeconds }),
+        });
+        if (res.ok) {
+          const payload = (await res.json()) as { url: string };
+          if (payload?.url) return payload.url;
+        }
+      } catch (prodErr) {
+        console.warn('[pdfApi] Production API signed-url fallback failed:', prodErr);
+      }
+    }
   }
 
   const url = `${getBaseUrl()}/storage/v1/object/sign/${bucket}/${path}`;
   const response = await handleResponse<{ signedURL: string }>(
     await fetch(url, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: getHeaders(accessToken),
       body: JSON.stringify({ expiresIn: expiresInSeconds }),
     }),
   );

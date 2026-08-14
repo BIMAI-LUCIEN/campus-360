@@ -396,7 +396,7 @@ export function BottomNav({
                   end={brandGradient.horizontal.end}
                   style={styles.navPill}
                 >
-                  <Icon size={19} color="#FFFFFF" strokeWidth={2.2} />
+                  <Icon size={18} color="#FFFFFF" strokeWidth={2.2} />
                   <Text style={styles.navPillText} numberOfLines={1}>{label}</Text>
                 </LinearGradient>
               </Pressable>
@@ -404,7 +404,8 @@ export function BottomNav({
           }
           return (
             <Pressable key={key} onPress={() => onPress(key)} style={styles.navItem}>
-              <Icon size={21} color={stitchColors.inkSubtle} strokeWidth={1.9} />
+              <Icon size={19} color={stitchColors.inkSubtle} strokeWidth={1.9} />
+              <Text style={styles.navLabelInactive} numberOfLines={1}>{label}</Text>
             </Pressable>
           );
         })}
@@ -880,6 +881,7 @@ const styles = StyleSheet.create({
     borderRadius: stitchRadius.full,
   },
   navPillText: { fontFamily: SANS, fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
+  navLabelInactive: { fontFamily: SANS, fontSize: 10, fontWeight: '600', color: stitchColors.inkSubtle, marginTop: 2 },
 
   // TopBar
   topBar: {
