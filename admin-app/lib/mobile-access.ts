@@ -162,7 +162,54 @@ export const requireMobileUser = async (
   request: NextRequest,
   options: MobileAccessOptions = {},
 ) => {
-  const session = await auth.api.getSession({ headers: request.headers });
+  const headers = request.headers;
+  let session = await auth.api.getSession({ headers }).catch(() => null);
+
+  // Resilient fallback: if getSession didn't resolve, check Authorization Bearer header or Cookie in session table
+  if (!session?.user) {
+    const authHeader = headers.get('authorization') || headers.get('Authorization');
+    const cookieHeader = headers.get('cookie') || headers.get('Cookie');
+    let sessionToken = '';
+    if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
+      sessionToken = authHeader.slice(7).trim();
+    } else if (cookieHeader) {
+      const match = cookieHeader.match(/(?:better-auth\.session_token|__Secure-better-auth\.session_token)=([^;]+)/);
+      if (match) sessionToken = match[1];
+    }
+
+    if (sessionToken) {
+      const rawToken = sessionToken.split('.')[0];
+      try {
+        const dbSession = await databasePool.query(
+          `select s."userId", s."expiresAt", u.id, u.email, u.name, u.role
+           from public."session" s
+           join public."user" u on u.id = s."userId"
+           where (s.token = $1 or s.token = $2) and s."expiresAt" > now()
+           limit 1`,
+          [sessionToken, rawToken],
+        );
+        if (dbSession.rows[0]) {
+          const row = dbSession.rows[0];
+          session = {
+            user: {
+              id: String(row.id),
+              email: String(row.email),
+              name: String(row.name),
+              role: String(row.role || 'student'),
+            },
+            session: {
+              id: String(row.id),
+              userId: String(row.userId),
+              expiresAt: row.expiresAt,
+            },
+          } as any;
+        }
+      } catch (err) {
+        console.warn('[mobile-access] Direct DB session fallback check error:', err);
+      }
+    }
+  }
+
   if (!session?.user) {
     return {
       user: null,
