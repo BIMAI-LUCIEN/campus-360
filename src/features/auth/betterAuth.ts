@@ -224,9 +224,30 @@ const errorMessage = (error: { message?: string; code?: string } | null | undefi
   error?.message || error?.code || 'Connexion impossible.';
 
 const loadSession = async (): Promise<StudentSession | null> => {
-  const result = await authClient.getSession();
-  if (result.error || !result.data?.user) return null;
-  return { user: result.data.user as StudentSession['user'] };
+  try {
+    const result = await authClient.getSession();
+    if (!result.error && result.data?.user) {
+      const sessionData = result.data as any;
+      if (sessionData.session?.token) {
+        authStorage.setItem('campus-bordes_session_token', sessionData.session.token);
+      }
+      authStorage.setItem('campus-bordes_user', JSON.stringify(result.data.user));
+      return { user: result.data.user as StudentSession['user'] };
+    }
+  } catch (err) {
+    console.warn('[auth] getSession fetch failed, checking local storage cache:', err);
+  }
+
+  // Fallback to persisted session in storage
+  const storedUser = authStorage.getItem('campus-bordes_user');
+  const storedToken = authStorage.getItem('campus-bordes_session_token');
+  if (storedUser && storedToken) {
+    try {
+      const user = JSON.parse(storedUser);
+      return { user: user as StudentSession['user'] };
+    } catch {}
+  }
+  return null;
 };
 
 export const loadStudentSession = loadSession;
@@ -235,6 +256,11 @@ export const signInStudent = async (email: string, password: string) => {
   const result = await authClient.signIn.email({ email, password });
   if (result.error) throw new Error(errorMessage(result.error));
   if (result.data?.user) {
+    const payload = result.data as any;
+    if (payload.token) {
+      authStorage.setItem('campus-bordes_session_token', payload.token);
+    }
+    authStorage.setItem('campus-bordes_user', JSON.stringify(result.data.user));
     return { user: result.data.user as StudentSession['user'] };
   }
   const session = await loadSession();
@@ -272,6 +298,11 @@ export const signUpStudent = async (
   } as any);
   if (result.error) throw new Error(errorMessage(result.error));
   if (result.data?.user) {
+    const payload = result.data as any;
+    if (payload.token) {
+      authStorage.setItem('campus-bordes_session_token', payload.token);
+    }
+    authStorage.setItem('campus-bordes_user', JSON.stringify(result.data.user));
     return { user: result.data.user as StudentSession['user'] };
   }
   const session = await loadSession();
@@ -311,8 +342,10 @@ export const getAuthCapabilities = async (): Promise<AuthCapabilities> =>
   (await fetch(`${authBaseUrl}/api/mobile/auth-capabilities`)).json() as Promise<AuthCapabilities>;
 
 export const clearStudentSession = async () => {
-  const result = await authClient.signOut();
-  if (result.error) throw new Error(errorMessage(result.error));
+  authStorage.setItem('campus-bordes_session_token', '');
+  authStorage.setItem('campus-bordes_user', '');
+  const result = await authClient.signOut().catch(() => null);
+  if (result?.error) throw new Error(errorMessage(result.error));
 };
 
 // Raw variant that never throws on a non-2xx response — callers that need to
@@ -321,10 +354,22 @@ export const clearStudentSession = async () => {
 export const authFetchRaw = async (path: string, init: RequestInit = {}) => {
   const headers = new Headers(init.headers);
   headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json');
+
+  const token = authStorage.getItem('campus-bordes_session_token');
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
   if (Platform.OS !== 'web') {
     const cookie = authClient.getCookie();
-    if (cookie) headers.set('Cookie', cookie);
+    if (cookie) {
+      headers.set('Cookie', cookie);
+    } else if (token) {
+      headers.set('Cookie', `better-auth.session_token=${token}; __Secure-better-auth.session_token=${token}`);
+    }
     headers.set('Expo-Origin', 'campus-bordes://');
+  } else if (token) {
+    headers.set('Cookie', `better-auth.session_token=${token}; __Secure-better-auth.session_token=${token}`);
   }
 
   return fetch(`${authBaseUrl}${path}`, {

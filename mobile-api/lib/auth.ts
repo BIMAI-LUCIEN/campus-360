@@ -1,7 +1,7 @@
 import { expo } from '@better-auth/expo';
 import { betterAuth } from 'better-auth';
 import { createAuthMiddleware } from 'better-auth/api';
-import { admin } from 'better-auth/plugins';
+import { admin, bearer } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
 
 import { databasePool } from './database';
@@ -225,6 +225,7 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
     },
     plugins: [
       expo(),
+      bearer(),
       admin({
         defaultRole: 'student',
         adminRoles: ['admin'],
