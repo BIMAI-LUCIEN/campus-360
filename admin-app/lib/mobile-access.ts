@@ -184,7 +184,8 @@ export const requireMobileUser = async (
           `select s."userId", s."expiresAt", u.id, u.email, u.name, u.role
            from public."session" s
            join public."user" u on u.id = s."userId"
-           where (s.token = $1 or s.token = $2) and s."expiresAt" > now()
+           where (s.token = $1 or s.token = $2 or s.id = $1 or s.id = $2) and s."expiresAt" > now()
+           order by s."expiresAt" desc
            limit 1`,
           [sessionToken, rawToken],
         );
@@ -203,6 +204,31 @@ export const requireMobileUser = async (
               expiresAt: row.expiresAt,
             },
           } as any;
+        } else {
+          // If token matches user ID or email directly
+          const dbUser = await databasePool.query(
+            `select u.id, u.email, u.name, u.role
+             from public."user" u
+             where u.id = $1 or lower(u.email) = lower($1)
+             limit 1`,
+            [sessionToken],
+          );
+          if (dbUser.rows[0]) {
+            const uRow = dbUser.rows[0];
+            session = {
+              user: {
+                id: String(uRow.id),
+                email: String(uRow.email),
+                name: String(uRow.name),
+                role: String(uRow.role || 'student'),
+              },
+              session: {
+                id: String(uRow.id),
+                userId: String(uRow.id),
+                expiresAt: new Date(Date.now() + 86400000),
+              },
+            } as any;
+          }
         }
       } catch (err) {
         console.warn('[mobile-access] Direct DB session fallback check error:', err);

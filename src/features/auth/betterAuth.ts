@@ -178,7 +178,26 @@ const getAuthWebBaseUrl = () => {
 
 export const authWebBaseUrl = getAuthWebBaseUrl();
 
-const authStorage = {
+const memoryStore: Record<string, string> = {};
+
+// Pre-hydrate memory store from SecureStore asynchronously
+const hydratePromise = (async () => {
+  if (Platform.OS === 'web') return;
+  try {
+    const [token, user, cookie] = await Promise.all([
+      SecureStore.getItemAsync('campus-bordes_session_token').catch(() => null),
+      SecureStore.getItemAsync('campus-bordes_user').catch(() => null),
+      SecureStore.getItemAsync('campus-bordes_better-auth.session_token').catch(() => null),
+    ]);
+    if (token) memoryStore['campus-bordes_session_token'] = token;
+    if (user) memoryStore['campus-bordes_user'] = user;
+    if (cookie) memoryStore['campus-bordes_better-auth.session_token'] = cookie;
+  } catch (err) {
+    console.warn('[auth] storage hydration warning:', err);
+  }
+})();
+
+export const authStorage = {
   getItem: (key: string): string | null => {
     if (Platform.OS === 'web') {
       try {
@@ -187,9 +206,10 @@ const authStorage = {
         return null;
       }
     }
-    return SecureStore.getItem(key);
+    return memoryStore[key] ?? null;
   },
   setItem: (key: string, value: string): void => {
+    memoryStore[key] = value;
     if (Platform.OS === 'web') {
       try {
         if (typeof localStorage !== 'undefined') {
@@ -198,7 +218,44 @@ const authStorage = {
       } catch {}
       return;
     }
-    SecureStore.setItem(key, value);
+    SecureStore.setItemAsync(key, value).catch(() => {});
+  },
+  getItemAsync: async (key: string): Promise<string | null> => {
+    if (memoryStore[key]) return memoryStore[key];
+    if (Platform.OS === 'web') {
+      try {
+        return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+      } catch {
+        return null;
+      }
+    }
+    const val = await SecureStore.getItemAsync(key).catch(() => null);
+    if (val) memoryStore[key] = val;
+    return val;
+  },
+  setItemAsync: async (key: string, value: string): Promise<void> => {
+    memoryStore[key] = value;
+    if (Platform.OS === 'web') {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(key, value);
+        }
+      } catch {}
+      return;
+    }
+    await SecureStore.setItemAsync(key, value).catch(() => {});
+  },
+  deleteItemAsync: async (key: string): Promise<void> => {
+    delete memoryStore[key];
+    if (Platform.OS === 'web') {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem(key);
+        }
+      } catch {}
+      return;
+    }
+    await SecureStore.deleteItemAsync(key).catch(() => {});
   },
 };
 
@@ -209,9 +266,6 @@ export const authClient = createAuthClient({
       ? []
       : [
           expoClient({
-            // Must match app.json `scheme` and the server's trustedOrigins
-            // (`campus-bordes://`); a mismatch makes the server reject the
-            // Expo-Origin on every auth request.
             scheme: 'campus-bordes',
             storagePrefix: 'campus-bordes',
             storage: authStorage,
@@ -224,14 +278,15 @@ const errorMessage = (error: { message?: string; code?: string } | null | undefi
   error?.message || error?.code || 'Connexion impossible.';
 
 const loadSession = async (): Promise<StudentSession | null> => {
+  await hydratePromise.catch(() => {});
   try {
     const result = await authClient.getSession();
     if (!result.error && result.data?.user) {
       const sessionData = result.data as any;
       if (sessionData.session?.token) {
-        authStorage.setItem('campus-bordes_session_token', sessionData.session.token);
+        await authStorage.setItemAsync('campus-bordes_session_token', sessionData.session.token);
       }
-      authStorage.setItem('campus-bordes_user', JSON.stringify(result.data.user));
+      await authStorage.setItemAsync('campus-bordes_user', JSON.stringify(result.data.user));
       return { user: result.data.user as StudentSession['user'] };
     }
   } catch (err) {
@@ -239,8 +294,8 @@ const loadSession = async (): Promise<StudentSession | null> => {
   }
 
   // Fallback to persisted session in storage
-  const storedUser = authStorage.getItem('campus-bordes_user');
-  const storedToken = authStorage.getItem('campus-bordes_session_token');
+  const storedUser = (await authStorage.getItemAsync('campus-bordes_user')) || authStorage.getItem('campus-bordes_user');
+  const storedToken = (await authStorage.getItemAsync('campus-bordes_session_token')) || authStorage.getItem('campus-bordes_session_token');
   if (storedUser && storedToken) {
     try {
       const user = JSON.parse(storedUser);
@@ -258,9 +313,11 @@ export const signInStudent = async (email: string, password: string) => {
   if (result.data?.user) {
     const payload = result.data as any;
     if (payload.token) {
-      authStorage.setItem('campus-bordes_session_token', payload.token);
+      await authStorage.setItemAsync('campus-bordes_session_token', payload.token);
+    } else if (payload.session?.token) {
+      await authStorage.setItemAsync('campus-bordes_session_token', payload.session.token);
     }
-    authStorage.setItem('campus-bordes_user', JSON.stringify(result.data.user));
+    await authStorage.setItemAsync('campus-bordes_user', JSON.stringify(result.data.user));
     return { user: result.data.user as StudentSession['user'] };
   }
   const session = await loadSession();
@@ -300,9 +357,11 @@ export const signUpStudent = async (
   if (result.data?.user) {
     const payload = result.data as any;
     if (payload.token) {
-      authStorage.setItem('campus-bordes_session_token', payload.token);
+      await authStorage.setItemAsync('campus-bordes_session_token', payload.token);
+    } else if (payload.session?.token) {
+      await authStorage.setItemAsync('campus-bordes_session_token', payload.session.token);
     }
-    authStorage.setItem('campus-bordes_user', JSON.stringify(result.data.user));
+    await authStorage.setItemAsync('campus-bordes_user', JSON.stringify(result.data.user));
     return { user: result.data.user as StudentSession['user'] };
   }
   const session = await loadSession();
@@ -342,8 +401,9 @@ export const getAuthCapabilities = async (): Promise<AuthCapabilities> =>
   (await fetch(`${authBaseUrl}/api/mobile/auth-capabilities`)).json() as Promise<AuthCapabilities>;
 
 export const clearStudentSession = async () => {
-  authStorage.setItem('campus-bordes_session_token', '');
-  authStorage.setItem('campus-bordes_user', '');
+  await authStorage.deleteItemAsync('campus-bordes_session_token');
+  await authStorage.deleteItemAsync('campus-bordes_user');
+  await authStorage.deleteItemAsync('campus-bordes_better-auth.session_token');
   const result = await authClient.signOut().catch(() => null);
   if (result?.error) throw new Error(errorMessage(result.error));
 };
@@ -355,7 +415,11 @@ export const authFetchRaw = async (path: string, init: RequestInit = {}) => {
   const headers = new Headers(init.headers);
   headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json');
 
-  const token = authStorage.getItem('campus-bordes_session_token');
+  let token = authStorage.getItem('campus-bordes_session_token');
+  if (!token && Platform.OS !== 'web') {
+    token = (await authStorage.getItemAsync('campus-bordes_session_token')) || (await authStorage.getItemAsync('campus-bordes_better-auth.session_token'));
+  }
+
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
