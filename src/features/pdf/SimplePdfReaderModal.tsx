@@ -4,6 +4,7 @@ import { createElement, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -19,6 +20,8 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Download,
+  ExternalLink,
   FileText,
   HelpCircle,
   MessageSquare,
@@ -192,6 +195,16 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
             <Text style={styles.title} numberOfLines={1}>{document.title}</Text>
             <Text style={styles.subtitle} numberOfLines={1}>{document.subject} • {document.level} • {document.university}</Text>
           </View>
+          {url ? (
+            <Pressable
+              style={styles.openExternalBtn}
+              onPress={() => {
+                if (url) void Linking.openURL(url);
+              }}
+            >
+              <ExternalLink size={16} color={stitchColors.sienna} />
+            </Pressable>
+          ) : null}
         </View>
 
         {/* 5-Tool Tab Segment Strip */}
@@ -288,28 +301,41 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                   </View>
                 </ScrollView>
               ) : url ? (
-                Platform.OS === 'web' ? (
-                  createElement('iframe', {
-                    src: `/pdf-viewer.html?url=${encodeURIComponent(url)}`,
-                    title: document.title,
-                    style: { width: '100%', height: '100%', border: '0', backgroundColor: stitchColors.paper },
-                  })
-                ) : (
-                  <WebView
-                    source={{ uri: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}` }}
-                    style={styles.webview}
-                    startInLoadingState
-                    renderLoading={() => (
-                      <View style={styles.centered}>
-                        <ActivityIndicator color={stitchColors.sienna} size="large" />
-                        <Text style={styles.bodyText}>Affichage du cours...</Text>
-                      </View>
-                    )}
-                    javaScriptEnabled
-                    domStorageEnabled
-                    scalesPageToFit
-                  />
-                )
+                <View style={{ flex: 1 }}>
+                  <View style={styles.pdfToolbar}>
+                    <Pressable
+                      style={styles.pdfToolbarBtn}
+                      onPress={() => {
+                        if (url) void Linking.openURL(url);
+                      }}
+                    >
+                      <ExternalLink size={14} color={stitchColors.sienna} />
+                      <Text style={styles.pdfToolbarBtnText}>Plein écran / Lecteur externe</Text>
+                    </Pressable>
+                  </View>
+                  {Platform.OS === 'web' ? (
+                    createElement('iframe', {
+                      src: `/pdf-viewer.html?url=${encodeURIComponent(url)}`,
+                      title: document.title,
+                      style: { width: '100%', height: '100%', border: '0', backgroundColor: stitchColors.paper },
+                    })
+                  ) : (
+                    <WebView
+                      source={{ uri: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}` }}
+                      style={styles.webview}
+                      startInLoadingState
+                      renderLoading={() => (
+                        <View style={styles.centered}>
+                          <ActivityIndicator color={stitchColors.sienna} size="large" />
+                          <Text style={styles.bodyText}>Affichage du cours...</Text>
+                        </View>
+                      )}
+                      javaScriptEnabled
+                      domStorageEnabled
+                      scalesPageToFit
+                    />
+                  )}
+                </View>
               ) : null}
             </View>
           ) : null}
@@ -576,6 +602,42 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: stitchColors.inkMuted,
     marginTop: 2,
+  },
+  openExternalBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: stitchColors.inkFaint,
+    backgroundColor: stitchColors.paper,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pdfToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: stitchColors.paperDeep,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchColors.inkFaint,
+  },
+  pdfToolbarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: stitchColors.paperSoft,
+    borderWidth: 1,
+    borderColor: stitchColors.siennaSoft,
+  },
+  pdfToolbarBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: stitchColors.sienna,
   },
 
   // Tool segment bar
