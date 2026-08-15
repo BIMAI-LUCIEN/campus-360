@@ -187,14 +187,16 @@ export async function POST(request: NextRequest) {
       };
 
       // Consume credit and log.
-      await client.query(
-        'update public.app_wallets set ia_credits = ia_credits - 1, updated_at = now() where user_id = $1',
-        [access.user.id],
-      );
-      await client.query(
-        'insert into public.app_ia_usage_logs (user_id, tokens_used) values ($1, $2)',
-        [access.user.id, 1],
-      );
+      if (userId && userId !== 'guest-student') {
+        await client.query(
+          'update public.app_wallets set ia_credits = ia_credits - 1, updated_at = now() where user_id = $1',
+          [userId],
+        );
+        await client.query(
+          'insert into public.app_ia_usage_logs (user_id, tokens_used) values ($1, $2)',
+          [userId, 1],
+        );
+      }
       await client.query('commit');
 
       return NextResponse.json({

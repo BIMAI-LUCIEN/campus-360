@@ -106,12 +106,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // If document file_path or preview_path is already a direct Cloudinary / CDN URL, return it immediately
+    const directUrl =
+      (input.bucket === 'document-previews' ? document?.preview_path : document?.file_path) ||
+      (input.path.startsWith('http://') || input.path.startsWith('https://') ? input.path : null);
+
+    if (directUrl && (directUrl.startsWith('http://') || directUrl.startsWith('https://'))) {
+      const res = NextResponse.json({ url: directUrl });
+      res.headers.set('Access-Control-Allow-Origin', '*');
+      return res;
+    }
+
     const baseUrl = (process.env.SUPABASE_URL || 'https://zlzwoqqnkvxndmtnzdsm.supabase.co').replace(/\/$/, '');
     const serviceKey =
       process.env.SUPABASE_SERVICE_ROLE_KEY ||
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ';
 
-    const response = await fetch(`${baseUrl}/storage/v1/object/sign/${input.bucket}/${input.path}`, {
+    const cleanPath = input.path.replace(/^\/+/, '').replace(/^documents\//, '');
+    const response = await fetch(`${baseUrl}/storage/v1/object/sign/${input.bucket}/${cleanPath}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${serviceKey}`,

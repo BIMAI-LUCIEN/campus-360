@@ -8,6 +8,7 @@ import { createPdf, listPdfs } from '@/lib/course-db';
 import { inferPdfIntelligence } from '@/lib/pdf-intelligence';
 import { pdfUploadDir } from '@/lib/paths';
 import { uploadSupabasePdfBytes, upsertSupabasePdf } from '@/lib/supabase-pdf';
+import { uploadToCloudinary, isCloudinaryConfigured } from '@/lib/cloudinary';
 import { generateWatermarkedPreview } from '@/lib/pdf-preview';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
@@ -216,12 +217,44 @@ export async function POST(request: NextRequest) {
   const bytes = Buffer.from(await file.arrayBuffer());
   await writeFile(absolutePath, bytes);
   const storagePath = `admin/${fileName}`;
-  await uploadSupabasePdfBytes(storagePath, bytes);
+
+  let cldUrl = '';
+  let cldPreviewUrl = '';
+
+  // 1. Upload to Cloudinary (Primary storage)
+  if (isCloudinaryConfigured()) {
+    try {
+      const cldRes = await uploadToCloudinary(bytes, {
+        folder: 'campus-360/documents',
+        publicId: `${Date.now()}-${safeBaseName}`,
+      });
+      cldUrl = cldRes.secure_url;
+    } catch (cldErr) {
+      console.warn('[pdf-upload] Cloudinary upload warning:', cldErr);
+    }
+  }
+
+  // 2. Upload to Supabase Storage (Backup storage)
+  try {
+    await uploadSupabasePdfBytes(storagePath, bytes);
+  } catch (sbErr) {
+    console.warn('[pdf-upload] Supabase upload warning:', sbErr);
+  }
 
   // Generate watermarked preview PDF buffer
   const previewBytes = await generateWatermarkedPreview(bytes);
-  // Upload to document-previews bucket
-  await uploadSupabasePdfBytes(storagePath, previewBytes, 'document-previews');
+  if (isCloudinaryConfigured()) {
+    try {
+      const cldPrevRes = await uploadToCloudinary(previewBytes, {
+        folder: 'campus-360/previews',
+        publicId: `${Date.now()}-prev-${safeBaseName}`,
+      });
+      cldPreviewUrl = cldPrevRes.secure_url;
+    } catch {}
+  }
+  try {
+    await uploadSupabasePdfBytes(storagePath, previewBytes, 'document-previews');
+  } catch {}
 
   const inferred = inferPdfIntelligence({
     fileName: file.name,
@@ -245,9 +278,9 @@ export async function POST(request: NextRequest) {
     {
       ...parsed.data,
       fileName: file.name,
-      filePath: `/uploads/pdfs/${fileName}`,
+      filePath: cldUrl || `/uploads/pdfs/${fileName}`,
       fileSize: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-      previewPath: storagePath,
+      previewPath: cldPreviewUrl || storagePath,
       aiSummary: parsed.data.aiSummary || inferred.aiSummary,
       aiTags: aiTags.length ? aiTags : inferred.aiTags,
       aiDifficulty: parsed.data.aiDifficulty || inferred.aiDifficulty,
