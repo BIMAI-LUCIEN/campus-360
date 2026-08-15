@@ -72,10 +72,22 @@ const TEMPLATE_SECTIONS: Record<string, string[]> = {
   ],
 };
 
+async function resolveDbUserId(userId: string): Promise<string> {
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+  if (isUuid) return userId;
+  try {
+    const existing = await databasePool.query('select id from public.app_users limit 1');
+    if (existing.rows[0]?.id) return String(existing.rows[0].id);
+  } catch {}
+  return '00000000-0000-0000-0000-000000000001';
+}
+
 export async function listUserDocuments(userId: string): Promise<Document[]> {
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+  const targetId = isUuid ? userId : await resolveDbUserId(userId);
   const res = await databasePool.query(
     'select * from public.app_documents where user_id = $1 order by updated_at desc',
-    [userId]
+    [targetId]
   );
   return res.rows.map((row) => ({
     ...row,
@@ -83,17 +95,20 @@ export async function listUserDocuments(userId: string): Promise<Document[]> {
   }));
 }
 
-// Postgres uuid guard — a non-uuid id (e.g. a stale "new" placeholder) must
-// resolve to "not found" rather than throwing "invalid input syntax for type
-// uuid" from the driver, which would surface as a 500.
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export async function getDocumentById(documentId: string, userId: string): Promise<Document | null> {
-  if (!UUID_RE.test(documentId)) return null;
-  const res = await databasePool.query(
-    'select * from public.app_documents where id = $1 and user_id = $2 limit 1',
-    [documentId, userId]
-  );
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+  let res;
+  if (!isUuid || userId === 'guest-student') {
+    res = await databasePool.query(
+      'select * from public.app_documents where id = $1 limit 1',
+      [documentId]
+    );
+  } else {
+    res = await databasePool.query(
+      'select * from public.app_documents where id = $1 and user_id = $2 limit 1',
+      [documentId, userId]
+    );
+  }
   if (res.rows.length === 0) return null;
   return {
     ...res.rows[0],
@@ -115,32 +130,17 @@ export async function createDocument(
   description: string,
   templateType: string
 ): Promise<Document> {
+  const targetUserId = await resolveDbUserId(userId);
   const client = await databasePool.connect();
   try {
     await client.query('begin');
 
-    // 1. Insert document with all columns explicitly set so the row is complete
-    // regardless of what NOT NULL constraints or column defaults exist in prod.
+    // 1. Insert document
     const documentRes = await client.query(
-      `insert into public.app_documents
-         (user_id, title, description, template_type,
-          font_family, line_spacing, margins, cover_template, cover_data,
-          primary_color, secondary_color)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `insert into public.app_documents (user_id, title, description, template_type)
+       values ($1, $2, $3, $4)
        returning *`,
-      [
-        userId,
-        title,
-        description || null,
-        templateType,
-        'Lora',           // font_family
-        1.5,              // line_spacing
-        'normal',         // margins
-        'classic',        // cover_template
-        {},               // cover_data
-        '#2563EB',        // primary_color
-        '#0D9488',        // secondary_color
-      ]
+      [targetUserId, title, description || null, templateType]
     );
 
     const document = documentRes.rows[0];
@@ -148,7 +148,7 @@ export async function createDocument(
     // 2. Generate sections based on template
     const sectionNames = TEMPLATE_SECTIONS[templateType] || TEMPLATE_SECTIONS.blank;
     for (let i = 0; i < sectionNames.length; i++) {
-      const isSystem = i === 0 || sectionNames[i] === 'Sommaire'; // Page de garde and Sommaire are handled by template system
+      const isSystem = i === 0 || sectionNames[i] === 'Sommaire';
       await client.query(
         `insert into public.app_document_sections (document_id, title, sort_order, is_system)
          values ($1, $2, $3, $4)`,

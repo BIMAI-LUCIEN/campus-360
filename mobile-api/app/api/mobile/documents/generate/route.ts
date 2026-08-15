@@ -131,7 +131,8 @@ ${motivation ? `<p>${motivation}</p>` : '<p>Votre structure se distingue par son
 
 const generateSchema = z.object({
   type: z.enum(['cv', 'lettre_motivation']),
-  formData: z.record(z.string(), z.any()),
+  formData: z.record(z.string(), z.any()).optional(),
+  answers: z.record(z.string(), z.any()).optional(),
   documentId: z.string().optional(),
 });
 
@@ -149,7 +150,8 @@ export async function POST(request: NextRequest) {
       return withCors(NextResponse.json({ error: "Données invalides." }, { status: 400 }), request);
     }
 
-    const { type, formData, documentId } = parsed.data;
+    const { type, documentId } = parsed.data;
+    const formData = parsed.data.formData || parsed.data.answers || {};
 
     let remainingCredits = 45;
 

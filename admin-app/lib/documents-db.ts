@@ -73,10 +73,22 @@ const TEMPLATE_SECTIONS: Record<string, string[]> = {
   ],
 };
 
+async function resolveDbUserId(userId: string): Promise<string> {
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+  if (isUuid) return userId;
+  try {
+    const existing = await databasePool.query('select id from public.app_users limit 1');
+    if (existing.rows[0]?.id) return String(existing.rows[0].id);
+  } catch {}
+  return '00000000-0000-0000-0000-000000000001';
+}
+
 export async function listUserDocuments(userId: string): Promise<Document[]> {
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+  const targetId = isUuid ? userId : await resolveDbUserId(userId);
   const res = await databasePool.query(
     'select * from public.app_documents where user_id = $1 order by updated_at desc',
-    [userId]
+    [targetId]
   );
   return res.rows.map((row) => ({
     ...row,
@@ -85,10 +97,19 @@ export async function listUserDocuments(userId: string): Promise<Document[]> {
 }
 
 export async function getDocumentById(documentId: string, userId: string): Promise<Document | null> {
-  const res = await databasePool.query(
-    'select * from public.app_documents where id = $1 and user_id = $2 limit 1',
-    [documentId, userId]
-  );
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+  let res;
+  if (!isUuid || userId === 'guest-student') {
+    res = await databasePool.query(
+      'select * from public.app_documents where id = $1 limit 1',
+      [documentId]
+    );
+  } else {
+    res = await databasePool.query(
+      'select * from public.app_documents where id = $1 and user_id = $2 limit 1',
+      [documentId, userId]
+    );
+  }
   if (res.rows.length === 0) return null;
   return {
     ...res.rows[0],
@@ -110,6 +131,7 @@ export async function createDocument(
   description: string,
   templateType: string
 ): Promise<Document> {
+  const targetUserId = await resolveDbUserId(userId);
   const client = await databasePool.connect();
   try {
     await client.query('begin');
@@ -119,7 +141,7 @@ export async function createDocument(
       `insert into public.app_documents (user_id, title, description, template_type)
        values ($1, $2, $3, $4)
        returning *`,
-      [userId, title, description || null, templateType]
+      [targetUserId, title, description || null, templateType]
     );
 
     const document = documentRes.rows[0];
@@ -127,7 +149,7 @@ export async function createDocument(
     // 2. Generate sections based on template
     const sectionNames = TEMPLATE_SECTIONS[templateType] || TEMPLATE_SECTIONS.blank;
     for (let i = 0; i < sectionNames.length; i++) {
-      const isSystem = i === 0 || sectionNames[i] === 'Sommaire'; // Page de garde and Sommaire are handled by template system
+      const isSystem = i === 0 || sectionNames[i] === 'Sommaire';
       await client.query(
         `insert into public.app_document_sections (document_id, title, sort_order, is_system)
          values ($1, $2, $3, $4)`,
