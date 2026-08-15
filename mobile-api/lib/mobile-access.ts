@@ -293,36 +293,39 @@ export class MobileApiError extends Error {
   }
 }
 
+export const withCors = (response: NextResponse): NextResponse => {
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Expo-Origin, x-client-info, apikey');
+  return response;
+};
+
 export const mobileErrorResponse = (error: unknown) => {
   if (error instanceof MobileApiError) {
-    return NextResponse.json({ error: error.message }, { status: error.status });
+    return withCors(NextResponse.json({ error: error.message }, { status: error.status }));
   }
   if (error instanceof RateLimitError) {
-    return NextResponse.json(
-      { error: error.message, retryAfter: error.retryAfterSeconds },
-      {
-        status: 429,
-        headers: { 'Retry-After': String(error.retryAfterSeconds) },
-      },
+    return withCors(
+      NextResponse.json(
+        { error: error.message, retryAfter: error.retryAfterSeconds },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(error.retryAfterSeconds) },
+        },
+      ),
     );
   }
-  // Invalid request payloads (bad UUID, missing field, wrong type) are client
-  // errors, not server failures — never surface them as a 500.
   if (error instanceof ZodError) {
-    return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 });
+    return withCors(NextResponse.json({ error: 'Requête invalide.' }, { status: 400 }));
   }
-  // Postgres unique_violation — the pre-insert "already purchased/exists"
-  // check in purchase routes runs before the row lock is acquired, so two
-  // near-simultaneous requests can both pass it and race on the insert. The
-  // unique constraint on (document_id, buyer_id) / (pack_id, buyer_id) is
-  // what actually prevents the double purchase; surface that as a clean 409
-  // instead of a generic 500.
   if (typeof error === 'object' && error !== null && (error as { code?: string }).code === '23505') {
-    return NextResponse.json({ error: 'Cet achat a deja ete effectue.' }, { status: 409 });
+    return withCors(NextResponse.json({ error: 'Cet achat a deja ete effectue.' }, { status: 409 }));
   }
   console.error('Mobile API error', error);
-  return NextResponse.json(
-    { error: 'Service momentanement indisponible.' },
-    { status: 500 },
+  return withCors(
+    NextResponse.json(
+      { error: 'Service momentanement indisponible.' },
+      { status: 500 },
+    ),
   );
 };

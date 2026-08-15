@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { PoolClient } from 'pg';
+import { ZodError } from 'zod';
 
 import { auth } from './auth';
 import { databasePool } from './database';
@@ -282,22 +283,39 @@ export class MobileApiError extends Error {
   }
 }
 
+export const withCors = (response: NextResponse): NextResponse => {
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Expo-Origin, x-client-info, apikey');
+  return response;
+};
+
 export const mobileErrorResponse = (error: unknown) => {
   if (error instanceof MobileApiError) {
-    return NextResponse.json({ error: error.message }, { status: error.status });
+    return withCors(NextResponse.json({ error: error.message }, { status: error.status }));
   }
   if (error instanceof RateLimitError) {
-    return NextResponse.json(
-      { error: error.message, retryAfter: error.retryAfterSeconds },
-      {
-        status: 429,
-        headers: { 'Retry-After': String(error.retryAfterSeconds) },
-      },
+    return withCors(
+      NextResponse.json(
+        { error: error.message, retryAfter: error.retryAfterSeconds },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(error.retryAfterSeconds) },
+        },
+      ),
     );
   }
+  if (error instanceof ZodError) {
+    return withCors(NextResponse.json({ error: 'Requête invalide.' }, { status: 400 }));
+  }
+  if (typeof error === 'object' && error !== null && (error as { code?: string }).code === '23505') {
+    return withCors(NextResponse.json({ error: 'Cet achat a deja ete effectue.' }, { status: 409 }));
+  }
   console.error('Mobile API error', error);
-  return NextResponse.json(
-    { error: 'Service momentanement indisponible.' },
-    { status: 500 },
+  return withCors(
+    NextResponse.json(
+      { error: 'Service momentanement indisponible.' },
+      { status: 500 },
+    ),
   );
 };

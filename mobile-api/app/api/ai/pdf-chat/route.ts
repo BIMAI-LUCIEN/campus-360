@@ -8,17 +8,20 @@ import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limi
 const bodySchema = z.object({
   question: z.string().min(1).max(2000),
   pdfContext: z
-    .object({
-      documentId: z.string().optional(),
-      title: z.string().optional(),
-      subject: z.string().optional(),
-      level: z.string().optional(),
-      pageCount: z.number().optional(),
-      previewText: z.string().optional(),
-      aiSummary: z.string().optional(),
-      aiStudyPlan: z.array(z.string()).optional(),
-      aiQuiz: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
-    })
+    .union([
+      z.string(),
+      z.object({
+        documentId: z.string().optional(),
+        title: z.string().optional(),
+        subject: z.string().optional(),
+        level: z.string().optional(),
+        pageCount: z.number().optional(),
+        previewText: z.string().optional(),
+        aiSummary: z.string().optional(),
+        aiStudyPlan: z.array(z.string()).optional(),
+        aiQuiz: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
+      }),
+    ])
     .optional(),
   messages: z
     .array(
@@ -75,9 +78,9 @@ export async function POST(request: NextRequest) {
   try {
     const access = await requireMobileUser(request).catch(() => ({
       user: { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null },
-      response: undefined,
+      response: null,
     }));
-    const userId = access.user?.id ?? 'guest-student';
+    const userId = access?.user?.id ?? 'guest-student';
 
     try {
       await enforceRateLimit(request, {
@@ -88,7 +91,7 @@ export async function POST(request: NextRequest) {
       });
     } catch (error) {
       const response = rateLimitFailedResponse(error);
-      if (response) return response;
+      if (response) return withCors(response);
       throw error;
     }
 
@@ -102,16 +105,31 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.OPENROUTER_API_KEY;
 
     if (!apiKey) {
-      const res = NextResponse.json(
-        {
-          answer: localPdfAnswer(question, pdfContext),
-          local: true,
-        },
-        { status: 200 },
+      return withCors(
+        NextResponse.json(
+          {
+            answer: localPdfAnswer(question, pdfContext),
+            local: true,
+          },
+          { status: 200 },
+        ),
       );
-      res.headers.set('Access-Control-Allow-Origin', '*');
-      return res;
     }
+
+    const contextStr = typeof pdfContext === 'string'
+      ? pdfContext
+      : [
+          `Titre : ${pdfContext?.title ?? 'Document de cours'}`,
+          `Matière : ${pdfContext?.subject ?? 'Non spécifiée'}`,
+          `Niveau : ${pdfContext?.level ?? 'Universitaire'}`,
+          pdfContext?.aiSummary ? `Résumé du cours : ${pdfContext.aiSummary}` : '',
+          pdfContext?.aiStudyPlan?.length
+            ? `Plan d'étude : \n${pdfContext.aiStudyPlan.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
+            : '',
+          pdfContext?.aiQuiz?.length
+            ? `Quiz du cours : \n${pdfContext.aiQuiz.map((q, i) => `Q${i + 1}: ${q.question} -> R: ${q.answer}`).join('\n')}`
+            : '',
+        ].filter(Boolean).join('\n');
 
     const systemPrompt = [
       'Tu es le tuteur d’apprentissage interactif officiel de Campus 360.',
@@ -120,16 +138,7 @@ export async function POST(request: NextRequest) {
       'Utilise le contexte du cours ci-dessous pour formuler des réponses précises et adaptées au niveau de l’étudiant.',
       '',
       '=== CONTEXTE DU DOCUMENT ===',
-      `Titre : ${pdfContext?.title ?? 'Document de cours'}`,
-      `Matière : ${pdfContext?.subject ?? 'Non spécifiée'}`,
-      `Niveau : ${pdfContext?.level ?? 'Universitaire'}`,
-      pdfContext?.aiSummary ? `Résumé du cours : ${pdfContext.aiSummary}` : '',
-      pdfContext?.aiStudyPlan?.length
-        ? `Plan d'étude : \n${pdfContext.aiStudyPlan.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
-        : '',
-      pdfContext?.aiQuiz?.length
-        ? `Quiz du cours : \n${pdfContext.aiQuiz.map((q, i) => `Q${i + 1}: ${q.question} -> R: ${q.answer}`).join('\n')}`
-        : '',
+      contextStr,
       '============================',
     ]
       .filter(Boolean)
