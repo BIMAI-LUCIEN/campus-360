@@ -291,6 +291,19 @@ let saveTimer = null;
 let historyStack = [];
 let redoStack = [];
 
+function sendToApp(payload) {
+  try {
+    const msg = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === 'function') {
+      window.ReactNativeWebView.postMessage(msg);
+    } else if (window.parent && window.parent !== window) {
+      window.parent.postMessage(msg, '*');
+    }
+  } catch (err) {
+    console.warn('[WebView] sendToApp error:', err);
+  }
+}
+
 // ── Section nav ────────────────────────────────────────────────────────────
 function renderSectionNav() {
   const nav = document.getElementById('sectionNav');
@@ -385,10 +398,10 @@ function renderCoverPage() {
         reportData.report.cover_data[field] = el.value;
         clearTimeout(saveTimer);
         saveTimer = setTimeout(() => {
-          window.ReactNativeWebView.postMessage(JSON.stringify({
+          sendToApp({
             type: 'updateCoverData',
             data: reportData.report.cover_data
-          }));
+          });
           showSaveIndicator();
         }, 1500);
       });
@@ -487,10 +500,10 @@ function renderRichEditor(section) {
 
   // Settings
   if (selFont) selFont.addEventListener('change', () => {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'updateFont', data: selFont.value }));
+    sendToApp({ type: 'updateFont', data: selFont.value });
   });
   if (selSpacing) selSpacing.addEventListener('change', () => {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'updateSpacing', data: parseFloat(selSpacing.value) }));
+    sendToApp({ type: 'updateSpacing', data: parseFloat(selSpacing.value) });
   });
 }
 
@@ -501,11 +514,11 @@ function saveCurrentSection() {
   if (!section) return;
   const editor = document.getElementById('editor');
   if (editor) section.content_html = editor.innerHTML;
-  window.ReactNativeWebView.postMessage(JSON.stringify({
+  sendToApp({
     type: 'saveSection',
     sectionId: currentSectionId,
     content: section.content_html
-  }));
+  });
   showSaveIndicator();
 }
 
@@ -594,13 +607,13 @@ async function runAI(action) {
     if (!textToImprove) { alert('Sélectionne du texte à améliorer.'); return; }
   }
 
-  window.ReactNativeWebView.postMessage(JSON.stringify({
+  sendToApp({
     type: 'aiRequest',
     action,
     prompt,
     text: textToImprove,
     sectionTitle: section ? section.title : 'Section'
-  }));
+  });
 }
 
 // ── Save indicator ─────────────────────────────────────────────────────────
@@ -789,6 +802,22 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
       console.warn('[DocumentEditor] Message parse error:', err);
     }
   }, [documentId]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const handleWebMsg = (e: MessageEvent) => {
+        if (!e.data) return;
+        try {
+          const parsed = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+          if (parsed && parsed.type) {
+            handleWebViewMessage({ nativeEvent: { data: typeof e.data === 'string' ? e.data : JSON.stringify(e.data) } } as any);
+          }
+        } catch {}
+      };
+      window.addEventListener('message', handleWebMsg);
+      return () => window.removeEventListener('message', handleWebMsg);
+    }
+  }, [handleWebViewMessage]);
 
   // Add new section
   const handleAddSection = useCallback(async () => {

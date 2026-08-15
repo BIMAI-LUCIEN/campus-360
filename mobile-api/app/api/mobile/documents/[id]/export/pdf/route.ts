@@ -4,11 +4,27 @@ import { NextRequest, NextResponse } from 'next/server';
 // `serverExternalPackages: ['puppeteer']` in next.config.ts this avoids
 // the `Module not found` webpack error during page data collection.
 
-import { requireMobileUser, mobileErrorResponse } from '@/lib/mobile-access';
+import { requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
 import { getDocumentById, getDocumentSections } from '@/lib/documents-db';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
+
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+    'Access-Control-Allow-Headers':
+      'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
+  };
+  if (origin) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  } else {
+    headers['Access-Control-Allow-Origin'] = '*';
+  }
+  return new NextResponse(null, { status: 204, headers });
+}
 
 type RouteContext = { params: Promise<{ id: string }> };
 

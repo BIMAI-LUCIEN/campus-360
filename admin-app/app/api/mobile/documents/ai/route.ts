@@ -114,7 +114,6 @@ export async function POST(request: NextRequest) {
           }
 
           if (wallet.ia_credits <= 0) {
-            // Give courtesy 10 credits for continuous workflow
             await client.query(
               'update public.app_wallets set ia_credits = 10, updated_at = now() where user_id = $1',
               [user.id],
