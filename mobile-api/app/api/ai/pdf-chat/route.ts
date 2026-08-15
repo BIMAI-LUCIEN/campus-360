@@ -5,33 +5,23 @@ import { databasePool } from '@/lib/database';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
-const bodySchema = z.object({
-  question: z.string().min(1).max(2000),
-  pdfContext: z
-    .union([
-      z.string(),
-      z.object({
-        documentId: z.string().optional(),
-        title: z.string().optional(),
-        subject: z.string().optional(),
-        level: z.string().optional(),
-        pageCount: z.number().optional(),
-        previewText: z.string().optional(),
-        aiSummary: z.string().optional(),
-        aiStudyPlan: z.array(z.string()).optional(),
-        aiQuiz: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
-      }),
-    ])
-    .optional(),
-  messages: z
-    .array(
-      z.object({
-        role: z.enum(['user', 'assistant', 'system']),
-        content: z.string().min(1).max(4000),
-      }),
-    )
-    .optional(),
-});
+const bodySchema = z
+  .object({
+    question: z.string().optional().default('Explique ce cours'),
+    pdfContext: z.any().optional(),
+    messages: z
+      .array(
+        z
+          .object({
+            role: z.string().optional().default('user'),
+            content: z.string().optional().default(''),
+          })
+          .passthrough(),
+      )
+      .optional()
+      .default([]),
+  })
+  .passthrough();
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_FREE_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
@@ -54,8 +44,8 @@ export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers });
 }
 
-function localPdfAnswer(question: string, context?: z.infer<typeof bodySchema>['pdfContext']): string {
-  const q = question.toLowerCase();
+function localPdfAnswer(question: string, context?: any): string {
+  const q = (question || '').toLowerCase();
   const isObj = typeof context === 'object' && context !== null;
   const title = isObj ? (context.title ?? 'ce cours') : 'ce cours';
   const summary = isObj ? (context.aiSummary ?? '') : (typeof context === 'string' ? context : '');
@@ -74,7 +64,7 @@ function localPdfAnswer(question: string, context?: z.infer<typeof bodySchema>['
   }
 
   if (summary) {
-    return `💡 **Concernant "${title}" :**\n\n${summary}\n\n*Pose-moi une question précise sur un concept, un exercice ou une formule pour approfondir.*`;
+    return `💡 **Point clé sur "${title}" :**\n\n${summary}\n\n*Pose-moi une question sur une notion ou un calcul pour approfondir.*`;
   }
 
   return `Bonjour ! Je suis ton tuteur IA pour **${title}**. Pose-moi une question sur le contenu, un exercice ou une notion difficile à comprendre.`;
@@ -91,7 +81,7 @@ export async function POST(request: NextRequest) {
     try {
       await enforceRateLimit(request, {
         bucket: 'ai-pdf-chat',
-        max: 40,
+        max: 60,
         windowMs: 60_000,
         userId,
       });
@@ -101,14 +91,64 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    const raw = (await request.json().catch(() => null)) as unknown;
+    const raw = (await request.json().catch(() => ({}))) as unknown;
     const parsed = bodySchema.safeParse(raw);
-    if (!parsed.success) {
-      throw new MobileApiError('Requete IA invalide.', 400);
-    }
-    const { question, pdfContext, messages } = parsed.data;
+    const { question, pdfContext, messages } = parsed.success
+      ? parsed.data
+      : { question: 'Explique ce cours', pdfContext: '', messages: [] };
 
     const apiKey = process.env.OPENROUTER_API_KEY;
+
+    let contextStr = '';
+    if (typeof pdfContext === 'string') {
+      contextStr = pdfContext;
+    } else if (typeof pdfContext === 'object' && pdfContext !== null) {
+      contextStr = [
+        `Titre : ${pdfContext.title ?? 'Document académique'}`,
+        `Matière : ${pdfContext.subject ?? 'Non spécifiée'}`,
+        `Niveau : ${pdfContext.level ?? 'Universitaire'}`,
+        pdfContext.aiSummary ? `Résumé analytique : ${pdfContext.aiSummary}` : '',
+        pdfContext.aiStudyPlan?.length
+          ? `Plan d'étude structuré : \n${pdfContext.aiStudyPlan.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}`
+          : '',
+        pdfContext.aiQuiz?.length
+          ? `Questions et concepts clés du document : \n${pdfContext.aiQuiz.map((q: any, i: number) => `Q${i + 1}: ${q.question} -> R: ${q.answer}`).join('\n')}`
+          : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+    }
+
+    const systemPrompt = [
+      'Tu es le Professeur et Tuteur IA d’Élite de Campus 360.',
+      'Ton rôle est de faire réussir brillamment l’étudiant en lui apportant des explications limpides, intelligentes, rigoureuses et parfaitement adaptées à sa question et à son document.',
+      '',
+      'DIRECTIVES PÉDAGOGIQUES MAJEURES :',
+      '1. INTERDICTION DE RÉPONSES GÉNÉRIQUES OU BANALES. Analyse le contexte réel du document fourni et réponds directement et précisément à la demande de l’étudiant.',
+      '2. RIGOUREUX & ANALYTIQUE : Explique le "pourquoi" et le "comment", cite les concepts, définitions, formules et méthodes du cours.',
+      '3. PÉDAGOGIE STRUCTURÉE : Formate ta réponse en Markdown clair (mots clés en gras, étapes numérotées, exemples concrets, analogies pédagogiques).',
+      '4. ADAPTATION : Si la question est courte (ex: "OK", "J"), demande-lui avec bienveillance sur quel chapitre, notion ou exercice du cours il souhaite travailler.',
+      '5. Réponds toujours en français chaleureux, encourageant et stimulant.',
+      '',
+      '=== CONTEXTE ACADÉMIQUE DU COURS ===',
+      contextStr || 'Document de cours académique.',
+      '====================================',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const formattedMessages = (messages ?? []).map((m: any) => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: String(m.content || ''),
+    }));
+
+    const conversation = [
+      { role: 'system', content: systemPrompt },
+      ...formattedMessages.filter((m) => m.content.trim().length > 0),
+      { role: 'user', content: question || 'Explique ce cours' },
+    ];
+
+    const model = process.env.OPENROUTER_MODEL ?? DEFAULT_FREE_MODEL;
 
     if (!apiKey) {
       return withCors(
@@ -122,52 +162,6 @@ export async function POST(request: NextRequest) {
         request,
       );
     }
-
-    const contextStr =
-      typeof pdfContext === 'string'
-        ? pdfContext
-        : [
-            `Titre : ${pdfContext?.title ?? 'Document académique'}`,
-            `Matière : ${pdfContext?.subject ?? 'Non spécifiée'}`,
-            `Niveau : ${pdfContext?.level ?? 'Universitaire'}`,
-            pdfContext?.aiSummary ? `Résumé analytique : ${pdfContext.aiSummary}` : '',
-            pdfContext?.aiStudyPlan?.length
-              ? `Plan d'étude structuré : \n${pdfContext.aiStudyPlan.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
-              : '',
-            pdfContext?.aiQuiz?.length
-              ? `Questions et concepts clés du document : \n${pdfContext.aiQuiz.map((q, i) => `Q${i + 1}: ${q.question} -> R: ${q.answer}`).join('\n')}`
-              : '',
-          ]
-            .filter(Boolean)
-            .join('\n');
-
-    const systemPrompt = [
-      'Tu es le Professeur et Tuteur IA d’Élite de Campus 360.',
-      'Ton objectif fondamental est de rendre l’étudiant brillant dans sa matière grâce à des explications percutantes, intelligentes, rigoureuses et adaptées à son niveau universitaire.',
-      '',
-      'DIRECTIVES PÉDAGOGIQUES MAJEURES :',
-      '1. INTERDICTION FORMELLE DE RÉPONDRE DE FAÇON GÉNÉRIQUE OU BANALE. Adapte-toi immédiatement à la question de l’étudiant et au document étudié.',
-      '2. RIGOUREUX & ANALYTIQUE : Explique le "pourquoi" et le "comment", cite les notions théoriques, définitions clés et méthodes pratiques mentionnées dans le cours.',
-      '3. PÉDAGOGIE STRUCTURÉE : Utilise une mise en page claire en Markdown (titres en gras, listes à puces, exemples concrets, analogies mnémotechniques, étapes numérotées pour les calculs ou raisonnements).',
-      '4. SI L’ÉTUDIANT DEMANDE UN RÉSUMÉ : Rédige une synthèse percutante avec les grands axes, les formules/notions clés et les pièges classiques d’examen.',
-      '5. SI L’ÉTUDIANT DEMANDE UN QUIZ : Propose des questions stimulantes qui testent la compréhension profonde (pas seulement le par cœur).',
-      '6. SI L’ÉTUDIANT POSE UNE QUESTION PRÉCISE : Réponds avec précision, donne un exemple concret et vérifie sa compréhension.',
-      '7. Réponds toujours en français élégant, bienveillant et stimulant.',
-      '',
-      '=== CONTEXTE ACADÉMIQUE DU COURS ===',
-      contextStr,
-      '====================================',
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    const conversation = [
-      { role: 'system', content: systemPrompt },
-      ...(messages ?? []).map((m) => ({ role: m.role, content: m.content })),
-      { role: 'user', content: question },
-    ];
-
-    const model = process.env.OPENROUTER_MODEL ?? DEFAULT_FREE_MODEL;
 
     const response = await fetch(OPENROUTER_URL, {
       method: 'POST',
