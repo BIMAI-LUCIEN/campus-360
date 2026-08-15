@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { databasePool } from '@/lib/database';
-import { MobileApiError, mobileErrorResponse, requireMobileUser } from '@/lib/mobile-access';
+import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 const bodySchema = z.object({
@@ -39,25 +39,22 @@ const DEFAULT_FREE_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
 export const runtime = 'nodejs';
 
 export async function OPTIONS() {
-  return new NextResponse(null, {
+  const res = new NextResponse(null, {
     status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Expo-Origin, x-client-info, apikey',
-    },
   });
+  return withCors(res);
 }
 
 function localPdfAnswer(question: string, context?: z.infer<typeof bodySchema>['pdfContext']): string {
   const q = question.toLowerCase();
-  const title = context?.title ?? 'ce cours';
-  const summary = context?.aiSummary ?? '';
-  const plan = context?.aiStudyPlan ?? [];
+  const isObj = typeof context === 'object' && context !== null;
+  const title = isObj ? (context.title ?? 'ce cours') : 'ce cours';
+  const summary = isObj ? (context.aiSummary ?? '') : (typeof context === 'string' ? context : '');
+  const plan = isObj ? (context.aiStudyPlan ?? []) : [];
 
   if (q.includes('plan') || q.includes('reviser') || q.includes('revision')) {
     if (plan.length > 0) {
-      return `Voici le plan de révision suggéré pour ${title} :\n\n${plan.map((step, idx) => `${idx + 1}. ${step}`).join('\n')}`;
+      return `Voici le plan de révision suggéré pour ${title} :\n\n${plan.map((step: string, idx: number) => `${idx + 1}. ${step}`).join('\n')}`;
     }
   }
 
