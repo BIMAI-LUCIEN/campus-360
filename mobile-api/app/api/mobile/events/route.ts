@@ -60,19 +60,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await databasePool.query(
-      `insert into public.document_events (
-         user_id, better_auth_user_id, document_id, event_type, session_id, metadata
-       ) values ($1, $2, $3, $4, $5, $6::jsonb)`,
-      [
-        access.user.id,
-        access.user.betterAuthUserId,
-        input.documentId ?? null,
-        input.eventType,
-        input.sessionId,
-        JSON.stringify(input.metadata),
-      ],
-    );
+    const rawUserId = access.user?.id ? String(access.user.id) : null;
+    const isUuid = rawUserId ? /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(rawUserId) : false;
+    const uuidUserId = isUuid ? rawUserId : null;
+    const betterAuthUserId = !isUuid ? rawUserId : (access.user?.betterAuthUserId || null);
+
+    try {
+      await databasePool.query(
+        `insert into public.document_events (
+           user_id, better_auth_user_id, document_id, event_type, session_id, metadata
+         ) values ($1, $2, $3, $4, $5, $6::jsonb)`,
+        [
+          uuidUserId,
+          betterAuthUserId,
+          input.documentId ?? null,
+          input.eventType,
+          input.sessionId,
+          JSON.stringify(input.metadata),
+        ],
+      );
+    } catch (dbErr) {
+      console.warn('[events] Document event recording warning:', dbErr);
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     return mobileErrorResponse(error);

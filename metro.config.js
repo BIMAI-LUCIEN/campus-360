@@ -6,6 +6,7 @@ const config = getDefaultConfig(__dirname);
 config.resolver.blockList = [
   /admin-app[\/\\]\.next[\/\\].*/,
   /admin-app[\/\\].*\.sqlite.*/,
+  /mobile-api[\/\\]\.next[\/\\].*/,
 ];
 
 // Dev-only reverse proxy: when Metro is reached through a tunnel (ngrok),

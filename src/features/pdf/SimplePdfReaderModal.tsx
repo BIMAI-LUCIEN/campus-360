@@ -69,7 +69,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
     let cancelled = false;
     setLoading(true);
     setError('');
-    setUrl('');
+    setUrl(document.filePath?.startsWith('http') ? document.filePath : '');
     setActiveTool('pdf');
     setAssistantMessages([]);
     setRevealedQuiz({});
@@ -82,10 +82,14 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
 
     createSignedPdfUrl('documents', document.filePath, accessToken, 1800)
       .then((signedUrl) => {
-        if (!cancelled) setUrl(signedUrl);
+        if (!cancelled && signedUrl) setUrl(signedUrl);
       })
       .catch((err) => {
         if (!cancelled) {
+          if (document.filePath?.startsWith('http')) {
+            setUrl(document.filePath);
+            return;
+          }
           const raw = err instanceof Error ? err.message : String(err);
           if (raw.includes('Object not found') || raw.includes('404')) {
             setError("Le fichier PDF physique est en cours de traitement sur le serveur. Explore le Résumé, le Plan de révision, le Quiz interactif et discute avec l'IA ci-dessus !");
@@ -315,7 +319,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                   </View>
                   {Platform.OS === 'web' ? (
                     createElement('iframe', {
-                      src: `/pdf-viewer.html?url=${encodeURIComponent(url)}`,
+                      src: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}`,
                       title: document.title,
                       style: { width: '100%', height: '100%', border: '0', backgroundColor: stitchColors.paper },
                     })

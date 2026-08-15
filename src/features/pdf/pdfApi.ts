@@ -517,6 +517,10 @@ export const createSignedPdfUrl = async (
   accessToken?: string,
   expiresInSeconds = 900,
 ): Promise<string> => {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
   assertConfigured();
 
   if (bucket === 'documents' || bucket === 'document-previews') {
@@ -547,7 +551,8 @@ export const createSignedPdfUrl = async (
     }
   }
 
-  const url = `${getBaseUrl()}/storage/v1/object/sign/${bucket}/${path}`;
+  const cleanPath = path.replace(/^\/+/, '').replace(/^documents\//, '');
+  const url = `${getBaseUrl()}/storage/v1/object/sign/${bucket}/${cleanPath}`;
   const response = await handleResponse<{ signedURL: string }>(
     await fetch(url, {
       method: 'POST',

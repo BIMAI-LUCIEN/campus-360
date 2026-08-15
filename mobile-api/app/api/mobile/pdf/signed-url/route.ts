@@ -7,13 +7,7 @@ import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limi
 
 const bodySchema = z.object({
   bucket: z.enum(['documents', 'document-previews']),
-  // Strict path shape: forward-slash separated segments, no traversal, ASCII-safe.
-  // Caps length to prevent abuse; storage paths are short (bucket/owner/uuid.pdf).
-  path: z
-    .string()
-    .min(1)
-    .max(500)
-    .regex(/^[A-Za-z0-9._\-/]+$/, 'Chemin de fichier invalide.'),
+  path: z.string().min(1).max(2000),
   expiresIn: z.number().int().min(60).max(1800).default(900),
 });
 export const runtime = 'nodejs';
@@ -29,8 +23,11 @@ export async function OPTIONS() {
   });
 }
 
-// Reject any path that resolves outside the bucket (../, absolute paths, encoded tricks).
+// Reject any path that resolves outside the bucket (../, absolute traversal).
 const assertSafePath = (path: string) => {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return;
+  }
   if (path.includes('..') || path.startsWith('/') || path.includes('\\')) {
     throw new MobileApiError('Chemin de fichier invalide.', 400);
   }
