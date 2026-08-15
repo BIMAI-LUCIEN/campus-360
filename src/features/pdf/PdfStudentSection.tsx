@@ -4,6 +4,7 @@ import { createElement, useEffect, useMemo, useState } from 'react';
 import { authWebBaseUrl } from '../auth/betterAuth';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -20,7 +21,9 @@ import {
 import type { CampusDocument, CampusPdfPack } from '../../types';
 import { createSignedPdfUrl, recordPdfAnalyticsEvent } from './pdfApi';
 import { askPdfAssistant, type PdfAssistantMessage } from './pdfAssistant';
-import { FileText, Sparkles, Calendar, HelpCircle, MessageSquare, Lock } from 'lucide-react-native';
+import { loadPdfChatHistory, savePdfChatHistory, clearPdfChatHistory } from './chatHistoryStorage';
+import { FormattedMarkdown } from '../../components/FormattedMarkdown';
+import { FileText, Sparkles, Calendar, HelpCircle, MessageSquare, Lock, RotateCcw } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { stitchColors, brandGradient } from '../../theme/stitch';
 
@@ -386,13 +389,22 @@ export function PdfStudentSection({
     setReaderUrl('');
     setReaderError('');
     setReaderLoading(true);
-    setAssistantMessages([
-      {
-        id: `assistant-${document.id}`,
-        role: 'assistant',
-        content: `Que veux-tu réviser sur "${document.title}" ?`,
-      },
-    ]);
+
+    // Load persistent chat history
+    loadPdfChatHistory(document.id).then((saved) => {
+      if (saved && saved.length > 0) {
+        setAssistantMessages(saved);
+      } else {
+        setAssistantMessages([
+          {
+            id: `assistant-${document.id}`,
+            role: 'assistant',
+            content: `Que veux-tu réviser sur "${document.title}" ?`,
+          },
+        ]);
+      }
+    });
+
     recordPdfAnalyticsEvent({
       eventType: 'preview_open',
       documentId: document.id,
@@ -452,13 +464,22 @@ export function PdfStudentSection({
           level: document.level,
         },
       });
-      setAssistantMessages([
-        {
-          id: `assistant-${document.id}`,
-          role: 'assistant',
-          content: `Que veux-tu reviser sur "${document.title}" ?`,
-        },
-      ]);
+
+      // Load persistent chat history
+      loadPdfChatHistory(document.id).then((saved) => {
+        if (saved && saved.length > 0) {
+          setAssistantMessages(saved);
+        } else {
+          setAssistantMessages([
+            {
+              id: `assistant-${document.id}`,
+              role: 'assistant',
+              content: `Que veux-tu réviser sur "${document.title}" ?`,
+            },
+          ]);
+        }
+      });
+
       setReaderLoading(true);
       try {
         const url = await createSignedPdfUrl('documents', document.filePath, accessToken, 1800);
@@ -481,6 +502,31 @@ export function PdfStudentSection({
     await openPreview(document);
   };
 
+  const handleClearChat = () => {
+    if (!readerDocument || assistantMessages.length === 0) return;
+    Alert.alert(
+      'Nouvelle discussion',
+      'Veux-tu réinitialiser cette discussion et effacer l’historique des messages pour ce document ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Réinitialiser',
+          style: 'destructive',
+          onPress: () => {
+            void clearPdfChatHistory(readerDocument.id);
+            setAssistantMessages([
+              {
+                id: `assistant-${readerDocument.id}`,
+                role: 'assistant',
+                content: `Que veux-tu réviser sur "${readerDocument.title}" ?`,
+              },
+            ]);
+          },
+        },
+      ]
+    );
+  };
+
   const askAssistant = async (question: string) => {
     const document = readerDocument;
     const cleanQuestion = question.trim();
@@ -495,6 +541,8 @@ export function PdfStudentSection({
     setAssistantMessages(nextMessages);
     setAssistantInput('');
     setAssistantLoading(true);
+    void savePdfChatHistory(document.id, nextMessages);
+
     recordPdfAnalyticsEvent({
       eventType: 'assistant_question',
       documentId: document.id,
@@ -506,20 +554,24 @@ export function PdfStudentSection({
 
     try {
       const answer = await askPdfAssistant({ document, question: cleanQuestion, messages: nextMessages });
-      setAssistantMessages((current) => [
-        ...current,
-        { id: `assistant-${Date.now()}`, role: 'assistant', content: answer },
-      ]);
+      const assistantMsg: PdfAssistantMessage = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: answer,
+      };
+      const updated = [...nextMessages, assistantMsg];
+      setAssistantMessages(updated);
+      void savePdfChatHistory(document.id, updated);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Je ne peux pas joindre le serveur IA maintenant. Réessaie dans un instant.';
-      setAssistantMessages((current) => [
-        ...current,
-        {
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          content: errorMessage,
-        },
-      ]);
+      const errorMsg: PdfAssistantMessage = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: errorMessage,
+      };
+      const updated = [...nextMessages, errorMsg];
+      setAssistantMessages(updated);
+      void savePdfChatHistory(document.id, updated);
     } finally {
       setAssistantLoading(false);
     }
@@ -1141,6 +1193,26 @@ export function PdfStudentSection({
                         Ton assistant personnel de révision.
                       </Text>
                     </View>
+                    {assistantMessages.length > 1 ? (
+                      <Pressable
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          backgroundColor: $.cream,
+                          paddingHorizontal: 8,
+                          paddingVertical: 5,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: $.line,
+                        }}
+                        onPress={handleClearChat}
+                        accessibilityLabel="Réinitialiser la discussion"
+                      >
+                        <RotateCcw size={13} color={$.sienna} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: $.sienna }}>Nouveau</Text>
+                      </Pressable>
+                    ) : null}
                   </View>
 
                   <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 32 }}>
@@ -1172,19 +1244,27 @@ export function PdfStudentSection({
                           style={[
                             styles.assistantBubble,
                             {
-                              maxWidth: '80%',
+                              maxWidth: '85%',
                               backgroundColor: message.role === 'user' ? $.ink : $.surface,
                               borderWidth: message.role === 'assistant' ? 1 : 0,
                               borderColor: $.line,
                             },
                           ]}
                         >
-                          <Text style={[
-                            styles.assistantBubbleText,
-                            { color: message.role === 'user' ? $.paper : $.ink, fontSize: 14, lineHeight: 21 },
-                          ]}>
-                            {message.content}
-                          </Text>
+                          {message.role === 'user' ? (
+                            <Text style={[
+                              styles.assistantBubbleText,
+                              { color: $.paper, fontSize: 14, lineHeight: 21 },
+                            ]}>
+                              {message.content}
+                            </Text>
+                          ) : (
+                            <FormattedMarkdown
+                              content={message.content}
+                              baseTextColor={$.ink}
+                              isDark={false}
+                            />
+                          )}
                         </View>
                       </View>
                     ))}

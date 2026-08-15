@@ -1,8 +1,7 @@
-// Comprehensive PDF reader modal for documents in Library, Home & Search.
-// Features 5 integrated tabs: PDF, Résumé IA, Plan de Révision, Quiz Interactif, Chat IA.
 import { createElement, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -25,6 +24,7 @@ import {
   FileText,
   HelpCircle,
   MessageSquare,
+  RotateCcw,
   Send,
   Sparkles,
 } from 'lucide-react-native';
@@ -32,6 +32,8 @@ import { WebView } from 'react-native-webview';
 import { authWebBaseUrl } from '../auth/betterAuth';
 import { createSignedPdfUrl, recordPdfAnalyticsEvent } from './pdfApi';
 import { askPdfAssistant, type PdfAssistantMessage } from './pdfAssistant';
+import { loadPdfChatHistory, savePdfChatHistory, clearPdfChatHistory } from './chatHistoryStorage';
+import { FormattedMarkdown } from '../../components/FormattedMarkdown';
 import type { CampusDocument } from '../../types';
 import { stitchColors } from '../../theme/stitch';
 
@@ -71,8 +73,16 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
     setError('');
     setUrl(document.filePath?.startsWith('http') ? document.filePath : '');
     setActiveTool('pdf');
-    setAssistantMessages([]);
     setRevealedQuiz({});
+
+    // Load persistent chat history for this document
+    loadPdfChatHistory(document.id).then((history) => {
+      if (!cancelled && history && history.length > 0) {
+        setAssistantMessages(history);
+      } else if (!cancelled) {
+        setAssistantMessages([]);
+      }
+    });
 
     recordPdfAnalyticsEvent({
       eventType: 'reader_open',
@@ -113,17 +123,39 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
     setRevealedQuiz((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
+  const handleClearChat = () => {
+    if (!document || assistantMessages.length === 0) return;
+    Alert.alert(
+      'Nouvelle discussion',
+      'Veux-tu réinitialiser cette discussion et effacer l’historique des messages pour ce document ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Réinitialiser',
+          style: 'destructive',
+          onPress: () => {
+            void clearPdfChatHistory(document.id);
+            setAssistantMessages([]);
+          },
+        },
+      ]
+    );
+  };
+
   const handleAskAssistant = async (questionText: string) => {
     const cleanQuestion = questionText.trim();
     if (!cleanQuestion || !document || assistantLoading) return;
 
-    const nextMessages: PdfAssistantMessage[] = [
-      ...assistantMessages,
-      { id: `user-${Date.now()}`, role: 'user', content: cleanQuestion },
-    ];
+    const userMsg: PdfAssistantMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: cleanQuestion,
+    };
+    const nextMessages: PdfAssistantMessage[] = [...assistantMessages, userMsg];
     setAssistantMessages(nextMessages);
     setAssistantInput('');
     setAssistantLoading(true);
+    void savePdfChatHistory(document.id, nextMessages);
 
     recordPdfAnalyticsEvent({
       eventType: 'assistant_question',
@@ -140,16 +172,24 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
         question: cleanQuestion,
         messages: nextMessages,
       });
-      setAssistantMessages((current) => [
-        ...current,
-        { id: `assistant-${Date.now()}`, role: 'assistant', content: answer },
-      ]);
+      const assistantMsg: PdfAssistantMessage = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: answer,
+      };
+      const updated = [...nextMessages, assistantMsg];
+      setAssistantMessages(updated);
+      void savePdfChatHistory(document.id, updated);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Je ne peux pas joindre le serveur IA actuellement. Réessaie dans un instant.";
-      setAssistantMessages((current) => [
-        ...current,
-        { id: `assistant-${Date.now()}`, role: 'assistant', content: msg },
-      ]);
+      const errorMsg: PdfAssistantMessage = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: msg,
+      };
+      const updated = [...nextMessages, errorMsg];
+      setAssistantMessages(updated);
+      void savePdfChatHistory(document.id, updated);
     } finally {
       setAssistantLoading(false);
     }
@@ -478,6 +518,16 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                   <Text style={styles.chatHeaderTitle}>Tuteur IA — Campus 360</Text>
                   <Text style={styles.chatHeaderSub}>Pose tes questions sur ce cours, demande des explications ou des exercices.</Text>
                 </View>
+                {assistantMessages.length > 0 ? (
+                  <Pressable
+                    style={styles.resetChatButton}
+                    onPress={handleClearChat}
+                    accessibilityLabel="Réinitialiser la discussion"
+                  >
+                    <RotateCcw size={13} color={stitchColors.sienna} />
+                    <Text style={styles.resetChatText}>Nouveau</Text>
+                  </Pressable>
+                ) : null}
               </View>
 
               <ScrollView
@@ -517,14 +567,22 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                           msg.role === 'user' ? styles.messageBubbleUser : styles.messageBubbleAssistant,
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.messageText,
-                            msg.role === 'user' ? styles.messageTextUser : styles.messageTextAssistant,
-                          ]}
-                        >
-                          {msg.content}
-                        </Text>
+                        {msg.role === 'user' ? (
+                          <Text
+                            style={[
+                              styles.messageText,
+                              styles.messageTextUser,
+                            ]}
+                          >
+                            {msg.content}
+                          </Text>
+                        ) : (
+                          <FormattedMarkdown
+                            content={msg.content}
+                            baseTextColor={stitchColors.ink}
+                            isDark={false}
+                          />
+                        )}
                       </View>
                     </View>
                   ))
@@ -898,6 +956,22 @@ const styles = StyleSheet.create({
   },
   chatHeaderTitle: { fontSize: 13, fontWeight: '700', color: stitchColors.ink },
   chatHeaderSub: { fontSize: 11, color: stitchColors.inkMuted, marginTop: 1 },
+  resetChatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: stitchColors.paperSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchColors.siennaSoft,
+  },
+  resetChatText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: stitchColors.sienna,
+  },
   chatMessagesScroll: { flex: 1 },
   chatMessagesContent: { padding: 16, paddingBottom: 24, gap: 12 },
   emptyChatPromptBox: { gap: 8, marginTop: 8 },
@@ -915,7 +989,7 @@ const styles = StyleSheet.create({
   messageRowUser: { justifyContent: 'flex-end' },
   messageRowAssistant: { justifyContent: 'flex-start' },
   messageBubble: {
-    maxWidth: '82%',
+    maxWidth: '88%',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 16,

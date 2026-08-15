@@ -307,10 +307,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
     // throws 'No "GlobalWorkerOptions.workerSrc" specified.' on every call,
     // which silently aborts analysis (no auto-fill, pageCount stays unset).
     if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-        'pdfjs-dist/build/pdf.worker.min.mjs',
-        import.meta.url,
-      ).toString();
+      pdfjs.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.54/build/pdf.worker.min.mjs';
     }
     const data = new Uint8Array(await file.arrayBuffer());
     const pdf = await pdfjs.getDocument({ data }).promise;

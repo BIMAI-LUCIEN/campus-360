@@ -268,6 +268,9 @@ body {
   <button class="tool-btn" id="btnH3" title="Titre 3">H3</button>
   <button class="tool-btn" id="btnUl" title="Liste">•—</button>
   <button class="tool-btn" id="btnImage" title="Insérer une image">🖼️</button>
+  <button class="tool-btn" id="btnDiagram" title="Insérer un schéma / diagramme">📐</button>
+  <button class="tool-btn" id="btnTable" title="Insérer un tableau académique">📊</button>
+  <button class="tool-btn" id="btnCallout" title="Insérer un encadré de remarque">💡</button>
   <div class="sep"></div>
   <button class="tool-btn" id="btnUndo" title="Annuler">↩</button>
   <button class="tool-btn" id="btnRedo" title="Refaire">↪</button>
@@ -542,6 +545,85 @@ document.getElementById('btnUl').addEventListener('click', () => {
 });
 document.getElementById('btnUndo').addEventListener('click', () => document.execCommand('undo'));
 document.getElementById('btnRedo').addEventListener('click', () => document.execCommand('redo'));
+
+// ── Academic Diagrams & Tables Insertion ──────────────────────────────────
+document.getElementById('btnDiagram').addEventListener('click', () => {
+  const editor = document.getElementById('editor');
+  if (editor) {
+    editor.focus();
+    const diagramHtml = \`
+      <div class="figure-container" style="text-align: center; margin: 20px 0; page-break-inside: avoid;">
+        <svg width="100%" height="220" viewBox="0 0 650 220" xmlns="http://www.w3.org/2000/svg" style="max-width: 600px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px;">
+          <rect x="30" y="30" width="160" height="150" rx="8" fill="#38BDF8"/>
+          <text x="110" y="65" font-family="sans-serif" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Couche Client</text>
+          <text x="110" y="105" font-family="sans-serif" font-size="11" fill="#FFFFFF" text-anchor="middle">Application Mobile</text>
+          <line x1="190" y1="105" x2="260" y2="105" stroke="#64748B" stroke-width="2" stroke-dasharray="4,4"/>
+          <rect x="260" y="30" width="160" height="150" rx="8" fill="#818CF8"/>
+          <text x="340" y="65" font-family="sans-serif" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Serveur API</text>
+          <text x="340" y="105" font-family="sans-serif" font-size="11" fill="#FFFFFF" text-anchor="middle">Next.js & Auth JWT</text>
+          <line x1="420" y1="105" x2="490" y2="105" stroke="#64748B" stroke-width="2"/>
+          <rect x="490" y="30" width="140" height="150" rx="8" fill="#34D399"/>
+          <text x="560" y="65" font-family="sans-serif" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Base Données</text>
+          <text x="560" y="105" font-family="sans-serif" font-size="11" fill="#FFFFFF" text-anchor="middle">PostgreSQL Pool</text>
+        </svg>
+        <div style="font-size: 9.5pt; font-style: italic; color: #475569; margin-top: 6px;"><strong>Figure :</strong> Schéma d'Architecture Technique Système</div>
+      </div>
+      <p><br></p>
+    \`;
+    document.execCommand('insertHTML', false, diagramHtml);
+    saveCurrentSection();
+  }
+});
+
+document.getElementById('btnTable').addEventListener('click', () => {
+  const editor = document.getElementById('editor');
+  if (editor) {
+    editor.focus();
+    const tableHtml = \`
+      <div style="margin: 18px 0; overflow-x: auto; page-break-inside: avoid;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 10pt; text-align: left; background: #FFFFFF; border: 1px solid #CBD5E1;">
+          <thead>
+            <tr style="background: #0F172A; color: #FFFFFF;">
+              <th style="padding: 8px 12px; border: 1px solid #334155;">Paramètre</th>
+              <th style="padding: 8px 12px; border: 1px solid #334155;">Description Technique</th>
+              <th style="padding: 8px 12px; border: 1px solid #334155;">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background: #F8FAFC;">
+              <td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Sécurité JWT</td>
+              <td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Tokens chiffrés et sessions Better Auth</td>
+              <td style="padding: 6px 12px; border: 1px solid #E2E8F0; color: #059669; font-weight: bold;">Validé</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Exportation PDF</td>
+              <td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Moteur vectoriel A4 conforme CAMES</td>
+              <td style="padding: 6px 12px; border: 1px solid #E2E8F0; color: #059669; font-weight: bold;">Validé</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p><br></p>
+    \`;
+    document.execCommand('insertHTML', false, tableHtml);
+    saveCurrentSection();
+  }
+});
+
+document.getElementById('btnCallout').addEventListener('click', () => {
+  const editor = document.getElementById('editor');
+  if (editor) {
+    editor.focus();
+    const calloutHtml = \`
+      <blockquote style="margin: 16px 0; padding: 10px 16px; background: #F8FAFC; border-left: 4px solid #0284C7; font-style: italic; color: #334155; border-radius: 0 6px 6px 0;">
+        <strong>Remarque Académique :</strong> Ce paragraphe met en lumière les points clés de l'analyse méthodologique.
+      </blockquote>
+      <p><br></p>
+    \`;
+    document.execCommand('insertHTML', false, calloutHtml);
+    saveCurrentSection();
+  }
+});
 
 // ── Image insertion (pick from device → downscale in-canvas → embed) ─────────
 document.getElementById('btnImage').addEventListener('click', () => {

@@ -7,7 +7,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { 
   BookOpen, ChevronLeft, Download, Sparkles, Settings2, 
   Plus, Trash2, ArrowUpDown, AlignLeft, Bold, Italic, 
-  Heading1, Heading2, List, Undo, Redo, FileText, CheckCircle2 
+  Heading1, Heading2, List, Undo, Redo, FileText, CheckCircle2, RotateCcw 
 } from 'lucide-react';
 import { Document as DocxDocument, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } from 'docx';
 
@@ -53,6 +53,7 @@ type Document = {
   margins: string;
   cover_template: string;
   cover_data: Record<string, any>;
+  document_metadata?: Record<string, any>;
   // Theme colors are optional and may be missing from older rows.
   primary_color?: string | null;
   secondary_color?: string | null;
@@ -152,6 +153,13 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
         const data = await res.json();
         setDocument(data.document);
         setSections(data.sections);
+        if (
+          data.document?.document_metadata?.chat_messages &&
+          Array.isArray(data.document.document_metadata.chat_messages) &&
+          data.document.document_metadata.chat_messages.length > 0
+        ) {
+          setChatMessages(data.document.document_metadata.chat_messages);
+        }
         if (data.sections.length > 0) {
           setActiveSectionId(data.sections[0].id);
         }
@@ -318,7 +326,8 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
   const sendChatMessage = async () => {
     if (!chatInput.trim()) return;
     const userMsg = { role: 'user' as const, content: chatInput.trim() };
-    setChatMessages((prev) => [...prev, userMsg]);
+    const updatedWithUser = [...chatMessages, userMsg];
+    setChatMessages(updatedWithUser);
     setChatInput('');
     setChatLoading(true);
 
@@ -327,18 +336,45 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [...chatMessages, userMsg],
+          messages: updatedWithUser,
           documentType: document?.template_type ?? 'stage'
         }),
       });
 
       if (!res.ok) throw new Error('Impossible de contacter l\'IA.');
       const data = await res.json();
-      setChatMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
+      const finalMessages = [...updatedWithUser, { role: 'assistant' as const, content: data.reply }];
+      setChatMessages(finalMessages);
+
+      // Persist to document_metadata
+      if (document) {
+        updateSettings({
+          document_metadata: {
+            ...document.document_metadata,
+            chat_messages: finalMessages,
+          },
+        });
+      }
     } catch (err: any) {
       ssrAlert(err.message || 'Une erreur est survenue.');
     } finally {
       setChatLoading(false);
+    }
+  };
+
+  const handleResetOnboardingChat = () => {
+    if (!ssrConfirm('Réinitialiser la conversation d\'onboarding avec l\'IA ?')) return;
+    const initial = [
+      { role: 'assistant' as const, content: "Bonjour ! Je suis ton assistant de rédaction Campus 360. Dis-moi : as-tu effectué un stage ? Quel est le thème de ton document et dans quelle entreprise ou université ?" }
+    ];
+    setChatMessages(initial);
+    if (document) {
+      updateSettings({
+        document_metadata: {
+          ...document.document_metadata,
+          chat_messages: initial,
+        },
+      });
     }
   };
 
@@ -694,6 +730,21 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
             {/* 1. Onboarding Chat Tab */}
             {leftTab === 'onboarding' && (
               <div className="flex-1 flex flex-col p-4 overflow-hidden">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/60 text-xs">
+                  <span className="text-[11px] font-semibold text-slate-400">
+                    Discussion ({chatMessages.length} message{chatMessages.length > 1 ? 's' : ''})
+                  </span>
+                  {chatMessages.length > 1 && (
+                    <button
+                      onClick={handleResetOnboardingChat}
+                      className="text-[10px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 transition"
+                      title="Réinitialiser l'historique"
+                    >
+                      <RotateCcw size={11} /> Nouveau chat
+                    </button>
+                  )}
+                </div>
+
                 <div className="flex-1 overflow-y-auto space-y-3 mb-3 pr-1 text-xs">
                   {chatMessages.map((msg, i) => (
                     <div
@@ -1274,14 +1325,159 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
   );
 }
 
+function parseInlineMarkdown(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  let remaining = text;
+  const pattern = /(`[^`]+`|\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/;
+
+  let key = 0;
+  while (remaining.length > 0) {
+    const match = remaining.match(pattern);
+    if (!match || match.index === undefined) {
+      if (remaining) parts.push(<span key={key++}>{remaining}</span>);
+      break;
+    }
+    const index = match.index;
+    if (index > 0) {
+      parts.push(<span key={key++}>{remaining.slice(0, index)}</span>);
+    }
+    const raw = match[0];
+    if (raw.startsWith('`') && raw.endsWith('`')) {
+      parts.push(
+        <code key={key++} className="bg-slate-950 text-pink-400 font-mono text-[11px] px-1 py-0.5 rounded">
+          {raw.slice(1, -1)}
+        </code>
+      );
+    } else if (raw.startsWith('***') && raw.endsWith('***')) {
+      parts.push(<strong key={key++} className="italic text-slate-100 font-bold">{raw.slice(3, -3)}</strong>);
+    } else if ((raw.startsWith('**') && raw.endsWith('**')) || (raw.startsWith('__') && raw.endsWith('__'))) {
+      parts.push(<strong key={key++} className="text-slate-100 font-bold">{raw.slice(2, -2)}</strong>);
+    } else if ((raw.startsWith('*') && raw.endsWith('*')) || (raw.startsWith('_') && raw.endsWith('_'))) {
+      parts.push(<em key={key++} className="italic text-slate-300">{raw.slice(1, -1)}</em>);
+    } else {
+      parts.push(<span key={key++}>{raw}</span>);
+    }
+    remaining = remaining.slice(index + raw.length);
+  }
+  return parts;
+}
+
 function TextFormatted({ text }: { text: string }) {
-  return (
-    <div className="space-y-1">
-      {text.split('\n').map((line, idx) => (
-        <p key={idx} className="min-h-[1.2em]">
-          {line}
-        </p>
-      ))}
-    </div>
-  );
+  if (!text) return null;
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const elements: React.ReactNode[] = [];
+  let inCodeBlock = false;
+  let codeBlockLines: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const trimmed = rawLine.trim();
+
+    if (trimmed.startsWith('```')) {
+      if (inCodeBlock) {
+        elements.push(
+          <pre key={`code-${i}`} className="bg-slate-950 text-emerald-400 font-mono text-[11px] p-2.5 rounded-md my-1.5 overflow-x-auto border border-slate-800">
+            <code>{codeBlockLines.join('\n')}</code>
+          </pre>
+        );
+        inCodeBlock = false;
+        codeBlockLines = [];
+      } else {
+        inCodeBlock = true;
+        codeBlockLines = [];
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeBlockLines.push(rawLine);
+      continue;
+    }
+
+    if (!trimmed) {
+      elements.push(<div key={`gap-${i}`} className="h-1.5" />);
+      continue;
+    }
+
+    // Headings
+    const h1 = trimmed.match(/^#\s+(.+)$/);
+    if (h1) {
+      elements.push(
+        <h3 key={`h1-${i}`} className="text-sm font-extrabold text-emerald-400 mt-2 mb-1">
+          {parseInlineMarkdown(h1[1])}
+        </h3>
+      );
+      continue;
+    }
+    const h2 = trimmed.match(/^##\s+(.+)$/);
+    if (h2) {
+      elements.push(
+        <h4 key={`h2-${i}`} className="text-[13px] font-bold text-slate-100 mt-1.5 mb-1">
+          {parseInlineMarkdown(h2[1])}
+        </h4>
+      );
+      continue;
+    }
+    const h3 = trimmed.match(/^###\s+(.+)$/);
+    if (h3) {
+      elements.push(
+        <h5 key={`h3-${i}`} className="text-xs font-bold text-amber-400 mt-1 mb-0.5">
+          {parseInlineMarkdown(h3[1])}
+        </h5>
+      );
+      continue;
+    }
+
+    // Blockquote
+    const quote = trimmed.match(/^>\s*(.+)$/);
+    if (quote) {
+      elements.push(
+        <blockquote key={`q-${i}`} className="border-l-2 border-emerald-500 bg-emerald-950/20 px-2.5 py-1 text-slate-300 text-[11px] italic my-1 rounded-r">
+          {parseInlineMarkdown(quote[1])}
+        </blockquote>
+      );
+      continue;
+    }
+
+    // Unordered List
+    const ul = trimmed.match(/^[-*+]\s+(.+)$/);
+    if (ul) {
+      elements.push(
+        <div key={`ul-${i}`} className="flex items-start gap-1.5 my-0.5 pl-1">
+          <span className="text-emerald-400 font-bold leading-none mt-1.5 text-[8px]">•</span>
+          <span className="flex-1 text-slate-300 leading-relaxed text-xs">{parseInlineMarkdown(ul[1])}</span>
+        </div>
+      );
+      continue;
+    }
+
+    // Ordered List
+    const ol = trimmed.match(/^(\d+)\.\s+(.+)$/);
+    if (ol) {
+      elements.push(
+        <div key={`ol-${i}`} className="flex items-start gap-1.5 my-0.5 pl-1">
+          <span className="text-emerald-400 font-bold text-[10px] min-w-[14px]">{ol[1]}.</span>
+          <span className="flex-1 text-slate-300 leading-relaxed text-xs">{parseInlineMarkdown(ol[2])}</span>
+        </div>
+      );
+      continue;
+    }
+
+    // Paragraph
+    elements.push(
+      <p key={`p-${i}`} className="leading-relaxed text-xs text-slate-300 my-0.5">
+        {parseInlineMarkdown(trimmed)}
+      </p>
+    );
+  }
+
+  if (inCodeBlock && codeBlockLines.length > 0) {
+    elements.push(
+      <pre key="code-unclosed" className="bg-slate-950 text-emerald-400 font-mono text-[11px] p-2.5 rounded-md my-1.5 overflow-x-auto border border-slate-800">
+        <code>{codeBlockLines.join('\n')}</code>
+      </pre>
+    );
+  }
+
+  return <div className="space-y-1">{elements}</div>;
 }

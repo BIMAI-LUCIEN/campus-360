@@ -45,7 +45,10 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
-    const { id } = await context.params;
+    const rawParams = context?.params;
+    const resolvedParams = rawParams instanceof Promise ? await rawParams : rawParams;
+    const id = resolvedParams?.id || '';
+
     const access = await requireMobileUser(request).catch(() => ({
       user: { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null },
       response: null,
@@ -70,7 +73,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
-    const { id } = await context.params;
+    const rawParams = context?.params;
+    const resolvedParams = rawParams instanceof Promise ? await rawParams : rawParams;
+    const id = resolvedParams?.id || '';
+
     const access = await requireMobileUser(request).catch(() => ({
       user: { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null },
       response: null,
@@ -96,7 +102,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
-    const { id } = await context.params;
+    const rawParams = context?.params;
+    const resolvedParams = rawParams instanceof Promise ? await rawParams : rawParams;
+    const id = resolvedParams?.id || '';
+
     const access = await requireMobileUser(request).catch(() => ({
       user: { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null },
       response: null,

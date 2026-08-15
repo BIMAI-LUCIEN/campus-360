@@ -36,26 +36,34 @@ export type DocumentSection = {
 const TEMPLATE_SECTIONS: Record<string, string[]> = {
   stage: [
     'Page de garde',
-    'Remerciements',
+    'Fiche d\'identification du stage',
+    'Dédicaces et Remerciements',
     'Sommaire',
-    'Introduction',
-    'Présentation de l\'entreprise',
-    'Missions et Travaux réalisés',
-    'Bilan et Conclusion',
+    'Liste des Figures et Tableaux',
+    'Liste des Abréviations',
+    'Chapitre 1 : Contexte et Présentation de l\'Entreprise',
+    'Chapitre 2 : Analyse des Besoins et Étude Préalable',
+    'Chapitre 3 : Conception Architecturale et Réalisations Techniques',
+    'Chapitre 4 : Bilan Critique, Compétences Acquises et Recommandations',
+    'Conclusion Générale et Perspectives',
+    'Bibliographie et Webographie',
     'Annexes',
   ],
   memoire: [
     'Page de garde',
-    'Dédicaces',
-    'Remerciements',
+    'Fiche de Synthèse',
+    'Dédicaces et Remerciements',
     'Sommaire',
-    'Introduction générale',
-    'Revue de la littérature',
-    'Méthodologie',
-    'Résultats et Analyses',
-    'Discussion',
-    'Conclusion générale',
+    'Liste des Figures et Tableaux',
+    'Liste des Abréviations',
+    'Introduction Générale',
+    'Chapitre 1 : Cadre Théorique et État de l\'Art',
+    'Chapitre 2 : Méthodologie et Analyse des Données',
+    'Chapitre 3 : Implémentation et Résultats Expérimentaux',
+    'Chapitre 4 : Discussion et Analyse Critique',
+    'Conclusion Générale et Perspectives de Recherche',
     'Bibliographie',
+    'Annexes',
   ],
   cv: [
     'CV généré',
@@ -72,13 +80,20 @@ const TEMPLATE_SECTIONS: Record<string, string[]> = {
   ],
 };
 
-async function resolveDbUserId(userId: string): Promise<string> {
+export async function resolveDbUserId(userId: string): Promise<string> {
   const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
   if (isUuid) return userId;
   try {
-    const existing = await databasePool.query('select id from public.app_users limit 1');
+    const existing = await databasePool.query('select id from public.app_users order by created_at desc limit 1');
     if (existing.rows[0]?.id) return String(existing.rows[0].id);
-  } catch {}
+    
+    const created = await databasePool.query(
+      `insert into public.app_users (email, name, role) values ('student@campus360.app', 'Étudiant Campus 360', 'student') on conflict do nothing returning id`
+    );
+    if (created.rows[0]?.id) return String(created.rows[0].id);
+  } catch (err) {
+    console.warn('[resolveDbUserId] Warning:', err);
+  }
   return '00000000-0000-0000-0000-000000000001';
 }
 
