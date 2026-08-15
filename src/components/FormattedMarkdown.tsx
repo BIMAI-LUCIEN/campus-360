@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, TextStyle, ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, TextStyle, ViewStyle, Platform } from 'react-native';
 
 export type FormattedMarkdownProps = {
   content: string;
@@ -59,8 +59,8 @@ function parseInlineTokens(text: string): InlineToken[] {
 
 export function FormattedMarkdown({
   content,
-  baseTextColor = '#1E293B',
-  isDark = false,
+  baseTextColor = '#F7F7F8',
+  isDark = true,
   style,
 }: FormattedMarkdownProps) {
   if (!content) return null;
@@ -73,33 +73,65 @@ export function FormattedMarkdown({
   let codeBlockLang = '';
 
   const textColor = baseTextColor;
+  const boldColor = isDark ? '#FFFFFF' : '#0F172A';
   const primaryAccent = isDark ? '#38BDF8' : '#0284C7';
-  const headingColor = isDark ? '#F8FAFC' : '#0F172A';
-  const codeBg = isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(241, 245, 249, 0.9)';
+  const headingColor = isDark ? '#FFFFFF' : '#0F172A';
+  const codeBg = isDark ? 'rgba(30, 41, 59, 0.85)' : 'rgba(241, 245, 249, 0.95)';
   const codeBorder = isDark ? '#334155' : '#E2E8F0';
   const quoteBorder = isDark ? '#38BDF8' : '#0284C7';
-  const quoteBg = isDark ? 'rgba(56, 189, 248, 0.08)' : 'rgba(2, 132, 199, 0.06)';
+  const quoteBg = isDark ? 'rgba(56, 189, 248, 0.12)' : 'rgba(2, 132, 199, 0.08)';
 
   const renderInline = (text: string, inlineStyle?: TextStyle) => {
     const tokens = parseInlineTokens(text);
     return tokens.map((token, idx) => {
       if (token.type === 'bold') {
         return (
-          <Text key={idx} style={[{ fontWeight: '700', color: headingColor }, inlineStyle]}>
+          <Text
+            key={idx}
+            style={[
+              {
+                fontWeight: '700',
+                color: inlineStyle?.color || boldColor,
+              },
+              inlineStyle,
+              { fontWeight: '700' },
+            ]}
+          >
             {token.content}
           </Text>
         );
       }
       if (token.type === 'italic') {
         return (
-          <Text key={idx} style={[{ fontStyle: 'italic' }, inlineStyle]}>
+          <Text
+            key={idx}
+            style={[
+              {
+                fontStyle: 'italic',
+                color: inlineStyle?.color || textColor,
+              },
+              inlineStyle,
+              { fontStyle: 'italic' },
+            ]}
+          >
             {token.content}
           </Text>
         );
       }
       if (token.type === 'boldItalic') {
         return (
-          <Text key={idx} style={[{ fontWeight: '700', fontStyle: 'italic', color: headingColor }, inlineStyle]}>
+          <Text
+            key={idx}
+            style={[
+              {
+                fontWeight: '700',
+                fontStyle: 'italic',
+                color: inlineStyle?.color || boldColor,
+              },
+              inlineStyle,
+              { fontWeight: '700', fontStyle: 'italic' },
+            ]}
+          >
             {token.content}
           </Text>
         );
@@ -110,12 +142,12 @@ export function FormattedMarkdown({
             key={idx}
             style={[
               {
-                fontFamily: 'monospace',
+                fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
                 fontSize: 12,
                 backgroundColor: codeBg,
                 color: isDark ? '#F472B6' : '#BE185D',
-                paddingHorizontal: 4,
-                paddingVertical: 1,
+                paddingHorizontal: 5,
+                paddingVertical: 1.5,
                 borderRadius: 4,
               },
               inlineStyle,
@@ -158,7 +190,7 @@ export function FormattedMarkdown({
                 {codeBlockLang}
               </Text>
             ) : null}
-            <Text style={{ fontFamily: 'monospace', fontSize: 12, color: headingColor, lineHeight: 18 }}>
+            <Text style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 12, color: headingColor, lineHeight: 18 }}>
               {codeBlockContent.join('\n')}
             </Text>
           </View>
@@ -207,8 +239,8 @@ export function FormattedMarkdown({
     if (h1Match) {
       elements.push(
         <View key={`h1-${i}`} style={{ marginTop: 10, marginBottom: 4 }}>
-          <Text style={{ fontSize: 18, fontWeight: '800', color: headingColor, lineHeight: 24, letterSpacing: -0.2 }}>
-            {renderInline(h1Match[1], { fontSize: 18, fontWeight: '800', color: headingColor })}
+          <Text style={{ fontSize: 17, fontWeight: '800', color: primaryAccent, lineHeight: 23, letterSpacing: -0.2 }}>
+            {renderInline(h1Match[1], { fontSize: 17, fontWeight: '800', color: primaryAccent })}
           </Text>
         </View>
       );
@@ -219,8 +251,8 @@ export function FormattedMarkdown({
     if (h2Match) {
       elements.push(
         <View key={`h2-${i}`} style={{ marginTop: 8, marginBottom: 3 }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: headingColor, lineHeight: 22, letterSpacing: -0.1 }}>
-            {renderInline(h2Match[1], { fontSize: 16, fontWeight: '700', color: headingColor })}
+          <Text style={{ fontSize: 15, fontWeight: '700', color: primaryAccent, lineHeight: 21, letterSpacing: -0.1 }}>
+            {renderInline(h2Match[1], { fontSize: 15, fontWeight: '700', color: primaryAccent })}
           </Text>
         </View>
       );
@@ -231,8 +263,8 @@ export function FormattedMarkdown({
     if (h3Match) {
       elements.push(
         <View key={`h3-${i}`} style={{ marginTop: 6, marginBottom: 2 }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: primaryAccent, lineHeight: 20 }}>
-            {renderInline(h3Match[1], { fontSize: 14, fontWeight: '700', color: primaryAccent })}
+          <Text style={{ fontSize: 14, fontWeight: '700', color: isDark ? '#FBBF24' : '#B45309', lineHeight: 20 }}>
+            {renderInline(h3Match[1], { fontSize: 14, fontWeight: '700', color: isDark ? '#FBBF24' : '#B45309' })}
           </Text>
         </View>
       );
@@ -269,7 +301,7 @@ export function FormattedMarkdown({
           }}
         >
           <Text style={{ fontSize: 13, lineHeight: 19, color: textColor, fontStyle: 'italic' }}>
-            {renderInline(quoteMatch[1], { fontSize: 13, fontStyle: 'italic' })}
+            {renderInline(quoteMatch[1], { fontSize: 13, fontStyle: 'italic', color: textColor })}
           </Text>
         </View>
       );
@@ -285,7 +317,7 @@ export function FormattedMarkdown({
         <View key={`ol-${i}`} style={{ flexDirection: 'row', alignItems: 'flex-start', marginVertical: 2.5, paddingLeft: 4 }}>
           <View
             style={{
-              backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.1)',
+              backgroundColor: isDark ? 'rgba(56, 189, 248, 0.2)' : 'rgba(2, 132, 199, 0.1)',
               borderRadius: 10,
               paddingHorizontal: 5,
               paddingVertical: 1,
@@ -300,7 +332,7 @@ export function FormattedMarkdown({
             </Text>
           </View>
           <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 20, color: textColor }}>
-            {renderInline(text, { fontSize: 13.5, lineHeight: 20 })}
+            {renderInline(text, { fontSize: 13.5, lineHeight: 20, color: textColor })}
           </Text>
         </View>
       );
@@ -312,19 +344,19 @@ export function FormattedMarkdown({
     if (unorderedMatch) {
       const text = unorderedMatch[1];
       elements.push(
-        <View key={`ul-${i}`} style={{ flexDirection: 'row', alignItems: 'flex-start', marginVertical: 2, paddingLeft: 4 }}>
+        <View key={`ul-${i}`} style={{ flexDirection: 'row', alignItems: 'flex-start', marginVertical: 2.5, paddingLeft: 4 }}>
           <View
             style={{
-              width: 5,
-              height: 5,
-              borderRadius: 2.5,
+              width: 6,
+              height: 6,
+              borderRadius: 3,
               backgroundColor: primaryAccent,
               marginRight: 8,
               marginTop: 7,
             }}
           />
           <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 20, color: textColor }}>
-            {renderInline(text, { fontSize: 13.5, lineHeight: 20 })}
+            {renderInline(text, { fontSize: 13.5, lineHeight: 20, color: textColor })}
           </Text>
         </View>
       );
@@ -333,8 +365,8 @@ export function FormattedMarkdown({
 
     // 8. Standard paragraph
     elements.push(
-      <Text key={`p-${i}`} style={{ fontSize: 14, lineHeight: 21, color: textColor, marginVertical: 1 }}>
-        {renderInline(trimmed, { fontSize: 14, lineHeight: 21 })}
+      <Text key={`p-${i}`} style={{ fontSize: 14, lineHeight: 21, color: textColor, marginVertical: 1.5 }}>
+        {renderInline(trimmed, { fontSize: 14, lineHeight: 21, color: textColor })}
       </Text>
     );
   }
@@ -353,7 +385,7 @@ export function FormattedMarkdown({
           marginVertical: 6,
         }}
       >
-        <Text style={{ fontFamily: 'monospace', fontSize: 12, color: headingColor, lineHeight: 18 }}>
+        <Text style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 12, color: headingColor, lineHeight: 18 }}>
           {codeBlockContent.join('\n')}
         </Text>
       </View>

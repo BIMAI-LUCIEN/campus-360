@@ -1262,7 +1262,7 @@ export function PdfStudentSection({
                             <FormattedMarkdown
                               content={message.content}
                               baseTextColor={$.ink}
-                              isDark={false}
+                              isDark={true}
                             />
                           )}
                         </View>
