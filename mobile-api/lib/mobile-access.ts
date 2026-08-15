@@ -293,16 +293,28 @@ export class MobileApiError extends Error {
   }
 }
 
-export const withCors = (response: NextResponse): NextResponse => {
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Expo-Origin, x-client-info, apikey');
+export const withCors = (
+  response: NextResponse,
+  request?: NextRequest | Request | null,
+): NextResponse => {
+  const origin = request?.headers?.get('origin');
+  if (origin) {
+    response.headers.set('Access-Control-Allow-Origin', origin);
+    response.headers.set('Access-Control-Allow-Credentials', 'true');
+  } else {
+    response.headers.set('Access-Control-Allow-Origin', '*');
+  }
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  response.headers.set(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
+  );
   return response;
 };
 
-export const mobileErrorResponse = (error: unknown) => {
+export const mobileErrorResponse = (error: unknown, request?: NextRequest | Request | null) => {
   if (error instanceof MobileApiError) {
-    return withCors(NextResponse.json({ error: error.message }, { status: error.status }));
+    return withCors(NextResponse.json({ error: error.message }, { status: error.status }), request);
   }
   if (error instanceof RateLimitError) {
     return withCors(
@@ -313,13 +325,14 @@ export const mobileErrorResponse = (error: unknown) => {
           headers: { 'Retry-After': String(error.retryAfterSeconds) },
         },
       ),
+      request,
     );
   }
   if (error instanceof ZodError) {
-    return withCors(NextResponse.json({ error: 'Requête invalide.' }, { status: 400 }));
+    return withCors(NextResponse.json({ error: 'Requête invalide.' }, { status: 400 }), request);
   }
   if (typeof error === 'object' && error !== null && (error as { code?: string }).code === '23505') {
-    return withCors(NextResponse.json({ error: 'Cet achat a deja ete effectue.' }, { status: 409 }));
+    return withCors(NextResponse.json({ error: 'Cet achat a deja ete effectue.' }, { status: 409 }), request);
   }
   console.error('Mobile API error', error);
   return withCors(
@@ -327,5 +340,6 @@ export const mobileErrorResponse = (error: unknown) => {
       { error: 'Service momentanement indisponible.' },
       { status: 500 },
     ),
+    request,
   );
 };

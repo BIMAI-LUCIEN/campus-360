@@ -38,42 +38,53 @@ const bodySchema = z.object({
   messages: z.array(messageSchema).max(20).optional().default([]),
 });
 
-export async function OPTIONS() {
-  const res = new NextResponse(null, { status: 204 });
-  return withCors(res);
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+    'Access-Control-Allow-Headers':
+      'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
+  };
+  if (origin) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  } else {
+    headers['Access-Control-Allow-Origin'] = '*';
+  }
+  return new NextResponse(null, { status: 204, headers });
 }
 
 function localPdfAnswer(question: string, context?: z.infer<typeof bodySchema>['pdfContext']): string {
   const q = question.toLowerCase();
   const isObj = typeof context === 'object' && context !== null;
-  const title = isObj ? (context.title ?? 'ce cours') : 'ce cours';
+  const title = isObj ? (context.title ?? 'ce document') : 'ce document';
   const summary = isObj ? (context.aiSummary ?? '') : (typeof context === 'string' ? context : '');
   const plan = isObj ? (context.aiStudyPlan ?? []) : [];
 
   if (q.includes('plan') || q.includes('reviser') || q.includes('revision')) {
     if (plan.length > 0) {
-      return `Voici le plan de révision suggéré pour ${title} :\n\n${plan.map((step: string, idx: number) => `${idx + 1}. ${step}`).join('\n')}`;
+      return `📌 **Plan de révision recommandé pour ${title} :**\n\n${plan.map((step: string, idx: number) => `**Étape ${idx + 1} :** ${step}`).join('\n')}`;
     }
   }
 
   if (q.includes('resume') || q.includes('résumé') || q.includes('synthèse')) {
     if (summary) {
-      return `Résumé pour ${title} :\n\n${summary}`;
+      return `📖 **Synthèse du cours — ${title} :**\n\n${summary}`;
     }
   }
 
   if (summary) {
-    return `Concernant "${title}" :\n\n${summary}\n\nN'hésite pas à me poser une question précise sur un chapitre ou un exercice !`;
+    return `💡 **Concernant "${title}" :**\n\n${summary}\n\n*Pose-moi une question précise sur un concept, un exercice ou une formule pour approfondir.*`;
   }
 
-  return `Je suis ton tuteur IA pour le document "${title}". Pose-moi une question sur le contenu, la méthodologie ou des exercices !`;
+  return `Bonjour ! Je suis ton tuteur IA pour **${title}**. Pose-moi une question sur le contenu, un exercice ou une notion difficile à comprendre.`;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const contentLength = Number(request.headers.get('content-length') ?? 0);
     if (contentLength > MAX_BODY_BYTES) {
-      return withCors(NextResponse.json({ error: 'Requete trop volumineuse.' }, { status: 413 }));
+      return withCors(NextResponse.json({ error: 'Requete trop volumineuse.' }, { status: 413 }), request);
     }
 
     const access = await requireMobileUser(request).catch(() => ({
@@ -85,13 +96,13 @@ export async function POST(request: NextRequest) {
     try {
       await enforceRateLimit(request, {
         bucket: 'ai-pdf-chat',
-        max: 30,
+        max: 40,
         windowMs: 60_000,
         userId,
       });
     } catch (error) {
       const response = rateLimitFailedResponse(error);
-      if (response) return withCors(response);
+      if (response) return withCors(response, request);
       throw error;
     }
 
@@ -108,29 +119,36 @@ export async function POST(request: NextRequest) {
       typeof pdfContext === 'string'
         ? pdfContext
         : [
-            `Titre : ${pdfContext?.title ?? 'Document de cours'}`,
+            `Titre : ${pdfContext?.title ?? 'Document académique'}`,
             `Matière : ${pdfContext?.subject ?? 'Non spécifiée'}`,
             `Niveau : ${pdfContext?.level ?? 'Universitaire'}`,
-            pdfContext?.aiSummary ? `Résumé du cours : ${pdfContext.aiSummary}` : '',
+            pdfContext?.aiSummary ? `Résumé analytique : ${pdfContext.aiSummary}` : '',
             pdfContext?.aiStudyPlan?.length
-              ? `Plan d'étude : \n${pdfContext.aiStudyPlan.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
+              ? `Plan d'étude structuré : \n${pdfContext.aiStudyPlan.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
               : '',
             pdfContext?.aiQuiz?.length
-              ? `Quiz du cours : \n${pdfContext.aiQuiz.map((q, i) => `Q${i + 1}: ${q.question} -> R: ${q.answer}`).join('\n')}`
+              ? `Questions et concepts clés du document : \n${pdfContext.aiQuiz.map((q, i) => `Q${i + 1}: ${q.question} -> R: ${q.answer}`).join('\n')}`
               : '',
           ]
             .filter(Boolean)
             .join('\n');
 
     const systemPrompt = [
-      'Tu es le tuteur d’apprentissage interactif officiel de Campus 360.',
-      'Ton rôle est d’aider l’étudiant à comprendre en profondeur, réviser, et tester ses connaissances sur son document académique.',
-      'Réponds en français, avec clarté, rigueur pédagogique et encouragement.',
-      'Utilise le contexte du cours ci-dessous pour formuler des réponses précises et adaptées au niveau de l’étudiant.',
+      'Tu es le Professeur et Tuteur IA d’Élite de Campus 360.',
+      'Ton objectif fondamental est de rendre l’étudiant brillant dans sa matière grâce à des explications percutantes, intelligentes, rigoureuses et adaptées à son niveau universitaire.',
       '',
-      '=== CONTEXTE DU DOCUMENT ===',
+      'DIRECTIVES PÉDAGOGIQUES MAJEURES :',
+      '1. INTERDICTION FORMELLE DE RÉPONDRE DE FAÇON GÉNÉRIQUE OU BANALE. Adapte-toi immédiatement à la question de l’étudiant et au document étudié.',
+      '2. RIGOUREUX & ANALYTIQUE : Explique le "pourquoi" et le "comment", cite les notions théoriques, définitions clés et méthodes pratiques mentionnées dans le cours.',
+      '3. PÉDAGOGIE STRUCTURÉE : Utilise une mise en page claire en Markdown (titres en gras, listes à puces, exemples concrets, analogies mnémotechniques, étapes numérotées pour les calculs ou raisonnements).',
+      '4. SI L’ÉTUDIANT DEMANDE UN RÉSUMÉ : Rédige une synthèse percutante avec les grands axes, les formules/notions clés et les pièges classiques d’examen.',
+      '5. SI L’ÉTUDIANT DEMANDE UN QUIZ : Propose des questions stimulantes qui testent la compréhension profonde (pas seulement le par cœur).',
+      '6. SI L’ÉTUDIANT POSE UNE QUESTION PRÉCISE : Réponds avec précision, donne un exemple concret et vérifie sa compréhension.',
+      '7. Réponds toujours en français élégant, bienveillant et stimulant.',
+      '',
+      '=== CONTEXTE ACADÉMIQUE DU COURS ===',
       contextStr,
-      '============================',
+      '====================================',
     ]
       .filter(Boolean)
       .join('\n');
@@ -143,6 +161,17 @@ export async function POST(request: NextRequest) {
 
     const model = process.env.OPENROUTER_MODEL ?? DEFAULT_FREE_MODEL;
 
+    if (!apiKey) {
+      const res = NextResponse.json(
+        {
+          answer: localPdfAnswer(question, pdfContext),
+          local: true,
+        },
+        { status: 200 },
+      );
+      return withCors(res, request);
+    }
+
     try {
       const response = await fetch(OPENROUTER_URL, {
         method: 'POST',
@@ -150,13 +179,13 @@ export async function POST(request: NextRequest) {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': process.env.BETTER_AUTH_URL ?? 'https://api.campus360b.site',
-          'X-OpenRouter-Title': 'Campus 360',
+          'X-OpenRouter-Title': 'Campus 360 AI Tutor',
         },
         body: JSON.stringify({
           model,
           messages: conversation,
-          temperature: 0.5,
-          max_tokens: 1000,
+          temperature: 0.4,
+          max_tokens: 1500,
         }),
       });
 
@@ -169,7 +198,7 @@ export async function POST(request: NextRequest) {
           },
           { status: 200 },
         );
-        return withCors(res);
+        return withCors(res, request);
       }
 
       const payload = (await response.json()) as {
@@ -185,14 +214,14 @@ export async function POST(request: NextRequest) {
           },
           { status: 200 },
         );
-        return withCors(res);
+        return withCors(res, request);
       }
 
       const res = NextResponse.json({
         answer: aiAnswer,
         model,
       });
-      return withCors(res);
+      return withCors(res, request);
     } catch (apiError) {
       console.warn('[ai/pdf-chat] OpenRouter network error, using fallback:', apiError);
       const res = NextResponse.json(
@@ -202,11 +231,11 @@ export async function POST(request: NextRequest) {
         },
         { status: 200 },
       );
-      return withCors(res);
+      return withCors(res, request);
     }
   } catch (error) {
     const status = error instanceof MobileApiError ? error.status : 500;
     const message = error instanceof MobileApiError ? error.message : 'Erreur lors du traitement IA.';
-    return withCors(NextResponse.json({ error: message }, { status }));
+    return withCors(NextResponse.json({ error: message }, { status }), request);
   }
 }

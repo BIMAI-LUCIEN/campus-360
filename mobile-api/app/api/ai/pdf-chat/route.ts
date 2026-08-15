@@ -38,11 +38,20 @@ const DEFAULT_FREE_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
 
 export const runtime = 'nodejs';
 
-export async function OPTIONS() {
-  const res = new NextResponse(null, {
-    status: 204,
-  });
-  return withCors(res);
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+    'Access-Control-Allow-Headers':
+      'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
+  };
+  if (origin) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  } else {
+    headers['Access-Control-Allow-Origin'] = '*';
+  }
+  return new NextResponse(null, { status: 204, headers });
 }
 
 function localPdfAnswer(question: string, context?: z.infer<typeof bodySchema>['pdfContext']): string {
@@ -54,21 +63,21 @@ function localPdfAnswer(question: string, context?: z.infer<typeof bodySchema>['
 
   if (q.includes('plan') || q.includes('reviser') || q.includes('revision')) {
     if (plan.length > 0) {
-      return `Voici le plan de révision suggéré pour ${title} :\n\n${plan.map((step: string, idx: number) => `${idx + 1}. ${step}`).join('\n')}`;
+      return `📌 **Plan de révision recommandé pour ${title} :**\n\n${plan.map((step: string, idx: number) => `**Étape ${idx + 1} :** ${step}`).join('\n')}`;
     }
   }
 
   if (q.includes('resume') || q.includes('résumé') || q.includes('synthèse')) {
     if (summary) {
-      return `Résumé pour ${title} :\n\n${summary}`;
+      return `📖 **Synthèse du cours — ${title} :**\n\n${summary}`;
     }
   }
 
   if (summary) {
-    return `Concernant "${title}" :\n\n${summary}\n\nN'hésite pas à me poser une question précise sur un chapitre ou un exercice !`;
+    return `💡 **Concernant "${title}" :**\n\n${summary}\n\n*Pose-moi une question précise sur un concept, un exercice ou une formule pour approfondir.*`;
   }
 
-  return `Je suis ton tuteur IA pour le document "${title}". Pose-moi une question sur le contenu, la méthodologie ou des exercices !`;
+  return `Bonjour ! Je suis ton tuteur IA pour **${title}**. Pose-moi une question sur le contenu, un exercice ou une notion difficile à comprendre.`;
 }
 
 export async function POST(request: NextRequest) {
@@ -82,13 +91,13 @@ export async function POST(request: NextRequest) {
     try {
       await enforceRateLimit(request, {
         bucket: 'ai-pdf-chat',
-        max: 30,
+        max: 40,
         windowMs: 60_000,
         userId,
       });
     } catch (error) {
       const response = rateLimitFailedResponse(error);
-      if (response) return withCors(response);
+      if (response) return withCors(response, request);
       throw error;
     }
 
@@ -110,33 +119,44 @@ export async function POST(request: NextRequest) {
           },
           { status: 200 },
         ),
+        request,
       );
     }
 
-    const contextStr = typeof pdfContext === 'string'
-      ? pdfContext
-      : [
-          `Titre : ${pdfContext?.title ?? 'Document de cours'}`,
-          `Matière : ${pdfContext?.subject ?? 'Non spécifiée'}`,
-          `Niveau : ${pdfContext?.level ?? 'Universitaire'}`,
-          pdfContext?.aiSummary ? `Résumé du cours : ${pdfContext.aiSummary}` : '',
-          pdfContext?.aiStudyPlan?.length
-            ? `Plan d'étude : \n${pdfContext.aiStudyPlan.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
-            : '',
-          pdfContext?.aiQuiz?.length
-            ? `Quiz du cours : \n${pdfContext.aiQuiz.map((q, i) => `Q${i + 1}: ${q.question} -> R: ${q.answer}`).join('\n')}`
-            : '',
-        ].filter(Boolean).join('\n');
+    const contextStr =
+      typeof pdfContext === 'string'
+        ? pdfContext
+        : [
+            `Titre : ${pdfContext?.title ?? 'Document académique'}`,
+            `Matière : ${pdfContext?.subject ?? 'Non spécifiée'}`,
+            `Niveau : ${pdfContext?.level ?? 'Universitaire'}`,
+            pdfContext?.aiSummary ? `Résumé analytique : ${pdfContext.aiSummary}` : '',
+            pdfContext?.aiStudyPlan?.length
+              ? `Plan d'étude structuré : \n${pdfContext.aiStudyPlan.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
+              : '',
+            pdfContext?.aiQuiz?.length
+              ? `Questions et concepts clés du document : \n${pdfContext.aiQuiz.map((q, i) => `Q${i + 1}: ${q.question} -> R: ${q.answer}`).join('\n')}`
+              : '',
+          ]
+            .filter(Boolean)
+            .join('\n');
 
     const systemPrompt = [
-      'Tu es le tuteur d’apprentissage interactif officiel de Campus 360.',
-      'Ton rôle est d’aider l’étudiant à comprendre en profondeur, réviser, et tester ses connaissances sur son document académique.',
-      'Réponds en français, avec clarté, rigueur pédagogique et encouragement.',
-      'Utilise le contexte du cours ci-dessous pour formuler des réponses précises et adaptées au niveau de l’étudiant.',
+      'Tu es le Professeur et Tuteur IA d’Élite de Campus 360.',
+      'Ton objectif fondamental est de rendre l’étudiant brillant dans sa matière grâce à des explications percutantes, intelligentes, rigoureuses et adaptées à son niveau universitaire.',
       '',
-      '=== CONTEXTE DU DOCUMENT ===',
+      'DIRECTIVES PÉDAGOGIQUES MAJEURES :',
+      '1. INTERDICTION FORMELLE DE RÉPONDRE DE FAÇON GÉNÉRIQUE OU BANALE. Adapte-toi immédiatement à la question de l’étudiant et au document étudié.',
+      '2. RIGOUREUX & ANALYTIQUE : Explique le "pourquoi" et le "comment", cite les notions théoriques, définitions clés et méthodes pratiques mentionnées dans le cours.',
+      '3. PÉDAGOGIE STRUCTURÉE : Utilise une mise en page claire en Markdown (titres en gras, listes à puces, exemples concrets, analogies mnémotechniques, étapes numérotées pour les calculs ou raisonnements).',
+      '4. SI L’ÉTUDIANT DEMANDE UN RÉSUMÉ : Rédige une synthèse percutante avec les grands axes, les formules/notions clés et les pièges classiques d’examen.',
+      '5. SI L’ÉTUDIANT DEMANDE UN QUIZ : Propose des questions stimulantes qui testent la compréhension profonde (pas seulement le par cœur).',
+      '6. SI L’ÉTUDIANT POSE UNE QUESTION PRÉCISE : Réponds avec précision, donne un exemple concret et vérifie sa compréhension.',
+      '7. Réponds toujours en français élégant, bienveillant et stimulant.',
+      '',
+      '=== CONTEXTE ACADÉMIQUE DU COURS ===',
       contextStr,
-      '============================',
+      '====================================',
     ]
       .filter(Boolean)
       .join('\n');
@@ -155,50 +175,56 @@ export async function POST(request: NextRequest) {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': process.env.BETTER_AUTH_URL ?? 'https://api.campus360b.site',
-        'X-OpenRouter-Title': 'Campus 360',
+        'X-OpenRouter-Title': 'Campus 360 AI Tutor',
       },
       body: JSON.stringify({
         model,
         messages: conversation,
-        temperature: 0.5,
-        max_tokens: 1200,
+        temperature: 0.4,
+        max_tokens: 1500,
       }),
     });
 
     if (!response.ok) {
       console.warn('[ai/pdf-chat] OpenRouter call failed:', response.status);
-      const res = NextResponse.json(
-        {
-          answer: localPdfAnswer(question, pdfContext),
-          fallback: true,
-        },
-        { status: 200 },
+      return withCors(
+        NextResponse.json(
+          {
+            answer: localPdfAnswer(question, pdfContext),
+            local: true,
+          },
+          { status: 200 },
+        ),
+        request,
       );
-      res.headers.set('Access-Control-Allow-Origin', '*');
-      return res;
     }
 
-    const data = (await response.json()) as {
+    const payload = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
     };
-    const answer = data.choices?.[0]?.message?.content?.trim();
 
-    if (!answer) {
-      const res = NextResponse.json(
-        {
-          answer: localPdfAnswer(question, pdfContext),
-          fallback: true,
-        },
-        { status: 200 },
+    const aiAnswer = payload.choices?.[0]?.message?.content;
+    if (!aiAnswer) {
+      return withCors(
+        NextResponse.json(
+          {
+            answer: localPdfAnswer(question, pdfContext),
+            local: true,
+          },
+          { status: 200 },
+        ),
+        request,
       );
-      res.headers.set('Access-Control-Allow-Origin', '*');
-      return res;
     }
 
-    const res = NextResponse.json({ answer, model }, { status: 200 });
-    res.headers.set('Access-Control-Allow-Origin', '*');
-    return res;
+    return withCors(
+      NextResponse.json({
+        answer: aiAnswer,
+        model,
+      }),
+      request,
+    );
   } catch (error) {
-    return mobileErrorResponse(error);
+    return mobileErrorResponse(error, request);
   }
 }
