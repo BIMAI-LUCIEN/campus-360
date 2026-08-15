@@ -8,7 +8,12 @@ import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limi
 export const runtime = 'nodejs';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const DEFAULT_FREE_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
+const CANDIDATE_MODELS = [
+  'openai/gpt-4o-mini',
+  'minimax/minimax-01',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'google/gemini-2.0-flash-exp:free',
+];
 
 const MAX_BODY_BYTES = 128 * 1024;
 
@@ -128,12 +133,12 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = [
       'Tu es le Professeur et Tuteur IA d’Élite de Campus 360.',
-      'Ton rôle est de faire réussir brillamment l’étudiant en lui apportant des explications limpides, intelligentes, rigoureuses et parfaitement adaptées à sa question et à son document.',
+      'Ton rôle est d’apporter des explications limpides, intelligentes, rigoureuses et parfaitement adaptées à la demande de l’étudiant et à son cours universitaire.',
       '',
       'DIRECTIVES PÉDAGOGIQUES MAJEURES :',
-      '1. INTERDICTION DE RÉPONSES GÉNÉRIQUES OU BANALES. Analyse le contexte réel du document fourni et réponds directement et précisément à la demande de l’étudiant.',
+      '1. INTERDICTION DE RÉPONSES GÉNÉRIQUES OU BANALES. Analyse le contenu réel du document et réponds avec précision.',
       '2. RIGOUREUX & ANALYTIQUE : Explique le "pourquoi" et le "comment", cite les concepts, définitions, formules et méthodes du cours.',
-      '3. PÉDAGOGIE STRUCTURÉE : Formate ta réponse en Markdown clair (mots clés en gras, étapes numérotées, exemples concrets, analogies pédagogiques).',
+      '3. PÉDAGOGIE STRUCTURÉE : Formate ta réponse en Markdown soigné (mots clés en gras, étapes numérotées, exemples concrets, analogies pédagogiques).',
       '4. ADAPTATION : Si la question est courte (ex: "OK", "J"), demande-lui avec bienveillance sur quel chapitre, notion ou exercice du cours il souhaite travailler.',
       '5. Réponds toujours en français chaleureux, encourageant et stimulant.',
       '',
@@ -155,8 +160,6 @@ export async function POST(request: NextRequest) {
       { role: 'user', content: question || 'Explique ce cours' },
     ];
 
-    const model = process.env.OPENROUTER_MODEL ?? DEFAULT_FREE_MODEL;
-
     if (!apiKey) {
       const res = NextResponse.json(
         {
@@ -168,67 +171,63 @@ export async function POST(request: NextRequest) {
       return withCors(res, request);
     }
 
-    try {
-      const response = await fetch(OPENROUTER_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': process.env.BETTER_AUTH_URL ?? 'https://api.campus360b.site',
-          'X-OpenRouter-Title': 'Campus 360 AI Tutor',
-        },
-        body: JSON.stringify({
-          model,
-          messages: conversation,
-          temperature: 0.4,
-          max_tokens: 1500,
-        }),
-      });
+    // Try primary model (gpt-4o-mini or minimax-01) with fallback chain
+    const preferredModel = process.env.OPENROUTER_MODEL || CANDIDATE_MODELS[0];
+    const modelsToTry = Array.from(new Set([preferredModel, ...CANDIDATE_MODELS]));
 
-      if (!response.ok) {
-        console.warn('[ai/pdf-chat] OpenRouter call failed:', response.status);
-        const res = NextResponse.json(
-          {
-            answer: localPdfAnswer(question, pdfContext),
-            local: true,
+    let lastError: unknown = null;
+    for (const model of modelsToTry) {
+      try {
+        const response = await fetch(OPENROUTER_URL, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': process.env.BETTER_AUTH_URL ?? 'https://api.campus360b.site',
+            'X-OpenRouter-Title': 'Campus 360 AI Tutor',
           },
-          { status: 200 },
-        );
-        return withCors(res, request);
+          body: JSON.stringify({
+            model,
+            messages: conversation,
+            temperature: 0.4,
+            max_tokens: 1500,
+          }),
+        });
+
+        if (!response.ok) {
+          console.warn(`[ai/pdf-chat] Model ${model} returned status: ${response.status}`);
+          continue;
+        }
+
+        const payload = (await response.json()) as {
+          choices?: Array<{ message?: { content?: string } }>;
+        };
+
+        const aiAnswer = payload.choices?.[0]?.message?.content;
+        if (aiAnswer) {
+          return withCors(
+            NextResponse.json({
+              answer: aiAnswer,
+              model,
+            }),
+            request,
+          );
+        }
+      } catch (err) {
+        lastError = err;
+        console.warn(`[ai/pdf-chat] Model ${model} error:`, err);
       }
-
-      const payload = (await response.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
-      };
-
-      const aiAnswer = payload.choices?.[0]?.message?.content;
-      if (!aiAnswer) {
-        const res = NextResponse.json(
-          {
-            answer: localPdfAnswer(question, pdfContext),
-            local: true,
-          },
-          { status: 200 },
-        );
-        return withCors(res, request);
-      }
-
-      const res = NextResponse.json({
-        answer: aiAnswer,
-        model,
-      });
-      return withCors(res, request);
-    } catch (apiError) {
-      console.warn('[ai/pdf-chat] OpenRouter network error, using fallback:', apiError);
-      const res = NextResponse.json(
-        {
-          answer: localPdfAnswer(question, pdfContext),
-          local: true,
-        },
-        { status: 200 },
-      );
-      return withCors(res, request);
     }
+
+    console.warn('[ai/pdf-chat] All AI models failed, using fallback:', lastError);
+    const res = NextResponse.json(
+      {
+        answer: localPdfAnswer(question, pdfContext),
+        local: true,
+      },
+      { status: 200 },
+    );
+    return withCors(res, request);
   } catch (error) {
     const status = error instanceof MobileApiError ? error.status : 500;
     const message = error instanceof MobileApiError ? error.message : 'Erreur lors du traitement IA.';
