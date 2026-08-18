@@ -524,3 +524,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     );
   }
 }
+
+export async function POST(request: NextRequest, context: RouteContext) {
+  return GET(request, context);
+}

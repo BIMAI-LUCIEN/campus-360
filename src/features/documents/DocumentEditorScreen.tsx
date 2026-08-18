@@ -293,6 +293,7 @@ let reportData = null;
 let saveTimer = null;
 let historyStack = [];
 let redoStack = [];
+let lastSavedContent = {};
 
 function sendToApp(payload) {
   try {
@@ -310,7 +311,7 @@ function sendToApp(payload) {
 // ── Section nav ────────────────────────────────────────────────────────────
 function renderSectionNav() {
   const nav = document.getElementById('sectionNav');
-  if (!reportData) return;
+  if (!nav || !reportData || !reportData.sections) return;
   nav.innerHTML = reportData.sections.map(s =>
     '<button class="sec-pill' + (s.id === currentSectionId ? ' active' : '') + '" data-id="' + s.id + '">' + s.title + '</button>'
   ).join('');
@@ -322,25 +323,34 @@ function renderSectionNav() {
 }
 
 // ── Switch section ──────────────────────────────────────────────────────────
-function switchSection(sectionId) {
-  // Save current first
-  saveCurrentSection();
+function switchSection(sectionId, shouldSave = true) {
+  if (!sectionId || !reportData || !reportData.sections) return;
+
+  // Save current section only if switching away and content changed
+  if (shouldSave && currentSectionId && currentSectionId !== sectionId) {
+    saveCurrentSection(false);
+  }
 
   currentSectionId = sectionId;
+  sendToApp({ type: 'sectionChanged', sectionId: sectionId });
+
   const section = reportData.sections.find(s => s.id === sectionId);
   if (!section) return;
 
-  const lower = section.title.toLowerCase();
+  const lower = (section.title || '').toLowerCase().trim();
 
   if (lower === 'page de garde') {
     renderCoverPage();
-    document.getElementById('toolbar').style.display = 'none';
+    const tb = document.getElementById('toolbar');
+    if (tb) tb.style.display = 'none';
   } else if (lower === 'sommaire') {
     renderTOC();
-    document.getElementById('toolbar').style.display = 'none';
+    const tb = document.getElementById('toolbar');
+    if (tb) tb.style.display = 'none';
   } else {
     renderRichEditor(section);
-    document.getElementById('toolbar').style.display = 'flex';
+    const tb = document.getElementById('toolbar');
+    if (tb) tb.style.display = 'flex';
   }
 
   renderSectionNav();
@@ -511,18 +521,26 @@ function renderRichEditor(section) {
 }
 
 // ── Save current section ────────────────────────────────────────────────────
-function saveCurrentSection() {
-  if (!currentSectionId) return;
+function saveCurrentSection(showIndicator = true) {
+  if (!currentSectionId || !reportData || !reportData.sections) return;
   const section = reportData.sections.find(s => s.id === currentSectionId);
   if (!section) return;
   const editor = document.getElementById('editor');
-  if (editor) section.content_html = editor.innerHTML;
+  if (editor) {
+    section.content_html = editor.innerHTML;
+  }
+  if (lastSavedContent[currentSectionId] === section.content_html) {
+    return;
+  }
+  lastSavedContent[currentSectionId] = section.content_html;
   sendToApp({
     type: 'saveSection',
     sectionId: currentSectionId,
     content: section.content_html
   });
-  showSaveIndicator();
+  if (showIndicator) {
+    showSaveIndicator();
+  }
 }
 
 // ── Toolbar actions ─────────────────────────────────────────────────────────
@@ -706,12 +724,38 @@ function showSaveIndicator() {
 }
 
 // ── Load data from React Native ─────────────────────────────────────────────
-window.loadReportData = function(data) {
+window.loadReportData = function(data, targetSectionId) {
+  if (!data || !data.sections) return;
   reportData = data;
-  const firstEditable = data.sections.find(s =>
-    !['page de garde','sommaire'].includes(s.title.toLowerCase())
-  );
-  switchSection(firstEditable ? firstEditable.id : (data.sections[0] ? data.sections[0].id : null));
+
+  data.sections.forEach(s => {
+    if (lastSavedContent[s.id] === undefined) {
+      lastSavedContent[s.id] = s.content_html || '';
+    }
+  });
+
+  renderSectionNav();
+
+  // If the user is already on a valid section, do not reset or reload!
+  if (currentSectionId && data.sections.some(s => s.id === currentSectionId)) {
+    return;
+  }
+
+  let sectionToOpen = targetSectionId;
+  if (!sectionToOpen || !data.sections.some(s => s.id === sectionToOpen)) {
+    const firstEditable = data.sections.find(s =>
+      !['page de garde','sommaire'].includes((s.title || '').toLowerCase().trim())
+    );
+    sectionToOpen = firstEditable ? firstEditable.id : (data.sections[0] ? data.sections[0].id : null);
+  }
+
+  if (sectionToOpen) {
+    switchSection(sectionToOpen, false);
+  }
+};
+
+window.switchSection = function(sectionId) {
+  switchSection(sectionId, true);
 };
 
 window.insertAIHtml = function(html) {
@@ -731,6 +775,9 @@ window.insertAIHtml = function(html) {
 
 export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScreenProps) {
   const webViewRef = useRef<any>(null);
+  const webViewLoadedRef = useRef(false);
+  const initialDataSentRef = useRef(false);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [report, setReport] = useState<Document | null>(null);
@@ -779,19 +826,24 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
 
   useEffect(() => { loadReport(); }, [loadReport]);
 
-  // Inject data into WebView once loaded
+  // Inject initial data into WebView once loaded and report is ready
   useEffect(() => {
-    if (!loading && report && sections.length > 0 && webViewRef.current) {
+    if (!loading && report && sections.length > 0 && webViewRef.current && webViewLoadedRef.current && !initialDataSentRef.current) {
       webViewRef.current.injectJavaScript(
-        `window.loadReportData(${JSON.stringify({ report, sections })}); true;`
+        `window.loadReportData(${JSON.stringify({ report, sections })}, ${JSON.stringify(currentSectionId)}); true;`
       );
+      initialDataSentRef.current = true;
     }
-  }, [loading, report, sections]);
+  }, [loading, report, sections, currentSectionId]);
 
   // Handle messages from WebView
   const handleWebViewMessage = useCallback(async (event: any) => {
     try {
       const msg = JSON.parse(event.nativeEvent.data);
+
+      if (msg.type === 'sectionChanged') {
+        setCurrentSectionId(msg.sectionId);
+      }
 
       if (msg.type === 'saveSection') {
         setSaving(true);
@@ -919,13 +971,16 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
       setNewSectionTitle('');
       setShowAddSection(false);
       // Switch to new section in WebView
+      const updatedSections = [...sections, newSection];
+      setSections(updatedSections);
+      setNewSectionTitle('');
+      setShowAddSection(false);
+      setCurrentSectionId(newSection.id);
       if (webViewRef.current && report) {
-        const updatedSections = [...sections, newSection];
         webViewRef.current.injectJavaScript(
-          `window.loadReportData(${JSON.stringify({ report, sections: updatedSections })}); true;`
+          `window.loadReportData(${JSON.stringify({ report, sections: updatedSections })}, ${JSON.stringify(newSection.id)}); true;`
         );
       }
-      setCurrentSectionId(newSection.id);
     } catch (err: any) {
       Alert.alert('Erreur', err.message);
     } finally {
@@ -955,13 +1010,12 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
               });
               const remaining = sections.filter(s => s.id !== sectionId);
               setSections(remaining);
-              if (currentSectionId === sectionId) {
-                setCurrentSectionId(remaining[0]?.id ?? null);
-                if (report && webViewRef.current) {
-                  webViewRef.current.injectJavaScript(
-                    `window.loadReportData(${JSON.stringify({ report, sections: remaining })}); true;`
-                  );
-                }
+              const nextId = currentSectionId === sectionId ? (remaining[0]?.id ?? null) : currentSectionId;
+              setCurrentSectionId(nextId);
+              if (report && webViewRef.current) {
+                webViewRef.current.injectJavaScript(
+                  `window.loadReportData(${JSON.stringify({ report, sections: remaining })}, ${JSON.stringify(nextId)}); true;`
+                );
               }
             } catch {
               Alert.alert('Erreur', 'Impossible de supprimer la section.');
@@ -1235,10 +1289,12 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
           domStorageEnabled={true}
           onMessage={handleWebViewMessage}
           onLoadEnd={() => {
+            webViewLoadedRef.current = true;
             if (report && sections.length > 0 && webViewRef.current) {
               webViewRef.current.injectJavaScript(
-                `window.loadReportData(${JSON.stringify({ report, sections })}); true;`
+                `window.loadReportData(${JSON.stringify({ report, sections })}, ${JSON.stringify(currentSectionId)}); true;`
               );
+              initialDataSentRef.current = true;
             }
           }}
           scrollEnabled={true}
