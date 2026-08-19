@@ -260,20 +260,23 @@ body {
 <div class="section-nav" id="sectionNav"></div>
 
 <!-- Toolbar -->
-<div class="toolbar" id="toolbar">
-  <button class="tool-btn" id="btnBold" title="Gras">B</button>
-  <button class="tool-btn" id="btnItalic" title="Italique"><i>I</i></button>
+<div class="toolbar" id="toolbar" onmousedown="event.preventDefault()" ontouchstart="event.preventDefault()" onpointerdown="event.preventDefault()">
+  <button type="button" class="tool-btn" id="btnBold" title="Gras"><b>B</b></button>
+  <button type="button" class="tool-btn" id="btnItalic" title="Italique"><i>I</i></button>
+  <button type="button" class="tool-btn" id="btnUnderline" title="Souligné"><u>U</u></button>
   <div class="sep"></div>
-  <button class="tool-btn" id="btnH2" title="Titre 2">H2</button>
-  <button class="tool-btn" id="btnH3" title="Titre 3">H3</button>
-  <button class="tool-btn" id="btnUl" title="Liste">•—</button>
-  <button class="tool-btn" id="btnImage" title="Insérer une image">🖼️</button>
-  <button class="tool-btn" id="btnDiagram" title="Insérer un schéma / diagramme">📐</button>
-  <button class="tool-btn" id="btnTable" title="Insérer un tableau académique">📊</button>
-  <button class="tool-btn" id="btnCallout" title="Insérer un encadré de remarque">💡</button>
+  <button type="button" class="tool-btn" id="btnH2" title="Titre 2">H2</button>
+  <button type="button" class="tool-btn" id="btnH3" title="Titre 3">H3</button>
+  <button type="button" class="tool-btn" id="btnUl" title="Liste à puces">•—</button>
+  <button type="button" class="tool-btn" id="btnOl" title="Liste numérotée">1.</button>
   <div class="sep"></div>
-  <button class="tool-btn" id="btnUndo" title="Annuler">↩</button>
-  <button class="tool-btn" id="btnRedo" title="Refaire">↪</button>
+  <button type="button" class="tool-btn" id="btnImage" title="Insérer une image">🖼️</button>
+  <button type="button" class="tool-btn" id="btnDiagram" title="Insérer un schéma vectoriel">📐</button>
+  <button type="button" class="tool-btn" id="btnTable" title="Insérer un tableau académique">📊</button>
+  <button type="button" class="tool-btn" id="btnCallout" title="Insérer une remarque / note">💡</button>
+  <div class="sep"></div>
+  <button type="button" class="tool-btn" id="btnUndo" title="Annuler">↩</button>
+  <button type="button" class="tool-btn" id="btnRedo" title="Refaire">↪</button>
 </div>
 <input type="file" id="imgInput" accept="image/*" style="display:none">
 <canvas id="imgCanvas" style="display:none"></canvas>
@@ -294,6 +297,7 @@ let saveTimer = null;
 let historyStack = [];
 let redoStack = [];
 let lastSavedContent = {};
+let savedRange = null;
 
 function sendToApp(payload) {
   try {
@@ -306,6 +310,97 @@ function sendToApp(payload) {
   } catch (err) {
     console.warn('[WebView] sendToApp error:', err);
   }
+}
+
+// ── Selection management ───────────────────────────────────────────────────
+function saveSelection() {
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0) {
+    const range = sel.getRangeAt(0);
+    const editor = document.getElementById('editor');
+    if (editor && (editor === range.commonAncestorContainer || editor.contains(range.commonAncestorContainer))) {
+      savedRange = range.cloneRange();
+    }
+  }
+}
+
+function restoreSelection() {
+  const editor = document.getElementById('editor');
+  if (!editor) return false;
+  editor.focus();
+  if (savedRange) {
+    const sel = window.getSelection();
+    if (sel) {
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+      return true;
+    }
+  }
+  return false;
+}
+
+function execFormat(cmd, val = null) {
+  const editor = document.getElementById('editor');
+  if (!editor) return;
+  restoreSelection();
+  try {
+    document.execCommand(cmd, false, val);
+  } catch (err) {
+    console.warn('[Editor] execCommand error:', cmd, err);
+  }
+  saveSelection();
+  updateToolbarState();
+  saveCurrentSection();
+}
+
+function toggleHeading(tag) {
+  const editor = document.getElementById('editor');
+  if (!editor) return;
+  restoreSelection();
+  const currentBlock = document.queryCommandValue('formatBlock');
+  if (currentBlock && currentBlock.toLowerCase() === tag.toLowerCase()) {
+    document.execCommand('formatBlock', false, '<p>');
+  } else {
+    document.execCommand('formatBlock', false, '<' + tag + '>');
+  }
+  saveSelection();
+  updateToolbarState();
+  saveCurrentSection();
+}
+
+function insertHtmlAtCursor(html) {
+  const editor = document.getElementById('editor');
+  if (!editor) return;
+  restoreSelection();
+  let inserted = false;
+  try {
+    inserted = document.execCommand('insertHTML', false, html);
+  } catch (e) {}
+
+  if (!inserted) {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    while (temp.firstChild) {
+      editor.appendChild(temp.firstChild);
+    }
+  }
+  saveSelection();
+  saveCurrentSection();
+}
+
+function updateToolbarState() {
+  try {
+    const btnBold = document.getElementById('btnBold');
+    if (btnBold) btnBold.classList.toggle('active', !!document.queryCommandState('bold'));
+    const btnItalic = document.getElementById('btnItalic');
+    if (btnItalic) btnItalic.classList.toggle('active', !!document.queryCommandState('italic'));
+    const btnUnderline = document.getElementById('btnUnderline');
+    if (btnUnderline) btnUnderline.classList.toggle('active', !!document.queryCommandState('underline'));
+    const btnUl = document.getElementById('btnUl');
+    if (btnUl) btnUl.classList.toggle('active', !!document.queryCommandState('insertUnorderedList'));
+    const btnOl = document.getElementById('btnOl');
+    if (btnOl) btnOl.classList.toggle('active', !!document.queryCommandState('insertOrderedList'));
+  } catch (e) {}
 }
 
 // ── Section nav ────────────────────────────────────────────────────────────
@@ -358,55 +453,64 @@ function switchSection(sectionId, shouldSave = true) {
 
 // ── Cover page ──────────────────────────────────────────────────────────────
 function renderCoverPage() {
-  const cd = reportData.report.cover_data || {};
+  const rep = (reportData && (reportData.report || reportData.document)) || {};
+  const cd = rep.cover_data || {};
   document.getElementById('mainContent').innerHTML = \`
     <div class="cover-form">
       <h2>📄 Page de Garde</h2>
-      <p style="font-size:12px;color:#64748B;margin-bottom:8px;">Remplissez les champs ci-dessous pour personnaliser votre couverture.</p>
+      <p style="font-size:12px;color:#64748B;margin-bottom:8px;">Remplissez les champs ci-dessous pour personnaliser votre couverture universitaire.</p>
       <div class="form-group">
-        <label>Établissement / École</label>
-        <input type="text" id="cd_school" value="\${cd.school || ''}" placeholder="Université de Douala">
+        <label>Établissement / Université / École</label>
+        <input type="text" id="cd_school" value="\${cd.school || ''}" placeholder="Ex: Université de Douala / IUT">
       </div>
       <div class="form-group">
-        <label>Titre du Rapport</label>
-        <input type="text" id="cd_title" value="\${cd.title || ''}" placeholder="Rapport de Stage">
+        <label>Titre du Rapport / Document</label>
+        <input type="text" id="cd_title" value="\${cd.title || ''}" placeholder="Ex: Rapport de Stage de Fin d'Études">
       </div>
       <div class="form-group">
-        <label>Sous-titre / Sujet</label>
-        <textarea id="cd_subtitle" placeholder="Stage de fin d'études...">\${cd.subtitle || ''}</textarea>
+        <label>Sous-titre / Sujet du Stage</label>
+        <textarea id="cd_subtitle" placeholder="Ex: Conception et Déploiement d'une Infrastructure Cloud Hybride...">\${cd.subtitle || ''}</textarea>
       </div>
       <div class="cover-grid">
         <div class="form-group">
           <label>Prénom & Nom Étudiant</label>
-          <input type="text" id="cd_studentName" value="\${cd.studentName || ''}">
+          <input type="text" id="cd_studentName" value="\${cd.studentName || ''}" placeholder="Ex: Jean Dupont">
         </div>
         <div class="form-group">
           <label>Entreprise d'Accueil</label>
-          <input type="text" id="cd_company" value="\${cd.company || ''}">
+          <input type="text" id="cd_company" value="\${cd.company || ''}" placeholder="Ex: MTN Cameroon">
         </div>
       </div>
       <div class="cover-grid">
         <div class="form-group">
-          <label>Maître de Stage</label>
-          <input type="text" id="cd_tutorCorporate" value="\${cd.tutorCorporate || ''}">
+          <label>Maître de Stage / Tuteur Entreprise</label>
+          <input type="text" id="cd_tutorCorporate" value="\${cd.tutorCorporate || ''}" placeholder="Ex: M. Paul Martin">
         </div>
         <div class="form-group">
           <label>Tuteur Académique</label>
-          <input type="text" id="cd_tutorAcademic" value="\${cd.tutorAcademic || ''}">
+          <input type="text" id="cd_tutorAcademic" value="\${cd.tutorAcademic || ''}" placeholder="Ex: Dr. Samuel Eto">
         </div>
       </div>
-      <div class="form-group">
-        <label>Année Académique</label>
-        <input type="text" id="cd_year" value="\${cd.year || ''}" placeholder="2024-2025">
+      <div class="cover-grid">
+        <div class="form-group">
+          <label>Filière / Spécialité</label>
+          <input type="text" id="cd_specialty" value="\${cd.specialty || ''}" placeholder="Ex: Génie Logiciel">
+        </div>
+        <div class="form-group">
+          <label>Année Académique</label>
+          <input type="text" id="cd_year" value="\${cd.year || ''}" placeholder="Ex: 2024-2025">
+        </div>
       </div>
     </div>
   \`;
 
   // Auto-save cover data
-  ['school','title','subtitle','studentName','company','tutorCorporate','tutorAcademic','year'].forEach(field => {
+  ['school','title','subtitle','studentName','company','tutorCorporate','tutorAcademic','specialty','year'].forEach(field => {
     const el = document.getElementById('cd_' + field);
     if (el) {
       el.addEventListener('input', () => {
+        if (!reportData) return;
+        if (!reportData.report) reportData.report = {};
         reportData.report.cover_data = reportData.report.cover_data || {};
         reportData.report.cover_data[field] = el.value;
         clearTimeout(saveTimer);
@@ -416,7 +520,7 @@ function renderCoverPage() {
             data: reportData.report.cover_data
           });
           showSaveIndicator();
-        }, 1500);
+        }, 1200);
       });
     }
   });
@@ -424,17 +528,17 @@ function renderCoverPage() {
 
 // ── TOC ────────────────────────────────────────────────────────────────────
 function renderTOC() {
-  const items = reportData.sections
-    .filter(s => !['page de garde','sommaire'].includes(s.title.toLowerCase()));
+  const items = (reportData.sections || [])
+    .filter(s => !['page de garde','sommaire'].includes((s.title || '').toLowerCase().trim()));
   document.getElementById('mainContent').innerHTML = \`
     <div class="cover-form">
       <h2>📑 Table des Matières</h2>
-      <p style="font-size:12px;color:#64748B;margin-bottom:12px;">Générée automatiquement à l'export.</p>
+      <p style="font-size:12px;color:#64748B;margin-bottom:12px;">Générée automatiquement et paginée à l'exportation PDF.</p>
       <div class="toc-list">
         \${items.map((s, i) => \`
-          <div class="toc-item">
-            <span>\${i + 1}. \${s.title}</span>
-            <span>Page \${i + 3}</span>
+          <div class="toc-item" style="cursor:pointer;" onclick="switchSection('\${s.id}')">
+            <span><strong>\${i + 1}.</strong> \${s.title}</span>
+            <span style="color:#7C3AED;font-weight:600;">Ouvrir ➜</span>
           </div>
         \`).join('')}
       </div>
@@ -442,40 +546,73 @@ function renderTOC() {
   \`;
 }
 
+// ── Starter content helper ──────────────────────────────────────────────────
+function getSectionStarterHtml(section) {
+  if (section.content_html && section.content_html.trim().length > 0) {
+    return section.content_html;
+  }
+  const title = (section.title || '').toLowerCase().trim();
+  if (title.includes('identification')) {
+    return \`
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+        <h3 style="margin-top:0; color:#1E293B;">Fiche d'Identification du Stage</h3>
+        <p><strong>Organisme d'Accueil :</strong> À renseigner</p>
+        <p><strong>Période du Stage :</strong> 3 mois (Du ... au ...)</p>
+        <p><strong>Service / Département :</strong> Direction des Systèmes d'Information</p>
+        <p><strong>Encadreur Professionnel :</strong> À renseigner</p>
+        <p><strong>Encadreur Académique :</strong> À renseigner</p>
+        <p><strong>Thème du Stage :</strong> Conception et Mise en Œuvre de la Plateforme...</p>
+      </div>
+      <p>Rédigez ici les détails complémentaires de la fiche de stage...</p>
+    \`;
+  }
+  if (title.includes('dédicace') || title.includes('remerciement')) {
+    return \`
+      <p><em>Je dédie ce travail à mes parents et à toute ma famille pour leurs encouragements continus...</em></p>
+      <p><br></p>
+      <p><em>J'adresse mes plus vifs remerciements à l'ensemble du corps professoral ainsi qu'à mon tuteur de stage pour leurs conseils avisés tout au long de cette expérience...</em></p>
+    \`;
+  }
+  return '<p><br></p>';
+}
+
 // ── Rich text editor ────────────────────────────────────────────────────────
 function renderRichEditor(section) {
+  const rep = (reportData && (reportData.report || reportData.document)) || {};
   const heading = section.title === 'page de garde' ? '' : \`<div class="section-heading">\${section.title}</div>\`;
+  const initialContent = getSectionStarterHtml(section);
+
   document.getElementById('mainContent').innerHTML = \`
     \${heading}
     <div class="editor-area">
-      <div id="editor" contenteditable="true">\${section.content_html || ''}</div>
+      <div id="editor" contenteditable="true">\${initialContent}</div>
     </div>
     <div class="ai-panel">
-      <h3>✨ Assistant IA</h3>
-      <textarea id="aiPrompt" placeholder="Décris ce que tu veux rédiger (ex: 'Rédige une intro sur...')"></textarea>
+      <h3>✨ Assistant IA de Section</h3>
+      <textarea id="aiPrompt" placeholder="Décris ce que tu souhaites rédiger (ex: 'Rédige une analyse des besoins fonctionnels...')"></textarea>
       <div class="ai-btns">
-        <button class="ai-btn ai-btn-draft" id="aiDraft">Rédiger</button>
-        <button class="ai-btn ai-btn-improve" id="aiImprove">Améliorer sélection</button>
+        <button type="button" class="ai-btn ai-btn-draft" id="aiDraft">✨ Rédiger avec IA</button>
+        <button type="button" class="ai-btn ai-btn-improve" id="aiImprove">Améliorer sélection</button>
       </div>
-      <p class="ai-credit-note" id="aiCreditNote">Coût : 1 crédit IA</p>
+      <p class="ai-credit-note" id="aiCreditNote">Coût : 1 crédit IA • Intégré directement dans la section</p>
     </div>
     <div class="settings-panel">
-      <h3>⚙️ Mise en forme</h3>
+      <h3>⚙️ Mise en forme du document</h3>
       <div class="settings-row">
-        <label>Police</label>
+        <label>Police de caractère</label>
         <select id="selFont">
-          <option value="Times New Roman">Times New Roman</option>
-          <option value="Arial">Arial</option>
-          <option value="Georgia">Georgia</option>
-          <option value="Courier New">Courier New</option>
+          <option value="Times New Roman">Times New Roman (Standard Universitaire)</option>
+          <option value="Arial">Arial (Moderne & Lisible)</option>
+          <option value="Georgia">Georgia (Sérif Élégant)</option>
+          <option value="Courier New">Courier New (Code & Technique)</option>
         </select>
       </div>
       <div class="settings-row">
         <label>Interligne</label>
         <select id="selSpacing">
-          <option value="1.15">1.15</option>
-          <option value="1.5">1.5</option>
-          <option value="2">2.0</option>
+          <option value="1.15">1.15 (Compact)</option>
+          <option value="1.5">1.5 (Standard Académique CAMES)</option>
+          <option value="2">2.0 (Double interligne)</option>
         </select>
       </div>
     </div>
@@ -485,8 +622,16 @@ function renderRichEditor(section) {
   const selFont = document.getElementById('selFont');
   const selSpacing = document.getElementById('selSpacing');
 
-  if (selFont) selFont.value = reportData.report.font_family || 'Times New Roman';
-  if (selSpacing) selSpacing.value = String(reportData.report.line_spacing || '1.5');
+  if (selFont) selFont.value = rep.font_family || 'Times New Roman';
+  if (selSpacing) selSpacing.value = String(rep.line_spacing || '1.5');
+
+  // Track selection and content changes
+  ['keyup', 'mouseup', 'touchend', 'input', 'focus'].forEach(evt => {
+    editor.addEventListener(evt, () => {
+      saveSelection();
+      updateToolbarState();
+    });
+  });
 
   // Auto-save on input
   editor.addEventListener('input', () => {
@@ -496,18 +641,27 @@ function renderRichEditor(section) {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       saveCurrentSection();
-    }, 1500);
+    }, 1200);
   });
 
-  // History
+  // Keyboard shortcuts
   editor.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-      if (e.shiftKey) { document.execCommand('redo'); } else { document.execCommand('undo'); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
       e.preventDefault();
+      execFormat('bold');
+    } else if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+      e.preventDefault();
+      execFormat('italic');
+    } else if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+      e.preventDefault();
+      execFormat('underline');
+    } else if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) { execFormat('redo'); } else { execFormat('undo'); }
     }
   });
 
-  // AI buttons
+  // In-editor AI buttons
   document.getElementById('aiDraft').addEventListener('click', () => runAI('draft'));
   document.getElementById('aiImprove').addEventListener('click', () => runAI('improve'));
 
@@ -543,108 +697,115 @@ function saveCurrentSection(showIndicator = true) {
   }
 }
 
-// ── Toolbar actions ─────────────────────────────────────────────────────────
-document.getElementById('btnBold').addEventListener('click', () => {
-  document.execCommand('bold', false, null);
-  updateToolbarState();
+// ── Toolbar actions binding ─────────────────────────────────────────────────
+document.getElementById('btnBold').addEventListener('click', (e) => {
+  e.preventDefault();
+  execFormat('bold');
 });
-document.getElementById('btnItalic').addEventListener('click', () => {
-  document.execCommand('italic', false, null);
-  updateToolbarState();
+document.getElementById('btnItalic').addEventListener('click', (e) => {
+  e.preventDefault();
+  execFormat('italic');
 });
-document.getElementById('btnH2').addEventListener('click', () => {
-  document.execCommand('formatBlock', false, '<h2>');
+document.getElementById('btnUnderline').addEventListener('click', (e) => {
+  e.preventDefault();
+  execFormat('underline');
 });
-document.getElementById('btnH3').addEventListener('click', () => {
-  document.execCommand('formatBlock', false, '<h3>');
+document.getElementById('btnH2').addEventListener('click', (e) => {
+  e.preventDefault();
+  toggleHeading('h2');
 });
-document.getElementById('btnUl').addEventListener('click', () => {
-  document.execCommand('insertUnorderedList', false, null);
+document.getElementById('btnH3').addEventListener('click', (e) => {
+  e.preventDefault();
+  toggleHeading('h3');
 });
-document.getElementById('btnUndo').addEventListener('click', () => document.execCommand('undo'));
-document.getElementById('btnRedo').addEventListener('click', () => document.execCommand('redo'));
+document.getElementById('btnUl').addEventListener('click', (e) => {
+  e.preventDefault();
+  execFormat('insertUnorderedList');
+});
+document.getElementById('btnOl').addEventListener('click', (e) => {
+  e.preventDefault();
+  execFormat('insertOrderedList');
+});
+document.getElementById('btnUndo').addEventListener('click', (e) => {
+  e.preventDefault();
+  execFormat('undo');
+});
+document.getElementById('btnRedo').addEventListener('click', (e) => {
+  e.preventDefault();
+  execFormat('redo');
+});
 
 // ── Academic Diagrams & Tables Insertion ──────────────────────────────────
-document.getElementById('btnDiagram').addEventListener('click', () => {
-  const editor = document.getElementById('editor');
-  if (editor) {
-    editor.focus();
-    const diagramHtml = \`
-      <div class="figure-container" style="text-align: center; margin: 20px 0; page-break-inside: avoid;">
-        <svg width="100%" height="220" viewBox="0 0 650 220" xmlns="http://www.w3.org/2000/svg" style="max-width: 600px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px;">
-          <rect x="30" y="30" width="160" height="150" rx="8" fill="#38BDF8"/>
-          <text x="110" y="65" font-family="sans-serif" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Couche Client</text>
-          <text x="110" y="105" font-family="sans-serif" font-size="11" fill="#FFFFFF" text-anchor="middle">Application Mobile</text>
-          <line x1="190" y1="105" x2="260" y2="105" stroke="#64748B" stroke-width="2" stroke-dasharray="4,4"/>
-          <rect x="260" y="30" width="160" height="150" rx="8" fill="#818CF8"/>
-          <text x="340" y="65" font-family="sans-serif" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Serveur API</text>
-          <text x="340" y="105" font-family="sans-serif" font-size="11" fill="#FFFFFF" text-anchor="middle">Next.js & Auth JWT</text>
-          <line x1="420" y1="105" x2="490" y2="105" stroke="#64748B" stroke-width="2"/>
-          <rect x="490" y="30" width="140" height="150" rx="8" fill="#34D399"/>
-          <text x="560" y="65" font-family="sans-serif" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Base Données</text>
-          <text x="560" y="105" font-family="sans-serif" font-size="11" fill="#FFFFFF" text-anchor="middle">PostgreSQL Pool</text>
-        </svg>
-        <div style="font-size: 9.5pt; font-style: italic; color: #475569; margin-top: 6px;"><strong>Figure :</strong> Schéma d'Architecture Technique Système</div>
-      </div>
-      <p><br></p>
-    \`;
-    document.execCommand('insertHTML', false, diagramHtml);
-    saveCurrentSection();
-  }
+document.getElementById('btnDiagram').addEventListener('click', (e) => {
+  e.preventDefault();
+  const diagramHtml = \`
+    <div class="figure-container" style="text-align: center; margin: 20px 0; page-break-inside: avoid;">
+      <svg width="100%" height="220" viewBox="0 0 650 220" xmlns="http://www.w3.org/2000/svg" style="max-width: 600px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px;">
+        <rect x="30" y="30" width="160" height="150" rx="8" fill="#38BDF8"/>
+        <text x="110" y="65" font-family="sans-serif" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Couche Client</text>
+        <text x="110" y="105" font-family="sans-serif" font-size="11" fill="#FFFFFF" text-anchor="middle">Application Mobile</text>
+        <line x1="190" y1="105" x2="260" y2="105" stroke="#64748B" stroke-width="2" stroke-dasharray="4,4"/>
+        <rect x="260" y="30" width="160" height="150" rx="8" fill="#818CF8"/>
+        <text x="340" y="65" font-family="sans-serif" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Serveur API</text>
+        <text x="340" y="105" font-family="sans-serif" font-size="11" fill="#FFFFFF" text-anchor="middle">Next.js & Auth JWT</text>
+        <line x1="420" y1="105" x2="490" y2="105" stroke="#64748B" stroke-width="2"/>
+        <rect x="490" y="30" width="140" height="150" rx="8" fill="#34D399"/>
+        <text x="560" y="65" font-family="sans-serif" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Base Données</text>
+        <text x="560" y="105" font-family="sans-serif" font-size="11" fill="#FFFFFF" text-anchor="middle">PostgreSQL Pool</text>
+      </svg>
+      <div style="font-size: 9.5pt; font-style: italic; color: #475569; margin-top: 6px;"><strong>Figure :</strong> Schéma d'Architecture Technique Système</div>
+    </div>
+    <p><br></p>
+  \`;
+  insertHtmlAtCursor(diagramHtml);
 });
 
-document.getElementById('btnTable').addEventListener('click', () => {
-  const editor = document.getElementById('editor');
-  if (editor) {
-    editor.focus();
-    const tableHtml = \`
-      <div style="margin: 18px 0; overflow-x: auto; page-break-inside: avoid;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 10pt; text-align: left; background: #FFFFFF; border: 1px solid #CBD5E1;">
-          <thead>
-            <tr style="background: #0F172A; color: #FFFFFF;">
-              <th style="padding: 8px 12px; border: 1px solid #334155;">Paramètre</th>
-              <th style="padding: 8px 12px; border: 1px solid #334155;">Description Technique</th>
-              <th style="padding: 8px 12px; border: 1px solid #334155;">Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="background: #F8FAFC;">
-              <td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Sécurité JWT</td>
-              <td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Tokens chiffrés et sessions Better Auth</td>
-              <td style="padding: 6px 12px; border: 1px solid #E2E8F0; color: #059669; font-weight: bold;">Validé</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Exportation PDF</td>
-              <td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Moteur vectoriel A4 conforme CAMES</td>
-              <td style="padding: 6px 12px; border: 1px solid #E2E8F0; color: #059669; font-weight: bold;">Validé</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p><br></p>
-    \`;
-    document.execCommand('insertHTML', false, tableHtml);
-    saveCurrentSection();
-  }
+document.getElementById('btnTable').addEventListener('click', (e) => {
+  e.preventDefault();
+  const tableHtml = \`
+    <div style="margin: 18px 0; overflow-x: auto; page-break-inside: avoid;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 10pt; text-align: left; background: #FFFFFF; border: 1px solid #CBD5E1;">
+        <thead>
+          <tr style="background: #0F172A; color: #FFFFFF;">
+            <th style="padding: 8px 12px; border: 1px solid #334155;">Critère</th>
+            <th style="padding: 8px 12px; border: 1px solid #334155;">Description Technique</th>
+            <th style="padding: 8px 12px; border: 1px solid #334155;">Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background: #F8FAFC;">
+            <td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Sécurité Auth</td>
+            <td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Tokens chiffrés et sessions sécurisées</td>
+            <td style="padding: 6px 12px; border: 1px solid #E2E8F0; color: #059669; font-weight: bold;">Validé</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Exportation PDF</td>
+            <td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Moteur vectoriel A4 conforme CAMES</td>
+            <td style="padding: 6px 12px; border: 1px solid #E2E8F0; color: #059669; font-weight: bold;">Validé</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="font-size: 9pt; font-style: italic; color: #64748B; margin-top: 6px; text-align: center;"><strong>Tableau :</strong> Synthèse Comparative des Modules</div>
+    </div>
+    <p><br></p>
+  \`;
+  insertHtmlAtCursor(tableHtml);
 });
 
-document.getElementById('btnCallout').addEventListener('click', () => {
-  const editor = document.getElementById('editor');
-  if (editor) {
-    editor.focus();
-    const calloutHtml = \`
-      <blockquote style="margin: 16px 0; padding: 10px 16px; background: #F8FAFC; border-left: 4px solid #0284C7; font-style: italic; color: #334155; border-radius: 0 6px 6px 0;">
-        <strong>Remarque Académique :</strong> Ce paragraphe met en lumière les points clés de l'analyse méthodologique.
-      </blockquote>
-      <p><br></p>
-    \`;
-    document.execCommand('insertHTML', false, calloutHtml);
-    saveCurrentSection();
-  }
+document.getElementById('btnCallout').addEventListener('click', (e) => {
+  e.preventDefault();
+  const calloutHtml = \`
+    <blockquote style="margin: 16px 0; padding: 12px 16px; background: #F8FAFC; border-left: 4px solid #7C3AED; font-style: italic; color: #334155; border-radius: 0 8px 8px 0;">
+      <strong>Remarque Académique :</strong> Ce paragraphe met en lumière les points clés de l'analyse méthodologique.
+    </blockquote>
+    <p><br></p>
+  \`;
+  insertHtmlAtCursor(calloutHtml);
 });
 
-// ── Image insertion (pick from device → downscale in-canvas → embed) ─────────
-document.getElementById('btnImage').addEventListener('click', () => {
+// ── Image insertion ─────────────────────────────────────────────────────────
+document.getElementById('btnImage').addEventListener('click', (e) => {
+  e.preventDefault();
   document.getElementById('imgInput').click();
 });
 document.getElementById('imgInput').addEventListener('change', (e) => {
@@ -666,12 +827,7 @@ document.getElementById('imgInput').addEventListener('change', (e) => {
       let dataUrl;
       try { dataUrl = canvas.toDataURL('image/jpeg', 0.72); }
       catch (err) { dataUrl = reader.result; }
-      const editor = document.getElementById('editor');
-      if (editor) {
-        editor.focus();
-        document.execCommand('insertHTML', false, '<img src="' + dataUrl + '" alt="image"/><p><br></p>');
-        saveCurrentSection();
-      }
+      insertHtmlAtCursor('<img src="' + dataUrl + '" alt="Figure" style="max-width:100%; border-radius:8px; margin:10px 0;"/><p><br></p>');
       e.target.value = '';
     };
     img.onerror = () => { e.target.value = ''; };
@@ -681,22 +837,20 @@ document.getElementById('imgInput').addEventListener('change', (e) => {
   reader.readAsDataURL(file);
 });
 
-function updateToolbarState() {
-  document.getElementById('btnBold').classList.toggle('active', document.queryCommandState('bold'));
-  document.getElementById('btnItalic').classList.toggle('active', document.queryCommandState('italic'));
-}
-
-// Update toolbar on selection change
+// Update toolbar on global selectionchange
 document.addEventListener('selectionchange', () => {
-  if (document.activeElement === document.getElementById('editor')) {
+  const editor = document.getElementById('editor');
+  if (document.activeElement === editor || (editor && editor.contains(document.activeElement))) {
+    saveSelection();
     updateToolbarState();
   }
 });
 
-// ── AI ─────────────────────────────────────────────────────────────────────
+// ── AI Request helper ──────────────────────────────────────────────────────
 async function runAI(action) {
-  const prompt = document.getElementById('aiPrompt').value.trim();
-  if (!prompt) { alert('Décris ce que tu veux rédiger.'); return; }
+  const promptEl = document.getElementById('aiPrompt');
+  const prompt = promptEl ? promptEl.value.trim() : '';
+  if (!prompt) { alert('Décris ce que tu souhaites rédiger.'); return; }
   const section = reportData.sections.find(s => s.id === currentSectionId);
   const editor = document.getElementById('editor');
 
@@ -719,8 +873,10 @@ async function runAI(action) {
 // ── Save indicator ─────────────────────────────────────────────────────────
 function showSaveIndicator() {
   const el = document.getElementById('saveIndicator');
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2000);
+  if (el) {
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2000);
+  }
 }
 
 // ── Load data from React Native ─────────────────────────────────────────────
@@ -736,12 +892,14 @@ window.loadReportData = function(data, targetSectionId) {
 
   renderSectionNav();
 
-  // If the user is already on a valid section, do not reset or reload!
-  if (currentSectionId && data.sections.some(s => s.id === currentSectionId)) {
+  const hasMountedContent = !!(document.getElementById('editor') || document.getElementById('cd_school') || document.querySelector('.toc-list'));
+  
+  // If the editor is already mounted and matches currentSectionId, keep the DOM intact!
+  if (hasMountedContent && currentSectionId && data.sections.some(s => s.id === currentSectionId)) {
     return;
   }
 
-  let sectionToOpen = targetSectionId;
+  let sectionToOpen = targetSectionId || currentSectionId;
   if (!sectionToOpen || !data.sections.some(s => s.id === sectionToOpen)) {
     const firstEditable = data.sections.find(s =>
       !['page de garde','sommaire'].includes((s.title || '').toLowerCase().trim())
@@ -759,12 +917,8 @@ window.switchSection = function(sectionId) {
 };
 
 window.insertAIHtml = function(html) {
-  const editor = document.getElementById('editor');
-  if (editor) {
-    editor.focus();
-    document.execCommand('insertHTML', false, html);
-    saveCurrentSection();
-  }
+  insertHtmlAtCursor(html);
+  showSaveIndicator();
 };
 </script>
 </body>
