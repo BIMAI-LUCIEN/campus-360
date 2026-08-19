@@ -45,7 +45,7 @@ type DocumentEditorScreenProps = {
 
 // ─── HTML Editor (bundled) ───────────────────────────────────────────────────
 
-const EDITOR_HTML = (sectionTitles: string[]) => `
+const EDITOR_HTML = (report: Document | null, sections: DocumentSection[], initialSectionId: string | null) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -290,9 +290,8 @@ body {
 <div class="save-indicator" id="saveIndicator">✓ Sauvegardé</div>
 
 <script>
-const sections = ${JSON.stringify(sectionTitles)};
-let currentSectionId = null;
-let reportData = null;
+let reportData = ${JSON.stringify({ report, sections })};
+let currentSectionId = ${JSON.stringify(initialSectionId)};
 let saveTimer = null;
 let historyStack = [];
 let redoStack = [];
@@ -920,6 +919,15 @@ window.insertAIHtml = function(html) {
   insertHtmlAtCursor(html);
   showSaveIndicator();
 };
+
+// Immediate first-render on load
+try {
+  if (reportData && reportData.sections && reportData.sections.length > 0) {
+    window.loadReportData(reportData, currentSectionId);
+  }
+} catch (e) {
+  console.warn('[Editor Auto-Render Error]', e);
+}
 </script>
 </body>
 </html>
@@ -1437,7 +1445,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
         <WebView
           ref={webViewRef}
           originWhitelist={['*']}
-          source={{ html: EDITOR_HTML(sectionTitles) }}
+          source={{ html: EDITOR_HTML(report, sections, currentSectionId) }}
           style={styles.webView}
           javaScriptEnabled={true}
           domStorageEnabled={true}
