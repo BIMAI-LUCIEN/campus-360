@@ -3,7 +3,7 @@
  * No admin-server dependency for the editing UI itself.
  * Only AI calls and data persistence require the server.
  */
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   StyleSheet, View, Text, Pressable, SafeAreaView, ScrollView,
   TextInput, ActivityIndicator, Alert, Modal,
@@ -45,7 +45,7 @@ type DocumentEditorScreenProps = {
 
 // ─── HTML Editor (bundled) ───────────────────────────────────────────────────
 
-const EDITOR_HTML = (report: Document | null, sections: DocumentSection[], initialSectionId: string | null) => `
+const EDITOR_HTML = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -387,8 +387,8 @@ body {
 <div class="save-indicator" id="saveIndicator">✓ Sauvegardé</div>
 
 <script>
-let reportData = ${JSON.stringify({ report, sections })};
-let currentSectionId = ${JSON.stringify(initialSectionId)};
+let reportData = null;
+let currentSectionId = null;
 let saveTimer = null;
 let lastSavedContent = {};
 let savedRange = null;
@@ -764,16 +764,18 @@ function initEditor() {
     }
   });
 
-  // Render initial section immediately
-  let sectionToOpen = currentSectionId;
-  if (!sectionToOpen || !(reportData.sections || []).some(s => s.id === sectionToOpen)) {
-    const firstEditable = (reportData.sections || []).find(s =>
-      !['page de garde','sommaire'].includes((s.title || '').toLowerCase().trim())
-    );
-    sectionToOpen = firstEditable ? firstEditable.id : (reportData.sections && reportData.sections[0] ? reportData.sections[0].id : null);
-  }
-  if (sectionToOpen) {
-    switchSection(sectionToOpen, false);
+  // Render initial section if reportData is present
+  if (reportData && reportData.sections) {
+    let sectionToOpen = currentSectionId;
+    if (!sectionToOpen || !(reportData.sections || []).some(s => s.id === sectionToOpen)) {
+      const firstEditable = (reportData.sections || []).find(s =>
+        !['page de garde','sommaire'].includes((s.title || '').toLowerCase().trim())
+      );
+      sectionToOpen = firstEditable ? firstEditable.id : (reportData.sections && reportData.sections[0] ? reportData.sections[0].id : null);
+    }
+    if (sectionToOpen) {
+      switchSection(sectionToOpen, false);
+    }
   }
 }
 
@@ -818,6 +820,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
   const webViewRef = useRef<any>(null);
   const webViewLoadedRef = useRef(false);
   const initialDataSentRef = useRef(false);
+  const editorHtmlSource = useMemo(() => ({ html: EDITOR_HTML }), []);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -1324,7 +1327,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
         <WebView
           ref={webViewRef}
           originWhitelist={['*']}
-          source={{ html: EDITOR_HTML(report, sections, currentSectionId) }}
+          source={editorHtmlSource}
           style={styles.webView}
           javaScriptEnabled={true}
           domStorageEnabled={true}
