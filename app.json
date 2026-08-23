@@ -31,7 +31,8 @@
         "expo-updates",
         {
           "channels": [
-            "preview"
+            "preview",
+            "production"
           ]
         }
       ],

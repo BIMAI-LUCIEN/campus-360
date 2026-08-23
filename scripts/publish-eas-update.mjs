@@ -13,27 +13,47 @@ const env = {
   CI: '1',
 };
 
-const branch = process.argv[2] || 'production';
-const message = process.argv[3] || 'feat(redaction): academic stage report standards, svg diagrams and pdf export';
-
-console.log(`🚀 Publishing EAS Update to branch [${branch}]...`);
-console.log(`📝 Message: "${message}"`);
+const requestedBranch = process.argv[2];
+const message = process.argv[3] || 'fix(editor): guaranteed rendering, stable webview, and full formatting toolbar';
+const branches = requestedBranch && requestedBranch !== 'all' ? [requestedBranch] : ['production', 'preview'];
 
 const easCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-const args = ['eas', 'update', '--branch', branch, `--message="${message}"`, '--non-interactive'];
 
-const child = spawn(easCmd, args, {
-  env,
-  stdio: 'inherit',
-  shell: true,
-});
+async function publishBranch(branch) {
+  return new Promise((resolve, reject) => {
+    console.log(`\n🚀 Publishing EAS Update to branch [${branch}]...`);
+    console.log(`📝 Message: "${message}"`);
 
-child.on('close', (code) => {
-  if (code === 0) {
-    console.log(`\n✅ EAS Update to branch [${branch}] published successfully!`);
-    process.exit(0);
-  } else {
-    console.error(`\n❌ EAS Update exited with code ${code}`);
-    process.exit(code || 1);
+    const args = ['eas', 'update', '--branch', branch, `--message=${message}`, '--non-interactive'];
+
+    const child = spawn(easCmd, args, {
+      env,
+      stdio: 'inherit',
+      shell: true,
+    });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        console.log(`✅ EAS Update to branch [${branch}] published successfully!`);
+        resolve();
+      } else {
+        console.error(`❌ EAS Update to branch [${branch}] failed with code ${code}`);
+        reject(new Error(`Exit code ${code}`));
+      }
+    });
+  });
+}
+
+async function run() {
+  for (const b of branches) {
+    try {
+      await publishBranch(b);
+    } catch (e) {
+      console.error(`Failed on branch ${b}:`, e.message);
+      process.exit(1);
+    }
   }
-});
+  console.log('\n🎉 All EAS updates published successfully to branches:', branches.join(', '));
+}
+
+run();
