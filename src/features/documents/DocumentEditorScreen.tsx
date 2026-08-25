@@ -266,7 +266,7 @@ body {
 <body>
 
 <!-- Toolbar -->
-<div class="toolbar" id="toolbar" onmousedown="event.preventDefault()" ontouchstart="event.preventDefault()" onpointerdown="event.preventDefault()">
+<div class="toolbar" id="toolbar">
   <button type="button" class="tool-btn" id="btnBold" title="Gras"><b>B</b></button>
   <button type="button" class="tool-btn" id="btnItalic" title="Italique"><i>I</i></button>
   <button type="button" class="tool-btn" id="btnUnderline" title="Souligné"><u>U</u></button>
@@ -436,6 +436,7 @@ function restoreSelection() {
 function execFormat(cmd, val = null) {
   const editor = document.getElementById('editor');
   if (!editor) return;
+  editor.focus();
   restoreSelection();
   try {
     document.execCommand(cmd, false, val);
@@ -450,6 +451,7 @@ function execFormat(cmd, val = null) {
 function toggleHeading(tag) {
   const editor = document.getElementById('editor');
   if (!editor) return;
+  editor.focus();
   restoreSelection();
   const currentBlock = document.queryCommandValue('formatBlock');
   if (currentBlock && currentBlock.toLowerCase() === tag.toLowerCase()) {
@@ -465,6 +467,7 @@ function toggleHeading(tag) {
 function insertHtmlAtCursor(html) {
   const editor = document.getElementById('editor');
   if (!editor) return;
+  editor.focus();
   restoreSelection();
   let inserted = false;
   try {
@@ -500,13 +503,6 @@ function updateToolbarState() {
 function getSectionStarterHtml(section) {
   if (section.content_html && section.content_html.trim().length > 0) {
     return section.content_html;
-  }
-  const title = (section.title || '').toLowerCase().trim();
-  if (title.includes('identification')) {
-    return '<div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin-bottom: 16px;"><h3 style="margin-top:0; color:#1E293B;">Fiche d\'Identification du Stage</h3><p><strong>Organisme d\'Accueil :</strong> &Agrave; renseigner</p><p><strong>P&eacute;riode du Stage :</strong> 3 mois (Du ... au ...)</p><p><strong>Service / D&eacute;partement :</strong> Direction des Syst&egrave;mes d\'Information</p><p><strong>Encadreur Professionnel :</strong> &Agrave; renseigner</p><p><strong>Encadreur Acad&eacute;mique :</strong> &Agrave; renseigner</p><p><strong>Th&egrave;me du Stage :</strong> Conception et Mise en &OElig;uvre de la Plateforme...</p></div><p>R&eacute;digez ici les d&eacute;tails compl&eacute;mentaires de la fiche de stage...</p>';
-  }
-  if (title.includes('dédicace') || title.includes('remerciement')) {
-    return '<p><em>Je d&eacute;die ce travail &agrave; mes parents et &agrave; toute ma famille pour leurs encouragements continus...</em></p><p><br></p><p><em>J\'adresse mes plus vifs remerciements &agrave; l\'ensemble du corps professoral ainsi qu\'&agrave; mon tuteur de stage pour leurs conseils avis&eacute;s tout au long de cette exp&eacute;rience...</em></p>';
   }
   return '<p><br></p>';
 }
@@ -640,40 +636,52 @@ async function runAI(action) {
   });
 }
 
+function attachBtn(id, action) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    action();
+  });
+  el.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    action();
+  });
+  el.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+  });
+}
+
 function initEditor() {
   // Toolbar Buttons
-  document.getElementById('btnBold').addEventListener('click', (e) => { e.preventDefault(); execFormat('bold'); });
-  document.getElementById('btnItalic').addEventListener('click', (e) => { e.preventDefault(); execFormat('italic'); });
-  document.getElementById('btnUnderline').addEventListener('click', (e) => { e.preventDefault(); execFormat('underline'); });
-  document.getElementById('btnH2').addEventListener('click', (e) => { e.preventDefault(); toggleHeading('h2'); });
-  document.getElementById('btnH3').addEventListener('click', (e) => { e.preventDefault(); toggleHeading('h3'); });
-  document.getElementById('btnUl').addEventListener('click', (e) => { e.preventDefault(); execFormat('insertUnorderedList'); });
-  document.getElementById('btnOl').addEventListener('click', (e) => { e.preventDefault(); execFormat('insertOrderedList'); });
-  document.getElementById('btnUndo').addEventListener('click', (e) => { e.preventDefault(); execFormat('undo'); });
-  document.getElementById('btnRedo').addEventListener('click', (e) => { e.preventDefault(); execFormat('redo'); });
+  attachBtn('btnBold', () => execFormat('bold'));
+  attachBtn('btnItalic', () => execFormat('italic'));
+  attachBtn('btnUnderline', () => execFormat('underline'));
+  attachBtn('btnH2', () => toggleHeading('h2'));
+  attachBtn('btnH3', () => toggleHeading('h3'));
+  attachBtn('btnUl', () => execFormat('insertUnorderedList'));
+  attachBtn('btnOl', () => execFormat('insertOrderedList'));
+  attachBtn('btnUndo', () => execFormat('undo'));
+  attachBtn('btnRedo', () => execFormat('redo'));
 
   // Diagram & Table & Callout
-  document.getElementById('btnDiagram').addEventListener('click', (e) => {
-    e.preventDefault();
+  attachBtn('btnDiagram', () => {
     const diagramHtml = '<div class="figure-container" style="text-align: center; margin: 20px 0; page-break-inside: avoid;"><svg width="100%" height="220" viewBox="0 0 650 220" xmlns="http://www.w3.org/2000/svg" style="max-width: 600px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px;"><rect x="30" y="30" width="160" height="150" rx="8" fill="#38BDF8"/><text x="110" y="65" font-family="sans-serif" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Couche Client</text><text x="110" y="105" font-family="sans-serif" font-size="11" fill="#FFFFFF" text-anchor="middle">Application Mobile</text><line x1="190" y1="105" x2="260" y2="105" stroke="#64748B" stroke-width="2" stroke-dasharray="4,4"/><rect x="260" y="30" width="160" height="150" rx="8" fill="#818CF8"/><text x="340" y="65" font-family="sans-serif" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Serveur API</text><text x="340" y="105" font-family="sans-serif" font-size="11" fill="#FFFFFF" text-anchor="middle">Next.js & Auth JWT</text><line x1="420" y1="105" x2="490" y2="105" stroke="#64748B" stroke-width="2"/><rect x="490" y="30" width="140" height="150" rx="8" fill="#34D399"/><text x="560" y="65" font-family="sans-serif" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Base Données</text><text x="560" y="105" font-family="sans-serif" font-size="11" fill="#FFFFFF" text-anchor="middle">PostgreSQL Pool</text></svg><div style="font-size: 9.5pt; font-style: italic; color: #475569; margin-top: 6px;"><strong>Figure :</strong> Sch&eacute;ma d\'Architecture Technique Syst&egrave;me</div></div><p><br></p>';
     insertHtmlAtCursor(diagramHtml);
   });
 
-  document.getElementById('btnTable').addEventListener('click', (e) => {
-    e.preventDefault();
+  attachBtn('btnTable', () => {
     const tableHtml = '<div style="margin: 18px 0; overflow-x: auto; page-break-inside: avoid;"><table style="width: 100%; border-collapse: collapse; font-size: 10pt; text-align: left; background: #FFFFFF; border: 1px solid #CBD5E1;"><thead><tr style="background: #0F172A; color: #FFFFFF;"><th style="padding: 8px 12px; border: 1px solid #334155;">Crit&egrave;re</th><th style="padding: 8px 12px; border: 1px solid #334155;">Description Technique</th><th style="padding: 8px 12px; border: 1px solid #334155;">Statut</th></tr></thead><tbody><tr style="background: #F8FAFC;"><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">S&eacute;curit&eacute; Auth</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Tokens chiffr&eacute;s et sessions s&eacute;curis&eacute;es</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0; color: #059669; font-weight: bold;">Valid&eacute;</td></tr><tr><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Exportation PDF</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Moteur vectoriel A4 conforme CAMES</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0; color: #059669; font-weight: bold;">Valid&eacute;</td></tr></tbody></table><div style="font-size: 9pt; font-style: italic; color: #64748B; margin-top: 6px; text-align: center;"><strong>Tableau :</strong> Synth&egrave;se Comparative des Modules</div></div><p><br></p>';
     insertHtmlAtCursor(tableHtml);
   });
 
-  document.getElementById('btnCallout').addEventListener('click', (e) => {
-    e.preventDefault();
+  attachBtn('btnCallout', () => {
     const calloutHtml = '<blockquote style="margin: 16px 0; padding: 12px 16px; background: #F8FAFC; border-left: 4px solid #7C3AED; font-style: italic; color: #334155; border-radius: 0 8px 8px 0;"><strong>Remarque Acad&eacute;mique :</strong> Ce paragraphe met en lumi&egrave;re les points cl&eacute;s de l\'analyse m&eacute;thodologique.</blockquote><p><br></p>';
     insertHtmlAtCursor(calloutHtml);
   });
 
   // Image Upload
-  document.getElementById('btnImage').addEventListener('click', (e) => {
-    e.preventDefault();
+  attachBtn('btnImage', () => {
     document.getElementById('imgInput').click();
   });
   document.getElementById('imgInput').addEventListener('change', (e) => {
@@ -732,8 +740,8 @@ function initEditor() {
   });
 
   // In-Editor AI Buttons
-  document.getElementById('aiDraft').addEventListener('click', () => runAI('draft'));
-  document.getElementById('aiImprove').addEventListener('click', () => runAI('improve'));
+  attachBtn('aiDraft', () => runAI('draft'));
+  attachBtn('aiImprove', () => runAI('improve'));
 
   // Settings
   document.getElementById('selFont').addEventListener('change', (e) => {
