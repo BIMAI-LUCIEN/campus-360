@@ -1,0 +1,128 @@
+env: load .env.local
+env: export EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY EXPO_PUBLIC_AI_PROXY_URL EXPO_NO_DEPENDENCY_VALIDATION EXPO_NO_TELEMETRY EXPO_PUBLIC_AUTH_URL EXPO_PUBLIC_AUTH_WEB_URL
+Starting project at C:\Users\MELAGO NATHAN\Documents\campus 360
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web .\index.ts ▓░░░░░░░░░░░░░░░ 11.1% (12/43)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓░░░░░░ 64.0% ( 98/123)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 81.7% (170/214)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 84.7% (300/326)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 91.1% (418/484)
+Web Bundled 20373ms index.ts (484 modules)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 112ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 136ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 78ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 83ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 67ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 62ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 68ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 113ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 74ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 77ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 80ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 221ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 81ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 396ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android .\index.ts ▓▓▓▓░░░░░░░░░░░░ 26.6% ( 61/168)
+Android .\index.ts ▓▓▓▓░░░░░░░░░░░░ 26.6% (128/260)
+Android .\index.ts ▓▓▓▓▓▓▓▓░░░░░░░░ 51.1% (313/438)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76.4% (444/508)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 81.4% (488/541)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 81.9% (512/591)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 81.9% (593/669)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88.1% (760/828)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 89.9% (853/932)
+Android .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 92.8% (899/933)
+Android Bundled 38704ms index.ts (934 modules)
+Android Bundled 145ms index.ts (1 module)
+ WARN  SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/th3rdwave/react-native-safe-area-context
+Android node_modules\expo-web-browser\build\WebBrowser.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 1463ms node_modules\expo-web-browser\build\WebBrowser.js (613 modules)
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 340ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 426ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 4174ms index.ts (1 module)
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+ WARN  SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/th3rdwave/react-native-safe-area-context
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 74ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 88ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 81ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 83ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 93ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 67ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 75ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 1756ms index.ts (1 module)
+ WARN  SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/th3rdwave/react-native-safe-area-context
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 95ms index.ts (1 module)
+ WARN  SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/th3rdwave/react-native-safe-area-context
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 75ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 90ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Android .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android Bundled 119ms index.ts (1 module)
+ WARN  SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/th3rdwave/react-native-safe-area-context
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 118ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 81ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 81ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console

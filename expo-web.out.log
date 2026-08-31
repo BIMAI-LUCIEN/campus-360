@@ -1,0 +1,114 @@
+
+> campus-bordes@1.0.0 web
+> expo start --web --port 8082
+
+env: load .env.local
+env: export EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY EXPO_PUBLIC_AI_PROXY_URL EXPO_NO_DEPENDENCY_VALIDATION EXPO_NO_TELEMETRY
+Starting project at C:\Users\MELAGO NATHAN\Documents\campus 360
+Starting Metro Bundler
+Waiting on http://localhost:8082
+Logs for your project will appear below.
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 98.8% (168/169)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (243/243)
+Web Bundled 7652ms index.ts (243 modules)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 58ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 44ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 39ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 39ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 36ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 39ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 36ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 39ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 36ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 53ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 3825ms index.ts (1 module)
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+ LOG  [web] Logs will appear in the browser console
+ ERROR  SyntaxError: C:\Users\MELAGO NATHAN\Documents\campus 360\App.tsx: Unexpected token (273:7)
+
+  271 |         }
+  272 |         Alert.alert('Achat impossible', message || 'Reessaie dans un instant.');
+> 273 |       });
+      |        ^
+  274 |   };
+  275 |
+  276 |   const rechargeWallet = async () => {
+    at constructor (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:365:19)
+    at TypeScriptParserMixin.raise (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:6616:19)
+    at TypeScriptParserMixin.unexpected (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:6636:16)
+    at TypeScriptParserMixin.parseExprAtom (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:11459:22)
+    at TypeScriptParserMixin.parseExprAtom (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:4776:20)
+    at TypeScriptParserMixin.parseExprSubscripts (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:11098:23)
+    at TypeScriptParserMixin.parseUpdate (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:11083:21)
+    at TypeScriptParserMixin.parseMaybeUnary (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:11063:23)
+    at TypeScriptParserMixin.parseMaybeUnary (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:9854:18)
+    at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:10916:61)
+    at TypeScriptParserMixin.parseExprOps (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:10921:23)
+    at TypeScriptParserMixin.parseMaybeConditional (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:10898:23)
+    at TypeScriptParserMixin.parseMaybeAssign (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:10848:21)
+    at TypeScriptParserMixin.parseMaybeAssign (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:9803:20)
+    at TypeScriptParserMixin.parseExpressionBase (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:10801:23)
+    at C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:10797:39
+    at TypeScriptParserMixin.allowInAnd (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:12438:16)
+    at TypeScriptParserMixin.parseExpression (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:10797:17)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:12912:23)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:9525:18)
+    at TypeScriptParserMixin.parseStatementLike (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:12784:17)
+    at TypeScriptParserMixin.parseModuleItem (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:12761:17)
+    at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:13333:36)
+    at TypeScriptParserMixin.parseBlockBody (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:13326:10)
+    at TypeScriptParserMixin.parseProgram (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:12639:10)
+    at TypeScriptParserMixin.parseTopLevel (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:12629:25)
+    at TypeScriptParserMixin.parse (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:14505:25)
+    at TypeScriptParserMixin.parse (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:10143:18)
+    at parse (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\parser\lib\index.js:14518:26)
+    at parser (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\core\lib\parser\index.js:41:34)
+    at parser.next (<anonymous>)
+    at normalizeFile (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\core\lib\transformation\normalize-file.js:51:37)
+    at normalizeFile.next (<anonymous>)
+    at run (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\core\lib\transformation\index.js:22:50)
+    at run.next (<anonymous>)
+    at transform (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\core\lib\transform.js:22:33)
+    at transform.next (<anonymous>)
+    at evaluateSync (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\gensync\index.js:251:28)
+    at sync (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\gensync\index.js:89:14)
+    at stopHiding - secret - don't use this - v1 (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\core\lib\errors\rewrite-stack-trace.js:47:12)
+    at Object.transformSync (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@babel\core\lib\transform.js:40:76)
+    at parseWithBabel (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\expo\node_modules\@expo\metro-config\build\transformSync.js:75:18)
+    at transformSync (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\expo\node_modules\@expo\metro-config\build\transformSync.js:54:16)
+    at Object.transform (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\expo\node_modules\@expo\metro-config\build\babel-transformer.js:127:58)
+    at transformJSWithBabel (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\expo\node_modules\@expo\metro-config\build\transform-worker\metro-transform-worker.js:468:47)
+    at Object.transform (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\expo\node_modules\@expo\metro-config\build\transform-worker\metro-transform-worker.js:583:12)
+    at Object.transform (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\expo\node_modules\@expo\metro-config\build\transform-worker\transform-worker.js:178:19)
+    at transformFile (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@expo\metro\node_modules\metro\src\DeltaBundler\Worker.flow.js:67:36)
+    at Object.transform (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\@expo\metro\node_modules\metro\src\DeltaBundler\Worker.flow.js:42:10)
+    at execFunction (C:\Users\MELAGO NATHAN\Documents\campus 360\node_modules\jest-worker\build\workers\processChild.js:149:17)
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 36ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web .\index.ts ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 62ms index.ts (1 module)
+ LOG  [web] Logs will appear in the browser console
