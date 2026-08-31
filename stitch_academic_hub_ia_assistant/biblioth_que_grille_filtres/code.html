@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EduGlass - Bibliothèque de PDF</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error-container": "#93000a",
+                    "inverse-primary": "#b4c5ff",
+                    "on-surface-variant": "#434655",
+                    "primary-fixed": "#dbe1ff",
+                    "surface-dim": "#d2d9f4",
+                    "on-tertiary": "#ffffff",
+                    "on-tertiary-fixed-variant": "#004c6e",
+                    "on-tertiary-container": "#e4f2ff",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "on-background": "#131b2e",
+                    "on-primary-fixed": "#00174b",
+                    "on-secondary": "#ffffff",
+                    "surface-container-high": "#e2e7ff",
+                    "on-tertiary-fixed": "#001e2f",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed": "#25005a",
+                    "tertiary": "#005a82",
+                    "background": "#faf8ff",
+                    "on-surface": "#131b2e",
+                    "secondary": "#712ae2",
+                    "surface-container": "#eaedff",
+                    "tertiary-container": "#0074a6",
+                    "inverse-on-surface": "#eef0ff",
+                    "on-primary": "#ffffff",
+                    "on-secondary-container": "#fffbff",
+                    "inverse-surface": "#283044",
+                    "surface-variant": "#dae2fd",
+                    "secondary-container": "#8a4cfc",
+                    "on-primary-container": "#eeefff",
+                    "tertiary-fixed-dim": "#89ceff",
+                    "error-container": "#ffdad6",
+                    "outline": "#737686",
+                    "tertiary-fixed": "#c9e6ff",
+                    "surface-container-highest": "#dae2fd",
+                    "surface": "#faf8ff",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "secondary-fixed": "#eaddff",
+                    "surface-tint": "#0053db",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed-dim": "#d2bbff",
+                    "on-secondary-fixed-variant": "#5a00c6",
+                    "surface-container-low": "#f2f3ff",
+                    "primary-container": "#2563eb",
+                    "primary": "#004ac6",
+                    "on-error": "#ffffff",
+                    "surface-bright": "#faf8ff",
+                    "outline-variant": "#c3c6d7"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-sm": "8px",
+                    "stack-lg": "32px",
+                    "gutter": "16px",
+                    "stack-md": "16px",
+                    "container-margin": "20px"
+            },
+            "fontFamily": {
+                    "headline-md": [
+                            "Outfit"
+                    ],
+                    "headline-lg-mobile": [
+                            "Outfit"
+                    ],
+                    "label-sm": [
+                            "Inter"
+                    ],
+                    "headline-xl": [
+                            "Outfit"
+                    ],
+                    "label-md": [
+                            "Inter"
+                    ],
+                    "headline-lg": [
+                            "Outfit"
+                    ],
+                    "body-lg": [
+                            "Inter"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg-mobile": [
+                            "28px",
+                            {
+                                    "lineHeight": "36px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "label-sm": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "headline-xl": [
+                            "40px",
+                            {
+                                    "lineHeight": "48px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "label-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "letterSpacing": "0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+        
+        /* Modern Glassmorphism Utilities */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+        }
+        
+        .dark .glass-panel {
+            background: rgba(40, 48, 68, 0.7); /* inverse-surface base */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .glass-highlight {
+            position: relative;
+        }
+        .glass-highlight::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+            border-top-left-radius: inherit;
+            border-top-right-radius: inherit;
+            pointer-events: none;
+        }
+        .dark .glass-highlight::before {
+            background: linear-gradient(90deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);
+        }
+
+        .pdf-viewer-active body {
+            overflow: hidden;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col relative pb-24 md:pb-0 pt-16">
+<!-- Ambient Background Effects -->
+<div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+<div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 dark:bg-primary-fixed/5 blur-3xl"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-secondary/5 dark:bg-secondary-fixed-dim/5 blur-3xl"></div>
+</div>
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 dark:bg-inverse-surface/80 backdrop-blur-xl border-b border-white/20 dark:border-white/10 shadow-sm hidden md:flex">
+<div class="flex justify-between items-center px-container-margin h-16 w-full mx-auto max-w-7xl">
+<div class="flex items-center gap-4">
+<button class="text-primary dark:text-inverse-primary hover:bg-white/10 transition-colors p-2 rounded-full scale-95 duration-200 active:scale-90">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-inverse-primary">EduGlass</h1>
+</div>
+<!-- Desktop Nav Cluster (Mirroring BottomNav logic) -->
+<nav class="hidden md:flex gap-8">
+<a class="text-on-surface-variant dark:text-outline-variant font-label-md text-label-md hover:opacity-80 transition-opacity" href="#">Accueil</a>
+<a class="text-on-surface-variant dark:text-outline-variant font-label-md text-label-md hover:opacity-80 transition-opacity" href="#">Explorer</a>
+<a class="text-primary dark:text-inverse-primary font-label-md text-label-md font-bold border-b-2 border-primary dark:border-inverse-primary pb-1" href="#">Bibliothèque</a>
+<a class="text-on-surface-variant dark:text-outline-variant font-label-md text-label-md hover:opacity-80 transition-opacity" href="#">Documents</a>
+</nav>
+<div class="flex items-center">
+<img alt="User profile picture" class="w-8 h-8 rounded-full object-cover border border-outline-variant cursor-pointer scale-95 duration-200 active:scale-90" data-alt="A professional headshot of a young adult student looking focused and approachable. The student has modern styling and is set against a bright, softly blurred library background. High key lighting creates a premium, optimistic mood suitable for an educational platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAz9-maWFWmLqlIisK7UeszyT9RW9EloD5LG8pyg6onY0yGD4DNr93tD2CLMqPbtu9Xwts2cmmVl1Zm8WggrSlbPGbrMedr0Xb9jOfOhguEL2qhpPNRxPKGT8L2MLAZgL1k7MUDtcm-lRjbXBX6E9uLXnVZ-IK7y1Nc5enx-azKIb90IgljyOAJo7TXq0eesaX1RF9UFW-m3OGIaepX_P4XuwkZ0Rj_SeXSMUl-bhuh-F9aWgoEBo3S7w"/>
+</div>
+</div>
+</header>
+<!-- Mobile Top Header (Simplified) -->
+<header class="fixed top-0 w-full z-40 bg-surface/80 dark:bg-inverse-surface/80 backdrop-blur-xl border-b border-white/20 dark:border-white/10 shadow-sm md:hidden flex justify-between items-center px-container-margin h-16">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-inverse-primary">Bibliothèque</h1>
+<button class="text-primary dark:text-inverse-primary p-2">
+<span class="material-symbols-outlined">search</span>
+</button>
+</header>
+<!-- Main Content: PDF Library Canvas -->
+<main class="flex-1 w-full max-w-7xl mx-auto px-container-margin py-stack-lg" id="library-view">
+<div class="flex justify-between mb-stack-lg flex-col gap-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg font-semibold text-on-surface dark:text-on-surface mb-2">Mes Documents</h2>
+<p class="font-body-md text-body-md text-on-surface-variant dark:text-outline">Retrouvez tous vos cours et packs achetés.</p>
+</div>
+<!-- Filters -->
+<div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+<button class="px-4 py-1.5 rounded-full bg-primary text-on-primary font-label-md text-label-md whitespace-nowrap">Tous</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-variant dark:bg-surface-container-high text-on-surface-variant dark:text-on-surface font-label-md text-label-md whitespace-nowrap hover:bg-surface-dim">Cours</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-variant dark:bg-surface-container-high text-on-surface-variant dark:text-on-surface font-label-md text-label-md whitespace-nowrap hover:bg-surface-dim">Packs</button>
+<button class="px-4 py-1.5 rounded-full bg-surface-variant dark:bg-surface-container-high text-on-surface-variant dark:text-on-surface font-label-md text-label-md whitespace-nowrap hover:bg-surface-dim">Fiches</button>
+</div>
+</div>
+<!-- Bento Grid / Asymmetric Layout for Documents -->
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+<!-- Card 1 -->
+<div class="group relative aspect-square rounded-xl overflow-hidden glass-panel glass-highlight cursor-pointer transition-all hover:scale-105" onclick="openPdfReader('Mathématiques Sup', 'Pack')">
+<div class="w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDyzYVBFqrNo8yYBGKeXKsri3r_FQlnOYEl3fHJnxxFY_9A-SWJO3KylxtZzmmTf0bU_h2VCYkC34R9jZshpx7zuHuK45FYWcXYU45_aPT-dCn-jj5AOdKeOm-LA2ilDxIFHZT7mdy3W90GEo8zmrG9D20hHUNBEEJ3LwkzRi8OeQrY7_8JKS_kIOgj-uZzQUOs6W6atRR6OPHqx-ig_n0iQFZqcN1nbIy-CteziSJc9l0qR_9xfbwNmg')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="absolute bottom-2 left-2 right-2">
+<p class="text-white font-label-sm text-label-sm truncate">Mathématiques Sup</p>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group relative aspect-square rounded-xl overflow-hidden glass-panel glass-highlight cursor-pointer transition-all hover:scale-105" onclick="openPdfReader('Physique Quantique', 'Cours')">
+<div class="w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB_AfcthzHGEzL3w85g-SD1FzkHX-0fMpL9zQRKbQACx9gqMSVwn9bwZo-bGhAKBjwDHc4TZXoCx_0rJnfNR0Xko1bTBLpYebtjnOGzRwl3cUX5sXRszH_qF1me7smHz_9EHG1Whh6rIyUl2SJ-Z1QoSzZ4PaC4tRMjh9cmzQ8DrISsy19SLxDHIHcyAovqh9T71jEIgJP-N0UEf8t9CuNPX-PNErZNGdi0Ua-PyJ_rJuMu6E0ZlamKzw')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="absolute bottom-2 left-2 right-2">
+<p class="text-white font-label-sm text-label-sm truncate">Physique Quantique</p>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group relative aspect-square rounded-xl overflow-hidden glass-panel glass-highlight cursor-pointer transition-all hover:scale-105" onclick="openPdfReader('Histoire Contemporaine', 'Fiches')">
+<div class="w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC0QLlwigmLhyS0y6HNkjf-Ci1DvbHaa1sida0ZkjpDd16o7d6Ww1sj0yuAbyqYuuVcYQTI7qj01_4HPSAWLSQeQpwrJ6WlrED5ZQ0VgcKM2YDBoeejhWkWnie2NcNi3XZlFZ6JT9oRFYYiHma2hDCOEMZHmQsJbheckEjhNpSwRsFEBH4mN4_RcpefethHFmGc_dYGmVklPHv_BGwBv5PFT8RdkszO-1j7tCcczW-oVbmViReW8Qrg6w')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="absolute bottom-2 left-2 right-2">
+<p class="text-white font-label-sm text-label-sm truncate">Histoire Contemporaine</p>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="group relative aspect-square rounded-xl overflow-hidden glass-panel glass-highlight cursor-pointer transition-all hover:scale-105" onclick="openPdfReader('Biologie Cellulaire', 'Cours')">
+<div class="w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA4LoNmBvqkzYLN55GZ8OG1UpdHwom2V2eGfznzhUpGu0hBaQBlHPya3wLpBa7vdxY8KJGh7NDO-Q3V4WS9ufA7dTjMWgyTkpTxK7w_jRdIuoGW8eOnvfNDQUCxtCgvV5kgZPOVuyLZxs30PDStaR8hsINnu2DeKmdAuDu4HmCLQJ6xXbZbKkrWZMhU2QwdY-gySx-MzRyjuhjLs7eJRywj2c3oASb9Z915VCG7s-KY9FYmYiS33i013w')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="absolute bottom-2 left-2 right-2">
+<p class="text-white font-label-sm text-label-sm truncate">Biologie Cellulaire</p>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full h-20 flex justify-around items-center px-4 pb-safe bg-surface/80 dark:bg-inverse-surface/80 backdrop-blur-2xl z-50 rounded-t-xl border-t border-white/20 dark:border-white/10 shadow-[0px_-4px_20px_rgba(0,0,0,0.05)]">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-3 py-1 hover:opacity-80 transition-opacity scale-110 duration-300 active:scale-95" href="#">
+<span class="material-symbols-outlined mb-1 text-2xl">home</span>
+<span class="font-label-sm text-label-sm">Accueil</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-3 py-1 hover:opacity-80 transition-opacity scale-110 duration-300 active:scale-95" href="#">
+<span class="material-symbols-outlined mb-1 text-2xl">explore</span>
+<span class="font-label-sm text-label-sm">Explorer</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container/20 dark:bg-secondary-container/40 text-secondary dark:text-secondary-fixed-dim rounded-xl px-3 py-1 hover:opacity-80 transition-opacity scale-110 duration-300 active:scale-95" href="#">
+<span class="material-symbols-outlined mb-1 text-2xl" style="font-variation-settings: 'FILL' 1;">local_library</span>
+<span class="font-label-sm text-label-sm font-bold">Bibliothèque</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-3 py-1 hover:opacity-80 transition-opacity scale-110 duration-300 active:scale-95" href="#">
+<span class="material-symbols-outlined mb-1 text-2xl">description</span>
+<span class="font-label-sm text-label-sm">Documents</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-3 py-1 hover:opacity-80 transition-opacity scale-110 duration-300 active:scale-95" href="#">
+<span class="material-symbols-outlined mb-1 text-2xl">person</span>
+<span class="font-label-sm text-label-sm">Profil</span>
+</a>
+</nav>
+<!-- PDF Reader Overlay (Hidden by default, shown via JS) -->
+<!-- Note: When this is active, navigation shell is suppressed logically by obscuring it -->
+<div class="fixed inset-0 z-[100] bg-surface dark:bg-background flex flex-col hidden translate-y-full transition-transform duration-300 ease-out" id="pdf-reader">
+<!-- Reader Header -->
+<header class="flex items-center justify-between px-4 h-16 bg-surface dark:bg-inverse-surface border-b border-outline-variant/30 shrink-0">
+<div class="flex items-center gap-3 w-1/3">
+<button class="p-2 rounded-full hover:bg-surface-variant transition-colors text-on-surface dark:text-on-surface scale-95 active:scale-90" onclick="closePdfReader()">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+</div>
+<div class="text-center flex-1 max-w-md mx-auto px-4 truncate">
+<h2 class="font-label-md text-label-md font-bold text-on-surface truncate" id="pdf-title">Titre du Document</h2>
+<p class="font-label-sm text-label-sm text-on-surface-variant dark:text-outline-variant truncate" id="pdf-subtitle">Détails</p>
+</div>
+<div class="flex items-center justify-end gap-2 w-1/3">
+<button class="p-2 rounded-full hover:bg-surface-variant transition-colors text-on-surface dark:text-on-surface hidden sm:block">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-variant transition-colors text-on-surface dark:text-on-surface">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</header>
+<!-- PDF Canvas Area (Simulated) -->
+<div class="flex-1 overflow-y-auto bg-surface-container-low dark:bg-[#1e1e1e] relative p-4 flex justify-center pb-32">
+<!-- Simulated PDF Page -->
+<div class="w-full max-w-3xl bg-white shadow-lg rounded-sm min-h-[1000px] p-8 sm:p-16 mb-8 text-black border border-outline-variant/20 relative">
+<!-- Fake Content to make it look like a document -->
+<div class="w-1/2 h-8 bg-surface-container-highest rounded mb-8"></div>
+<div class="w-full h-4 bg-surface-variant rounded mb-3"></div>
+<div class="w-full h-4 bg-surface-variant rounded mb-3"></div>
+<div class="w-5/6 h-4 bg-surface-variant rounded mb-8"></div>
+<div class="w-full h-64 bg-surface-container-high rounded mb-8 flex items-center justify-center">
+<span class="material-symbols-outlined text-6xl text-outline/50">image</span>
+</div>
+<div class="w-full h-4 bg-surface-variant rounded mb-3"></div>
+<div class="w-full h-4 bg-surface-variant rounded mb-3"></div>
+<div class="w-full h-4 bg-surface-variant rounded mb-3"></div>
+<div class="w-2/3 h-4 bg-surface-variant rounded mb-3"></div>
+<!-- Page indicator -->
+<div class="absolute bottom-4 left-0 right-0 text-center font-label-sm text-outline">Page 1</div>
+</div>
+<!-- Floating AI Action Button (FAB) Contextual to Reader -->
+<button class="fixed bottom-6 right-6 sm:bottom-12 sm:right-12 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-primary/90 dark:bg-primary-container/90 backdrop-blur-md shadow-[0_8px_32px_rgba(0,74,198,0.4)] border border-white/20 text-white dark:text-on-primary-container scale-100 hover:scale-105 active:scale-95 transition-all duration-300 group">
+<span class="material-symbols-outlined text-2xl group-hover:rotate-12 transition-transform duration-300">magic_button</span>
+<!-- Optional label on hover for desktop -->
+<span class="absolute right-full mr-4 bg-surface dark:bg-inverse-surface text-on-surface dark:text-on-surface px-3 py-1.5 rounded-lg font-label-sm text-label-sm shadow-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden sm:block">Demander à l'IA</span>
+</button>
+<!-- Reader Progress Bar -->
+<div class="fixed bottom-0 left-0 w-full h-1 bg-surface-variant">
+<div class="h-full bg-primary w-1/3"></div>
+</div>
+</div>
+</div>
+<script>
+        function openPdfReader(title, subtitle) {
+            document.getElementById('pdf-title').innerText = title;
+            document.getElementById('pdf-subtitle').innerText = subtitle;
+            const reader = document.getElementById('pdf-reader');
+            reader.classList.remove('hidden');
+            // Small delay to allow display:block to apply before animating transform
+            setTimeout(() => {
+                reader.classList.remove('translate-y-full');
+                document.body.classList.add('pdf-viewer-active');
+            }, 10);
+        }
+
+        function closePdfReader() {
+            const reader = document.getElementById('pdf-reader');
+            reader.classList.add('translate-y-full');
+            document.body.classList.remove('pdf-viewer-active');
+            // Wait for animation to finish before hiding
+            setTimeout(() => {
+                reader.classList.add('hidden');
+            }, 300);
+        }
+    </script>
+</body></html>

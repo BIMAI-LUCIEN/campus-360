@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+/* ── Campus 360 "AI Analyzer" system ──────────────────────────────────────
+   The same identity that ships in the mobile app: near-black surfaces, a
+   violet→pink→blue gradient accent, bold sans, soft radii. Direct, not
+   decorative — the gradient is the one flourish, everything else is flat
+   and legible. ─────────────────────────────────────────────────────────── */
+@theme {
+  /* Ink — now the foreground/text ramp (light on dark) */
+  --color-ink:         oklch(0.975 0.0015 264);
+  --color-ink-soft:     oklch(0.9 0.003 264);
+  --color-ink-muted:   oklch(0.66 0.006 264);
+  --color-ink-subtle:  oklch(0.48 0.008 264);
+  --color-ink-faint:   oklch(0.26 0.008 264);
+
+  /* Paper — now the background/surface ramp (dark) */
+  --color-paper:      oklch(0.15 0.002 264);
+  --color-paper-deep:  oklch(0.2 0.003 264);
+  --color-paper-soft:  oklch(0.24 0.004 264);
+  --color-white:       oklch(1 0 0);
+
+  /* Sienna — repurposed as the violet brand accent (solid uses: icons, dots) */
+  --color-sienna:      oklch(0.72 0.19 316);
+  --color-sienna-deep:  oklch(0.64 0.22 307);
+  --color-sienna-tone:  oklch(0.78 0.15 330);
+  --color-sienna-bg:    oklch(0.72 0.19 316 / 14%);
+
+  /* Emerald — success, ownership, confirmation. Bright on dark. */
+  --color-emerald:     oklch(0.78 0.14 162);
+  --color-emerald-deep: oklch(0.7 0.15 162);
+  --color-emerald-tone: oklch(0.85 0.12 162);
+  --color-emerald-bg:   oklch(0.78 0.14 162 / 14%);
+
+  /* Brand gradient — the signature accent (buttons, headlines, active states) */
+  --color-grad-1: #7C4DFF;
+  --color-grad-2: #E13D9E;
+  --color-grad-3: #3B82F6;
+  --gradient-brand: linear-gradient(90deg, var(--color-grad-1), var(--color-grad-2), var(--color-grad-3));
+
+  /* Legacy `brand-*` aliases retint automatically to the violet ramp. */
+  --color-brand-50:  oklch(0.72 0.19 316 / 10%);
+  --color-brand-100: oklch(0.72 0.19 316 / 16%);
+  --color-brand-200: oklch(0.72 0.19 316 / 28%);
+  --color-brand-300: oklch(0.78 0.15 330);
+  --color-brand-400: oklch(0.75 0.17 322);
+  --color-brand-500: oklch(0.72 0.19 316);
+  --color-brand-600: oklch(0.68 0.205 311);
+  --color-brand-700: oklch(0.64 0.22 307);
+  --color-brand-800: oklch(0.52 0.19 305);
+  --color-brand-900: oklch(0.4 0.15 303);
+
+  /* No serif in the dark "AI Analyzer" language — display headings use the
+     same bold sans as body copy, just heavier. `font-serif`/`font-display`
+     stay as class names for call-site compatibility, retinted here. */
+  --font-serif: var(--font-inter), system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jbmono), ui-monospace, "SF Mono", monospace;
+
+  --radius-editorial: 14px;
+
+  /* Legacy CTA alias — some pages still reference `bg-amber-cta`. Tailwind
+     v4 only generates utility classes from tokens declared inside @theme,
+     so this must live here (not :root) for those classes to resolve. */
+  --color-amber-cta:       oklch(0.72 0.19 316);
+  --color-amber-cta-hover: oklch(0.64 0.22 307);
+}
+
+:root {
+  --color-ink-light:   var(--color-ink-muted);
+  --color-ink-lighter: var(--color-ink-subtle);
+  --color-border:      var(--color-ink-faint);
+  --color-amber-cta:       var(--color-sienna);
+  --color-amber-cta-hover: var(--color-sienna-deep);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  color: var(--color-ink);
+  background: var(--color-paper);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Gradient text — the signature headline treatment, used deliberately. */
+.text-gradient-brand {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+p { text-wrap: pretty; }
+
+.font-display { font-family: var(--font-serif); }
+.font-sans    { font-family: var(--font-sans); }
+.font-mono    { font-family: var(--font-mono); }
+
+/* Editorial kicker — the em-dash + tracked mono label. A signature device,
+   used deliberately in a few places, never as mechanical section grammar. */
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-sienna);
+}
+.kicker::before { content: "— "; color: var(--color-ink-faint); }
+
+.ink-rule { height: 1px; background: var(--color-ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-sienna);
+  outline-offset: 2px;
+}
+
+::selection {
+  background-color: var(--color-sienna-bg);
+  color: var(--color-sienna-deep);
+}
+
+/* Reveal-on-load choreography — content is visible by default; motion only
+   enhances devices that support it (see brand.md: never gate visibility). */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.rise-in {
+  animation: rise-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise-in { animation: none; }
+}

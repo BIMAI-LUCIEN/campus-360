@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+  <title>Lecteur PDF — Campus 360</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      background-color: #0E131F;
+      color: #E2E8F0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #viewer-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0 32px 0;
+      width: 100%;
+      min-height: 100%;
+    }
+    .page-container {
+      margin-bottom: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      background-color: #FFFFFF;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      max-width: 96%;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    canvas, img.pdf-page-img {
+      display: block;
+      max-width: 100%;
+      height: auto !important;
+    }
+    #status-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px;
+      color: #94A3B8;
+      font-weight: 500;
+      text-align: center;
+      padding: 20px;
+      max-width: 85%;
+      z-index: 100;
+    }
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top: 3px solid #D97706;
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .fallback-btn {
+      display: inline-block;
+      margin-top: 14px;
+      padding: 10px 18px;
+      background: #D97706;
+      color: #FFFFFF;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+  <div id="status-overlay">
+    <div class="spinner" id="spinner"></div>
+    <div id="status-text">Chargement du cours en haute définition...</div>
+  </div>
+  
+  <div id="viewer-container"></div>
+
+  <script>
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    let pdfUrl = urlParams.get('url');
+    const container = document.getElementById('viewer-container');
+    const statusOverlay = document.getElementById('status-overlay');
+    const statusText = document.getElementById('status-text');
+    const spinner = document.getElementById('spinner');
+
+    function renderCloudinaryImages(baseUrl) {
+      statusOverlay.style.display = 'none';
+      container.innerHTML = '';
+      
+      const baseJpgUrl = baseUrl.replace(/\.pdf(\?.*)?$/i, '.jpg');
+      
+      for (let p = 1; p <= 30; p++) {
+        const pageContainer = document.createElement('div');
+        pageContainer.className = 'page-container';
+        
+        const img = document.createElement('img');
+        img.className = 'pdf-page-img';
+        img.loading = p === 1 ? 'eager' : 'lazy';
+        
+        const pageUrl = baseJpgUrl.replace('/image/upload/', '/image/upload/pg_' + p + '/');
+        img.src = pageUrl;
+        
+        img.onerror = function() {
+          if (p > 1) {
+            pageContainer.remove();
+          }
+        };
+        
+        pageContainer.appendChild(img);
+        container.appendChild(pageContainer);
+      }
+    }
+
+    if (!pdfUrl) {
+      spinner.style.display = 'none';
+      statusText.innerHTML = "Aucun lien de document spécifié.";
+    } else {
+      if (pdfUrl.includes('cloudinary.com') && pdfUrl.includes('/image/upload/')) {
+        renderCloudinaryImages(pdfUrl);
+      } else {
+        const streamUrl = 'https://api.campus360b.site/api/mobile/pdf/stream?url=' + encodeURIComponent(pdfUrl);
+
+        const fallbackTimer = setTimeout(() => {
+          if (container.children.length === 0) {
+            statusText.innerHTML = "Chargement alternatif en cours...<br><br><a class='fallback-btn' href='" + streamUrl + "' target='_blank'>Ouvrir le document directement</a>";
+          }
+        }, 8000);
+
+        const tryPdfJs = (targetUrl) => {
+          return pdfjsLib.getDocument({
+            url: targetUrl,
+            cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+            cMapPacked: true,
+          }).promise;
+        };
+
+        tryPdfJs(pdfUrl)
+          .catch(() => tryPdfJs(streamUrl))
+          .then(pdf => {
+            clearTimeout(fallbackTimer);
+            statusOverlay.style.display = 'none';
+            
+            let renderQueue = Promise.resolve();
+
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+              const pageContainer = document.createElement('div');
+              pageContainer.className = 'page-container';
+              pageContainer.id = 'page-' + pageNum;
+              container.appendChild(pageContainer);
+
+              const canvas = document.createElement('canvas');
+              pageContainer.appendChild(canvas);
+
+              renderQueue = renderQueue.then(() => {
+                return pdf.getPage(pageNum).then(page => {
+                  const dpr = window.devicePixelRatio || 1;
+                  const screenWidth = Math.min(window.innerWidth * 0.96, 850);
+                  const unscaledViewport = page.getViewport({ scale: 1 });
+                  const scale = screenWidth / unscaledViewport.width;
+                  const viewport = page.getViewport({ scale: scale * Math.min(dpr, 2) });
+
+                  const context = canvas.getContext('2d');
+                  canvas.width = viewport.width;
+                  canvas.height = viewport.height;
+                  canvas.style.width = (viewport.width / Math.min(dpr, 2)) + 'px';
+                  canvas.style.height = (viewport.height / Math.min(dpr, 2)) + 'px';
+
+                  return page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                  }).promise;
+                });
+              });
+            }
+          })
+          .catch(err => {
+            clearTimeout(fallbackTimer);
+            console.warn('PDF.js render error, switching to Cloudinary/Stream fallback:', err);
+            if (pdfUrl.includes('cloudinary.com')) {
+              renderCloudinaryImages(pdfUrl);
+            } else {
+              window.location.replace(streamUrl);
+            }
+          });
+      }
+    }
+  </script>
+</body>
+</html>

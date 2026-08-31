@@ -1,0 +1,77 @@
+name: Publish OTA update (EAS Update)
+
+# Pushes an over-the-air (OTA) JavaScript/asset update to already-installed
+# Campus 360 apps on the "production" channel. Installed apps pick it up on the
+# next launch — no reinstall needed.
+#
+# IMPORTANT: OTA only ships JS/TS and asset changes. Native changes (new native
+# modules, permissions, most app.json native config, or an Expo SDK bump) still
+# require a fresh APK build + install. When in doubt, rebuild.
+#
+# Required GitHub repository secret:
+#   - EXPO_TOKEN: an Expo access token (https://expo.dev/settings/access-tokens)
+#                 with permission to publish updates on the campus-360 project.
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Update message"
+        required: false
+        default: "Manual OTA update"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "App.tsx"
+      - "index.ts"
+      - "assets/**"
+      - "app.json"
+      - ".github/workflows/eas-update.yml"
+
+# Never run OTA publishes concurrently — the latest push wins.
+concurrency:
+  group: eas-update-production
+  cancel-in-progress: true
+
+jobs:
+  publish-ota:
+    name: eas update · production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      # EXPO_PUBLIC_* vars are inlined by Metro at export time from the process
+      # env. `eas update` does NOT read eas.json build-profile env, so without
+      # this the OTA bundle would ship empty public config (blank Supabase =>
+      # broken catalog) and overwrite a correctly-built APK on next launch.
+      # Load them from the production build profile so eas.json stays the single
+      # source of truth.
+      - name: Load EXPO_PUBLIC env from eas.json (production profile)
+        run: |
+          node -e "const e=require('./eas.json').build.production.env||{};const fs=require('fs');const out=Object.entries(e).filter(([k])=>k.startsWith('EXPO_PUBLIC_')).map(([k,v])=>k+'='+v).join('\n');fs.appendFileSync(process.env.GITHUB_ENV, out+'\n');console.log('Loaded',Object.keys(e).length,'vars')"
+
+      - name: Publish OTA update
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          set -euxo pipefail
+          MESSAGE="${{ github.event.inputs.message || github.event.head_commit.message || 'OTA update' }}"
+          # Keep the message single-line and bounded.
+          MESSAGE=$(printf '%s' "$MESSAGE" | head -n 1 | cut -c1-140)
+          npx --yes eas-cli@latest update \
+            --branch production \
+            --message "$MESSAGE" \
+            --non-interactive

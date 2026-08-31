@@ -1,0 +1,322 @@
+/*
+ * Tailwind v4 entry stub.
+ *
+ * IMPORTANT: This file is intentionally minimal. The actual Tailwind
+ * compilation happens in scripts/prebuild-css.mjs which is wired
+ * into `npm run build` (and `npm run dev`) via the package.json
+ * pre/post hooks. It writes the compiled output to
+ * `globals.compiled.css`, which we import below.
+ *
+ * Why a workaround and not the official `@import "tailwindcss"`?
+ * In monorepo / git-worktree setups, Next.js's integration with
+ * `@tailwindcss/postcss` loses the `@source` paths and ships an
+ * essentially empty stylesheet (only @theme + reset are emitted).
+ * Pre-compiling here — under our explicit Node cwd — sidesteps that
+ * bug entirely.
+ *
+ * Refs:
+ *   - https://tailwindcss.com/docs/installation/using-postcss
+ *   - https://github.com/tailwindlabs/tailwindcss/issues/13500
+ */
+
+/* ============================================================================
+ * Campus 360 Admin — Design System v3 (Flup-inspired, green + multi-chart)
+ *
+ * Reference : Flup admin dashboard — modern SaaS, white surfaces, generous
+ *             whitespace, green primary accent, colorful chart palette
+ *             (blue / orange / purple / pink / cyan / green).
+ * Type      : Plus Jakarta Sans (display) + Inter (body)
+ * Sidebar   : Two-layer (collapsed icon strip + expanded sidebar with
+ *             MARKETING / PAYMENTS / SYSTEM sections).
+ * ============================================================================ */
+
+@import "tailwindcss";
+
+/* ============================================================================
+ * Load the prebuilt Tailwind output.
+ *
+ * `scripts/prebuild-css.mjs` runs as part of `npm run build` (wired through
+ * `prebuild` in package.json) and writes the fully-compiled CSS to
+ * `globals.compiled.css`. This indirection exists because Next.js's
+ * built-in PostCSS integration drops `@source` globs in monorepo /
+ * git-worktree setups — verified repeatedly in this repo. Pre-compiling
+ * under our own Node cwd sidesteps that bug.
+ *
+ * Refs:
+ *   - https://github.com/tailwindlabs/tailwindcss/issues/13500
+ * ============================================================================ */
+@import "./globals.compiled.css";
+
+/* ============================================================================
+ * The block below is the SOURCE — it gets compiled by the prebuild step.
+ * Any `@source` directives here are read by prebuild-css.mjs to know
+ * which files to scan for utility-class usage. They are NOT used by
+ * Next.js's PostCSS at request time (that's the bug we're working
+ * around).
+ * ============================================================================ */
+
+/* Explicit source globs — Tailwind v4's auto-detection misses these in
+ * monorepo / git-worktree setups, so without @source the build ships an
+ * essentially empty stylesheet. Point at the app + lib + types folders
+ * so all `.tsx` / `.ts` are scanned for utility class usage.
+ */
+@source "../**/*.{ts,tsx}";
+@source "./**/*.{ts,tsx}";
+
+@theme {
+  /* ── Brand / Primary (Stitch design) ──────────────────────────────── */
+  --color-primary: #004ac6;
+  --color-primary-hover: #003ea8;
+  --color-primary-active: #002e80;
+  --color-primary-soft: #dbe1ff;
+  --color-primary-softer: #eeefff;
+  --color-primary-tint: #eff4ff;
+  --color-on-primary: #ffffff;
+
+  /* ── Surfaces (Stitch design) ─────────────────────────────────────── */
+  --color-bg: #f8f9ff;
+  --color-surface: #ffffff;
+  --color-surface-2: #eff4ff;
+  --color-surface-3: #e5eeff;
+  --color-surface-soft: #f8f9ff;
+
+  /* ── Borders ──────────────────────────────────────────────────────── */
+  --color-border: #cbd5e1;
+  --color-border-light: #e2e8f0;
+  --color-border-strong: #737686;
+
+  /* ── Foreground (text) ────────────────────────────────────────────── */
+  --color-fg: #0b1c30;
+  --color-fg-muted: #434655;
+  --color-fg-subtle: #737686;
+  --color-fg-faint: #c3c6d7;
+
+  /* ── Status ───────────────────────────────────────────────────────── */
+  --color-success: #10b981;
+  --color-success-soft: #ecfdf5;
+  --color-success-bg: #f0fdf4;
+  --color-warning: #f59e0b;
+  --color-warning-soft: #fef3c7;
+  --color-warning-bg: #fffbeb;
+  --color-danger: #ba1a1a;
+  --color-danger-soft: #fef2f2;
+  --color-danger-bg: #fef2f2;
+  --color-info: #005a82;
+  --color-info-soft: #e4f2ff;
+
+  /* ── Sidebar / Topbar (Stitch design) ────────────────────────────── */
+  --color-sidebar: #ffffff;
+  --color-sidebar-strip: #ffffff;
+  --color-sidebar-fg: #0b1c30;
+  --color-sidebar-fg-muted: #434655;
+  --color-sidebar-active-bg: #d5e3fc;
+  --color-sidebar-active-fg: #004ac6;
+  --color-sidebar-border: #c3c6d7;
+  --color-sidebar-divider: #eff4ff;
+
+  /* ── Chart palette (Stitch multi-color style) ─────────────────────── */
+  --color-chart-blue: #3b82f6;
+  --color-chart-blue-soft: #dbeafe;
+  --color-chart-orange: #fb923c;
+  --color-chart-orange-soft: #ffedd5;
+  --color-chart-purple: #8b5cf6;
+  --color-chart-purple-soft: #ede9fe;
+  --color-chart-pink: #ec4899;
+  --color-chart-pink-soft: #fce7f3;
+  --color-chart-green: #10b981;
+  --color-chart-green-soft: #d1fae5;
+  --color-chart-cyan: #06b6d4;
+  --color-chart-cyan-soft: #cffafe;
+  --color-chart-amber: #f59e0b;
+  --color-chart-amber-soft: #fef3c7;
+  --color-chart-rose: #f43f5e;
+  --color-chart-rose-soft: #ffe4e6;
+  --color-chart-indigo: #6366f1;
+  --color-chart-indigo-soft: #e0e7ff;
+
+  /* ── Stitch design system tokens (prefixed for backward compatibility) ─ */
+  --color-stitch-bg: #f8f9ff;
+  --color-stitch-surface: #f8f9ff;
+  --color-stitch-surface-lowest: #ffffff;
+  --color-stitch-surface-container-lowest: #ffffff;
+  --color-stitch-surface-container-low: #eff4ff;
+  --color-stitch-surface-container: #e5eeff;
+  --color-stitch-surface-container-high: #dce9ff;
+  --color-stitch-surface-container-highest: #d3e4fe;
+  --color-stitch-primary: #004ac6;
+  --color-stitch-primary-container: #2563eb;
+  --color-stitch-on-primary: #ffffff;
+  --color-stitch-on-primary-container: #eeefff;
+  --color-stitch-primary-fixed: #dbe1ff;
+  --color-stitch-on-surface: #0b1c30;
+  --color-stitch-on-surface-variant: #434655;
+  --color-stitch-outline: #737686;
+  --color-stitch-outline-variant: #c3c6d7;
+  --color-stitch-success: #10b981;
+  --color-stitch-success-light: #ecfdf5;
+  --color-stitch-success-dark: #047857;
+  --color-stitch-error: #ba1a1a;
+  --color-stitch-error-rose: #e11d48;
+  --color-stitch-error-light: #fef2f2;
+  --color-stitch-secondary: #515f74;
+  --color-stitch-secondary-container: #d5e3fc;
+  --color-stitch-on-secondary: #ffffff;
+  --color-stitch-on-secondary-container: #57657a;
+  --color-stitch-tertiary: #005a82;
+  --color-stitch-tertiary-container: #0074a6;
+  --color-stitch-on-tertiary: #ffffff;
+  --color-stitch-on-tertiary-container: #e4f2ff;
+
+  --font-stitch-headline: "Plus Jakarta Sans", sans-serif;
+  --font-stitch-body: "Inter", sans-serif;
+  --radius-stitch: 12px;
+  --radius-stitch-sm: 8px;
+  --radius-stitch-lg: 16px;
+  --spacing-stitch-sidebar: 240px;
+  --spacing-stitch-topbar: 64px;
+
+  /* ── Typography ───────────────────────────────────────────────────── */
+  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* ── Radius ───────────────────────────────────────────────────────── */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  /* ── Spacing ──────────────────────────────────────────────────────── */
+  --spacing-sidebar: 240px;
+  --spacing-topbar: 64px;
+
+  /* ── Shadows ──────────────────────────────────────────────────────── */
+  --shadow-card: 0 1px 2px 0 rgba(17, 24, 39, 0.04);
+  --shadow-card-hover: 0 4px 12px -2px rgba(17, 24, 39, 0.06), 0 2px 4px -2px rgba(17, 24, 39, 0.03);
+  --shadow-popover: 0 12px 32px -8px rgba(17, 24, 39, 0.12), 0 4px 8px -4px rgba(17, 24, 39, 0.06);
+  --shadow-topbar: 0 1px 0 0 rgba(17, 24, 39, 0.05);
+  --shadow-sidebar: 1px 0 0 0 rgba(17, 24, 39, 0.05);
+}
+
+/* ============================================================================
+ * Base layer overrides
+ * ============================================================================ */
+
+@layer base {
+  html, body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  /* Disable the legacy `spin-anim` if any component still uses it */
+  .spin-anim {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  /* Standardized focus ring (WCAG) */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ============================================================================
+ * Document Editor — Live Preview Styles
+ *
+ * Reads `--doc-primary` and `--doc-secondary` from inline style on the parent
+ * <div> (set in admin-app/app/documents/[id]/page.tsx). Gives the student a
+ * faithful preview of how their font / spacing / margins / colors will look.
+ * ============================================================================ */
+
+.document-editor-prose {
+  color: rgb(226 232 240); /* slate-200 */
+}
+
+.document-editor-prose h1 {
+  color: var(--doc-primary, #10B981);
+  font-weight: 800;
+  font-size: 1.6rem;
+  margin: 1.25rem 0 0.75rem;
+  border-bottom: 2px solid var(--doc-primary, #10B981);
+  padding-bottom: 0.25rem;
+}
+
+.document-editor-prose h2 {
+  color: var(--doc-secondary, #64748B);
+  font-weight: 700;
+  font-size: 1.25rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.document-editor-prose h3 {
+  color: var(--doc-secondary, #64748B);
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin: 0.9rem 0 0.4rem;
+}
+
+.document-editor-prose p {
+  margin: 0.5rem 0;
+  text-align: justify;
+}
+
+.document-editor-prose ul,
+.document-editor-prose ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.document-editor-prose ul li {
+  list-style-type: disc;
+}
+
+.document-editor-prose ol li {
+  list-style-type: decimal;
+}
+
+.document-editor-prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem auto;
+  display: block;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.document-editor-prose .image-placeholder {
+  /* The TipTap node renders these; we keep visual cues identical to the
+   * AI-injected HTML so the user gets immediate feedback that they can
+   * click to fill. */
+  transition: border-color 150ms ease;
+}
+
+.document-editor-prose .image-placeholder:hover {
+  border-color: #10b981 !important;
+}

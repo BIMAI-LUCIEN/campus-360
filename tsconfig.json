@@ -1,0 +1,8 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "exclude": ["recruiter-web", "admin-app", "landing-site", "node_modules", "dist", ".expo", "scratch", "mobile-api", "admin", "scripts"]
+}

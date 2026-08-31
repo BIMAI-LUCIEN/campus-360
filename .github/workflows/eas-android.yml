@@ -1,0 +1,150 @@
+name: Build Android APK (EAS preview)
+
+# Builds an Android APK for internal / preview distribution via Expo
+# Application Services (EAS).
+#
+# Required GitHub repository secrets:
+#   - EXPO_TOKEN: an Expo access token from https://expo.dev/settings/access-tokens
+#                  Needs at least the "Build applications" scope on the expo-360 project.
+#
+# After every push to a branch under .github/workflows will trigger a build.
+# Override which profile with the workflow_dispatch input.
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "EAS build profile"
+        required: true
+        default: "preview"
+        type: choice
+        options:
+          - preview
+          - production
+      platform:
+        description: "Target platform"
+        required: true
+        default: "android"
+        type: choice
+        options:
+          - android
+          - all
+  push:
+    branches:
+      - main
+      - "feat/**"
+      - "deploy/**"
+    paths:
+      - "app.json"
+      - "eas.json"
+      - "package.json"
+      - "src/**"
+      - "App.tsx"
+      - "index.ts"
+      - ".github/workflows/eas-android.yml"
+
+jobs:
+  build-android-apk:
+    name: EAS ${{ inputs.profile || 'preview' }} · ${{ inputs.platform || 'android' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Setup Expo (non-interactive auth)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          echo "::add-mask::$EXPO_TOKEN"
+          npx --yes expo@latest whoami
+
+      - name: Run EAS build (preview = APK; production = AAB)
+        id: build
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          set -euxo pipefail
+          PROFILE="${{ inputs.profile || 'preview' }}"
+          PLATFORM="${{ inputs.platform || 'android' }}"
+          echo "Building $PLATFORM with profile=$PROFILE"
+          npx --yes eas-cli@latest build \
+            --platform "$PLATFORM" \
+            --profile "$PROFILE" \
+            --non-interactive \
+            --no-wait \
+            --json > /tmp/eas-build.json
+          echo "Build submitted:"
+          cat /tmp/eas-build.json
+
+      - name: Poll EAS for completion
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          set -euxo pipefail
+          BUILD_ID=$(jq -r '.[] | select(.buildsCount>0) | .builds[0].id // empty' /tmp/eas-build.json || true)
+          if [ -z "$BUILD_ID" ]; then
+            BUILD_ID=$(jq -r '.[0].id // .id // empty' /tmp/eas-build.json || true)
+          fi
+          if [ -z "$BUILD_ID" ]; then
+            echo "::error::Could not parse build id from EAS response"
+            exit 1
+          fi
+          echo "Polling build $BUILD_ID"
+          # eas build:view prints a "- Fetching..." spinner line before the JSON.
+          # We strip any non-JSON line so jq sees a clean payload.
+          jsonify() { grep -E '^\s*[\{\[]' || cat; }
+          for i in $(seq 1 60); do
+            STATUS=$(npx --yes eas-cli@latest build:view "$BUILD_ID" --json 2>/dev/null | jsonify | jq -r 'if type=="array" then .[0].status else .status end // "UNKNOWN"')
+            echo "Iteration $i: $STATUS"
+            case "$STATUS" in
+              FINISHED) ;;
+              FAILED|CANCELED|ERROR)
+                echo "::error::EAS build $STATUS"
+                exit 1
+                ;;
+              *)
+                sleep 30
+                continue
+                ;;
+            esac
+            break
+          done
+
+          npx --yes eas-cli@latest build:view "$BUILD_ID" --json 2>/dev/null | jsonify > /tmp/eas-result.json
+          ARTIFACT_URL=$(jq -r 'if type=="array" then .[0].artifacts.buildUrl // .[0].artifacts.applicationArchiveUrl else .artifacts.buildUrl // .artifacts.applicationArchiveUrl end // empty' /tmp/eas-result.json)
+          if [ -z "$ARTIFACT_URL" ]; then
+            echo "::error::EAS finished but no artifact URL exposed"
+            cat /tmp/eas-result.json
+            exit 1
+          fi
+          echo "artifact_url=$ARTIFACT_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Download APK
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          set -euxo pipefail
+          curl -fSL \
+            -H "Authorization: Bearer $EXPO_TOKEN" \
+            "${{ steps.build.outputs.artifact_url }}" \
+            -o campus-360.apk
+          ls -lh campus-360.apk
+          file campus-360.apk
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: campus-360-apk
+          path: campus-360.apk
+          if-no-files-found: error
+          retention-days: 30

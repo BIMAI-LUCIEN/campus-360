@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Analytics Dashboard | Campus 360 Admin</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-container": "#57657a",
+                    "on-surface": "#0b1c30",
+                    "error-container": "#ffdad6",
+                    "inverse-surface": "#213145",
+                    "surface-variant": "#d3e4fe",
+                    "tertiary-fixed": "#c9e6ff",
+                    "on-tertiary-fixed-variant": "#004c6e",
+                    "on-primary": "#ffffff",
+                    "on-primary-container": "#eeefff",
+                    "tertiary-fixed-dim": "#89ceff",
+                    "on-surface-variant": "#434655",
+                    "on-error-container": "#93000a",
+                    "inverse-primary": "#b4c5ff",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "tertiary": "#005a82",
+                    "surface-container-highest": "#d3e4fe",
+                    "tertiary-container": "#0074a6",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-fixed": "#001e2f",
+                    "primary": "#004ac6",
+                    "surface-bright": "#f8f9ff",
+                    "surface-tint": "#0053db",
+                    "on-error": "#ffffff",
+                    "surface-container-low": "#eff4ff",
+                    "surface-dim": "#cbdbf5",
+                    "error": "#ba1a1a",
+                    "surface": "#f8f9ff",
+                    "outline": "#737686",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary-fixed-variant": "#3a485b",
+                    "on-background": "#0b1c30",
+                    "secondary-container": "#d5e3fc",
+                    "on-primary-fixed": "#00174b",
+                    "surface-container": "#e5eeff",
+                    "on-tertiary-container": "#e4f2ff",
+                    "secondary-fixed-dim": "#b9c7df",
+                    "background": "#f8f9ff",
+                    "primary-fixed": "#dbe1ff",
+                    "secondary": "#515f74",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "surface-container-high": "#dce9ff",
+                    "outline-variant": "#c3c6d7",
+                    "inverse-on-surface": "#eaf1ff",
+                    "on-secondary-fixed": "#0d1c2e",
+                    "secondary-fixed": "#d5e3fc",
+                    "primary-container": "#2563eb"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "display-lg": ["Plus Jakarta Sans"]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #fff8f1; /* Brand canvas color */
+            color: #0b1c30;
+        }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .glass-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-radius: 0.5rem;
+        }
+        .heatmap-cell {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="font-body-md overflow-x-hidden">
+<!-- Shared SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-[240px] bg-surface border-r border-outline-variant flex flex-col py-6 z-50">
+<div class="px-6 mb-10">
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface">Campus 360 Admin</h1>
+<p class="font-label-md text-label-md text-on-surface-variant opacity-70">University Management</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Dashboard -->
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<!-- PDF Catalogue -->
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="font-label-md text-label-md">PDF Catalogue</span>
+</a>
+<!-- Packs -->
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="package_2">package_2</span>
+<span class="font-label-md text-label-md">Packs</span>
+</a>
+<!-- Students -->
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-label-md text-label-md">Students</span>
+</a>
+<!-- Analytics (ACTIVE) -->
+<a class="flex items-center gap-3 px-4 py-2 bg-secondary-container text-on-secondary-container border-l-4 border-primary rounded-r-lg opacity-90 transition-opacity" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-label-md text-label-md">Analytics</span>
+</a>
+<!-- Configuration -->
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Configuration</span>
+</a>
+</nav>
+<div class="mt-auto px-4">
+<div class="flex items-center gap-3 px-4 py-2 text-on-surface-variant border-t border-outline-variant pt-6">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+<span class="font-label-md text-label-md">Lucien Pascal</span>
+</div>
+</div>
+</aside>
+<!-- Shared TopNavBar -->
+<header class="sticky top-0 right-0 h-16 w-full ml-[240px] max-w-[calc(100%-240px)] bg-surface border-b border-outline-variant shadow-sm flex items-center justify-between px-8 z-40">
+<div class="flex items-center gap-6">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="w-full pl-10 pr-4 py-1.5 bg-surface-container-low border border-outline-variant rounded-full text-body-sm focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Rechercher..." type="text"/>
+</div>
+<nav class="flex gap-4">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Dashboard</a>
+<span class="text-outline-variant">/</span>
+<a class="font-label-md text-label-md text-primary font-bold" href="#">Analytics</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-primary-fixed overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a middle-aged male administrator with a confident smile, wearing a sharp navy blue suit against a clean, neutral academic office background. The lighting is bright and professional, following a modern corporate aesthetic with soft shadows and high clarity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAYFa6fG_rVBa2VlDW_SlfopqsOv6y_Khd_mKubxcrKUP1M61-FIBgDzpQL2Cq9Pg2Xz6yAMuQv2avz2KLL4gFqNX-jlJTN8Gh0DL7COrlfqtiL_FVGBOMUxz4B0UQvGhkwavauf5TTM2rvjGHGjXD4PPNoyirwj4enG9t3EYflC56GyZv_uI54_Jct-SwoMj-D2NjGKiWxlZv4alVFJglCuSo30juI4v-ZMJqTaLcjDc0Uav5Nn54GTA"/>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-[240px] p-8 max-w-[1600px]">
+<!-- Header Section -->
+<section class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Analytics</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Comprendre comment Campus 360 performe.</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center bg-surface border border-outline-variant rounded px-3 py-2 gap-2 cursor-pointer hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-primary" data-icon="calendar_month">calendar_month</span>
+<span class="font-label-md text-label-md">Derniers 30 jours</span>
+<span class="material-symbols-outlined text-xs" data-icon="expand_more">expand_more</span>
+</div>
+<button class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded font-label-md text-label-md hover:bg-primary-container transition-all active:scale-95">
+<span class="material-symbols-outlined text-sm" data-icon="picture_as_pdf">picture_as_pdf</span>
+                    PDF Export
+                </button>
+</div>
+</section>
+<!-- Bento Grid Layout -->
+<div class="chart-grid">
+<!-- 1. Large Revenus Widget -->
+<div class="col-span-12 glass-card p-6">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline-md text-headline-md">Surveillance des Revenus</h3>
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-primary"></span>
+<span class="font-label-md text-label-md">Revenu (FCFA)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-tertiary"></span>
+<span class="font-label-md text-label-md">Volume de ventes</span>
+</div>
+</div>
+</div>
+<div class="h-[320px] w-full relative">
+<!-- Revenue Visualization Mock -->
+<div class="absolute inset-0 flex items-end justify-between px-2 pt-10">
+<!-- Simplified simulated line graph background using gradients -->
+<div class="w-full h-full opacity-20 bg-gradient-to-t from-primary/10 to-transparent"></div>
+<!-- Drawing a simulated path using a CSS clip-path or complex gradient is too heavy; using an overlay for data feel -->
+<div class="absolute inset-0 grid grid-cols-12 items-end gap-1 opacity-60">
+<div class="bg-primary/20 h-[40%] rounded-t-sm"></div>
+<div class="bg-primary/20 h-[55%] rounded-t-sm"></div>
+<div class="bg-primary/20 h-[45%] rounded-t-sm"></div>
+<div class="bg-primary/20 h-[70%] rounded-t-sm"></div>
+<div class="bg-primary/20 h-[85%] rounded-t-sm"></div>
+<div class="bg-primary/20 h-[65%] rounded-t-sm"></div>
+<div class="bg-primary/20 h-[75%] rounded-t-sm"></div>
+<div class="bg-primary/20 h-[60%] rounded-t-sm"></div>
+<div class="bg-primary/20 h-[90%] rounded-t-sm"></div>
+<div class="bg-primary/20 h-[80%] rounded-t-sm"></div>
+<div class="bg-primary/20 h-[70%] rounded-t-sm"></div>
+<div class="bg-primary/20 h-[95%] rounded-t-sm"></div>
+</div>
+<!-- Axis Mockup -->
+<div class="absolute bottom-0 left-0 w-full h-[1px] bg-outline-variant"></div>
+<div class="absolute top-0 left-0 h-full w-[1px] bg-outline-variant"></div>
+</div>
+<div class="absolute inset-0 flex flex-col justify-between pointer-events-none text-[10px] text-on-surface-variant font-medium opacity-50">
+<span>1,000,000</span>
+<span>750,000</span>
+<span>500,000</span>
+<span>250,000</span>
+<span>0</span>
+</div>
+</div>
+</div>
+<!-- 2. Funnel Conversion -->
+<div class="col-span-12 lg:col-span-4 glass-card p-6">
+<h3 class="font-headline-md text-headline-md mb-6">Entonnoir de Conversion</h3>
+<div class="space-y-4">
+<div class="relative">
+<div class="w-full h-10 bg-primary/90 rounded flex items-center justify-center text-white text-xs font-bold">Recherche (100%)</div>
+<div class="text-right text-[10px] mt-1 text-on-surface-variant">12,402 Utilisateurs</div>
+</div>
+<div class="flex justify-center -my-2"><span class="material-symbols-outlined text-outline-variant">keyboard_double_arrow_down</span></div>
+<div class="relative">
+<div class="mx-auto w-[85%] h-10 bg-primary/70 rounded flex items-center justify-center text-white text-xs font-bold">Aperçu (74%)</div>
+<div class="text-right text-[10px] mt-1 text-on-surface-variant">9,177 Utilisateurs</div>
+</div>
+<div class="flex justify-center -my-2"><span class="material-symbols-outlined text-outline-variant">keyboard_double_arrow_down</span></div>
+<div class="relative">
+<div class="mx-auto w-[50%] h-10 bg-primary/50 rounded flex items-center justify-center text-white text-xs font-bold">Achat (22%)</div>
+<div class="text-right text-[10px] mt-1 text-on-surface-variant">2,728 Achats</div>
+</div>
+<div class="flex justify-center -my-2"><span class="material-symbols-outlined text-outline-variant">keyboard_double_arrow_down</span></div>
+<div class="relative">
+<div class="mx-auto w-[40%] h-10 bg-primary/30 rounded flex items-center justify-center text-on-surface text-xs font-bold">Lecture (18%)</div>
+<div class="text-right text-[10px] mt-1 text-on-surface-variant">2,232 Actifs</div>
+</div>
+</div>
+</div>
+<!-- 3. Cohort Retention -->
+<div class="col-span-12 lg:col-span-8 glass-card p-6">
+<h3 class="font-headline-md text-headline-md mb-6">Rétention par Cohorte</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr>
+<th class="font-label-md text-label-md p-2 text-on-surface-variant border-b border-outline-variant">Cohorte</th>
+<th class="font-label-md text-label-md p-2 text-on-surface-variant border-b border-outline-variant">Users</th>
+<th class="font-label-md text-label-md p-2 text-center text-on-surface-variant border-b border-outline-variant">Sem. 0</th>
+<th class="font-label-md text-label-md p-2 text-center text-on-surface-variant border-b border-outline-variant">Sem. 1</th>
+<th class="font-label-md text-label-md p-2 text-center text-on-surface-variant border-b border-outline-variant">Sem. 2</th>
+<th class="font-label-md text-label-md p-2 text-center text-on-surface-variant border-b border-outline-variant">Sem. 3</th>
+<th class="font-label-md text-label-md p-2 text-center text-on-surface-variant border-b border-outline-variant">Sem. 4</th>
+</tr>
+</thead>
+<tbody class="text-body-sm">
+<tr>
+<td class="p-2 border-b border-outline-variant font-medium">1 Oct - 7 Oct</td>
+<td class="p-2 border-b border-outline-variant text-on-surface-variant">2,410</td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-primary text-white rounded">100%</div></td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-primary/80 text-white rounded">82%</div></td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-primary/60 text-white rounded">64%</div></td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-primary/40 rounded">41%</div></td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-primary/20 rounded">32%</div></td>
+</tr>
+<tr>
+<td class="p-2 border-b border-outline-variant font-medium">8 Oct - 14 Oct</td>
+<td class="p-2 border-b border-outline-variant text-on-surface-variant">1,980</td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-primary text-white rounded">100%</div></td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-primary/70 text-white rounded">71%</div></td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-primary/50 text-white rounded">55%</div></td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-primary/30 rounded">28%</div></td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-surface-container rounded">-</div></td>
+</tr>
+<tr>
+<td class="p-2 border-b border-outline-variant font-medium">15 Oct - 21 Oct</td>
+<td class="p-2 border-b border-outline-variant text-on-surface-variant">3,120</td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-primary text-white rounded">100%</div></td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-primary/80 text-white rounded">85%</div></td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-primary/60 text-white rounded">68%</div></td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-surface-container rounded">-</div></td>
+<td class="p-1 border-b border-outline-variant"><div class="heatmap-cell bg-surface-container rounded">-</div></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- 4. Geographic Map -->
+<div class="col-span-12 lg:col-span-7 glass-card p-6 overflow-hidden flex flex-col">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-headline-md text-headline-md">Distribution Géographique</h3>
+<div class="text-xs text-on-surface-variant bg-surface-container px-2 py-1 rounded">Cameroun</div>
+</div>
+<div class="flex-1 min-h-[300px] bg-surface-container-low rounded relative">
+<img class="w-full h-full object-cover opacity-80" data-alt="A minimalist vector-style administrative map of Cameroon highlighting major urban centers like Yaoundé and Douala with subtle glowing blue markers. The map uses a clean, light-mode palette of soft greys and off-whites, with primary blue accents representing data density. High-end GIS dashboard aesthetic with crisp lines and informative overlays." data-location="Yaoundé" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCc4hyii57n9V1MJbReNvpezM0-_5Q_WFqKqrOfZJ-YBEWQq29qJGdm_YMltNqSEXTqn0V2IyqCTP3xpPyF9DGviEk3UP83TPF3NTXWHaTafCORj9rn5ycPy5ZRna4lBEhetAT9TWCAXZb9EANX8pw0Ya1R7aIJaDu1ShMQa-j1VpUQTf3d1jsMN2pUzZ_my6Cxz4yyz1VKMaow1JBkY3z8lQUsU9JsqqAq36_WNgsmRxn4SmpBzrs8pA"/>
+<!-- Overlay Stats -->
+<div class="absolute bottom-4 left-4 glass-card p-3 bg-white/90 backdrop-blur-sm">
+<div class="text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Top Villes</div>
+<div class="space-y-1">
+<div class="flex justify-between items-center gap-6">
+<span class="text-xs">Yaoundé</span>
+<span class="text-xs font-bold text-primary">42%</span>
+</div>
+<div class="flex justify-between items-center gap-6">
+<span class="text-xs">Douala</span>
+<span class="text-xs font-bold text-primary">31%</span>
+</div>
+<div class="flex justify-between items-center gap-6">
+<span class="text-xs">Bafoussam</span>
+<span class="text-xs font-bold text-primary">12%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 5. Wallet Analytics -->
+<div class="col-span-12 lg:col-span-5 glass-card p-6">
+<h3 class="font-headline-md text-headline-md mb-6">Portefeuille (Wallet)</h3>
+<div class="space-y-6">
+<div class="grid grid-cols-2 gap-4">
+<div class="p-4 bg-surface-container-low rounded border border-outline-variant/30">
+<p class="font-label-md text-label-md text-on-surface-variant mb-1">Total Rechargé</p>
+<h4 class="font-headline-md text-headline-md text-primary">4.2M FCFA</h4>
+</div>
+<div class="p-4 bg-surface-container-low rounded border border-outline-variant/30">
+<p class="font-label-md text-label-md text-on-surface-variant mb-1">Total Dépensé</p>
+<h4 class="font-headline-md text-headline-md text-tertiary">3.8M FCFA</h4>
+</div>
+</div>
+<div class="h-48 flex items-end justify-around gap-2 px-2 border-b border-outline-variant">
+<!-- Simulated Bar Comparison -->
+<div class="flex gap-1 w-full items-end h-full">
+<div class="flex-1 flex flex-col items-center gap-1 group">
+<div class="w-full bg-primary/20 hover:bg-primary/40 h-3/4 rounded-t transition-colors relative">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 text-[10px] font-bold">850k</div>
+</div>
+<div class="w-full bg-tertiary/20 hover:bg-tertiary/40 h-2/3 rounded-t transition-colors"></div>
+<span class="text-[9px] mt-1">S1</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1 group">
+<div class="w-full bg-primary/20 hover:bg-primary/40 h-full rounded-t transition-colors"></div>
+<div class="w-full bg-tertiary/20 hover:bg-tertiary/40 h-4/5 rounded-t transition-colors"></div>
+<span class="text-[9px] mt-1">S2</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1 group">
+<div class="w-full bg-primary/20 hover:bg-primary/40 h-2/3 rounded-t transition-colors"></div>
+<div class="w-full bg-tertiary/20 hover:bg-tertiary/40 h-1/2 rounded-t transition-colors"></div>
+<span class="text-[9px] mt-1">S3</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-1 group">
+<div class="w-full bg-primary/20 hover:bg-primary/40 h-4/5 rounded-t transition-colors"></div>
+<div class="w-full bg-tertiary/20 hover:bg-tertiary/40 h-3/4 rounded-t transition-colors"></div>
+<span class="text-[9px] mt-1">S4</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 6. IA Usage -->
+<div class="col-span-12 glass-card p-6">
+<div class="flex items-center justify-between mb-8">
+<h3 class="font-headline-md text-headline-md">Utilisation de l'IA par Faculté</h3>
+<div class="flex items-center gap-2 bg-tertiary-fixed text-on-tertiary-fixed px-3 py-1 rounded-full text-xs font-bold">
+<span class="material-symbols-outlined text-sm" data-icon="auto_awesome">auto_awesome</span>
+                        +14% vs mois dernier
+                    </div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+<div class="space-y-4">
+<div class="space-y-2">
+<div class="flex justify-between text-body-sm font-medium">
+<span>Sciences Juridiques</span>
+<span>2,401 requêtes</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 85%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-body-sm font-medium">
+<span>Génie Industriel</span>
+<span>1,892 requêtes</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 65%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-body-sm font-medium">
+<span>Médecine</span>
+<span>1,120 requêtes</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 40%"></div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant flex flex-col justify-center">
+<div class="flex items-start gap-4">
+<div class="p-3 bg-white rounded-lg shadow-sm border border-outline-variant">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="chat_bubble">chat_bubble</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-surface-variant uppercase mb-1">Top Question IA</h4>
+<p class="font-headline-md text-headline-md italic">"Quelles sont les conditions de validité d'un contrat en droit civil camerounais ?"</p>
+<div class="mt-4 flex items-center gap-2 text-on-surface-variant text-xs">
+<span class="font-bold">412 fois</span> posée cette semaine
+                                </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="mt-12 py-6 border-t border-outline-variant flex justify-between items-center text-on-surface-variant text-body-sm">
+<p>© 2024 Campus 360 Admin. Tous droits réservés.</p>
+<div class="flex gap-4">
+<a class="hover:text-primary transition-colors" href="#">Confidentialité</a>
+<a class="hover:text-primary transition-colors" href="#">Support</a>
+</div>
+</footer>
+</main>
+<!-- Micro-interaction Script -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Hover effect for table rows
+            const rows = document.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                row.addEventListener('mouseenter', () => {
+                    row.classList.add('bg-surface-container-low');
+                });
+                row.addEventListener('mouseleave', () => {
+                    row.classList.remove('bg-surface-container-low');
+                });
+            });
+
+            // Active transition for the export button
+            const exportBtn = document.querySelector('button[active\\:scale-95]');
+            if(exportBtn) {
+                exportBtn.addEventListener('click', () => {
+                    const originalText = exportBtn.innerHTML;
+                    exportBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm" data-icon="sync">sync</span> Génération...';
+                    setTimeout(() => {
+                        exportBtn.innerHTML = originalText;
+                    }, 2000);
+                });
+            }
+        });
+    </script>
+</body></html>

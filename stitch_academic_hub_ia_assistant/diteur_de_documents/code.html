@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>EduGlass - Document Editor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#93000a",
+                        "inverse-primary": "#b4c5ff",
+                        "on-surface-variant": "#434655",
+                        "primary-fixed": "#dbe1ff",
+                        "surface-dim": "#d2d9f4",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "on-tertiary-container": "#e4f2ff",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "on-background": "#131b2e",
+                        "on-primary-fixed": "#00174b",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#e2e7ff",
+                        "on-tertiary-fixed": "#001e2f",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed": "#25005a",
+                        "tertiary": "#005a82",
+                        "background": "#faf8ff",
+                        "on-surface": "#131b2e",
+                        "secondary": "#712ae2",
+                        "surface-container": "#eaedff",
+                        "tertiary-container": "#0074a6",
+                        "inverse-on-surface": "#eef0ff",
+                        "on-primary": "#ffffff",
+                        "on-secondary-container": "#fffbff",
+                        "inverse-surface": "#283044",
+                        "surface-variant": "#dae2fd",
+                        "secondary-container": "#8a4cfc",
+                        "on-primary-container": "#eeefff",
+                        "tertiary-fixed-dim": "#89ceff",
+                        "error-container": "#ffdad6",
+                        "outline": "#737686",
+                        "tertiary-fixed": "#c9e6ff",
+                        "surface-container-highest": "#dae2fd",
+                        "surface": "#faf8ff",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "secondary-fixed": "#eaddff",
+                        "surface-tint": "#0053db",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#d2bbff",
+                        "on-secondary-fixed-variant": "#5a00c6",
+                        "surface-container-low": "#f2f3ff",
+                        "primary-container": "#2563eb",
+                        "primary": "#004ac6",
+                        "on-error": "#ffffff",
+                        "surface-bright": "#faf8ff",
+                        "outline-variant": "#c3c6d7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px",
+                        "2xl": "1rem",
+                        "3xl": "1.5rem"
+                    },
+                    "spacing": {
+                        "stack-sm": "8px",
+                        "stack-lg": "32px",
+                        "gutter": "16px",
+                        "stack-md": "16px",
+                        "container-margin": "20px",
+                        "safe": "env(safe-area-inset-bottom)"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Outfit"],
+                        "headline-lg-mobile": ["Outfit"],
+                        "label-sm": ["Inter"],
+                        "headline-xl": ["Outfit"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Outfit"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-xl": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-top: 0.5px solid rgba(255, 255, 255, 0.6);
+            border-left: 0.5px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+        }
+
+        .editor-block {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .editor-block.active {
+            box-shadow: -4px 0 0 theme('colors.primary');
+            background-color: theme('colors.surface-container-lowest');
+            border-radius: theme('borderRadius.lg');
+            padding: theme('spacing.stack-md');
+        }
+
+        .ai-magic-btn {
+            background: linear-gradient(135deg, rgba(138, 76, 252, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%);
+            border: 1px solid rgba(138, 76, 252, 0.2);
+            transition: all 0.2s ease;
+        }
+        
+        .ai-magic-btn:hover {
+            background: linear-gradient(135deg, rgba(138, 76, 252, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(138, 76, 252, 0.1);
+        }
+
+        /* Material Symbols Outline Settings */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: theme('colors.surface-variant'); 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: theme('colors.outline-variant'); 
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col relative overflow-x-hidden">
+<!-- TopAppBar Semantic Shell - Hidden on mobile, visible on desktop -->
+<header class="hidden md:flex justify-between items-center px-container-margin h-16 w-full fixed top-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-white/20 shadow-sm">
+<div class="flex items-center gap-4">
+<button class="scale-95 duration-200 active:scale-90 text-on-surface-variant hover:bg-white/10 transition-colors rounded-full p-2">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">EduGlass</h1>
+</div>
+<nav class="flex gap-8">
+<a class="text-on-surface-variant hover:bg-white/10 transition-colors font-label-md text-label-md px-3 py-2 rounded-lg" href="#">Accueil</a>
+<a class="text-on-surface-variant hover:bg-white/10 transition-colors font-label-md text-label-md px-3 py-2 rounded-lg" href="#">Explorer</a>
+<a class="text-on-surface-variant hover:bg-white/10 transition-colors font-label-md text-label-md px-3 py-2 rounded-lg" href="#">Bibliothèque</a>
+<a class="text-primary font-bold hover:bg-white/10 transition-colors font-label-md text-label-md px-3 py-2 rounded-lg bg-primary-container/10" href="#">Documents</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="scale-95 duration-200 active:scale-90 text-on-surface-variant hover:bg-white/10 transition-colors rounded-full p-2">
+<span class="material-symbols-outlined">search</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-variant overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A small, circular avatar portrait of a modern student with a clean, minimalist aesthetic, suitable for a light-mode UI profile picture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuByzn5p6y8UALRBk6VXoIZ9IVKxNLdT7pH7RpIIeq-2ojNtHvaKyisoaJ4ptcx_VE0DlGENj1sqKc9aGBKhHw52N1ZMrg1IqTkOvIpUN59aRH09Rf7qj0bATb-CUcOOGkvu5M-56kQCgaq9pCTyl1eAsL8Jf6P2T6pCX9oN8czJ8A4xw05D1iuKr9A2Kpxv6wcELAlRHW77ODrTRLcOHe71QJdkK3j_CyJ1eDRf_qFVzDkuWPDii5EzTg"/>
+</div>
+</div>
+</header>
+<!-- Editor Header (Mobile & Desktop) -->
+<div class="fixed top-0 w-full z-40 bg-surface/90 backdrop-blur-xl border-b border-surface-variant md:top-16 md:bg-surface/95 transition-all">
+<div class="max-w-4xl mx-auto px-container-margin h-16 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-outline">Brouillon • Enregistré à 14:32</span>
+<h2 class="font-label-md text-label-md text-on-surface">Synthèse d'Histoire Contemporaine</h2>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-variant transition-colors font-label-sm text-label-sm">
+<span class="material-symbols-outlined" style="font-size: 18px;">preview</span>
+                    Aperçu
+                </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary hover:bg-primary/90 transition-colors font-label-sm text-label-sm shadow-sm hover:shadow-md transform hover:scale-[0.98] active:scale-95">
+<span class="material-symbols-outlined" style="font-size: 18px;">ios_share</span>
+                    Export
+                </button>
+</div>
+</div>
+</div>
+<!-- Main Canvas -->
+<main class="flex-1 pt-20 pb-32 md:pt-36 max-w-4xl mx-auto w-full px-container-margin sm:px-8 relative">
+<!-- Document Title Area -->
+<div class="mb-stack-lg mt-stack-md">
+<input class="w-full bg-transparent border-none p-0 font-headline-xl text-headline-xl text-on-surface placeholder:text-outline-variant focus:ring-0 focus:outline-none" placeholder="Titre du document..." type="text" value="La Révolution Industrielle et ses Impacts Sociaux"/>
+<div class="flex items-center gap-2 mt-3">
+<span class="px-2 py-1 rounded-full bg-surface-variant text-on-surface-variant font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined" style="font-size: 14px;">folder</span>
+                    Histoire
+                </span>
+<span class="px-2 py-1 rounded-full bg-surface-variant text-on-surface-variant font-label-sm text-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined" style="font-size: 14px;">sell</span>
+                    Synthèse
+                </span>
+</div>
+</div>
+<!-- Editor Content -->
+<div class="flex flex-col gap-2">
+<!-- Inactive Block 1 -->
+<div class="editor-block group relative py-2 px-2 hover:bg-surface-container-lowest/50 rounded-lg -ml-2">
+<div class="absolute -left-6 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 text-outline-variant cursor-grab">
+<span class="material-symbols-outlined" style="font-size: 16px;">drag_indicator</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-2">Introduction</h3>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                    La révolution industrielle marque une transition majeure dans l'histoire humaine, passant d'une économie agraire et artisanale à une économie dominée par l'industrie et la fabrication mécanique. Cette période a fondamentalement transformé la société européenne, puis mondiale.
+                </p>
+</div>
+<!-- Active Block with Toolbar and AI -->
+<div class="editor-block active relative my-4 flex flex-col lg:flex-row gap-6">
+<!-- Rich Text Toolbar (Floating above block on mobile, attached on desktop) -->
+<div class="absolute -top-12 left-0 glass-panel rounded-full px-3 py-1.5 flex items-center gap-1 z-10 shadow-lg">
+<select class="bg-transparent border-none text-sm font-medium text-on-surface focus:ring-0 py-1 pl-2 pr-6 cursor-pointer">
+<option>Normal</option>
+<option>Titre 1</option>
+<option>Titre 2</option>
+<option>Citation</option>
+</select>
+<div class="w-px h-5 bg-outline-variant/50 mx-1"></div>
+<button class="p-1.5 rounded hover:bg-surface-variant text-on-surface transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-size: 18px;">format_bold</span>
+</button>
+<button class="p-1.5 rounded bg-surface-variant text-primary transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-size: 18px;">format_italic</span>
+</button>
+<button class="p-1.5 rounded hover:bg-surface-variant text-on-surface transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-size: 18px;">format_underlined</span>
+</button>
+<div class="w-px h-5 bg-outline-variant/50 mx-1"></div>
+<button class="p-1.5 rounded hover:bg-surface-variant text-on-surface transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-size: 18px;">format_list_bulleted</span>
+</button>
+<button class="p-1.5 rounded hover:bg-surface-variant text-on-surface transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-size: 18px;">format_list_numbered</span>
+</button>
+</div>
+<!-- Text Area -->
+<div class="flex-1">
+<div class="absolute -left-2 top-4 opacity-50 flex flex-col gap-1 text-primary cursor-grab">
+<span class="material-symbols-outlined" style="font-size: 16px;">drag_indicator</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface leading-relaxed outline-none min-h-[100px]" contenteditable="true">
+                        L'urbanisation rapide a conduit à la création de nouvelles classes sociales. <i>Les conditions de travail dans les premières usines étaient souvent très difficiles, avec de longues heures et des environnements dangereux.</i> Cela a finalement mené à l'émergence des premiers mouvements syndicaux et à la demande de réformes sociales significatives.
+                    </p>
+</div>
+<!-- AI Magic Assistant Panel (Side in desktop, bottom in mobile) -->
+<div class="w-full lg:w-48 shrink-0 flex flex-row lg:flex-col gap-2 mt-4 lg:mt-0 p-3 bg-surface-bright rounded-xl border border-surface-variant shadow-sm relative overflow-hidden">
+<!-- Subtle glass gleam effect -->
+<div class="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none"></div>
+<div class="hidden lg:flex items-center gap-2 mb-2 px-1">
+<span class="material-symbols-outlined text-secondary fill" style="font-size: 16px;">auto_awesome</span>
+<span class="font-label-md text-label-md text-on-surface-variant">AI Magic</span>
+</div>
+<button class="ai-magic-btn flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-2 px-3 py-2 rounded-lg text-secondary font-label-sm text-label-sm">
+<span class="material-symbols-outlined" style="font-size: 16px;">edit_note</span>
+<span>Reformuler</span>
+</button>
+<button class="ai-magic-btn flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-2 px-3 py-2 rounded-lg text-secondary font-label-sm text-label-sm">
+<span class="material-symbols-outlined" style="font-size: 16px;">spellcheck</span>
+<span>Corriger</span>
+</button>
+<button class="ai-magic-btn flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-2 px-3 py-2 rounded-lg text-secondary font-label-sm text-label-sm">
+<span class="material-symbols-outlined" style="font-size: 16px;">short_text</span>
+<span>Allonger</span>
+</button>
+</div>
+</div>
+<!-- Inactive Block 2 (List) -->
+<div class="editor-block group relative py-2 px-2 hover:bg-surface-container-lowest/50 rounded-lg -ml-2">
+<div class="absolute -left-6 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 text-outline-variant cursor-grab">
+<span class="material-symbols-outlined" style="font-size: 16px;">drag_indicator</span>
+</div>
+<h3 class="font-label-md text-label-md text-on-surface mb-2">Principales conséquences :</h3>
+<ul class="list-disc list-inside font-body-md text-body-md text-on-surface-variant space-y-2 ml-4">
+<li>Exode rural massif vers les centres urbains</li>
+<li>Développement des infrastructures de transport (chemin de fer)</li>
+<li>Émergence de la bourgeoisie industrielle</li>
+</ul>
+</div>
+<!-- Add New Block Area -->
+<div class="mt-4 flex items-center gap-4 opacity-50 hover:opacity-100 transition-opacity cursor-pointer group">
+<div class="flex-1 h-px bg-outline-variant group-hover:bg-primary transition-colors"></div>
+<button class="w-8 h-8 rounded-full bg-surface-variant group-hover:bg-primary-container text-on-surface-variant group-hover:text-primary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined">add</span>
+</button>
+<div class="flex-1 h-px bg-outline-variant group-hover:bg-primary transition-colors"></div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Shell - Mobile Only, suppressed FAB due to Document context -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl border-t border-white/20 bg-surface/80 backdrop-blur-2xl shadow-[0px_-4px_20px_rgba(0,0,0,0.05)]">
+<div class="w-full h-20 flex justify-around items-center px-4 pb-safe">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-3 py-1 scale-110 duration-300 active:scale-95 hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm mt-1">Accueil</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-3 py-1 scale-110 duration-300 active:scale-95 hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-sm text-label-sm mt-1">Explorer</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-3 py-1 scale-110 duration-300 active:scale-95 hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined">local_library</span>
+<span class="font-label-sm text-label-sm mt-1">Bibliothèque</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container/20 text-secondary rounded-xl px-3 py-1 scale-110 duration-300 active:scale-95 hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-label-sm text-label-sm mt-1">Documents</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-3 py-1 scale-110 duration-300 active:scale-95 hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-sm text-label-sm mt-1">Profil</span>
+</a>
+</div>
+</nav>
+<!-- Add space for safe area bottom on mobile devices without hiding content behind nav -->
+<div class="h-safe md:hidden"></div>
+</body></html>

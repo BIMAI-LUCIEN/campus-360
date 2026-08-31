@@ -1,0 +1,77 @@
+{
+  "timestamp": "2026-08-31T21:21:05Z",
+  "git_sha": "",
+  "goals": [
+    {
+      "goal_id": "mobile-typecheck",
+      "result": "fail",
+      "duration_s": 0.0070535,
+      "output": "exec: \"bash\": executable file not found in %PATH%",
+      "weight": 8
+    },
+    {
+      "goal_id": "admin-typecheck",
+      "result": "fail",
+      "duration_s": 0.016126,
+      "output": "exec: \"bash\": executable file not found in %PATH%",
+      "weight": 8
+    },
+    {
+      "goal_id": "pdf-only-scope",
+      "result": "fail",
+      "duration_s": 0.0109969,
+      "output": "exec: \"bash\": executable file not found in %PATH%",
+      "weight": 7
+    },
+    {
+      "goal_id": "supabase-security",
+      "result": "fail",
+      "duration_s": 0.0075186,
+      "output": "exec: \"bash\": executable file not found in %PATH%",
+      "weight": 10
+    },
+    {
+      "goal_id": "onboarding-short",
+      "result": "fail",
+      "duration_s": 0.0082573,
+      "output": "exec: \"bash\": executable file not found in %PATH%",
+      "weight": 5
+    },
+    {
+      "goal_id": "user-copy-clean",
+      "result": "fail",
+      "duration_s": 0.0111725,
+      "output": "exec: \"bash\": executable file not found in %PATH%",
+      "weight": 5
+    },
+    {
+      "goal_id": "purchase-flow-real",
+      "result": "fail",
+      "duration_s": 0.0106664,
+      "output": "exec: \"bash\": executable file not found in %PATH%",
+      "weight": 10
+    },
+    {
+      "goal_id": "admin-publish-flow",
+      "result": "fail",
+      "duration_s": 0.0122417,
+      "output": "exec: \"bash\": executable file not found in %PATH%",
+      "weight": 9
+    }
+  ],
+  "summary": {
+    "total": 8,
+    "passing": 0,
+    "failing": 8,
+    "skipped": 0,
+    "score": 0,
+    "code_driven_total": 8,
+    "code_driven_passing": 0,
+    "code_driven_failing": 8,
+    "code_driven_skipped": 0,
+    "code_driven_score": 0,
+    "runtime_artifact_total": 0,
+    "runtime_artifact_passing": 0,
+    "runtime_artifact_failing": 0
+  }
+}

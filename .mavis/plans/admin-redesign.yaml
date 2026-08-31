@@ -1,0 +1,134 @@
+﻿version: 1
+plan:
+  name: Admin Stitch Redesign
+  max_concurrency: 4
+  max_consecutive_failures: 2
+  max_cycles: 3
+tasks:
+  - id: admin-layout
+    title: Refaire le layout admin
+    prompt: |
+      Tu travailles dans le workspace: C:\Users\migue\Desktop\mes projets\campus 360
+
+      OBJECTIF: Refaire le fichier admin-app/app/admin/layout.tsx pour correspondre au design Stitch.
+
+      FICHIERS DE RÉFÉRENCE:
+      - admin-app/public/stitch_campus_360_admin_dashboard/dashboard_overview_campus_360_admin_desktop/code.html
+      - admin-app/public/stitch_campus_360_admin_dashboard/campus_admin/DESIGN.md
+      - admin-app/public/stitch_campus_360_admin_dashboard/student_management_campus_360_admin_desktop/code.html (sections sidebar et topbar)
+      - admin-app/public/stitch_campus_360_admin_dashboard/catalogue_pdf_campus_360_admin_desktop/code.html (sections sidebar et topbar)
+      - admin-app/public/stitch_campus_360_admin_dashboard/analytics_campus_360_admin_desktop/code.html (sections sidebar et topbar)
+
+      FICHIER À MODIFIER: admin-app/app/admin/layout.tsx
+      CSS: admin-app/app/globals.compiled.css
+
+      CHANGEMENTS CLÉS (basés sur le HTML de référence):
+      1. SIDEBAR: aside fixe gauche w-[240px], bg-surface, border-r border-stitch-outline-variant, py-6
+      2. Header sidebar: "Campus 360 Admin" font-stitch-headline + "University Management" en opacity-70
+      3. Nav items ACTIFS: bg-stitch-secondary-container + border-l-4 border-stitch-primary + text-stitch-on-secondary-container
+      4. Nav items INACTIFS: text-stitch-on-surface-variant + hover:bg-stitch-surface-container-high
+      5. Icônes nav: utiliser span className="material-symbols-outlined" (pas lucide-react pour les icônes de navigation)
+      6. Bottom sidebar: avatar w-8 h-8 rounded-full bg-stitch-primary-container + "Lucien Pascal" en font-label-md + "Administrator" label
+      7. TOPBAR: header sticky h-16, bg-surface, border-b border-stitch-outline-variant, shadow-sm, ml-60
+      8. Search: rounded-full border + bg-stitch-surface-container-low avec material-symbols-outlined search icon
+      9. Breadcrumb: Dashboard > Overview (chevron_right material symbols)
+      10. Right side: notifications (dot w-2 h-2 bg-stitch-error) + help + avatar rond
+      11. MAIN: ml-60, p-8, max-w-[1600px], bg-stitch-bg
+
+      CONSERVER: logique auth (session, signOut, usePathname), NAV_GROUPS existants, breadcrumb, useState search
+
+      Commit avec "feat(admin): apply new Stitch layout design" et push.
+    assigned_to: general
+    verified_by: verifier
+    verify_prompt: |
+      Lis le fichier admin-app/app/admin/layout.tsx modifié.
+      Vérifie que: (1) sidebar a bg-surface + border-r border-stitch-outline-variant (2) nav items actifs ont border-l-4 border-stitch-primary (3) topbar a h-16 + ml-60 (4) material-symbols-outlined utilisés pour les icônes. Rapport: PASS ou FAIL.
+    max_retries: 2
+
+  - id: analytics-dashboard
+    title: Refaire le dashboard analytics principal
+    prompt: |
+      Tu travailles dans le workspace: C:\Users\migue\Desktop\mes projets\campus 360
+
+      OBJECTIF: Refaire admin-app/app/admin/analytics/AnalyticsDashboard.tsx pour correspondre au design Stitch.
+
+      FICHIERS DE RÉFÉRENCE:
+      - admin-app/public/stitch_campus_360_admin_dashboard/dashboard_overview_campus_360_admin_desktop/code.html (LIRE ENTIÈREMENT)
+      - admin-app/public/stitch_campus_360_admin_dashboard/campus_admin/DESIGN.md
+
+      FICHIERS À LIRE:
+      - admin-app/app/admin/analytics/AnalyticsDashboard.tsx (actuel)
+      - admin-app/app/admin/analytics/DashboardCharts.tsx (charts à conserver)
+      - admin-app/app/globals.compiled.css
+
+      DESIGN CLÉ:
+      1. PAGE HEADER: "Bonjour Lucien 👋" en font-stitch-headline + sous-titre + boutons calendrier "Cette semaine" + Exporter en bg-stitch-primary
+      2. KPI ROW: 4 cartes blanches bg-stitch-surface-lowest avec border border-stitch-outline-variant rounded-xl shadow-sm + valeur en font-stitch-headline text-[32px]
+      3. CHARTS ROW: lg:grid-cols-3 avec lg:col-span-2 + bg-white rounded-xl border border-stitch-outline-variant shadow-sm
+      4. TABLEAU: bg-stitch-surface-lowest + header bg-stitch-surface-container-low + badge conversion bg-stitch-primary-fixed text-stitch-primary
+      5. RECENT ACTIVITY: avatars ronds + timestamp + description
+
+      CONSERVER: data, initialData, useEffect refresh, weeklyTrend, conversionRate, DashboardCharts, formatInt, formatCoins, TrendUp, TrendNeutral, fetchError
+
+      Commit avec "feat(admin): apply new Stitch design to analytics dashboard" et push.
+    assigned_to: general
+    verified_by: verifier
+    verify_prompt: |
+      Lis le fichier admin-app/app/admin/analytics/AnalyticsDashboard.tsx modifié.
+      Vérifie que: (1) KPI cards bg-stitch-surface-lowest + rounded-xl + border (2) greeting "Bonjour [Nom] 👋" (3) charts layout lg:grid-cols-3 (4) tableau header bg-stitch-surface-container-low. Rapport: PASS ou FAIL.
+    max_retries: 2
+
+  - id: pdf-dashboard
+    title: Refaire le dashboard PDF catalogue
+    prompt: |
+      Tu travailles dans le workspace: C:\Users\migue\Desktop\mes projets\campus 360
+
+      OBJECTIF: Refaire admin-app/app/admin/pdf/PdfDashboardClient.tsx pour correspondre au design Stitch.
+
+      FICHIERS DE RÉFÉRENCE:
+      - admin-app/public/stitch_campus_360_admin_dashboard/catalogue_pdf_campus_360_admin_desktop/code.html (LIRE ENTIÈREMENT)
+      - admin-app/app/globals.compiled.css
+
+      DESIGN CLÉ:
+      1. PAGE HEADER: "Catalogue PDF" font-stitch-headline text-on-surface + boutons Export (border) et Nouveau PDF (bg-stitch-primary rounded-lg)
+      2. FILTER BAR: bg-white rounded-xl border border-stitch-outline-variant shadow-sm p-4 + filter pills px-3 py-1.5 rounded-full bg-stitch-surface-container-high + Reset text-stitch-primary
+      3. TABLE: bg-white rounded-xl border shadow-sm, header bg-stitch-surface-container-low uppercase, rows hover:bg-stitch-surface-container-low
+      4. STATS CARDS: grid-cols-1 md:grid-cols-3 avec icône dans cercle coloré
+
+      CONSERVER: toute la logique fonctionnelle (useState, useEffect, handlers upload/delete/edit/publish, inferPdfFields, pagination, filtres, modal, KpiCard)
+
+      Commit avec "feat(admin): apply new Stitch design to PDF catalogue dashboard" et push.
+    assigned_to: general
+    verified_by: verifier
+    verify_prompt: |
+      Lis le fichier admin-app/app/admin/pdf/PdfDashboardClient.tsx modifié.
+      Vérifie que: (1) filter bar bg-white rounded-xl border shadow-sm (2) bouton Nouveau PDF bg-stitch-primary rounded-lg (3) tableau header bg-stitch-surface-container-low. Rapport: PASS ou FAIL.
+    max_retries: 2
+
+  - id: users-dashboard
+    title: Refaire le dashboard students
+    prompt: |
+      Tu travailles dans le workspace: C:\Users\migue\Desktop\mes projets\campus 360
+
+      OBJECTIF: Refaire admin-app/app/admin/users/UsersDashboardClient.tsx pour correspondre au design Stitch.
+
+      FICHIERS DE RÉFÉRENCE:
+      - admin-app/public/stitch_campus_360_admin_dashboard/student_management_campus_360_admin_desktop/code.html (LIRE ENTIÈREMENT lignes 196-425)
+      - admin-app/app/globals.compiled.css
+
+      DESIGN CLÉ:
+      1. PAGE HEADER: "Étudiants" font-stitch-headline + stats count + bouton Export CSV border rounded-lg
+      2. FILTER ROW: bg-stitch-surface border border-stitch-outline-variant rounded-xl p-4 shadow-sm + filter pills rounded-full bg-stitch-surface-container-low
+      3. TABLE: bg-stitch-surface border rounded-xl shadow-sm, bulk actions bg-stitch-primary text-on-primary, header bg-stitch-surface-container-low, avatars w-10 h-10
+      4. BADGES: Active=emerald avec animate-pulse, En attente=amber
+      5. PAGINATION: bg-stitch-surface border-t
+
+      CONSERVER: toute la logique (fetchUsers, handleRoleChange, handleBan, handleUnban, search, pagination, modals, messages)
+
+      Commit avec "feat(admin): apply new Stitch design to students dashboard" et push.
+    assigned_to: general
+    verified_by: verifier
+    verify_prompt: |
+      Lis le fichier admin-app/app/admin/users/UsersDashboardClient.tsx modifié.
+      Vérifie que: (1) header font-stitch-headline (2) filter pills rounded-full + bg-stitch-surface-container-low (3) tableau header bg-stitch-surface-container-low (4) badges emerald/amber. Rapport: PASS ou FAIL.
+    max_retries: 2

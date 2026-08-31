@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+
+<html class="light" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Campus 360 Admin - Students Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Plus+Jakarta+Sans:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-tab-indicator {
+            box-shadow: inset 4px 0 0 0 #004ac6;
+        }
+        /* Custom scrollbar for better admin look */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f8f9ff;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-container": "#57657a",
+                    "on-surface": "#0b1c30",
+                    "error-container": "#ffdad6",
+                    "inverse-surface": "#213145",
+                    "surface-variant": "#d3e4fe",
+                    "tertiary-fixed": "#c9e6ff",
+                    "on-tertiary-fixed-variant": "#004c6e",
+                    "on-primary": "#ffffff",
+                    "on-primary-container": "#eeefff",
+                    "tertiary-fixed-dim": "#89ceff",
+                    "on-surface-variant": "#434655",
+                    "on-error-container": "#93000a",
+                    "inverse-primary": "#b4c5ff",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "tertiary": "#005a82",
+                    "surface-container-highest": "#d3e4fe",
+                    "tertiary-container": "#0074a6",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-fixed": "#001e2f",
+                    "primary": "#004ac6",
+                    "surface-bright": "#f8f9ff",
+                    "surface-tint": "#0053db",
+                    "on-error": "#ffffff",
+                    "surface-container-low": "#eff4ff",
+                    "surface-dim": "#cbdbf5",
+                    "error": "#ba1a1a",
+                    "surface": "#f8f9ff",
+                    "outline": "#737686",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary-fixed-variant": "#3a485b",
+                    "on-background": "#0b1c30",
+                    "secondary-container": "#d5e3fc",
+                    "on-primary-fixed": "#00174b",
+                    "surface-container": "#e5eeff",
+                    "on-tertiary-container": "#e4f2ff",
+                    "secondary-fixed-dim": "#b9c7df",
+                    "background": "#f8f9ff",
+                    "primary-fixed": "#dbe1ff",
+                    "secondary": "#515f74",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "surface-container-high": "#dce9ff",
+                    "outline-variant": "#c3c6d7",
+                    "inverse-on-surface": "#eaf1ff",
+                    "on-secondary-fixed": "#0d1c2e",
+                    "secondary-fixed": "#d5e3fc",
+                    "primary-container": "#2563eb"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "container-padding": "32px",
+                    "sidebar-width": "240px",
+                    "stack-sm": "8px",
+                    "stack-md": "16px",
+                    "stack-lg": "24px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "body-sm": ["Inter"],
+                    "code": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "label-md": ["Inter"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                    "code": ["13px", {"lineHeight": "20px", "fontWeight": "500"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body-md overflow-x-hidden">
+<!-- Shared SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-[240px] bg-surface border-r border-outline-variant flex flex-col py-6 z-50">
+<div class="px-6 mb-10">
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface">Campus 360 Admin</h1>
+<p class="text-on-surface-variant font-body-sm opacity-70">University Management</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-label-md text-label-md">PDF Catalogue</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">package_2</span>
+<span class="font-label-md text-label-md">Packs</span>
+</a>
+<!-- Active State: Students -->
+<a class="flex items-center gap-3 px-4 py-2 bg-secondary-container text-on-secondary-container border-l-4 border-primary rounded-r-lg active-tab-indicator" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-md text-label-md font-bold">Students</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-md text-label-md">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Configuration</span>
+</a>
+</nav>
+<div class="mt-auto px-4 border-t border-outline-variant pt-4">
+<div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-container-high cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">account_circle</span>
+<span class="font-label-md text-label-md">Lucien Pascal</span>
+</div>
+</div>
+</aside>
+<!-- Shared TopNavBar -->
+<header class="sticky top-0 right-0 h-16 w-full flex items-center justify-between px-8 bg-surface border-b border-outline-variant shadow-sm ml-[240px] max-w-[calc(100%-240px)] z-40">
+<div class="flex items-center gap-4">
+<nav class="flex items-center gap-2 text-on-surface-variant font-body-md">
+<a class="hover:text-primary transition-colors" href="#">Dashboard</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="font-bold text-primary">Étudiants</span>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative w-64 group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-10 pr-4 py-1.5 bg-surface-container-low border border-outline-variant rounded-full font-body-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="Rechercher..." type="text"/>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 hover:bg-surface-container-high rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold text-xs">
+                    LP
+                </div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] p-container-padding bg-[#fff8f1] min-h-[calc(100vh-64px)]">
+<!-- Page Header -->
+<div class="flex items-end justify-between mb-8">
+<div class="space-y-1">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Étudiants</h2>
+<p class="font-body-md text-on-surface-variant">Gère les comptes étudiants de Campus 360.</p>
+</div>
+<div class="flex items-center gap-4">
+<div class="text-right">
+<span class="block text-headline-md font-bold text-primary">1 234</span>
+<span class="font-label-md text-on-surface-variant opacity-70">comptes actifs</span>
+</div>
+<button class="flex items-center gap-2 px-4 py-2.5 bg-surface border border-outline-variant rounded-lg font-label-md text-on-surface hover:bg-surface-container-low shadow-sm transition-all">
+<span class="material-symbols-outlined">download</span>
+                    Export CSV
+                </button>
+</div>
+</div>
+<!-- Filter Row -->
+<div class="bg-surface border border-outline-variant rounded-xl p-4 mb-6 shadow-sm flex flex-wrap items-center justify-between gap-4">
+<div class="flex-1 min-w-[300px] relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-50">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg font-body-sm focus:ring-2 focus:ring-primary focus:outline-none" placeholder="Rechercher nom, email..." type="text"/>
+</div>
+<div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+<button class="px-3 py-1.5 bg-surface-container-low hover:bg-surface-container-high border border-outline-variant rounded-full flex items-center gap-1 font-label-md text-on-surface transition-colors">
+                    Université <span class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+</button>
+<button class="px-3 py-1.5 bg-surface-container-low hover:bg-surface-container-high border border-outline-variant rounded-full flex items-center gap-1 font-label-md text-on-surface transition-colors">
+                    Faculté <span class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+</button>
+<button class="px-3 py-1.5 bg-surface-container-low hover:bg-surface-container-high border border-outline-variant rounded-full flex items-center gap-1 font-label-md text-on-surface transition-colors">
+                    Niveau <span class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+</button>
+<button class="px-3 py-1.5 bg-surface-container-low hover:bg-surface-container-high border border-outline-variant rounded-full flex items-center gap-1 font-label-md text-on-surface transition-colors">
+                    Abonnement <span class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+</button>
+<button class="px-3 py-1.5 bg-surface-container-low hover:bg-surface-container-high border border-outline-variant rounded-full flex items-center gap-1 font-label-md text-on-surface transition-colors">
+                    Statut <span class="material-symbols-outlined text-[18px]">keyboard_arrow_down</span>
+</button>
+</div>
+</div>
+<!-- Data Table Card -->
+<div class="bg-surface border border-outline-variant rounded-xl shadow-sm overflow-hidden relative">
+<!-- Bulk Actions (Hidden by default, shown when checkboxes clicked) -->
+<div class="absolute top-0 left-0 w-full h-14 bg-primary text-on-primary flex items-center px-6 gap-6 z-20 transition-transform translate-y-[-100%]" id="bulkActions">
+<span class="font-label-md"><span id="selectedCount">0</span> sélectionnés</span>
+<div class="h-6 w-px bg-white/20"></div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors font-label-md">
+<span class="material-symbols-outlined text-[20px]">send</span> Envoyer message
+                    </button>
+<button class="flex items-center gap-2 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors font-label-md">
+<span class="material-symbols-outlined text-[20px]">account_balance_wallet</span> Offrir recharge
+                    </button>
+<button class="flex items-center gap-2 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors font-label-md">
+<span class="material-symbols-outlined text-[20px]">block</span> Suspendre
+                    </button>
+</div>
+<button class="ml-auto material-symbols-outlined hover:bg-white/10 p-2 rounded-full cursor-pointer" onclick="clearSelection()">close</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant bg-surface-container-low">
+<th class="px-6 py-4 w-12">
+<input class="rounded border-outline-variant text-primary focus:ring-primary cursor-pointer" onchange="toggleAllRows(this)" type="checkbox"/>
+</th>
+<th class="px-6 py-4 font-label-md text-on-surface-variant uppercase tracking-wider">Nom</th>
+<th class="px-6 py-4 font-label-md text-on-surface-variant uppercase tracking-wider">Email</th>
+<th class="px-6 py-4 font-label-md text-on-surface-variant uppercase tracking-wider">Faculté</th>
+<th class="px-6 py-4 font-label-md text-on-surface-variant uppercase tracking-wider text-center">Niveau</th>
+<th class="px-6 py-4 font-label-md text-on-surface-variant uppercase tracking-wider text-right">Wallet</th>
+<th class="px-6 py-4 font-label-md text-on-surface-variant uppercase tracking-wider text-center">Statut</th>
+<th class="px-6 py-4 w-10"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4">
+<input class="row-check rounded border-outline-variant text-primary focus:ring-primary cursor-pointer" onchange="updateSelection()" type="checkbox"/>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-cover bg-center ring-2 ring-surface border border-outline-variant" data-alt="A professional headshot of a female student with a warm smile, wearing modern academic casual attire. The lighting is bright and natural, reflecting a clean university campus environment. The overall mood is focused and welcoming, consistent with a high-end educational dashboard." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAzDeuTsdOQ5fpic6SrFjgbrrwsrQ6a-wq1uOZWQTL1ljMqbVBU350L5PIkt0TLkSC3JVoa46K0EXYblXzeSdCFSC9CrO6d3598I8qbBMFBAhyzaZmS-4QX5g8TFVPAs2qOtvmeWugoHx3T9pjlJqrJ3_1Bv0dvMnFjTVhNSaDYETf7klk9BfQTmL-PctmKmkTaLCWI8ZzwEThVsWaNxt3cB51Te2ZoO1E7EfCMdPaCGqpKj45iXVu76g')"></div>
+<div>
+<div class="font-body-md font-bold">Marie D.</div>
+<div class="font-label-md text-on-surface-variant opacity-60">ID: #34211</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 font-body-sm text-on-surface-variant">marie.d@univ-sciences.edu</td>
+<td class="px-6 py-4 font-body-sm">Sciences</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 bg-surface-variant text-on-surface-variant rounded text-[11px] font-bold">L2</span>
+</td>
+<td class="px-6 py-4 text-right font-code font-bold text-primary">2 450F</td>
+<td class="px-6 py-4">
+<div class="flex items-center justify-center gap-2">
+<span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+<span class="font-label-md text-emerald-600">Active</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<button class="p-2 text-on-surface-variant opacity-0 group-hover:opacity-100 hover:bg-surface-container-highest rounded-full transition-all">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4">
+<input class="row-check rounded border-outline-variant text-primary focus:ring-primary cursor-pointer" onchange="updateSelection()" type="checkbox"/>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-cover bg-center ring-2 ring-surface border border-outline-variant" data-alt="A crisp, professional portrait of a male medical student in a light grey studio setting. He is wearing a simple dark navy sweater, looking directly at the camera with a confident and serious expression. High-key lighting emphasizes a corporate and academic professional aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCxBfKxkY7bYaRn-7GB1BIWb31U4IMkPH3D5LYT5kvkr-fVNbMjz3LLi_skcnE-vBOr737sD5mnaQ9S1leapMDFhoNFsr1CkfHh88j2AgSCsSyqtvkpXtAnr9Z3_Exc87mqmD__okU5uAVAxoPMUt053DAF_eFVJ4XxWmNI_xDidOu9xqL0WqFEwqj1gvjC3UqTRFNjapBx5ehfF8SwMgZkWRuAUE7jU5Ha5HISeoYIczsz6hgOCf7iQA')"></div>
+<div>
+<div class="font-body-md font-bold">Pierre K.</div>
+<div class="font-label-md text-on-surface-variant opacity-60">ID: #34212</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 font-body-sm text-on-surface-variant">pierre.k@facmedecine.fr</td>
+<td class="px-6 py-4 font-body-sm">Médecine</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 bg-surface-variant text-on-surface-variant rounded text-[11px] font-bold">L1</span>
+</td>
+<td class="px-6 py-4 text-right font-code font-bold text-primary">150F</td>
+<td class="px-6 py-4">
+<div class="flex items-center justify-center gap-2">
+<span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+<span class="font-label-md text-emerald-600">Active</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<button class="p-2 text-on-surface-variant opacity-0 group-hover:opacity-100 hover:bg-surface-container-highest rounded-full transition-all">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 (Sample) -->
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4">
+<input class="row-check rounded border-outline-variant text-primary focus:ring-primary cursor-pointer" onchange="updateSelection()" type="checkbox"/>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-cover bg-center ring-2 ring-surface border border-outline-variant" data-alt="A close-up portrait of a young female student with glasses, smiling brightly in a brightly lit library environment with blurred bookshelves in the background. The lighting is warm and academic. The student looks engaged and ready for learning, fitting a premium educational administrative tool." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBUZVesuD34oQyuRH8ROd4OScuBP1o-FO7ULsmGD5Q-5zKdcNB0MffcaawolfhEIyXshNVokI_77Bj-rf6is5Xyvw42KtfIXFQgDVnaCJ70ifFEpPwPvwT4iX86l2TBfqwh4heagaR-7cC6z4VW0TXd-f-XVZHA5kXnMDwyYrdf_0QiKIwTJx0P-8eozj0JI0aE-BjEJzupnvRgL1To2A-CCNkhjjm0E1SKZ64Wss26Avxk7-RDVJsAWA')"></div>
+<div>
+<div class="font-body-md font-bold">Sarah B.</div>
+<div class="font-label-md text-on-surface-variant opacity-60">ID: #34215</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 font-body-sm text-on-surface-variant">sarah.b@droit.edu</td>
+<td class="px-6 py-4 font-body-sm">Droit</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 bg-surface-variant text-on-surface-variant rounded text-[11px] font-bold">M2</span>
+</td>
+<td class="px-6 py-4 text-right font-code font-bold text-primary">5 000F</td>
+<td class="px-6 py-4">
+<div class="flex items-center justify-center gap-2">
+<span class="w-2 h-2 bg-amber-500 rounded-full"></span>
+<span class="font-label-md text-amber-600">En attente</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<button class="p-2 text-on-surface-variant opacity-0 group-hover:opacity-100 hover:bg-surface-container-highest rounded-full transition-all">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 (Sample) -->
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="px-6 py-4">
+<input class="row-check rounded border-outline-variant text-primary focus:ring-primary cursor-pointer" onchange="updateSelection()" type="checkbox"/>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-cover bg-center ring-2 ring-surface border border-outline-variant" data-alt="A high-quality digital avatar showing a male student of African descent, wearing a modern tech company t-shirt, working in a contemporary, sunlit university lab. Crisp lines and shallow depth of field create a professional, trustworthy atmosphere for an administrative dashboard." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBiIOXLDaZIdrmMkLXdC4AIPuEnewS8bFkyancfpC8CYOlmhnEErJXuSJCQIJR_tLk47OLRH9aJRr4cQnST3g-Yf_5OTMQdUMJyxw2bxgTZu0UgVvGpXiW_8SNa6ZQjnrVc_9fom6NejG7qB8_pY4kUV44Oh0W3zvMoXFRFGO2lg3NLLiSmdIjJHW94br6Wzpsk6mfE9nydKrCekeCzKkLuYVacVx2csFMW37k4F_70Z-QbkQTXsZMb6w')"></div>
+<div>
+<div class="font-body-md font-bold">Ousmane T.</div>
+<div class="font-label-md text-on-surface-variant opacity-60">ID: #34218</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 font-body-sm text-on-surface-variant">ousmane.t@polytech.edu</td>
+<td class="px-6 py-4 font-body-sm">Informatique</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 bg-surface-variant text-on-surface-variant rounded text-[11px] font-bold">L3</span>
+</td>
+<td class="px-6 py-4 text-right font-code font-bold text-primary">1 200F</td>
+<td class="px-6 py-4">
+<div class="flex items-center justify-center gap-2">
+<span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+<span class="font-label-md text-emerald-600">Active</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<button class="p-2 text-on-surface-variant opacity-0 group-hover:opacity-100 hover:bg-surface-container-highest rounded-full transition-all">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-6 py-4 bg-surface border-t border-outline-variant flex items-center justify-between">
+<span class="font-label-md text-on-surface-variant">Affichage 1-4 sur 1 234 comptes</span>
+<div class="flex items-center gap-2">
+<button class="p-2 rounded hover:bg-surface-container-high transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded bg-primary text-on-primary font-label-md">1</button>
+<button class="w-8 h-8 rounded hover:bg-surface-container-high font-label-md transition-colors text-on-surface-variant">2</button>
+<button class="w-8 h-8 rounded hover:bg-surface-container-high font-label-md transition-colors text-on-surface-variant">3</button>
+<span class="px-2">...</span>
+<button class="w-8 h-8 rounded hover:bg-surface-container-high font-label-md transition-colors text-on-surface-variant">42</button>
+<button class="p-2 rounded hover:bg-surface-container-high transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<script>
+        function updateSelection() {
+            const checkboxes = document.querySelectorAll('.row-check:checked');
+            const bulkBar = document.getElementById('bulkActions');
+            const selectedCount = document.getElementById('selectedCount');
+            
+            if (checkboxes.length > 0) {
+                bulkBar.classList.remove('translate-y-[-100%]');
+                selectedCount.textContent = checkboxes.length;
+            } else {
+                bulkBar.classList.add('translate-y-[-100%]');
+            }
+        }
+
+        function toggleAllRows(masterCheckbox) {
+            const checkboxes = document.querySelectorAll('.row-check');
+            checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+            updateSelection();
+        }
+
+        function clearSelection() {
+            const master = document.querySelector('thead input[type="checkbox"]');
+            if (master) master.checked = false;
+            toggleAllRows({checked: false});
+        }
+    </script>
+</body></html>
