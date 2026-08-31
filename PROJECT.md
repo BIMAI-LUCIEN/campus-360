@@ -1,30 +1,21 @@
-# Project: Campus-Bordes Mobile App & Supabase Integration (Phase 2)
+# Project: Campus 360 — Matching & Automatisation de Stages (Cœur) + Hub Académique
 
-## Architecture
-- **Mobile Client**: Expo React Native app utilizing `Better Auth` and `pdfApi.ts` for database/storage operations.
-- **Backend Server**: Next.js app in `admin-app/` acting as the API gateway. Exposes `/api/auth` (Better Auth backend) and `/api/mobile/*` (secured business routes talking to Supabase via service role).
-- **Database**: Supabase PostgreSQL (`public.app_users`, `public.app_wallets`, `public.app_wallet_transactions`, `public.documents`, `public.app_document_purchases`, `public.app_pack_purchases`).
-- **Storage**: Supabase Storage (`documents` and `document-previews` buckets).
+## Architecture Globale
+- **Cœur Produit**: Plateforme intégrale de matching de stages & génération automatisée de candidatures par IA (Mobile B2C Expo + Portail B2B Next.js).
+- **Modules Secondaires**: Bibliothèque/Marketplace de PDF académiques & Assistant IA de révision (regroupés dans l'onglet `[Ressources]`).
+- **Mobile Client**: Expo React Native (iOS / Android / Web) avec 4 onglets : `[Stages]`, `[Candidatures]`, `[Ressources]`, `[Profil]`.
+- **Backend & Portail Recruteur**: Next.js App Router dans `admin-app/` avec `/recruteur` (Espace B2B), `/admin` (Supervision & Quarantaine KYB) et `/api/*` (API Prisma/Supabase unifiée).
+- **Moteur d'IA & Automatisation**: n8n (Docker) + Google Gemini 2.0 Flash / Claude 3.5 Sonnet pour le scraping, la génération de CV/lettres ciblés, le template HTML/Tailwind -> PDF CMJN et les relances J+7.
+- **Base de Données**: Supabase PostgreSQL avec Prisma ORM (`Student`, `Company`, `Job`, `Application`, `Document`, `Wallet`).
+- **Paiements**: Mobile Money FCFA (FedaPay / CinetPay : MTN, Orange Money, Moov, Wave) pour packs de candidatures et abonnements.
 
-## Milestones
-| # | Name | Scope | Dependencies | Status |
-|---|------|-------|-------------|--------|
-| 1 | DB Schema & Auth Verification | Verify Supabase database schema, betterAuth configuration, and session restoration. | None | PLANNED |
-| 2 | Live Catalog & Packs Integration | Connect mobile explore/catalog views to backend database tables using `pdfApi.ts`. | M1 | PLANNED |
-| 3 | Wallet & Purchase Transactions | Integrate purchase routes, transaction history, and wallet sync on the frontend. | M2 | PLANNED |
-| 4 | Secure PDF Reader & Signed URLs | Implement signed URL retrieval for reading purchased PDFs and preview loading. | M3 | PLANNED |
-| 5 | E2E Verification & Typecheck | Verify all requirements pass typecheck, manual E2E tests, and audit checks. | M4 | PLANNED |
+## Milestones & Sprints (BMAD Framework)
+| # | Sprint | Périmètre | Dépendances | Statut |
+|---|--------|-----------|-------------|--------|
+| 1 | Modèle Prisma & Better Auth | Intégration du schéma Prisma complet (Student, Company, Job, Application) et sessions unifiées. | None | IN PROGRESS |
+| 2 | Feed Mobile des Stages & Matching | UI Mobile 4 onglets, infinite scroll, filtres rapides et algorithme de % match basé sur les compétences. | M1 | PLANNED |
+| 3 | Moteur de Candidature IA (1-Clic) | Prompt LLM, modal de prévisualisation, export multi-canaux (WhatsApp direct, Email, Téléchargement PDF). | M2 | PLANNED |
+| 4 | Timeline, Relances & Gamification | Suivi des candidatures, confettis sur acceptation, webhook n8n pour le Cron J+7 de relance automatique. | M3 | PLANNED |
+| 5 | Portail B2B & Détective KYB | Inscription entreprise, système de vérification anti-fraude par IA (>80%), publication d'offres et CVthèque. | M1 | PLANNED |
+| 6 | Mobile Money & Finalisation Ressources | Paiements FCFA (FedaPay/CinetPay), réorganisation de la bibliothèque PDF et assistant dans l'onglet Ressources. | M4, M5 | PLANNED |
 
-## Interface Contracts
-### Mobile API: `/api/mobile/account` (GET & PATCH)
-- GET: Returns profile details, wallet balance, active subscription, purchased document/pack IDs, and transaction history.
-- PATCH: Updates student name, phone, whatsappPhone, university, faculty, and level.
-
-### Mobile API: `/api/mobile/purchase/document` (POST)
-- POST: Performs atomic document purchase by debiting wallet and inserting into `app_document_purchases`.
-
-### Mobile API: `/api/mobile/purchase/pack` (POST)
-- POST: Performs atomic pack purchase by debiting wallet and inserting into `app_pack_purchases` + unlocking all documents in the pack.
-
-### Mobile API: `/api/mobile/pdf/signed-url` (POST)
-- POST: Validates purchase status and returns a temporary secure signed URL from the private `documents` bucket.

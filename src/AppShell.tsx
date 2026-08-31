@@ -58,7 +58,8 @@ import {
   updateStudentProfile,
   changeStudentPassword,
 } from './features/auth/betterAuth';
-import { OnboardingScreen } from './features/onboarding/OnboardingScreen';
+import { OnboardingScreen as IntroSliderScreen } from './features/onboarding/OnboardingScreen';
+import { OnboardingScreen } from './ui/screens/OnboardingScreen';
 import { FreePdfSelector } from './features/onboarding/FreePdfSelector';
 import { Toast, type ToastMessage, type ToastVariant } from './ui/Toast';
 import { PdfStudentSection } from './features/pdf/PdfStudentSection';
@@ -93,6 +94,9 @@ import { SimplePdfReaderModal } from './features/pdf/SimplePdfReaderModal';
 import { ProfileScreen } from './ui/screens/ProfileScreen';
 import { AuthScreen } from './ui/screens/AuthScreen';
 import { DocumentsScreen } from './features/documents/DocumentsScreen';
+import { StagesScreen } from './ui/screens/StagesScreen';
+import { ApplicationsTimelineScreen } from './ui/screens/ApplicationsTimelineScreen';
+import { ResourcesScreen } from './ui/screens/ResourcesScreen';
 
 const logo = require('../assets/icon.png');
 const onboardingStorageKey = 'campus-bordes.onboarding-seen';
@@ -168,7 +172,7 @@ const CAMEROON_LEVELS = [
 ];
 
 type ClientCatalogTab = 'packs' | 'catalog' | 'library';
-type AppSection = 'home' | 'explore' | 'library' | 'documents' | 'account' | 'premium';
+type AppSection = 'stages' | 'applications' | 'resources' | 'account' | 'home' | 'explore' | 'library' | 'documents' | 'premium';
 
 const onboardingSlides = [
   { title: 'Trouve le bon PDF', text: 'Recherche par université, filière, matière ou niveau.' },
@@ -320,7 +324,7 @@ export function AppShell() {
   const [studentProfile, setStudentProfile] = React.useState<StudentProfile | null>(null);
   const [syncingAccount, setSyncingAccount] = React.useState(false);
   const [clientTab, setClientTab] = React.useState<ClientCatalogTab>('packs');
-  const [activeSection, setActiveSection] = React.useState<AppSection>('home');
+  const [activeSection, setActiveSection] = React.useState<AppSection>('stages');
   const [readingDocument, setReadingDocument] = React.useState<CampusDocument | null>(null);
   const [isSessionRestoring, setIsSessionRestoring] = React.useState(true);
   const [rechargePhone, setRechargePhone] = React.useState('');
@@ -954,7 +958,7 @@ export function AppShell() {
             <Text style={styles.loadingText}>Chargement de ton espace...</Text>
           </View>
         ) : !hasSeenOnboarding ? (
-          <OnboardingScreen
+          <IntroSliderScreen
             onFinish={() => {
               setHasSeenOnboarding(true);
               (async () => {
@@ -993,6 +997,37 @@ export function AppShell() {
             onSubmit={submitAuth}
             onGoogle={handleGoogleSignIn}
           />
+        ) : studentSession && (!studentProfile?.skills || studentProfile.skills.length === 0) ? (
+          <OnboardingScreen
+            initialName={studentProfile?.name || studentSession.user.name || 'Étudiant'}
+            onCompleteOnboarding={(onboardingData) => {
+              const updated: StudentProfile = {
+                ...(studentProfile || {
+                  id: studentSession.user.id,
+                  name: studentSession.user.name || 'Étudiant',
+                  email: studentSession.user.email,
+                  role: 'STUDENT',
+                  phone: '',
+                  whatsappPhone: '',
+                }),
+                university: onboardingData.university,
+                faculty: onboardingData.major,
+                level: onboardingData.level,
+                skills: onboardingData.skills,
+              };
+              setStudentProfile(updated);
+              updateStudentProfile({
+                name: updated.name,
+                phone: updated.phone || '',
+                whatsappPhone: updated.whatsappPhone || '',
+                university: updated.university || '',
+                faculty: updated.faculty || '',
+                level: updated.level,
+                skills: updated.skills,
+              }).catch((e) => console.warn('Sync profile error:', e));
+              showToast('Profil complété avec succès ! Découvre tes stages.');
+            }}
+          />
         ) : (
           <View style={styles.appShell}>
             {/* TopBar */}
@@ -1020,6 +1055,46 @@ export function AppShell() {
                 />
               }
             >
+              {activeSection === 'stages' && (
+                <StagesScreen
+                  studentProfile={{
+                    fullName: studentProfile?.name || 'Étudiant',
+                    email: studentProfile?.email || 'etudiant@campus360.app',
+                    phoneWhatsapp: studentProfile?.whatsappPhone || studentProfile?.phone,
+                    major: studentProfile?.faculty || studentProfile?.university || 'Informatique & Télécoms',
+                    educationLevel: studentProfile?.level || 'Licence 2',
+                    skills: ['React', 'TypeScript', 'Comptabilité', 'Excel', 'UI/UX Design', 'Git'],
+                    tokens: iaCredits > 0 ? iaCredits : 2,
+                  }}
+                  onOpenWallet={() => openSection('account')}
+                />
+              )}
+
+              {activeSection === 'applications' && (
+                <ApplicationsTimelineScreen
+                  studentName={studentProfile?.name || 'Étudiant'}
+                />
+              )}
+
+              {activeSection === 'resources' && (
+                <ResourcesScreen
+                  documents={pdfDocuments}
+                  packs={pdfPacks}
+                  purchasedDocumentIds={effectivePurchasedDocuments}
+                  purchasedPackIds={purchasedPacks}
+                  ownedDocuments={ownedLibrary}
+                  documentsLoading={documentsLoading}
+                  documentsError={documentsError}
+                  purchasingDocumentId={purchasingDocumentId}
+                  purchasingPackId={purchasingPackId}
+                  onBuyDocument={buyDocument}
+                  onBuyPack={buyPack}
+                  onOpenPdf={setReadingDocument}
+                  onRefreshDocuments={() => refreshDocuments()}
+                  onOpenAssistant={() => openSection('documents')}
+                />
+              )}
+
               {activeSection === 'home' && (
                 <HomeScreen
                   studentName={studentProfile?.name}
@@ -1029,11 +1104,11 @@ export function AppShell() {
                   homePacks={homePacks}
                   ownedDocuments={ownedLibrary}
                   onRecharge={() => openSection('account')}
-                  onExplore={() => openSection('explore')}
+                  onExplore={() => openSection('resources')}
                   onBuyPack={buyPack}
                   purchasingPackId={purchasingPackId}
                   onDocuments={() => openSection('documents')}
-                  onLibrary={() => openSection('library')}
+                  onLibrary={() => openSection('resources')}
                   onPremium={() => openSection('premium')}
                 />
               )}
@@ -1057,7 +1132,7 @@ export function AppShell() {
                 <LibraryScreen
                   ownedDocuments={ownedLibrary}
                   onOpenDocument={setReadingDocument}
-                  onExplore={() => openSection('explore')}
+                  onExplore={() => openSection('resources')}
                 />
               )}
 
@@ -1088,7 +1163,7 @@ export function AppShell() {
                   onSync={() => syncStudentAccount(studentSession ?? undefined)}
                   onRecharge={() => { setAccountVisible(true); }}
                   onPremium={() => openSection('premium')}
-                  onLibrary={() => openSection('library')}
+                  onLibrary={() => openSection('resources')}
                   onDocuments={() => openSection('documents')}
                   onSignOut={signOutStudent}
                 />
@@ -1105,7 +1180,7 @@ export function AppShell() {
                 />
               )}
 
-              {activeSection !== 'premium' && activeSection !== 'account' && activeSection !== 'home' && activeSection !== 'explore' && activeSection !== 'library' && activeSection !== 'documents' ? (
+              {activeSection !== 'stages' && activeSection !== 'applications' && activeSection !== 'resources' && activeSection !== 'premium' && activeSection !== 'account' && activeSection !== 'home' && activeSection !== 'explore' && activeSection !== 'library' && activeSection !== 'documents' ? (
                 <PdfStudentSection
                   documents={pdfDocuments}
                   packs={pdfPacks}

@@ -4,5 +4,5 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "exclude": ["admin-app", "landing-site", "node_modules", "dist", ".expo", "scratch", "mobile-api", "admin"]
+  "exclude": ["recruiter-web", "admin-app", "landing-site", "node_modules", "dist", ".expo", "scratch", "mobile-api", "admin", "scripts"]
 }

@@ -12,6 +12,7 @@ import {
   Wallet,
   Crown,
   Sparkles,
+  Flame,
   BookOpen,
   LogOut,
   RefreshCw,
@@ -210,6 +211,49 @@ export function ProfileScreen({
           <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Premium</Text>
         </Pressable>
       </View>
+
+      {/* Boost & Social Portfolio Hero Card */}
+      <GlassCard style={styles.portfolioCard}>
+        <View style={styles.portfolioHeader}>
+          <View style={styles.portfolioBadge}>
+            <Sparkles size={14} color="#F59E0B" />
+            <Text style={styles.portfolioBadgeText}>Vitrine Sociale &amp; Portfolio</Text>
+          </View>
+          <Pressable style={styles.boostBtn} onPress={() => alert('Boost activé pour 3 jours ! Ton profil est épinglé en tête de liste des recruteurs.')}>
+            <Flame size={13} color="#FFFFFF" />
+            <Text style={styles.boostBtnText}>Booster (500 FCFA)</Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.portfolioTitle}>Mes Réalisations &amp; Projets</Text>
+        <Text style={styles.portfolioSubtitle}>
+          Présente tes projets, vidéos de démo et réalisations pour convaincre les recruteurs.
+        </Text>
+
+        <View style={styles.projectsList}>
+          <View style={styles.projectItem}>
+            <View style={styles.projectDot} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.projectName}>Application Mobile React Native</Text>
+              <Text style={styles.projectDesc}>Projet de fin d'études • Vidéo de démo attachée (GCS)</Text>
+            </View>
+            <View style={styles.mediaPill}>
+              <Text style={styles.mediaPillText}>Vidéo 45s</Text>
+            </View>
+          </View>
+
+          <View style={styles.projectItem}>
+            <View style={styles.projectDot} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.projectName}>Modèle d'Analyse Financière SYSCOHADA</Text>
+              <Text style={styles.projectDesc}>Tableau de bord Excel • Rapport PDF joint</Text>
+            </View>
+            <View style={styles.mediaPill}>
+              <Text style={styles.mediaPillText}>PDF</Text>
+            </View>
+          </View>
+        </View>
+      </GlassCard>
 
       {/* Subscription card */}
       {subscriptionTier !== 'free' && (
@@ -460,5 +504,93 @@ const styles = StyleSheet.create({
     flex: 1,
     fontWeight: '600',
     color: stitchColors.ink,
+  },
+  portfolioCard: {
+    padding: 16,
+    marginBottom: stitchSpacing.stackMd,
+    backgroundColor: '#0F172A',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  portfolioHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  portfolioBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  portfolioBadgeText: {
+    color: '#F59E0B',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  boostBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#EA580C',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  boostBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  portfolioTitle: {
+    ...stitchTypography.displaySm,
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  portfolioSubtitle: {
+    ...stitchTypography.bodySm,
+    color: '#94A3B8',
+    marginBottom: 14,
+  },
+  projectsList: {
+    gap: 10,
+  },
+  projectItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    padding: 12,
+    borderRadius: 10,
+    gap: 10,
+  },
+  projectDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
+  },
+  projectName: {
+    color: '#F8FAFC',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  projectDesc: {
+    color: '#94A3B8',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  mediaPill: {
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  mediaPillText: {
+    color: '#60A5FA',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

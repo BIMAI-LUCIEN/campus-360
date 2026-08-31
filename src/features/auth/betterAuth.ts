@@ -26,6 +26,7 @@ export type StudentProfile = {
   university?: string;
   faculty?: string;
   level?: string;
+  skills?: string[];
 };
 
 export type StudentProfileUpdateInput = {
@@ -35,6 +36,7 @@ export type StudentProfileUpdateInput = {
   university: string;
   faculty: string;
   level?: string;
+  skills?: string[];
 };
 
 export type StudentAccount = {

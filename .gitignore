@@ -45,6 +45,17 @@ admin-app/*.sqlite-*
 admin-app/public/uploads/pdfs/*
 !admin-app/public/uploads/pdfs/.gitkeep
 
+recruiter-web/.env.local
+recruiter-web/.next/
+recruiter-web/*.sqlite
+recruiter-web/*.sqlite-*
+recruiter-web/public/uploads/pdfs/*
+!recruiter-web/public/uploads/pdfs/.gitkeep
+
+# generated reports & artifacts
+generated_reports/
+.idea/
+
 # typescript
 *.tsbuildinfo
 
@@ -55,7 +66,7 @@ admin-app/public/uploads/pdfs/*
 # Git worktrees
 .worktrees/
 
-# Next.js build cache (root level — admin-app/.next is already ignored above)
+# Next.js build cache
 .next/
 
 

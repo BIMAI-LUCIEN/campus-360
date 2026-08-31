@@ -31,6 +31,9 @@ import {
   Eye,
   EyeOff,
   Check,
+  Send,
+  Briefcase,
+  Layers,
 } from 'lucide-react-native';
 
 // Cover accents — give each PDF tile a distinct hue (comic-shelf feel).
@@ -66,6 +69,14 @@ const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospa
 export function InkRule({ style }: { style?: ViewStyle }) {
   return <View style={[styles.rule, style]} />;
 }
+
+// ─── BottomNav — 4 onglets stratégiques : Stages (Cœur), Candidatures, Ressources, Profil ──
+const NAV_ITEMS = [
+  { key: 'stages', label: 'Stages', Icon: Briefcase },
+  { key: 'applications', label: 'Candidatures', Icon: Send },
+  { key: 'resources', label: 'Ressources', Icon: BookOpen },
+  { key: 'account', label: 'Profil', Icon: User },
+] as const;
 
 // ─── GradientText — the signature gradient headline (SVG-based) ──────────────
 export function GradientText({
@@ -367,14 +378,6 @@ export function SecondaryButton({
 }
 
 // ─── BottomNav — floating dark bar, active = gradient pill ───────────────────
-const NAV_ITEMS = [
-  { key: 'home', label: 'Accueil', Icon: Home },
-  { key: 'explore', label: 'Explorer', Icon: Search },
-  { key: 'library', label: 'Biblio', Icon: BookOpen },
-  { key: 'documents', label: 'Rédaction', Icon: FileText },
-  { key: 'account', label: 'Compte', Icon: User },
-] as const;
-
 export function BottomNav({
   activeSection,
   onPress,
@@ -644,17 +647,17 @@ export function TransactionRow({
   label: string;
   date: string;
   amount: number;
-  type: 'topup' | 'purchase' | 'withdrawal' | 'commission' | 'report';
+  type: 'topup' | 'purchase' | 'withdrawal' | 'commission' | 'report' | 'stage_token' | 'subscription';
   formatCoins: (n: number) => string;
 }) {
   const isPositive = amount > 0;
   const iconColor =
-    type === 'topup' ? stitchColors.emerald
-    : type === 'commission' || type === 'report' ? stitchColors.sienna
+    type === 'topup' || type === 'stage_token' ? stitchColors.emerald
+    : type === 'commission' || type === 'report' || type === 'subscription' ? stitchColors.sienna
     : stitchColors.inkMuted;
   const Icon =
-    type === 'topup' || type === 'withdrawal' ? Wallet
-    : type === 'commission' ? Sparkles
+    type === 'topup' || type === 'withdrawal' || type === 'stage_token' ? Wallet
+    : type === 'commission' || type === 'subscription' ? Sparkles
     : FileText;
 
   return (
