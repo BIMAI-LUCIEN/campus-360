@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { execSync } from 'child_process';
+import puppeteer from 'puppeteer';
 
 import { requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
 import { getDocumentById, getDocumentSections } from '@/lib/documents-db';
@@ -42,8 +43,26 @@ const escapeHtml = (value: unknown): string => {
   });
 };
 
-const findSystemChromium = (): string | undefined => {
+const EXPORT_FONTS: Record<string, string> = {
+  'Times New Roman': "'Times New Roman', Times, serif",
+  Arial: 'Arial, Helvetica, sans-serif',
+  Georgia: "Georgia, 'Times New Roman', serif",
+  'Courier New': "'Courier New', Courier, monospace",
+};
+
+const PAGE_MARGINS: Record<string, string> = {
+  narrow: '1.2cm 1.4cm',
+  normal: '2cm 2.2cm',
+  wide: '2.8cm 3cm',
+};
+
+const findSystemChromium = async (): Promise<string | undefined> => {
+  let puppeteerChromium: string | undefined;
+  try {
+    puppeteerChromium = await puppeteer.executablePath();
+  } catch {}
   const candidates = [
+    puppeteerChromium,
     'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
@@ -112,6 +131,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const isCareerDocument = document.template_type === 'cv' || document.template_type === 'lettre_motivation';
     const isMemoir = document.template_type === 'memoire';
     const isProfessionalMemoir = isMemoir && cd.memoirKind === 'professional';
+    const exportFont = EXPORT_FONTS[document.font_family] || EXPORT_FONTS['Times New Roman'];
+    const exportLineSpacing = Math.min(4, Math.max(0.5, Number(document.line_spacing) || 1.5));
+    const exportMargins = isCareerDocument ? '1.4cm 1.6cm' : (PAGE_MARGINS[document.margins] || PAGE_MARGINS.normal);
 
     const studentName = cd.studentName || (isMemoir ? '' : 'Lucien Nkouam');
     const studentMatricule = cd.matricule || (isMemoir ? '' : '22GL049');
@@ -281,12 +303,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
         <style>
           @page {
             size: A4;
-            margin: ${isCareerDocument ? '1.4cm 1.6cm' : '2cm 2.2cm 2cm 2.2cm'};
+            margin: ${exportMargins};
           }
           * { box-sizing: border-box; }
           body {
-            font-family: 'Times New Roman', 'Cambria', 'Segoe UI', serif;
-            line-height: 1.5;
+            font-family: ${exportFont};
+            line-height: ${exportLineSpacing};
             color: #0F172A;
             margin: 0;
             padding: 0;
@@ -412,7 +434,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
           .academic-body-content {
             font-size: 11.5pt;
-            line-height: 1.6;
+            line-height: ${exportLineSpacing};
             color: #1E293B;
             text-align: justify;
             text-justify: inter-word;
@@ -487,9 +509,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
             color: #334155;
           }
           .professional-document {
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: ${exportFont};
             color: #172033;
-            line-height: 1.42;
+            line-height: ${exportLineSpacing};
           }
           .professional-document h1 {
             font-size: 24pt;
@@ -509,9 +531,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
           .professional-document ul, .professional-document ol { margin: 5px 0 10px; }
           .professional-section { page-break-inside: auto; }
           .letter-document {
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family: ${exportFont};
             font-size: 11.5pt;
-            line-height: 1.55;
+            line-height: ${exportLineSpacing};
           }
           .subscription-watermark {
             position: fixed;
@@ -536,7 +558,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     `;
 
     let pdfBuffer: Buffer | null = null;
-    const chromiumBin = findSystemChromium();
+    const chromiumBin = await findSystemChromium();
 
     if (chromiumBin) {
       const tmpHtmlPath = path.join(os.tmpdir(), `academic_doc_${id}_${Date.now()}.html`);
@@ -573,7 +595,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     console.log('[PDF Export] Generated High-Fidelity Academic PDF bytes:', pdfBuffer.length);
 
-    const filename = `Rapport_de_Stage_${String(document.title || 'Stage')
+    const documentPrefix = document.template_type === 'cv'
+      ? 'CV'
+      : document.template_type === 'lettre_motivation'
+        ? 'Lettre_de_Motivation'
+        : document.template_type === 'memoire'
+          ? 'Memoire'
+          : 'Rapport_de_Stage';
+    const filename = `${documentPrefix}_${String(document.title || 'Document')
       .replace(/[^\p{L}\p{N}_-]+/gu, '_')
       .slice(0, 80)}.pdf`;
 

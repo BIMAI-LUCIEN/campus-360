@@ -324,7 +324,7 @@ export function AppShell() {
   const [studentProfile, setStudentProfile] = React.useState<StudentProfile | null>(null);
   const [syncingAccount, setSyncingAccount] = React.useState(false);
   const [clientTab, setClientTab] = React.useState<ClientCatalogTab>('packs');
-  const [activeSection, setActiveSection] = React.useState<AppSection>('stages');
+  const [activeSection, setActiveSection] = React.useState<AppSection>('home');
   const [readingDocument, setReadingDocument] = React.useState<CampusDocument | null>(null);
   const [isSessionRestoring, setIsSessionRestoring] = React.useState(true);
   const [rechargePhone, setRechargePhone] = React.useState('');
@@ -891,13 +891,6 @@ export function AppShell() {
     ? Array.from(new Set([...pdfDocuments.map((d) => d.id), ...purchasedDocuments]))
     : purchasedDocuments;
   const ownedLibrary = pdfDocuments.filter((d) => effectivePurchasedDocuments.includes(d.id));
-  const publishedPacks = pdfPacks.filter((p) => p.status === 'published');
-  const homePacks = [...publishedPacks].sort((a, b) => {
-    const leftVal = a.discountPercent * 10 + a.documentCount;
-    const rightVal = b.discountPercent * 10 + b.documentCount;
-    return rightVal - leftVal;
-  });
-
   const openSection = (section: AppSection) => {
     if (section === 'home') { setActiveSection(section); setClientTab('packs'); return; }
     if (section === 'explore') { setActiveSection(section); setClientTab('catalog'); return; }
@@ -1071,7 +1064,7 @@ export function AppShell() {
                     phoneWhatsapp: studentProfile?.whatsappPhone || studentProfile?.phone,
                     major: studentProfile?.faculty || studentProfile?.university || 'Informatique & Télécoms',
                     educationLevel: studentProfile?.level || 'Licence 2',
-                    skills: ['React', 'TypeScript', 'Comptabilité', 'Excel', 'UI/UX Design', 'Git'],
+                    skills: studentProfile?.skills ?? [],
                     tokens: iaCredits > 0 ? iaCredits : 2,
                   }}
                   onOpenWallet={() => openSection('account')}
@@ -1106,18 +1099,23 @@ export function AppShell() {
               {activeSection === 'home' && (
                 <HomeScreen
                   studentName={studentProfile?.name}
+                  studentSkills={studentProfile?.skills ?? []}
+                  profileComplete={Boolean(
+                    studentProfile?.name
+                    && studentProfile?.university
+                    && studentProfile?.faculty
+                    && studentProfile?.level
+                    && studentProfile?.skills?.length
+                  )}
                   balance={balance}
                   iaCredits={iaCredits}
                   transactions={transactions}
-                  homePacks={homePacks}
-                  ownedDocuments={ownedLibrary}
                   onRecharge={() => openSection('account')}
-                  onExplore={() => openSection('resources')}
-                  onBuyPack={buyPack}
-                  purchasingPackId={purchasingPackId}
+                  onStages={() => openSection('stages')}
+                  onApplications={() => openSection('applications')}
                   onDocuments={() => openSection('documents')}
-                  onLibrary={() => openSection('resources')}
-                  onPremium={() => openSection('premium')}
+                  onResources={() => openSection('resources')}
+                  onProfile={() => openSection('account')}
                 />
               )}
 

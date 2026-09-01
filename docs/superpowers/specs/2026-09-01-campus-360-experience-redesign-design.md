@@ -16,7 +16,7 @@ Le résultat attendu est une interface épurée, motivante et immédiatement com
 - Priorité produit : les stages sont la fonctionnalité numéro 1 ; l'atelier et les ressources soutiennent ce parcours.
 - Accueil mobile : priorité dynamique calculée selon la situation réelle de l'étudiant.
 - Navigation mobile : Accueil, Stages, Créer, Ressources et Profil.
-- Identité : bleu Campus 360 dominant, surfaces claires, bleu nuit pour le texte et orange utilisé avec parcimonie.
+- Identité : design Stitch violet sombre, surfaces anthracite, texte clair et accents violet, rose et bleu utilisés avec parcimonie.
 - Typographie : Outfit pour les titres et Inter pour le contenu, en continuité avec l'existant.
 - Aucun compte ni espace encadrant. L'étudiant exporte son document et le présente en dehors de l'application.
 - La tarification comprend une offre gratuite et trois offres payantes : Basique, Pro et Elite.
@@ -112,9 +112,9 @@ Les notifications rappellent une candidature, un document abandonné ou une rela
 
 ### 3.6 Système visuel mobile
 
-- Fond général bleu très pâle et surfaces principales blanches.
-- Bleu principal réservé aux actions, sélections et progressions.
-- Orange réservé aux éléments importants, réussites et alertes positives ; rouge réservé aux erreurs.
+- Fond général presque noir et surfaces principales anthracite.
+- Violet principal réservé aux actions, sélections et progressions, avec un dégradé violet, rose et bleu sur les moments prioritaires.
+- Vert réservé aux réussites et états positifs ; rouge réservé aux erreurs.
 - Cartes avec un rayon de 14 à 16 px.
 - Une carte utilise soit une bordure légère, soit une ombre courte, sans combiner une bordure décorative et une ombre large.
 - Les cartes varient de format selon la hiérarchie : grande carte d'objectif, raccourcis compacts, listes horizontales pour l'activité.

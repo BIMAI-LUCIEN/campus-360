@@ -27,6 +27,9 @@ const decodeHtml = (value: string) =>
 const safeFilename = (value: string) =>
   value.replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 80) || 'Rapport_de_stage';
 
+const DOCX_FONTS = new Set(['Times New Roman', 'Arial', 'Georgia', 'Courier New']);
+const DOCX_MARGINS: Record<string, number> = { narrow: 680, normal: 1_134, wide: 1_700 };
+
 export async function OPTIONS(request: NextRequest) {
   return withCors(new NextResponse(null, { status: 204 }), request);
 }
@@ -60,6 +63,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const memoirLabel = cover.memoirKind === 'professional'
       ? 'MÉMOIRE PROFESSIONNEL / PROJET'
       : 'MÉMOIRE ACADÉMIQUE DE RECHERCHE';
+    const exportFont = DOCX_FONTS.has(document.font_family) ? document.font_family : 'Times New Roman';
+    const exportLineSpacing = Math.round(240 * Math.min(4, Math.max(0.5, Number(document.line_spacing) || 1.5)));
+    const exportMargin = DOCX_MARGINS[document.margins] || DOCX_MARGINS.normal;
     const children: Paragraph[] = isCareerDocument ? [] : [
       new Paragraph({ text: String(cover.school || 'Établissement'), heading: HeadingLevel.HEADING_2 }),
       new Paragraph({ text: '' }),
@@ -99,7 +105,22 @@ export async function GET(request: NextRequest, context: RouteContext) {
       }
     }
 
-    const buffer = await Packer.toBuffer(new DocxDocument({ sections: [{ children }] }));
+    const buffer = await Packer.toBuffer(new DocxDocument({
+      styles: {
+        default: {
+          document: {
+            run: { font: exportFont, size: 23 },
+            paragraph: { spacing: { line: exportLineSpacing } },
+          },
+        },
+      },
+      sections: [{
+        properties: {
+          page: { margin: { top: exportMargin, right: exportMargin, bottom: exportMargin, left: exportMargin } },
+        },
+        children,
+      }],
+    }));
     return withCors(
       new NextResponse(new Uint8Array(buffer), {
         status: 200,

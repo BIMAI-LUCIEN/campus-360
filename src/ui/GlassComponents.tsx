@@ -31,7 +31,6 @@ import {
   Eye,
   EyeOff,
   Check,
-  Send,
   Briefcase,
   Layers,
 } from 'lucide-react-native';
@@ -70,10 +69,11 @@ export function InkRule({ style }: { style?: ViewStyle }) {
   return <View style={[styles.rule, style]} />;
 }
 
-// ─── BottomNav — 4 onglets stratégiques : Stages (Cœur), Candidatures, Ressources, Profil ──
+// Five destinations keep the student's complete journey one tap away.
 const NAV_ITEMS = [
+  { key: 'home', label: 'Accueil', Icon: Home },
   { key: 'stages', label: 'Stages', Icon: Briefcase },
-  { key: 'applications', label: 'Candidatures', Icon: Send },
+  { key: 'documents', label: 'Créer', Icon: FileText },
   { key: 'resources', label: 'Ressources', Icon: BookOpen },
   { key: 'account', label: 'Profil', Icon: User },
 ] as const;
@@ -874,16 +874,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 8,
   },
-  navItem: { alignItems: 'center', justifyContent: 'center', minWidth: 44, height: 44 },
+  navItem: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 44, height: 48 },
   navPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    justifyContent: 'center',
+    gap: 5,
     paddingVertical: 9,
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     borderRadius: stitchRadius.full,
   },
-  navPillText: { fontFamily: SANS, fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
+  navPillText: { fontFamily: SANS, fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
   navLabelInactive: { fontFamily: SANS, fontSize: 10, fontWeight: '600', color: stitchColors.inkSubtle, marginTop: 2 },
 
   // TopBar

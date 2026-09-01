@@ -24,11 +24,13 @@
  */
 
 import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
 const require = createRequire(import.meta.url);
 
 // ── Load .env.local (gitignored) ───────────────────────────────────────────────
 const fs = require('fs');
 const path = require('path');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.join(__dirname, '..', '.env.local');
 if (fs.existsSync(envPath)) {
   fs.readFileSync(envPath, 'utf8')

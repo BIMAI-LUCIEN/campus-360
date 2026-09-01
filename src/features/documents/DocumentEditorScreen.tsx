@@ -44,6 +44,91 @@ type DocumentEditorScreenProps = {
   onUpgrade: () => void;
 };
 
+type EditorSurfaceHandle = {
+  injectJavaScript: (script: string) => void;
+};
+
+type EditorSurfaceProps = {
+  html: string;
+  onMessage: (event: any) => void;
+  onLoadEnd: () => void;
+};
+
+const EditorSurface = React.forwardRef<EditorSurfaceHandle, EditorSurfaceProps>(
+  ({ html, onMessage, onLoadEnd }, forwardedRef) => {
+    const nativeRef = useRef<any>(null);
+    const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+    useEffect(() => {
+      if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+      const handleMessage = (event: MessageEvent) => {
+        if (event.source !== iframeRef.current?.contentWindow || !event.data) return;
+        const data = typeof event.data === 'string' ? event.data : JSON.stringify(event.data);
+        onMessage({ nativeEvent: { data } });
+      };
+      window.addEventListener('message', handleMessage);
+      return () => window.removeEventListener('message', handleMessage);
+    }, [onMessage]);
+
+    React.useImperativeHandle(forwardedRef, () => ({
+      injectJavaScript(script: string) {
+        if (Platform.OS === 'web') {
+          (iframeRef.current?.contentWindow as any)?.eval(script);
+          return;
+        }
+        nativeRef.current?.injectJavaScript(script);
+      },
+    }), []);
+
+    if (Platform.OS === 'web') {
+      return React.createElement('iframe', {
+        ref: iframeRef,
+        srcDoc: html,
+        title: 'Éditeur de document Campus 360',
+        onLoad: onLoadEnd,
+        style: {
+          width: '100%',
+          height: '100%',
+          border: 0,
+          backgroundColor: '#EDEEF2',
+        },
+      });
+    }
+
+    return (
+      <WebView
+        ref={nativeRef}
+        originWhitelist={['*']}
+        source={{ html }}
+        style={styles.webView}
+        javaScriptEnabled
+        domStorageEnabled
+        onMessage={onMessage}
+        onLoadEnd={onLoadEnd}
+        scrollEnabled
+        showsVerticalScrollIndicator={false}
+        textZoom={100}
+        keyboardDisplayRequiresUserAction={false}
+        hideKeyboardAccessoryView={false}
+      />
+    );
+  },
+);
+
+EditorSurface.displayName = 'EditorSurface';
+
+const downloadBlobOnWeb = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = window.document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = 'none';
+  window.document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+};
+
 // ─── HTML Editor (bundled) ───────────────────────────────────────────────────
 
 const EDITOR_HTML = `
@@ -508,6 +593,14 @@ function getSectionStarterHtml(section) {
   return '<p><br></p>';
 }
 
+function applyDocumentStyles() {
+  const rep = (reportData && (reportData.report || reportData.document)) || {};
+  const editor = document.getElementById('editor');
+  if (!editor) return;
+  editor.style.fontFamily = rep.font_family || 'Times New Roman';
+  editor.style.lineHeight = String(rep.line_spacing || 1.5);
+}
+
 // ── Switch Section Logic ────────────────────────────────────────────────────
 function switchSection(sectionId, shouldSave = true) {
   if (!sectionId || !reportData || !reportData.sections) return;
@@ -579,6 +672,7 @@ function switchSection(sectionId, shouldSave = true) {
     if (selFont) selFont.value = rep.font_family || 'Times New Roman';
     const selSpacing = document.getElementById('selSpacing');
     if (selSpacing) selSpacing.value = String(rep.line_spacing || '1.5');
+    applyDocumentStyles();
   }
 }
 
@@ -746,10 +840,15 @@ function initEditor() {
 
   // Settings
   document.getElementById('selFont').addEventListener('change', (e) => {
+    if (reportData && reportData.report) reportData.report.font_family = e.target.value;
+    applyDocumentStyles();
     sendToApp({ type: 'updateFont', data: e.target.value });
   });
   document.getElementById('selSpacing').addEventListener('change', (e) => {
-    sendToApp({ type: 'updateSpacing', data: parseFloat(e.target.value) });
+    const spacing = parseFloat(e.target.value);
+    if (reportData && reportData.report) reportData.report.line_spacing = spacing;
+    applyDocumentStyles();
+    sendToApp({ type: 'updateSpacing', data: spacing });
   });
 
   // Cover Page Auto-Save
@@ -826,10 +925,10 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 // ─── React Native Component ───────────────────────────────────────────────────
 
 export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, onUpgrade }: DocumentEditorScreenProps) {
-  const webViewRef = useRef<any>(null);
+  const webViewRef = useRef<EditorSurfaceHandle | null>(null);
   const webViewLoadedRef = useRef(false);
   const initialDataSentRef = useRef(false);
-  const editorHtmlSource = useMemo(() => ({ html: EDITOR_HTML }), []);
+  const editorHtml = useMemo(() => EDITOR_HTML, []);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -992,22 +1091,6 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
     }
   }, [documentId]);
 
-  useEffect(() => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const handleWebMsg = (e: MessageEvent) => {
-        if (!e.data) return;
-        try {
-          const parsed = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-          if (parsed && parsed.type) {
-            handleWebViewMessage({ nativeEvent: { data: typeof e.data === 'string' ? e.data : JSON.stringify(e.data) } } as any);
-          }
-        } catch {}
-      };
-      window.addEventListener('message', handleWebMsg);
-      return () => window.removeEventListener('message', handleWebMsg);
-    }
-  }, [handleWebViewMessage]);
-
   // Add new section
   const handleAddSection = useCallback(async () => {
     if (!newSectionTitle.trim()) return;
@@ -1102,15 +1185,19 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
       }
 
       const blob = await response.blob();
+      const safeName = `${String(report.title || 'document')
+        .replace(/[^\p{L}\p{N}_-]+/gu, '_')
+        .slice(0, 60)}.pdf`;
+      if (Platform.OS === 'web') {
+        downloadBlobOnWeb(blob, safeName);
+        return;
+      }
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
         reader.onerror = () => reject(new Error('read-failed'));
         reader.readAsDataURL(blob);
       });
-      const safeName = `${String(report.title || 'document')
-        .replace(/[^\p{L}\p{N}_-]+/gu, '_')
-        .slice(0, 60)}.pdf`;
       const fileUri = `${FileSystem.cacheDirectory}${safeName}`;
       await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
 
@@ -1148,16 +1235,20 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
         throw new Error(payload.error || "Le serveur a refusé l'export Word.");
       }
       const blob = await response.blob();
+      const safeName = `${String(report.title || 'document')
+        .replace(/[^\p{L}\p{N}_-]+/gu, '_')
+        .slice(0, 60)}.docx`;
+      if (Platform.OS === 'web') {
+        downloadBlobOnWeb(blob, safeName);
+        return;
+      }
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
         reader.onerror = () => reject(new Error('read-failed'));
         reader.readAsDataURL(blob);
       });
-      const safeName = String(report.title || 'Rapport_de_stage')
-        .replace(/[^\p{L}\p{N}_-]+/gu, '_')
-        .slice(0, 60);
-      const fileUri = `${FileSystem.cacheDirectory}${safeName}.docx`;
+      const fileUri = `${FileSystem.cacheDirectory}${safeName}`;
       await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
       if (!(await Sharing.isAvailableAsync())) {
         throw new Error("Le partage n'est pas disponible sur cet appareil.");
@@ -1303,13 +1394,9 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
 
       {/* ── WebView Editor ─────────────────────────────────────────────── */}
       <View style={styles.webViewContainer}>
-        <WebView
+        <EditorSurface
           ref={webViewRef}
-          originWhitelist={['*']}
-          source={editorHtmlSource}
-          style={styles.webView}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
+          html={editorHtml}
           onMessage={handleWebViewMessage}
           onLoadEnd={() => {
             webViewLoadedRef.current = true;
@@ -1320,11 +1407,6 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
               initialDataSentRef.current = true;
             }
           }}
-          scrollEnabled={true}
-          showsVerticalScrollIndicator={false}
-          textZoom={100}
-          keyboardDisplayRequiresUserAction={false}
-          hideKeyboardAccessoryView={false}
         />
 
         {/* ── Floating AI assistant button ───────────────────────────── */}
