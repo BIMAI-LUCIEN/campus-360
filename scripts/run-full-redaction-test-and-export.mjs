@@ -155,6 +155,7 @@ async function runTests() {
       body: JSON.stringify({
         documentId: reportId,
         documentType: 'stage',
+        generationId: `stage-${reportId}-${Date.now()}`,
         messages: [
           { role: 'user', content: 'Je suis Lucien Nkouam, étudiant en Master Génie Logiciel. Mon stage chez Campus 360 Inc. a porté sur la conception et l\'implémentation d\'un moteur de rédaction académique assisté par IA, sécurisé par Better Auth, avec rendu vectoriel A4 et persistance PostgreSQL.' },
           { role: 'assistant', content: 'Très bien, je vais rédiger un rapport universitaire structuré et illustré de diagrammes techniques.' },

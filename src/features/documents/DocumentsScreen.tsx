@@ -114,6 +114,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   const [newDesc, setNewDesc] = useState('');
   const [creating, setCreating] = useState(false);
   const [iaCredits, setIaCredits] = useState<number | null>(null);
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
 
   // CV form state
   const [cvFullName, setCvFullName] = useState('');
@@ -159,6 +160,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       if (res.ok) {
         const data = await res.json();
         setIaCredits(data.wallet?.iaCredits ?? 0);
+        setStudentProfile(data.user ?? null);
       }
     } catch {}
   };
@@ -318,13 +320,29 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       const { document: doc } = await createRes.json();
       createdId = doc.id;
 
-      // 2. Write every section + the cover page from the conversation.
-      const genRes = await authFetch('/api/mobile/documents/generate-full', {
+      const isCareerDocument = selectedType === 'cv' || selectedType === 'lettre_motivation';
+      const generationId = `${selectedType}-${doc.id}-${Date.now()}`;
+      const genRes = await authFetch(
+        isCareerDocument ? '/api/mobile/documents/generate' : '/api/mobile/documents/generate-full',
+        {
         method: 'POST',
         body: JSON.stringify({
+          type: isCareerDocument ? selectedType : undefined,
           messages,
+          answers: isCareerDocument
+            ? {
+                conversation: messages.map((message) => `${message.role}: ${message.content}`).join('\n'),
+                fullName: studentProfile?.name ?? '',
+                email: studentProfile?.email ?? '',
+                phone: studentProfile?.phone ?? '',
+                university: studentProfile?.university ?? '',
+                faculty: studentProfile?.faculty ?? '',
+                level: studentProfile?.level ?? '',
+              }
+            : undefined,
           documentId: doc.id,
           documentType: selectedType,
+          generationId,
         }),
       });
       if (genRes.ok) {
@@ -661,86 +679,12 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                   onChangeText={setNewTitle}
                 />
 
-                {/* Common profile fields for AI docs */}
                 {(selectedType === 'cv' || selectedType === 'lettre_motivation') && (
-                  <>
-                    <Text style={styles.fieldLabel}>INFORMATIONS PERSONNELLES</Text>
-                    <TextInput style={styles.textInput} placeholder="Nom complet" placeholderTextColor={stitchColors.inkSubtle} value={cvFullName} onChangeText={setCvFullName} />
-                    <View style={styles.fieldRow}>
-                      <TextInput style={[styles.textInput, styles.flex]} placeholder="Université" placeholderTextColor={stitchColors.inkSubtle} value={cvUniversity} onChangeText={setCvUniversity} />
-                      <TextInput style={[styles.textInput, styles.flex]} placeholder="Filière" placeholderTextColor={stitchColors.inkSubtle} value={cvFaculty} onChangeText={setCvFaculty} />
-                    </View>
-                    <TextInput style={styles.textInput} placeholder="Niveau (ex: Licence 3)" placeholderTextColor={stitchColors.inkSubtle} value={cvLevel} onChangeText={setCvLevel} />
-                    <TextInput style={styles.textInput} placeholder="Poste visé" placeholderTextColor={stitchColors.inkSubtle} value={selectedType === 'cv' ? cvPosition : lettrePosition}
-                      onChangeText={selectedType === 'cv' ? setCvPosition : setLettrePosition} />
-                  </>
-                )}
-
-                {/* CV-specific fields */}
-                {selectedType === 'cv' && (
-                  <>
-                    <Text style={styles.fieldLabel}>COMPÉTENCES</Text>
-                    <View style={styles.tagGrid}>
-                      {COMMON_SKILLS.map((skill) => (
-                        <Pressable
-                          key={skill}
-                          style={[styles.tagChip, cvSkills.includes(skill) && styles.tagChipActive]}
-                          onPress={() => toggleTag(skill, cvSkills, setCvSkills)}
-                        >
-                          <Text style={[styles.tagChipText, cvSkills.includes(skill) && styles.tagChipTextActive]}>
-                            {skill}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-
-                    <Text style={styles.fieldLabel}>LANGUES</Text>
-                    {['Français', 'Anglais', 'Espagnol', 'Allemand', 'Chinois', 'Arabe'].map((lang) => (
-                      <Pressable key={lang} style={styles.tagRow} onPress={() => toggleTag(lang, cvLanguages, setCvLanguages)}>
-                        <View style={[styles.tagCheckbox, cvLanguages.includes(lang) && styles.tagCheckboxActive]}>
-                          {cvLanguages.includes(lang) && <Text style={styles.tagCheckboxCheck}>✓</Text>}
-                        </View>
-                        <Text style={styles.tagRowLabel}>{lang}</Text>
-                      </Pressable>
-                    ))}
-
-                    <Text style={styles.fieldLabel}>EXPÉRIENCES (une par ligne : Poste | Entreprise | Durée)</Text>
-                    {cvExperiences.map((exp, i) => (
-                      <TextInput
-                        key={i}
-                        style={[styles.textInput, { fontSize: 12 }]}
-                        placeholder="Ex: Stagiaire | TechCorp | 3 mois"
-                        placeholderTextColor={stitchColors.inkSubtle}
-                        value={exp}
-                        onChangeText={(v) => {
-                          const updated = [...cvExperiences];
-                          updated[i] = v;
-                          setCvExperiences(updated);
-                        }}
-                      />
-                    ))}
-                    <Pressable onPress={() => setCvExperiences([...cvExperiences, ''])}>
-                      <Text style={styles.addMoreText}>+ Ajouter une expérience</Text>
-                    </Pressable>
-                  </>
-                )}
-
-                {/* Lettre-specific fields */}
-                {selectedType === 'lettre_motivation' && (
-                  <>
-                    <Text style={styles.fieldLabel}>INFORMATIONS SUR L'OFFRE</Text>
-                    <TextInput style={styles.textInput} placeholder="Entreprise / Organisation" placeholderTextColor={stitchColors.inkSubtle} value={lettreCompany} onChangeText={setLettreCompany} />
-                    <TextInput style={styles.textInput} placeholder="Secteur (ex: Technologie, Santé, Finance)" placeholderTextColor={stitchColors.inkSubtle} value={lettreSector} onChangeText={setLettreSector} />
-                    <Text style={styles.fieldLabel}>VOS MOTIVATIONS (optionnel)</Text>
-                    <TextInput
-                      style={[styles.textInput, { height: 80, textAlignVertical: 'top' }]}
-                      placeholder="Décrivez brièvement pourquoi ce poste vous intéresse..."
-                      placeholderTextColor={stitchColors.inkSubtle}
-                      multiline
-                      value={lettreMotivation}
-                      onChangeText={setLettreMotivation}
-                    />
-                  </>
+                  <View style={styles.creditsInfo}>
+                    <Text style={styles.creditsInfoText}>
+                      La conversation réutilisera ton profil et te posera une question à la fois.
+                    </Text>
+                  </View>
                 )}
 
                 {/* Credits info — every type can now be generated by the AI */}
@@ -759,13 +703,13 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                   {(selectedType === 'cv' || selectedType === 'lettre_motivation') ? (
                     <Pressable
                       style={[styles.modalButton, styles.aiGenerateBtn, creating && styles.buttonDisabled]}
-                      onPress={handleCreateWithAi}
+                      onPress={openGenChat}
                       disabled={creating}
                     >
                       {creating ? (
                         <ActivityIndicator size="small" color={stitchColors.white} />
                       ) : (
-                        <Text style={styles.aiGenerateBtnText}>🤖 Générer avec l'IA</Text>
+                        <Text style={styles.aiGenerateBtnText}>Commencer la conversation</Text>
                       )}
                     </Pressable>
                   ) : (
@@ -804,6 +748,15 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         documentType={selectedType ?? 'blank'}
         generating={generatingFull}
         onGenerate={handleGenerateFull}
+        sessionKey={`${selectedType ?? 'blank'}:${newTitle.trim()}`}
+        profileContext={studentProfile ? {
+          name: studentProfile.name ?? '',
+          email: studentProfile.email ?? '',
+          phone: studentProfile.phone ?? '',
+          university: studentProfile.university ?? '',
+          faculty: studentProfile.faculty ?? '',
+          level: studentProfile.level ?? '',
+        } : undefined}
       />
     </View>
   );

@@ -54,26 +54,38 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     const cover = document.cover_data || {};
-    const children: Paragraph[] = [
+    const sections = await getDocumentSections(id);
+    const isCareerDocument = document.template_type === 'cv' || document.template_type === 'lettre_motivation';
+    const isMemoir = document.template_type === 'memoire';
+    const memoirLabel = cover.memoirKind === 'professional'
+      ? 'MÉMOIRE PROFESSIONNEL / PROJET'
+      : 'MÉMOIRE ACADÉMIQUE DE RECHERCHE';
+    const children: Paragraph[] = isCareerDocument ? [] : [
       new Paragraph({ text: String(cover.school || 'Établissement'), heading: HeadingLevel.HEADING_2 }),
       new Paragraph({ text: '' }),
+      ...(isMemoir ? [new Paragraph({ text: memoirLabel, heading: HeadingLevel.HEADING_2 })] : []),
       new Paragraph({ text: String(cover.title || document.title), heading: HeadingLevel.TITLE }),
       new Paragraph({ text: String(cover.subtitle || '') }),
       new Paragraph({ text: '' }),
       new Paragraph({ text: `Présenté par : ${cover.studentName || ''}` }),
-      new Paragraph({ text: `Entreprise d'accueil : ${cover.company || ''}` }),
-      new Paragraph({ text: `Maître de stage : ${cover.tutorCorporate || ''}` }),
+      ...(!isMemoir ? [
+        new Paragraph({ text: `Entreprise d'accueil : ${cover.company || ''}` }),
+        new Paragraph({ text: `Maître de stage : ${cover.tutorCorporate || ''}` }),
+      ] : cover.memoirKind === 'professional' && cover.company ? [
+        new Paragraph({ text: `Organisation du projet : ${cover.company}` }),
+      ] : []),
       new Paragraph({ text: `Encadreur académique : ${cover.tutorAcademic || ''}` }),
       new Paragraph({ text: `Année académique : ${cover.year || ''}` }),
       new Paragraph({ children: [new PageBreak()] }),
     ];
 
-    const sections = await getDocumentSections(id);
     for (const section of sections) {
       const title = section.title.toLowerCase();
       if (title === 'page de garde') continue;
 
-      children.push(new Paragraph({ text: section.title, heading: HeadingLevel.HEADING_1 }));
+      if (!isCareerDocument) {
+        children.push(new Paragraph({ text: section.title, heading: HeadingLevel.HEADING_1 }));
+      }
       if (title === 'sommaire') {
         sections
           .filter((item) => !['page de garde', 'sommaire'].includes(item.title.toLowerCase()))
@@ -82,7 +94,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
         const lines = decodeHtml(section.content_html || '');
         (lines.length ? lines : ['...']).forEach((text) => children.push(new Paragraph({ text })));
       }
-      children.push(new Paragraph({ children: [new PageBreak()] }));
+      if (!isCareerDocument) {
+        children.push(new Paragraph({ children: [new PageBreak()] }));
+      }
     }
 
     const buffer = await Packer.toBuffer(new DocxDocument({ sections: [{ children }] }));

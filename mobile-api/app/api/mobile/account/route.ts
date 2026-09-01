@@ -35,42 +35,9 @@ const MAX_BODY_BYTES = 4 * 1024;
 
 export async function GET(request: NextRequest) {
   try {
-    const access = await requireMobileUser(request).catch(() => ({
-      user: { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null },
-      response: null,
-    }));
-    const user = access?.user ?? { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null };
-
-    if (user.id === 'guest-student') {
-      return withCors(
-        NextResponse.json({
-          user: {
-            id: 'guest-student',
-            email: 'etudiant@campus360.local',
-            name: 'Étudiant Campus 360',
-            role: 'student',
-            phone: '',
-            whatsappPhone: '',
-            university: 'Université',
-            faculty: 'Général',
-            level: 'L3',
-          },
-          wallet: {
-            balanceCoins: 0,
-            iaCredits: 50,
-            reportCredits: 5,
-          },
-          subscription: {
-            tier: 'free',
-            expiresAt: null,
-          },
-          purchasedDocumentIds: [],
-          purchasedPackIds: [],
-          transactions: [],
-        }),
-        request,
-      );
-    }
+    const access = await requireMobileUser(request);
+    if (access.response || !access.user) return withCors(access.response!, request);
+    const user = access.user;
 
     const [wallet, documents, packs, transactions] = await Promise.all([
       databasePool.query('select balance_coins, ia_credits, report_credits from public.app_wallets where user_id = $1', [user.id]),
@@ -147,31 +114,14 @@ export async function PATCH(request: NextRequest) {
     if (contentLength > MAX_BODY_BYTES) {
       return withCors(NextResponse.json({ error: 'Requete trop volumineuse.' }, { status: 413 }), request);
     }
-    const access = await requireMobileUser(request).catch(() => ({
-      user: { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null },
-      response: null,
-    }));
-    const user = access?.user ?? { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null };
+    const access = await requireMobileUser(request);
+    if (access.response || !access.user) return withCors(access.response!, request);
+    const user = access.user;
 
     const body = await request.json().catch(() => null);
     const parsed = updateProfileSchema.safeParse(body);
     if (!parsed.success) {
       throw new MobileApiError('Profil etudiant incomplet.');
-    }
-
-    if (user.id === 'guest-student') {
-      return withCors(
-        NextResponse.json({
-          id: 'guest-student',
-          name: parsed.data.name,
-          phone: parsed.data.phone,
-          whatsappPhone: parsed.data.whatsappPhone,
-          university: parsed.data.university,
-          faculty: parsed.data.faculty,
-          level: parsed.data.level ?? '',
-        }),
-        request,
-      );
     }
 
     const result = await databasePool.query(

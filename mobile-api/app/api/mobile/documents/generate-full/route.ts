@@ -5,7 +5,11 @@ import { databasePool } from '@/lib/database';
 import { requireMobileUser, mobileErrorResponse, MobileApiError, withCors } from '@/lib/mobile-access';
 import { sendPushToUser } from '@/lib/push';
 import { SVG_DIAGRAMS, ACADEMIC_TABLE_SAMPLE } from '@/lib/academic-stage-template';
-import { getDocumentById } from '@/lib/documents-db';
+import {
+  getDocumentById,
+  MEMOIRE_PROFESSIONAL_SECTIONS,
+  MEMOIRE_RESEARCH_SECTIONS,
+} from '@/lib/documents-db';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -45,6 +49,7 @@ const generateSchema = z.object({
   messages: z.array(chatMessageSchema).min(1),
   documentId: z.string().uuid(),
   documentType: z.enum(['stage', 'memoire', 'cv', 'lettre_motivation', 'blank']).default('stage'),
+  generationId: z.string().trim().min(8).max(200),
 });
 
 const sanitizeHtmlFragment = (raw: string): string => {
@@ -59,6 +64,8 @@ const extractCoverData = async (
   messages: Array<{ role: string; content: string }>,
   title: string,
   apiKey: string,
+  documentType: string,
+  memoirKind: 'research' | 'professional',
 ): Promise<Record<string, string>> => {
   const userText = messages
     .filter((m) => m.role === 'user')
@@ -66,17 +73,7 @@ const extractCoverData = async (
     .join('\n');
 
   if (!apiKey) {
-    return {
-      title,
-      studentName: 'Lucien Nkouam',
-      matricule: '22GL049',
-      specialty: 'Master 2 Génie Logiciel',
-      company: 'Campus 360 Inc.',
-      companyLocation: 'Yaoundé, Cameroun',
-      school: 'École Nationale Supérieure Polytechnique',
-      university: 'Université de Yaoundé I',
-      year: '2025 - 2026',
-    };
+    return { title, memoirKind };
   }
 
   const prompt = [
@@ -84,6 +81,8 @@ const extractCoverData = async (
     `Discussion :`,
     userText,
     `Titre du document : ${title}`,
+    `Type du document : ${documentType}`,
+    `N'invente aucune valeur absente. Retourne une chaîne vide pour toute information non fournie.`,
     `\nRéponds UNIQUEMENT avec un JSON strict contenant ces clés :`,
     `{`,
     `  "title": string,`,
@@ -97,7 +96,9 @@ const extractCoverData = async (
     `  "companyLocation": string,`,
     `  "tutorCorporate": string,`,
     `  "tutorAcademic": string,`,
-    `  "year": string`,
+    `  "year": string,`,
+    `  "degree": string,`,
+    `  "memoirKind": string`,
     `}`,
   ].join('\n');
 
@@ -128,23 +129,15 @@ const extractCoverData = async (
           result[k] = v.trim();
         }
       }
+      result.title ||= title;
+      result.memoirKind = memoirKind;
       return result;
     }
   } catch (err) {
     console.warn('[extractCoverData] Error:', err);
   }
 
-  return {
-    title,
-    studentName: 'Lucien Nkouam',
-    matricule: '22GL049',
-    specialty: 'Master 2 Génie Logiciel',
-    company: 'Campus 360 Inc.',
-    companyLocation: 'Yaoundé, Cameroun',
-    school: 'École Nationale Supérieure Polytechnique',
-    university: 'Université de Yaoundé I',
-    year: '2025 - 2026',
-  };
+  return { title, memoirKind };
 };
 
 async function runWithConcurrency<T, R>(
@@ -178,82 +171,119 @@ export async function POST(request: NextRequest) {
       return withCors(NextResponse.json({ error: 'Paramètres invalides.' }, { status: 400 }), request);
     }
 
-    const { messages, documentId, documentType } = parsed.data;
+    const { messages, documentId, documentType, generationId } = parsed.data;
 
     const ownedDocument = await getDocumentById(documentId, user.id);
-    if (!ownedDocument) {
+    if (!ownedDocument || ownedDocument.template_type !== documentType) {
       return withCors(NextResponse.json({ error: 'Document introuvable.' }, { status: 404 }), request);
     }
 
-    let remainingCredits = 45;
+    const previous = await databasePool.query(
+      `select w.ia_credits
+         from public.app_wallet_transactions tx
+         join public.app_wallets w on w.user_id = tx.user_id
+        where tx.user_id = $1
+          and tx.type = 'ai_generation'
+          and tx.reference_id = $2
+          and tx.status = 'success'
+        limit 1`,
+      [user.id, generationId],
+    );
+    if (previous.rows[0]) {
+      return withCors(
+        NextResponse.json({
+          success: true,
+          remainingCredits: Number(previous.rows[0].ia_credits ?? 0),
+          creditsUsed: 0,
+          idempotentReplay: true,
+        }),
+        request,
+      );
+    }
+
+    const walletCheck = await databasePool.query(
+      'select ia_credits from public.app_wallets where user_id = $1 limit 1',
+      [user.id],
+    );
+    const availableCredits = Number(walletCheck.rows[0]?.ia_credits ?? 0);
+    if (availableCredits < IA_CREDITS_PER_GENERATION) {
+      return withCors(
+        NextResponse.json(
+          { error: 'Crédits IA insuffisants.', code: 'INSUFFICIENT_AI_CREDITS' },
+          { status: 402 },
+        ),
+        request,
+      );
+    }
+
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      throw new MobileApiError('Le service IA n’est pas configuré.', 503);
+    }
+
+    const conversationText = messages.map((message) => message.content).join(' ');
+    const memoirKind: 'research' | 'professional' =
+      documentType === 'memoire' && /(professionnel|projet|application|solution|réalisation|realisation)/i.test(conversationText)
+        ? 'professional'
+        : 'research';
+
+    let remainingCredits = availableCredits;
     let docTitle = ownedDocument.title || 'Document académique';
     let sections: Array<{ id: string; title: string }> = [];
-
-    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(user.id);
 
     try {
       const client = await databasePool.connect();
       try {
         await client.query('begin');
 
-        if (isUuid) {
-          const walletRes = await client.query(
-            'select id, ia_credits from public.app_wallets where user_id = $1 for update',
-            [user.id],
-          );
-          let wallet = walletRes.rows[0];
-
-          if (!wallet) {
-            const newWallet = await client.query(
-              'insert into public.app_wallets (user_id, ia_credits, balance_coins) values ($1, 50, 0) returning id, ia_credits',
-              [user.id],
-            );
-            wallet = newWallet.rows[0];
-          }
-
-          if (wallet && wallet.ia_credits < IA_CREDITS_PER_GENERATION) {
-            await client.query(
-              'update public.app_wallets set ia_credits = 20, updated_at = now() where user_id = $1',
-              [user.id],
-            );
-            wallet.ia_credits = 20;
-          }
-
-          if (wallet) {
-            await client.query(
-              'update public.app_wallets set ia_credits = greatest(0, ia_credits - $1), updated_at = now() where user_id = $2',
-              [IA_CREDITS_PER_GENERATION, user.id],
-            );
-            remainingCredits = Math.max(0, wallet.ia_credits - IA_CREDITS_PER_GENERATION);
-          }
-        }
-
         const docRes = await client.query(
-          'select id, title from public.app_documents where id = $1 limit 1',
-          [documentId],
+          'select id, title from public.app_documents where id = $1 and user_id = $2 limit 1',
+          [documentId, user.id],
         );
         if (docRes.rows.length > 0) {
           docTitle = docRes.rows[0].title;
         }
 
-        const sectionsRes = await client.query(
-          'select id, title from public.app_document_sections where document_id = $1 order by sort_order asc',
+        let sectionsRes = await client.query(
+          'select id, title, content_html from public.app_document_sections where document_id = $1 order by sort_order asc',
           [documentId],
         );
+
+        const hasWrittenContent = sectionsRes.rows.some((section) =>
+          String(section.content_html || '').trim().length > 0,
+        );
+        if (documentType === 'memoire' && !hasWrittenContent) {
+          const targetSections = memoirKind === 'professional'
+            ? MEMOIRE_PROFESSIONAL_SECTIONS
+            : MEMOIRE_RESEARCH_SECTIONS;
+          await client.query('delete from public.app_document_sections where document_id = $1', [documentId]);
+          for (let index = 0; index < targetSections.length; index += 1) {
+            const title = targetSections[index];
+            await client.query(
+              `insert into public.app_document_sections
+                 (document_id, title, sort_order, is_system)
+               values ($1, $2, $3, $4)`,
+              [documentId, title, index, index === 0 || title === 'Sommaire'],
+            );
+          }
+          sectionsRes = await client.query(
+            'select id, title, content_html from public.app_document_sections where document_id = $1 order by sort_order asc',
+            [documentId],
+          );
+        }
         sections = sectionsRes.rows;
 
         await client.query('commit');
       } catch (dbErr) {
         await client.query('rollback').catch(() => {});
-        console.warn('[AI Full Gen] DB error:', dbErr);
+        throw dbErr;
       } finally {
         client.release();
       }
     } catch (poolErr) {
-      console.warn('[AI Full Gen] Pool error:', poolErr);
+      console.warn('[AI Full Gen] Preparation error:', poolErr);
+      throw new MobileApiError('Impossible de préparer le document.', 500);
     }
-
-    const apiKey = process.env.OPENROUTER_API_KEY;
 
     const userMessagesText = messages
       .filter((m) => m.role === 'user')
@@ -269,9 +299,13 @@ export async function POST(request: NextRequest) {
       return t !== 'page de garde' && t !== 'sommaire';
     });
 
-    const stageGuidance = hasStage
-      ? `L'étudiant a effectué un stage en milieu professionnel. Rédige chaque section de manière concrète en te basant sur ses missions réelles, les outils utilisés et les enseignements tirés.`
-      : `L'étudiant n'a pas effectué de stage. Rédige un rapport académique solide, avec une revue de la littérature approfondie, un cadre théorique clair et une méthodologie d'analyse rigoureuse.`;
+    const documentGuidance = documentType === 'memoire'
+      ? memoirKind === 'professional'
+        ? `Il s'agit d'un mémoire professionnel/projet. Structure le contenu autour du besoin réel, du cahier des charges, de la conception, de la réalisation, des tests et de l'évaluation, uniquement à partir des informations confirmées.`
+        : `Il s'agit d'un mémoire académique de recherche. Structure le contenu autour de la problématique, du cadre théorique, de la méthodologie, des résultats disponibles et de leur discussion.`
+      : hasStage
+        ? `L'étudiant a effectué un stage en milieu professionnel. Rédige chaque section de manière concrète en te basant sur ses missions réelles, les outils utilisés et les enseignements tirés.`
+        : `L'étudiant n'a pas effectué de stage. Rédige un rapport académique solide, avec une revue de la littérature approfondie, un cadre théorique clair et une méthodologie d'analyse rigoureuse.`;
 
     const preferredModel = process.env.OPENROUTER_MODEL || CANDIDATE_MODELS[0];
     const modelsToTry = Array.from(new Set([preferredModel, ...CANDIDATE_MODELS]));
@@ -280,7 +314,7 @@ export async function POST(request: NextRequest) {
       const lowerTitle = section.title.toLowerCase();
 
       // Specialized Academic Preliminary Sections
-      if (lowerTitle.includes('fiche d\'identification')) {
+      if (documentType === 'stage' && lowerTitle.includes('fiche d\'identification')) {
         return {
           id: section.id,
           html: `
@@ -301,7 +335,7 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      if (lowerTitle.includes('liste des abréviations')) {
+      if (documentType === 'stage' && lowerTitle.includes('liste des abréviations')) {
         return {
           id: section.id,
           html: `
@@ -325,7 +359,7 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      if (lowerTitle.includes('liste des figures')) {
+      if (documentType === 'stage' && lowerTitle.includes('liste des figures')) {
         return {
           id: section.id,
           html: `
@@ -340,7 +374,19 @@ export async function POST(request: NextRequest) {
         };
       }
 
-      if (lowerTitle.includes('bibliographie')) {
+      if (documentType === 'memoire' && lowerTitle.includes('bibliographie')) {
+        return {
+          id: section.id,
+          html: `
+            <p><strong>Références fournies et vérifiées</strong></p>
+            <p>[Ajoutez ici les sources effectivement consultées et vérifiées.]</p>
+            <p><strong>Références suggérées à vérifier</strong></p>
+            <p>[Toute suggestion de l'IA doit être vérifiée avant son insertion dans la bibliographie définitive.]</p>
+          `,
+        };
+      }
+
+      if (documentType === 'stage' && lowerTitle.includes('bibliographie')) {
         return {
           id: section.id,
           html: `
@@ -360,10 +406,13 @@ export async function POST(request: NextRequest) {
       const systemPrompt = [
         `Tu es le Rédacteur Universitaire d'Élite de Campus 360.`,
         `Rédige le contenu académique complet, rigoureux et structuré pour la section : "${section.title}" du document "${docTitle}" (${documentType}).`,
-        stageGuidance,
+        documentGuidance,
         `Directives d'excellence académique :`,
         `- Structure avec des sous-titres hiérarchisés <h2> et <h3> (ex: 1.1 Contexte, 1.2 Problématique, 1.3 Objectifs).`,
         `- Rédige des paragraphes complets, denses, soutenus et élégants (4-6 phrases par paragraphe).`,
+        `- N'invente aucune donnée, statistique, personne, enquête, résultat, auteur, publication ou DOI.`,
+        `- Si une donnée nécessaire manque, insère un marqueur explicite entre crochets, par exemple [Données à fournir], et explique brièvement ce qui est attendu.`,
+        `- Utilise uniquement les sources explicitement présentes dans la discussion. Toute piste non confirmée doit porter la mention "À vérifier".`,
         `- Formate EXCLUSIVEMENT en HTML TipTap propre : <p>, <strong>, <em>, <h2>, <h3>, <ul>, <ol>, <li>, <br>.`,
         `- Ne mets JAMAIS de balises <html>, <body>, <head>, ni de code markdown (\`\`\`html).`,
       ].join('\n');
@@ -374,7 +423,7 @@ export async function POST(request: NextRequest) {
         `\n\nRédige maintenant le texte académique complet pour la section "${section.title}".`,
       ].join('\n');
 
-      let sectionContent = `<p><strong>${section.title}</strong></p><p>Analyse approfondie et développement de la partie ${section.title}.</p>`;
+      let sectionContent = '';
 
       if (apiKey) {
         for (const model of modelsToTry) {
@@ -410,12 +459,16 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      if (!sectionContent) {
+        throw new MobileApiError(`La section « ${section.title} » n'a pas pu être générée.`, 503);
+      }
+
       // Inject illustrative Vector Diagrams & Tables based on chapter subject
-      if (lowerTitle.includes('contexte') || lowerTitle.includes('présentation de l\'entreprise') || lowerTitle.includes('chapitre 1')) {
+      if (documentType === 'stage' && (lowerTitle.includes('contexte') || lowerTitle.includes('présentation de l\'entreprise') || lowerTitle.includes('chapitre 1'))) {
         sectionContent += `\n${ACADEMIC_TABLE_SAMPLE}`;
-      } else if (lowerTitle.includes('analyse') || lowerTitle.includes('besoins') || lowerTitle.includes('chapitre 2')) {
+      } else if (documentType === 'stage' && (lowerTitle.includes('analyse') || lowerTitle.includes('besoins') || lowerTitle.includes('chapitre 2'))) {
         sectionContent += `\n${SVG_DIAGRAMS.useCase}`;
-      } else if (lowerTitle.includes('conception') || lowerTitle.includes('architectur') || lowerTitle.includes('réalisations') || lowerTitle.includes('chapitre 3')) {
+      } else if (documentType === 'stage' && (lowerTitle.includes('conception') || lowerTitle.includes('architectur') || lowerTitle.includes('réalisations') || lowerTitle.includes('chapitre 3'))) {
         sectionContent += `\n${SVG_DIAGRAMS.architecture}\n${SVG_DIAGRAMS.databaseSchema}`;
       }
 
@@ -424,13 +477,29 @@ export async function POST(request: NextRequest) {
 
     const [generatedSections, coverData] = await Promise.all([
       runWithConcurrency(editableSections, GENERATION_CONCURRENCY, buildSection),
-      extractCoverData(messages, docTitle, apiKey || ''),
+      extractCoverData(messages, docTitle, apiKey, documentType, memoirKind),
     ]);
 
     try {
       const client = await databasePool.connect();
       try {
         await client.query('begin');
+
+        const walletResult = await client.query(
+          'select ia_credits from public.app_wallets where user_id = $1 for update',
+          [user.id],
+        );
+        const walletCredits = Number(walletResult.rows[0]?.ia_credits ?? 0);
+        const replay = await client.query(
+          `select id from public.app_wallet_transactions
+            where user_id = $1 and type = 'ai_generation' and reference_id = $2 and status = 'success'
+            limit 1`,
+          [user.id, generationId],
+        );
+
+        if (replay.rows.length === 0 && walletCredits < IA_CREDITS_PER_GENERATION) {
+          throw new MobileApiError('Crédits IA insuffisants.', 402);
+        }
 
         for (const generated of generatedSections) {
           if (!generated.html) continue;
@@ -449,15 +518,33 @@ export async function POST(request: NextRequest) {
           );
         }
 
+        if (replay.rows.length === 0) {
+          remainingCredits = walletCredits - IA_CREDITS_PER_GENERATION;
+          await client.query(
+            'update public.app_wallets set ia_credits = $2, updated_at = now() where user_id = $1',
+            [user.id, remainingCredits],
+          );
+          await client.query(
+            `insert into public.app_wallet_transactions
+               (user_id, type, amount_coins, reference_id, status)
+             values ($1, 'ai_generation', 0, $2, 'success')`,
+            [user.id, generationId],
+          );
+        } else {
+          remainingCredits = walletCredits;
+        }
+
         await client.query('commit');
       } catch (updateErr) {
         await client.query('rollback').catch(() => {});
-        console.warn('[AI Full Gen] Section save error:', updateErr);
+        throw updateErr;
       } finally {
         client.release();
       }
     } catch (poolErr) {
-      console.warn('[AI Full Gen] Pool error:', poolErr);
+      if (poolErr instanceof MobileApiError) throw poolErr;
+      console.warn('[AI Full Gen] Save error:', poolErr);
+      throw new MobileApiError('Impossible d’enregistrer le document généré.', 500);
     }
 
     if (user.id) {

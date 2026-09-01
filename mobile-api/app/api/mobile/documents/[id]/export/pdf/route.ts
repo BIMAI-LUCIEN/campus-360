@@ -109,19 +109,28 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const rawSections = await getDocumentSections(id);
     const cd = document.cover_data || {};
+    const isCareerDocument = document.template_type === 'cv' || document.template_type === 'lettre_motivation';
+    const isMemoir = document.template_type === 'memoire';
+    const isProfessionalMemoir = isMemoir && cd.memoirKind === 'professional';
 
-    const studentName = cd.studentName || 'Lucien Nkouam';
-    const studentMatricule = cd.matricule || '22GL049';
-    const studentSpecialty = cd.specialty || 'Master 2 - Génie Logiciel & Systèmes d\'Information';
-    const schoolName = cd.school || 'ÉCOLE NATIONALE SUPÉRIEURE POLYTECHNIQUE';
-    const universityName = cd.university || 'UNIVERSITÉ DE YAOUNDÉ I';
-    const facultyName = cd.faculty || 'DÉPARTEMENT DE GÉNIE INFORMATIQUE ET TÉLÉCOMMUNICATIONS';
-    const companyName = cd.company || 'Campus 360 Inc. (Division R&D)';
-    const tutorCorporate = cd.tutorCorporate || 'M. Lucien Nkouam (Lead Architecte Logiciel)';
-    const tutorAcademic = cd.tutorAcademic || 'Dr. / Pr. Encadreur Universitaire';
-    const academicYear = cd.year || '2025 - 2026';
-    const docTitle = document.title || 'RAPPORT DE STAGE ACADÉMIQUE DE FIN D\'ÉTUDES';
-    const docSubtitle = cd.subtitle || 'Conception et Déploiement d\'une Plateforme Mobile Sécurisée avec IA Générative';
+    const studentName = cd.studentName || (isMemoir ? '' : 'Lucien Nkouam');
+    const studentMatricule = cd.matricule || (isMemoir ? '' : '22GL049');
+    const studentSpecialty = cd.specialty || (isMemoir ? '' : 'Master 2 - Génie Logiciel & Systèmes d\'Information');
+    const schoolName = cd.school || (isMemoir ? 'ÉTABLISSEMENT' : 'ÉCOLE NATIONALE SUPÉRIEURE POLYTECHNIQUE');
+    const universityName = cd.university || (isMemoir ? 'UNIVERSITÉ' : 'UNIVERSITÉ DE YAOUNDÉ I');
+    const facultyName = cd.faculty || (isMemoir ? 'FACULTÉ / DÉPARTEMENT' : 'DÉPARTEMENT DE GÉNIE INFORMATIQUE ET TÉLÉCOMMUNICATIONS');
+    const companyName = cd.company || (isMemoir ? '' : 'Campus 360 Inc. (Division R&D)');
+    const tutorCorporate = cd.tutorCorporate || (isMemoir ? '' : 'M. Lucien Nkouam (Lead Architecte Logiciel)');
+    const tutorAcademic = cd.tutorAcademic || (isMemoir ? '' : 'Dr. / Pr. Encadreur Universitaire');
+    const academicYear = cd.year || '';
+    const docTitle = document.title || (isMemoir ? 'MÉMOIRE' : 'RAPPORT DE STAGE ACADÉMIQUE DE FIN D\'ÉTUDES');
+    const docSubtitle = cd.subtitle || '';
+    const documentBadge = isMemoir
+      ? isProfessionalMemoir ? 'MÉMOIRE PROFESSIONNEL / PROJET' : 'MÉMOIRE ACADÉMIQUE DE RECHERCHE'
+      : 'RAPPORT DE STAGE ACADÉMIQUE DE FIN D\'ÉTUDES';
+    const diplomaGoal = cd.degree
+      ? `En vue de l'obtention du diplôme de ${escapeHtml(cd.degree)}`
+      : isMemoir ? 'Présenté en vue de l’obtention du diplôme indiqué par l’établissement' : 'En vue de l\'obtention du Diplôme de Master Professionnel en Génie Logiciel';
 
     // 1. Official Academic Cover Page
     const coverHtml = `
@@ -159,12 +168,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
         </div>
 
         <div class="title-frame">
-          <div class="doc-badge">RAPPORT DE STAGE ACADÉMIQUE DE FIN D'ÉTUDES</div>
-          <div class="diploma-goal">En vue de l'obtention du Diplôme de Master Professionnel en Génie Logiciel</div>
+          <div class="doc-badge">${documentBadge}</div>
+          <div class="diploma-goal">${diplomaGoal}</div>
           <div class="theme-label">THÈME :</div>
           <h1 class="theme-title">${escapeHtml(docTitle)}</h1>
           ${docSubtitle ? `<div class="theme-subtitle">${escapeHtml(docSubtitle)}</div>` : ''}
-          <div class="stage-place">Effectué du 1er Mars au 31 Août 2026 à : <strong>${escapeHtml(companyName)}</strong></div>
+          ${isMemoir
+            ? isProfessionalMemoir && companyName ? `<div class="stage-place">Projet réalisé au sein de : <strong>${escapeHtml(companyName)}</strong></div>` : ''
+            : `<div class="stage-place">Effectué du 1er Mars au 31 Août 2026 à : <strong>${escapeHtml(companyName)}</strong></div>`}
         </div>
 
         <div class="supervision-grid">
@@ -179,13 +190,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
           </div>
           <div class="sup-col">
             <div class="sup-heading">SOUS L'ENCADREMENT DE :</div>
-            <div class="sup-item">
+            ${!isMemoir && tutorCorporate ? `<div class="sup-item">
               <span class="sup-role">Encadreur Professionnel :</span><br>
               <strong>${escapeHtml(tutorCorporate)}</strong>
-            </div>
+            </div>` : ''}
             <div class="sup-item" style="margin-top: 8px;">
               <span class="sup-role">Encadreur Académique :</span><br>
-              <strong>${escapeHtml(tutorAcademic)}</strong>
+              <strong>${escapeHtml(tutorAcademic || 'À renseigner')}</strong>
             </div>
           </div>
         </div>
@@ -253,6 +264,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
       })
       .join('');
 
+    const professionalHtml = rawSections
+      .filter((section) => section.content_html?.trim())
+      .map((section) => `<section class="professional-section">${section.content_html}</section>`)
+      .join('');
+    const documentBodyHtml = isCareerDocument
+      ? `<main class="professional-document ${document.template_type === 'cv' ? 'cv-document' : 'letter-document'}">${professionalHtml}</main>`
+      : `${coverHtml}${sectionsHtml}`;
+
     const fullHtml = `
       <!DOCTYPE html>
       <html lang="fr">
@@ -262,7 +281,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         <style>
           @page {
             size: A4;
-            margin: 2cm 2.2cm 2cm 2.2cm;
+            margin: ${isCareerDocument ? '1.4cm 1.6cm' : '2cm 2.2cm 2cm 2.2cm'};
           }
           * { box-sizing: border-box; }
           body {
@@ -467,6 +486,33 @@ export async function GET(request: NextRequest, context: RouteContext) {
             font-style: italic;
             color: #334155;
           }
+          .professional-document {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #172033;
+            line-height: 1.42;
+          }
+          .professional-document h1 {
+            font-size: 24pt;
+            margin: 0 0 6px;
+            color: #0F3D56;
+          }
+          .professional-document h2 {
+            font-size: 12pt;
+            margin: 16px 0 6px;
+            padding-bottom: 4px;
+            border-bottom: 1.5px solid #0F6B78;
+            color: #0F6B78;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .professional-document p { margin: 0 0 8px; }
+          .professional-document ul, .professional-document ol { margin: 5px 0 10px; }
+          .professional-section { page-break-inside: auto; }
+          .letter-document {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 11.5pt;
+            line-height: 1.55;
+          }
           .subscription-watermark {
             position: fixed;
             top: 46%;
@@ -484,8 +530,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       </head>
       <body>
         ${watermarkHtml}
-        ${coverHtml}
-        ${sectionsHtml}
+        ${documentBodyHtml}
       </body>
       </html>
     `;

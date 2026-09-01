@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { databasePool } from '@/lib/database';
+import { getDocumentById } from '@/lib/documents-db';
 import { requireMobileUser, mobileErrorResponse, MobileApiError, withCors } from '@/lib/mobile-access';
 
 export const runtime = 'nodejs';
@@ -133,7 +134,8 @@ const generateSchema = z.object({
   type: z.enum(['cv', 'lettre_motivation']),
   formData: z.record(z.string(), z.any()).optional(),
   answers: z.record(z.string(), z.any()).optional(),
-  documentId: z.string().optional(),
+  documentId: z.string().uuid(),
+  generationId: z.string().trim().min(8).max(200),
 });
 
 export async function POST(request: NextRequest) {
@@ -145,176 +147,191 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const parsed = generateSchema.safeParse(body);
     if (!parsed.success) {
-      return withCors(NextResponse.json({ error: "Données invalides." }, { status: 400 }), request);
+      return withCors(NextResponse.json({ error: 'Données invalides.' }, { status: 400 }), request);
     }
 
-    const { type, documentId } = parsed.data;
+    const { type, documentId, generationId } = parsed.data;
     const formData = parsed.data.formData || parsed.data.answers || {};
-
-    let remainingCredits = 45;
-
-    // Database wallet handling
-    if (user.id) {
-      try {
-        const client = await databasePool.connect();
-        try {
-          await client.query('begin');
-          const walletRes = await client.query(
-            'select id, ia_credits from public.app_wallets where user_id = $1 for update',
-            [user.id],
-          );
-          let wallet = walletRes.rows[0];
-
-          if (!wallet) {
-            const newWallet = await client.query(
-              'insert into public.app_wallets (user_id, ia_credits, balance_coins) values ($1, 50, 0) returning id, ia_credits',
-              [user.id],
-            );
-            wallet = newWallet.rows[0];
-          }
-
-          if (wallet.ia_credits < IA_CREDITS_PER_GENERATION) {
-            await client.query(
-              'update public.app_wallets set ia_credits = 20, updated_at = now() where user_id = $1',
-              [user.id],
-            );
-            wallet.ia_credits = 20;
-          }
-
-          await client.query(
-            'update public.app_wallets set ia_credits = greatest(0, ia_credits - $1), updated_at = now() where user_id = $2',
-            [IA_CREDITS_PER_GENERATION, user.id],
-          );
-          remainingCredits = Math.max(0, wallet.ia_credits - IA_CREDITS_PER_GENERATION);
-
-          await client.query(
-            `insert into public.app_wallet_transactions (user_id, type, amount_coins, reference_id, status)
-             values ($1, 'purchase', 0, 'ia_document_generate_${type}', 'success')`,
-            [user.id],
-          );
-
-          await client.query('commit');
-        } catch (dbErr) {
-          await client.query('rollback').catch(() => {});
-          console.warn('[AI Generate] Wallet error:', dbErr);
-        } finally {
-          client.release();
-        }
-      } catch (poolErr) {
-        console.warn('[AI Generate] Pool error:', poolErr);
-      }
+    const document = await getDocumentById(documentId, user.id);
+    if (!document || document.template_type !== type) {
+      return withCors(NextResponse.json({ error: 'Document introuvable.' }, { status: 404 }), request);
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY;
-
-    let systemPrompt: string;
-    let userPrompt: string;
-
-    if (type === 'cv') {
-      systemPrompt = [
-        `Tu es un Rédacteur Professionnel de CV (Curriculum Vitae) d'Élite en français.`,
-        `Tu génères un CV moderne, percutant et très soigné.`,
-        `Règles de rédaction :`,
-        `- Valorise les compétences et parcours académiques avec des verbes d'action.`,
-        `- Structure avec clarté : Titre / En-tête, Profil Professionnel, Compétences Clés, Expériences Professionnelles, Formation, Langues.`,
-        `- Utilise exclusivement les balises HTML TipTap : <h1>, <h2>, <h3>, <p>, <strong>, <em>, <ul>, <li>, <br>.`,
-        `- Pas de <html>, <body>, <head>, ni de code markdown (\`\`\`html). Retourne directement le HTML propre.`,
-      ].join('\n');
-
-      const userData = buildCvPrompt(formData);
-      userPrompt = `Rédige un CV hautement professionnel à partir des informations suivantes :\n\n${userData}`;
-    } else {
-      systemPrompt = [
-        `Tu es un Expert en Recrutement et Rédacteur Professionnel de Lettres de Motivation en français.`,
-        `Tu rédiges des lettres de motivation percutantes, élégantes, convaincantes et parfaitement structurées.`,
-        `Règles de rédaction :`,
-        `- Structure exemplaire : Date, Destinataire, Objet, Salutation, 3 paragraphes captivants (Entreprise, Candidat, Collaboration), Formule de politesse et Signature.`,
-        `- Utilise exclusivement les balises HTML TipTap : <h1>, <h2>, <p>, <strong>, <em>, <br>.`,
-        `- Pas de <html>, <body>, <head>, ni de code markdown (\`\`\`html). Retourne directement le HTML propre.`,
-      ].join('\n');
-
-      const userData = buildLettrePrompt(formData);
-      userPrompt = `Rédige une lettre de motivation convaincante et formelle à partir de ces informations :\n\n${userData}`;
-    }
-
-    if (!apiKey) {
-      const fallbackHtml = type === 'cv' ? buildCvPrompt(formData) : buildLettrePrompt(formData);
+    const sectionTitle = type === 'cv' ? 'CV généré' : 'Lettre de motivation';
+    const previous = await databasePool.query(
+      `select w.ia_credits, s.content_html
+         from public.app_wallet_transactions tx
+         join public.app_wallets w on w.user_id = tx.user_id
+         left join public.app_document_sections s
+           on s.document_id = $3 and lower(s.title) = lower($4)
+        where tx.user_id = $1
+          and tx.type = 'ai_generation'
+          and tx.reference_id = $2
+          and tx.status = 'success'
+        limit 1`,
+      [user.id, generationId, documentId, sectionTitle],
+    );
+    if (previous.rows[0]) {
       return withCors(
         NextResponse.json({
-          html: fallbackHtml,
-          remainingCredits,
-          creditsUsed: IA_CREDITS_PER_GENERATION,
+          html: String(previous.rows[0].content_html || ''),
+          remainingCredits: Number(previous.rows[0].ia_credits ?? 0),
+          creditsUsed: 0,
+          idempotentReplay: true,
         }),
         request,
       );
     }
 
-    const preferredModel = process.env.OPENROUTER_MODEL || CANDIDATE_MODELS[0];
-    const modelsToTry = Array.from(new Set([preferredModel, ...CANDIDATE_MODELS]));
+    const walletCheck = await databasePool.query(
+      'select ia_credits from public.app_wallets where user_id = $1 limit 1',
+      [user.id],
+    );
+    const availableCredits = Number(walletCheck.rows[0]?.ia_credits ?? 0);
+    if (availableCredits < IA_CREDITS_PER_GENERATION) {
+      return withCors(
+        NextResponse.json(
+          { error: 'Crédits IA insuffisants.', code: 'INSUFFICIENT_AI_CREDITS' },
+          { status: 402 },
+        ),
+        request,
+      );
+    }
+
+    const conversation = String(formData.conversation || '').trim();
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    let systemPrompt: string;
+    let userPrompt: string;
+
+    if (type === 'cv') {
+      systemPrompt = [
+        `Tu es un rédacteur professionnel de CV en français.`,
+        `Produis un CV moderne d'une à deux pages, factuel et compatible avec les logiciels de recrutement.`,
+        `Structure attendue : identité et coordonnées, titre ciblé, profil, expériences et projets, formation, compétences, langues et certifications.`,
+        `N'invente aucune expérience, compétence, date, entreprise ou certification.`,
+        `Utilise uniquement les balises HTML TipTap autorisées et ne retourne aucun markdown.`,
+      ].join('\n');
+      userPrompt = `Rédige le CV à partir de cette conversation guidée et du profil confirmé.\n\nConversation :\n${conversation}\n\nProfil :\n${JSON.stringify(formData)}`;
+    } else {
+      systemPrompt = [
+        `Tu es un rédacteur professionnel de lettres de motivation en français.`,
+        `Produis une lettre personnalisée, convaincante et normalement limitée à une page.`,
+        `Structure attendue : expéditeur, destinataire, date, objet, salutation, entreprise, candidat, collaboration, conclusion et signature.`,
+        `N'invente aucune expérience, compétence, entreprise ou motivation.`,
+        `Utilise uniquement les balises HTML TipTap autorisées et ne retourne aucun markdown.`,
+      ].join('\n');
+      userPrompt = `Rédige la lettre à partir de cette conversation guidée et du profil confirmé.\n\nConversation :\n${conversation}\n\nProfil :\n${JSON.stringify(formData)}`;
+    }
 
     let safeHtml = '';
-    for (const model of modelsToTry) {
-      try {
-        const openrouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': process.env.BETTER_AUTH_URL ?? 'https://api.campus360b.site',
-            'X-Title': 'Campus 360 Document Generator',
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt },
-            ],
-            temperature: 0.5,
-            max_tokens: 2500,
-          }),
-        });
+    if (apiKey) {
+      const preferredModel = process.env.OPENROUTER_MODEL || CANDIDATE_MODELS[0];
+      const modelsToTry = Array.from(new Set([preferredModel, ...CANDIDATE_MODELS]));
 
-        if (!openrouterRes.ok) {
-          console.warn(`[AI Generate] Model ${model} returned status: ${openrouterRes.status}`);
-          continue;
-        }
-
-        const aiData = (await openrouterRes.json()) as {
-          choices?: Array<{ message?: { content?: string } }>;
-        };
-        const raw = aiData.choices?.[0]?.message?.content ?? '';
-        const cleaned = sanitizeHtmlFragment(raw);
-        if (cleaned) {
-          safeHtml = cleaned;
-          break;
-        }
-      } catch (err) {
-        console.warn(`[AI Generate] Model ${model} error:`, err);
-      }
-    }
-
-    if (!safeHtml) {
-      safeHtml = type === 'cv' ? buildCvPrompt(formData) : buildLettrePrompt(formData);
-    }
-
-    // If documentId provided, insert section
-    if (documentId && user.id) {
-      try {
-        const client = await databasePool.connect();
+      for (const model of modelsToTry) {
         try {
-          const sectionTitle = type === 'cv' ? 'CV généré' : 'Lettre de motivation';
-          await client.query(
-            `insert into public.app_document_sections (document_id, title, content_html, sort_order, is_system)
-             values ($1, $2, $3, 0, false)
-             on conflict do nothing`,
-            [documentId, sectionTitle, safeHtml],
-          );
-        } finally {
-          client.release();
+          const openrouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': process.env.BETTER_AUTH_URL ?? 'https://api.campus360b.site',
+              'X-Title': 'Campus 360 Document Generator',
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt },
+              ],
+              temperature: 0.45,
+              max_tokens: 2800,
+            }),
+          });
+          if (!openrouterRes.ok) continue;
+          const aiData = (await openrouterRes.json()) as {
+            choices?: Array<{ message?: { content?: string } }>;
+          };
+          safeHtml = sanitizeHtmlFragment(aiData.choices?.[0]?.message?.content ?? '');
+          if (safeHtml) break;
+        } catch (error) {
+          console.warn(`[AI Generate] Model ${model} error:`, error);
         }
-      } catch (insertErr) {
-        console.warn('[AI Generate] Section insert error:', insertErr);
       }
+
+      if (!safeHtml) {
+        throw new MobileApiError('Le service IA est momentanément indisponible.', 503);
+      }
+    } else {
+      throw new MobileApiError('Le service IA n’est pas configuré.', 503);
+    }
+
+    const client = await databasePool.connect();
+    let remainingCredits = availableCredits;
+    try {
+      await client.query('begin');
+      const walletResult = await client.query(
+        'select ia_credits from public.app_wallets where user_id = $1 for update',
+        [user.id],
+      );
+      const walletCredits = Number(walletResult.rows[0]?.ia_credits ?? 0);
+
+      const replay = await client.query(
+        `select id from public.app_wallet_transactions
+          where user_id = $1 and type = 'ai_generation' and reference_id = $2 and status = 'success'
+          limit 1`,
+        [user.id, generationId],
+      );
+
+      if (replay.rows.length === 0) {
+        if (walletCredits < IA_CREDITS_PER_GENERATION) {
+          throw new MobileApiError('Crédits IA insuffisants.', 402);
+        }
+        remainingCredits = walletCredits - IA_CREDITS_PER_GENERATION;
+        await client.query(
+          'update public.app_wallets set ia_credits = $2, updated_at = now() where user_id = $1',
+          [user.id, remainingCredits],
+        );
+        await client.query(
+          `insert into public.app_wallet_transactions
+             (user_id, type, amount_coins, reference_id, status)
+           values ($1, 'ai_generation', 0, $2, 'success')`,
+          [user.id, generationId],
+        );
+      } else {
+        remainingCredits = walletCredits;
+      }
+
+      const updated = await client.query(
+        `update public.app_document_sections
+            set content_html = $3, updated_at = now()
+          where id = (
+            select id from public.app_document_sections
+             where document_id = $1 and lower(title) = lower($2)
+             order by sort_order asc
+             limit 1
+          )
+          returning id`,
+        [documentId, sectionTitle, safeHtml],
+      );
+      if (updated.rows.length === 0) {
+        await client.query(
+          `insert into public.app_document_sections
+             (document_id, title, content_html, sort_order, is_system)
+           values ($1, $2, $3, 0, false)`,
+          [documentId, sectionTitle, safeHtml],
+        );
+      }
+      await client.query(
+        'update public.app_documents set updated_at = now() where id = $1 and user_id = $2',
+        [documentId, user.id],
+      );
+      await client.query('commit');
+    } catch (error) {
+      await client.query('rollback').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
     }
 
     return withCors(

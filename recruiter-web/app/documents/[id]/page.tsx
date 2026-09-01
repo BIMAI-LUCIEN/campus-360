@@ -379,8 +379,14 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
   };
 
   const generateFullDocument = async () => {
-    if (chatMessages.length < 2) {
-      ssrAlert('Commencez à discuter pour donner quelques informations d\'onboarding à l\'IA.');
+    const minimumMessages = document?.template_type === 'memoire' ? 7 : 2;
+    const userAnswerCount = chatMessages.filter((message) => message.role === 'user').length;
+    if (userAnswerCount < minimumMessages) {
+      ssrAlert(
+        document?.template_type === 'memoire'
+          ? 'Complétez le cadrage du mémoire et confirmez le plan avant de lancer la rédaction.'
+          : 'Commencez à discuter pour donner quelques informations d\'onboarding à l\'IA.',
+      );
       return;
     }
     setAiLoading(true);
@@ -391,7 +397,8 @@ export default function DocumentEditorPage({ params }: { params: Promise<{ id: s
         body: JSON.stringify({
           messages: chatMessages,
           documentId,
-          documentType: document?.template_type ?? 'stage'
+          documentType: document?.template_type ?? 'stage',
+          generationId: `${document?.template_type ?? 'stage'}-${documentId}-${Date.now()}`,
         }),
       });
 

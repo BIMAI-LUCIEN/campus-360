@@ -41,19 +41,45 @@ const chatSchema = z
       )
       .optional()
       .default([]),
-    documentType: z.string().default('stage'),
+    documentType: z.enum(['stage', 'memoire', 'cv', 'lettre_motivation', 'blank']).default('stage'),
+    profileContext: z.record(z.string(), z.string()).optional().default({}),
   })
   .passthrough();
 
 export async function POST(request: NextRequest) {
   try {
+    const access = await requireMobileUser(request);
+    if (access.response || !access.user) return withCors(access.response!, request);
+
     const body = await request.json().catch(() => ({}));
     const parsed = chatSchema.safeParse(body);
-    const { messages, documentType } = parsed.success
+    const { messages, documentType, profileContext } = parsed.success
       ? parsed.data
-      : { messages: [], documentType: 'stage' };
+      : { messages: [], documentType: 'stage' as const, profileContext: {} };
 
     const apiKey = process.env.OPENROUTER_API_KEY;
+
+    const scenarioDirectives: Record<string, string[]> = {
+      cv: [
+        `Collecte le poste recherché, le résumé professionnel, les formations, expériences et projets, les compétences, langues et certifications.`,
+        `Ne pose pas de question académique sur une page de garde, un stage obligatoire ou un sommaire.`,
+        `Après au moins trois réponses utiles, propose une synthèse courte et invite à générer le CV.`,
+      ],
+      lettre_motivation: [
+        `Collecte l'opportunité visée, l'entreprise, le contexte de candidature, les motivations, les expériences pertinentes et la disponibilité.`,
+        `Vérifie les coordonnées du candidat et les informations du destinataire.`,
+        `Après au moins trois réponses utiles, propose une synthèse courte et invite à générer la lettre.`,
+      ],
+      memoire: [
+        `Commence par identifier s'il s'agit d'un mémoire académique de recherche ou d'un mémoire professionnel/projet.`,
+        `Collecte ensuite la discipline, le niveau, le sujet, la problématique, les objectifs, les questions ou hypothèses, la méthodologie, le terrain, les données disponibles et les contraintes de l'établissement.`,
+        `Demande quelles sources l'étudiant possède déjà et quel style bibliographique est requis (APA, IEEE ou autre).`,
+        `Ne fabrique jamais de données, résultats, participants, auteurs, publications ou DOI. Toute référence seulement suggérée doit être annoncée comme "à vérifier".`,
+        `Après au moins sept réponses utiles, propose un plan adapté au type de mémoire et demande explicitement à l'étudiant de le confirmer ou de le corriger avant de lancer la rédaction.`,
+      ],
+      stage: [`Collecte l'établissement, l'entreprise, la période, les missions, outils et apprentissages du stage.`],
+      blank: [`Collecte le sujet, le public cible, l'objectif et la structure attendue du document.`],
+    };
 
     const systemPrompt = [
       `Tu es l'Assistant d'Onboarding Intelligent et Pédagogique de Campus 360.`,
@@ -61,10 +87,10 @@ export async function POST(request: NextRequest) {
       '',
       `DIRECTIVES :`,
       `- Pose UNE SEULE question claire à la fois.`,
-      `- Demande les détails essentiels : sujet/thématique, établissement/filière, stage effectué ou non, missions ou projets clés réalisés.`,
+      `- Utilise les informations de profil déjà connues sans les redemander inutilement : ${JSON.stringify(profileContext)}.`,
+      ...(scenarioDirectives[documentType] ?? scenarioDirectives.blank).map((directive) => `- ${directive}`),
       `- Sois chaleureux, dynamique et stimulant en français.`,
-      `- Dès que tu as rassemblé 3 ou 4 informations utiles, invite poliment l'étudiant à cliquer sur le bouton "Générer le rapport" ou "Lancer la rédaction".`,
-      `- Si l'étudiant indique qu'il n'a pas fait de stage, rassure-le chaleureusement en lui disant que l'IA élaborera un rapport théorique et méthodologique complet de haut niveau.`,
+      `- Ne fabrique aucune information personnelle, expérience, compétence ou entreprise.`,
     ].join('\n');
 
     const formattedMessages = messages.map((m) => ({
@@ -75,7 +101,9 @@ export async function POST(request: NextRequest) {
     if (!apiKey) {
       return withCors(
         NextResponse.json({
-          reply: `Parfait ! Peux-tu me préciser ton sujet principal et les points majeurs que tu souhaites aborder dans ton ${documentType} ?`,
+          reply: documentType === 'memoire'
+            ? `Commençons par le type de mémoire : s'agit-il d'un mémoire académique de recherche ou d'un mémoire professionnel/projet ?`
+            : `Parfait ! Peux-tu me préciser ton sujet principal et les points majeurs que tu souhaites aborder dans ton ${documentType} ?`,
         }),
         request,
       );
@@ -118,7 +146,9 @@ export async function POST(request: NextRequest) {
 
     return withCors(
       NextResponse.json({
-        reply: `Très bien ! As-tu d'autres précisions ou missions clés à ajouter, ou souhaites-tu lancer la rédaction complète dès maintenant ?`,
+        reply: documentType === 'memoire'
+          ? `Très bien. Vérifie maintenant que le type de mémoire, la problématique, les objectifs, la méthodologie, les données et les sources sont bien précisés avant de valider le plan.`
+          : `Très bien ! As-tu d'autres précisions ou missions clés à ajouter, ou souhaites-tu lancer la rédaction complète dès maintenant ?`,
       }),
       request,
     );

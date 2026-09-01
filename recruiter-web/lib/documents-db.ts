@@ -33,6 +33,43 @@ export type DocumentSection = {
   updated_at: string;
 };
 
+export const MEMOIRE_RESEARCH_SECTIONS = [
+  'Page de garde',
+  'Résumé et Mots-clés',
+  'Dédicaces et Remerciements',
+  'Sommaire',
+  'Liste des Figures et Tableaux',
+  'Liste des Abréviations',
+  'Introduction Générale',
+  'Chapitre 1 : Problématique, Questions et Objectifs de Recherche',
+  'Chapitre 2 : Revue de Littérature et Cadre Théorique',
+  'Chapitre 3 : Méthodologie de Recherche',
+  'Chapitre 4 : Présentation et Analyse des Résultats',
+  'Chapitre 5 : Discussion des Résultats',
+  'Conclusion Générale et Recommandations',
+  'Bibliographie',
+  'Annexes',
+];
+
+export const MEMOIRE_PROFESSIONAL_SECTIONS = [
+  'Page de garde',
+  'Résumé et Mots-clés',
+  'Dédicaces et Remerciements',
+  'Sommaire',
+  'Liste des Figures et Tableaux',
+  'Liste des Abréviations',
+  'Introduction Générale',
+  'Chapitre 1 : Contexte et Analyse du Besoin',
+  'Chapitre 2 : Cahier des Charges et État de l’Art',
+  'Chapitre 3 : Méthodologie et Conception de la Solution',
+  'Chapitre 4 : Réalisation et Mise en Œuvre',
+  'Chapitre 5 : Tests, Évaluation et Résultats',
+  'Chapitre 6 : Discussion Critique et Recommandations',
+  'Conclusion Générale',
+  'Bibliographie',
+  'Annexes',
+];
+
 // Default structures based on template types
 const TEMPLATE_SECTIONS: Record<string, string[]> = {
   stage: [
@@ -50,22 +87,7 @@ const TEMPLATE_SECTIONS: Record<string, string[]> = {
     'Bibliographie et Webographie',
     'Annexes',
   ],
-  memoire: [
-    'Page de garde',
-    'Fiche de Synthèse',
-    'Dédicaces et Remerciements',
-    'Sommaire',
-    'Liste des Figures et Tableaux',
-    'Liste des Abréviations',
-    'Introduction Générale',
-    'Chapitre 1 : Cadre Théorique et État de l\'Art',
-    'Chapitre 2 : Méthodologie et Analyse des Données',
-    'Chapitre 3 : Implémentation et Résultats Expérimentaux',
-    'Chapitre 4 : Discussion et Analyse Critique',
-    'Conclusion Générale et Perspectives de Recherche',
-    'Bibliographie',
-    'Annexes',
-  ],
+  memoire: MEMOIRE_RESEARCH_SECTIONS,
   cv: [
     'CV généré',
   ],

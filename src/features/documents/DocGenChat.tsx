@@ -12,28 +12,42 @@ import {
   View,
 } from 'react-native';
 import { Sparkles, X, Send, Wand2 } from 'lucide-react-native';
+import * as SecureStore from 'expo-secure-store';
 import { authFetch } from '../auth/betterAuth';
 import { stitchColors } from '../../theme/stitch';
 
 type ChatRole = 'user' | 'assistant';
 type ChatMsg = { role: ChatRole; content: string };
 
+const storageKeyFor = (sessionKey: string) =>
+  `campus360.docgen.${sessionKey.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120)}`;
+
 export const IA_CREDITS_FULL_GEN = 5;
 
 const TYPE_LABEL: Record<string, string> = {
+  cv: 'CV',
+  lettre_motivation: 'lettre de motivation',
   stage: 'rapport de stage',
   memoire: 'mémoire',
   blank: 'document',
 };
 
 const SUGGESTIONS: Record<string, string[]> = {
+  cv: [
+    'Je cherche un premier emploi en développement web',
+    'Je veux valoriser mes stages et mes projets académiques',
+  ],
+  lettre_motivation: [
+    'Je réponds à une offre précise',
+    'Je souhaite envoyer une candidature spontanée',
+  ],
   stage: [
     "J'ai fait un stage en développement web",
     "Je n'ai pas fait de stage, c'est un rapport théorique",
   ],
   memoire: [
-    'Mon mémoire porte sur la digitalisation des PME',
-    "Je n'ai pas encore de problématique précise",
+    'Je prépare un mémoire académique de recherche',
+    'Je prépare un mémoire professionnel ou un projet',
   ],
   blank: ['Je veux rédiger un document sur…'],
 };
@@ -49,21 +63,57 @@ export function DocGenChat({
   documentType,
   generating,
   onGenerate,
+  profileContext,
+  sessionKey,
 }: {
   visible: boolean;
   onClose: () => void;
   documentType: string;
   generating: boolean;
   onGenerate: (messages: ChatMsg[]) => void;
+  profileContext?: Record<string, string>;
+  sessionKey: string;
 }) {
   const [messages, setMessages] = React.useState<ChatMsg[]>([]);
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const scrollRef = React.useRef<ScrollView>(null);
+  const activeSessionRef = React.useRef('');
+  const hydratedSessionRef = React.useRef('');
+
+  React.useEffect(() => {
+    if (!visible || activeSessionRef.current === sessionKey) return;
+    activeSessionRef.current = sessionKey;
+    hydratedSessionRef.current = '';
+    setMessages([]);
+    setInput('');
+    void SecureStore.getItemAsync(storageKeyFor(sessionKey))
+      .then((saved) => {
+        if (activeSessionRef.current !== sessionKey) return;
+        if (saved) {
+          const parsed = JSON.parse(saved) as ChatMsg[];
+          if (Array.isArray(parsed)) setMessages(parsed);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (activeSessionRef.current === sessionKey) hydratedSessionRef.current = sessionKey;
+      });
+  }, [sessionKey, visible]);
+
+  React.useEffect(() => {
+    if (hydratedSessionRef.current !== sessionKey) return;
+    void SecureStore.setItemAsync(storageKeyFor(sessionKey), JSON.stringify(messages)).catch(() => {});
+  }, [messages, sessionKey]);
 
   const label = TYPE_LABEL[documentType] ?? 'document';
   const userTurns = messages.filter((m) => m.role === 'user').length;
-  const canGenerate = userTurns >= 2 && !loading && !generating;
+  const requiredTurns = documentType === 'memoire'
+    ? 7
+    : documentType === 'cv' || documentType === 'lettre_motivation'
+      ? 3
+      : 2;
+  const canGenerate = userTurns >= requiredTurns && !loading && !generating;
 
   const scrollToEnd = () =>
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
@@ -81,7 +131,7 @@ export function DocGenChat({
         const res = await authFetch('/api/mobile/documents/onboard-chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: next, documentType }),
+          body: JSON.stringify({ messages: next, documentType, profileContext }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Erreur IA.');
@@ -102,7 +152,7 @@ export function DocGenChat({
         scrollToEnd();
       }
     },
-    [messages, loading, generating, documentType],
+    [messages, loading, generating, documentType, profileContext],
   );
 
   // Full-screen state while every section is being written.
@@ -156,8 +206,8 @@ export function DocGenChat({
               <View style={styles.empty}>
                 <Text style={styles.emptyTitle}>Parle-moi de ton {label}</Text>
                 <Text style={styles.emptyBody}>
-                  Quelques échanges suffisent : sujet, contexte, entreprise, missions… Ensuite je
-                  rédige toutes les sections d&apos;un coup.
+                  Je connais déjà les informations disponibles dans ton profil. Confirme-les et
+                  réponds à quelques questions ciblées avant la rédaction complète.
                 </Text>
                 <View style={styles.suggestions}>
                   {(SUGGESTIONS[documentType] ?? SUGGESTIONS.blank).map((s) => (
@@ -202,12 +252,14 @@ export function DocGenChat({
             >
               <Wand2 size={17} color={stitchColors.white} strokeWidth={2.2} />
               <Text style={styles.ctaText}>
-                Générer mon {label} ({IA_CREDITS_FULL_GEN} crédits)
+                {documentType === 'memoire' ? 'Valider le plan et rédiger' : `Générer mon ${label}`} ({IA_CREDITS_FULL_GEN} crédits)
               </Text>
             </Pressable>
-            {!canGenerate && userTurns < 2 ? (
+            {!canGenerate && userTurns < requiredTurns ? (
               <Text style={styles.ctaHint}>
-                Réponds à au moins 2 questions pour lancer la rédaction.
+                {documentType === 'memoire'
+                  ? `Complète encore ${requiredTurns - userTurns} étape${requiredTurns - userTurns > 1 ? 's' : ''} avant de valider le plan.`
+                  : `Réponds à au moins ${requiredTurns} questions pour lancer la rédaction.`}
               </Text>
             ) : null}
           </View>
