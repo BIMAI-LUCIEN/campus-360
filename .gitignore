@@ -66,6 +66,9 @@ generated_reports/
 # Git worktrees
 .worktrees/
 
+# Local visual brainstorming sessions
+.superpowers/
+
 # Next.js build cache
 .next/
 
