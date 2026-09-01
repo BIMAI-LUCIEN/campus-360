@@ -1,5 +1,7 @@
 # Review produit - Campus-Bordes
 
+> **Document historique.** Cette revue décrit l'ancien MVP centré uniquement sur les PDF. Pour les décisions produit actuelles, `docs/context.md` et les spécifications validées dans `docs/superpowers/specs/` font foi. Les exigences de sécurité PDF ci-dessous restent applicables.
+
 ## Diagnostic PM
 
 Le PRD initial etait trop large pour un premier lancement. La meilleure trajectoire est de

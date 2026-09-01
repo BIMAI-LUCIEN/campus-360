@@ -2,6 +2,8 @@
 
 Ce document sert de référence absolue pour comprendre la vision, les fonctionnalités et l'architecture de l'application **Campus 360**. Il permet à n'importe quel développeur ou intelligence artificielle de reprendre le projet avec un contexte complet.
 
+En cas de contradiction avec un ancien document centré uniquement sur les PDF, ce document et les spécifications validées dans `docs/superpowers/specs/` font foi. Les documents PDF restent une fonctionnalité importante, mais la recherche et l'obtention d'un stage constituent la priorité produit.
+
 ---
 
 ## 1. Vision & Proposition de Valeur
@@ -10,6 +12,7 @@ Ce document sert de référence absolue pour comprendre la vision, les fonctionn
 * **Slogan** : *« L'IA qui trouve et décroche ton stage. »*
 * **Cœur de cible B2C** : Étudiants d'IUT, BTS, Licences, Masters cherchant un stage obligatoire.
 * **Cœur de cible B2B** : Chargés de recrutement, PME, Startups et grandes entreprises locales.
+* **Hiérarchie produit** : 1) trouver et décrocher un stage, 2) créer les documents nécessaires, 3) apprendre et réviser avec les ressources académiques.
 
 ---
 
@@ -24,10 +27,10 @@ Ce document sert de référence absolue pour comprendre la vision, les fonctionn
                  ▼                                                           ▼
      💼 FONCTIONNALITÉS CŒUR (B2C)                               📦 FONCTIONNALITÉS SECONDAIRES
  ──────────────────────────────────────                     ──────────────────────────────────────
- • Onboarding Animé Obligatoire (3 Qs)                      • Catalogue d'Épreuves PDF (En ligne / Hors-ligne)
+ • Onboarding Animé Obligatoire (4 étapes)                  • Catalogue d'Épreuves PDF (En ligne / Hors-ligne)
  • Flux de Stages avec % de Matching                        • Bibliothèque de cours & épreuves acquis
  • Postulation IA Automatisée (Tailoring)                   • Assistant IA de Révision & Préparation (Limites de chat)
- • Éditeur Assisté par IA (CV + Lettre)                     • Portefeuille & Micro-paiements Mobile Money
+ • Atelier IA (CV + Lettre + Rapport + Mémoire)              • Portefeuille & Micro-paiements Mobile Money
  • Suivi & Relance J+7
  • Boucle Virale de Parrainage
  • Relances humoristiques (Duolingo Style)
@@ -77,6 +80,11 @@ Pour stimuler l'engagement, l'application utilise des notifications push humoris
 * *« Ton CV prend la poussière dans un coin de l'app... Tu veux vraiment valider ton année ? 🧹 »*
 * *« Notre IA a travaillé dur pour te rédiger une lettre parfaite. Ne la laisse pas tomber ! 😢 »*
 
+### H. Navigation et accueil personnalisé
+La navigation mobile comprend cinq destinations stables : **Accueil**, **Stages**, **Créer**, **Ressources** et **Profil**. Les stages restent la fonctionnalité principale.
+
+L'accueil affiche une prochaine action dynamique. Il privilégie une candidature urgente, une nouvelle offre fortement compatible, un document en cours, un profil incomplet, puis une ressource recommandée. Cette logique fusionne le Top 3 Matches, l'atelier de documents et les ressources sans transformer l'accueil en catalogue de modules.
+
 ---
 
 ## 4. Modèle Économique, Limites IA & Structure des Prix (B2C)
@@ -89,6 +97,7 @@ Pour coller au budget des étudiants en Afrique Francophone, le modèle de tarif
 * **Candidature de Stage IA** : **1 000 FCFA** par postulation IA complète (génération CV + Lettre), ou **500 FCFA** si l'étudiant fournit son propre CV.
 * **Correction & Rédaction Assistée (Atelier)** :
   * Un CV générique : **500 FCFA**.
+  * Une lettre de motivation générique : **500 FCFA**.
   * Un Rapport de stage : **1 000 FCFA**.
   * Un Mémoire académique (plan / chapitres) : **2 000 à 3 000 FCFA**.
 * **Chat avec l'Assistant Révision IA** : **1 jeton (100 FCFA) = 50 messages** de chat.
@@ -98,22 +107,35 @@ L'abonnement supprime les frictions à l'acte d'achat et fidélise l'étudiant e
 
 1. **Pass Basique (2 000 FCFA / mois)** :
    * **5** candidatures IA complètes.
-   * **3** rédactions/corrections de Rapports ou Mémoires incluses dans l'Atelier.
+   * **3** rédactions/corrections de documents incluses dans l'Atelier.
    * **Lecture PDF** : Accès illimité en ligne (lecture seule sans option IA).
    * **Chat IA** : Limité à **500 messages** de chat par mois.
    * *Mode Hors-ligne* : Indisponible.
+   * **Exports Atelier** : PDF avec watermark ; export Word indisponible.
 2. **Pass Pro (3 500 FCFA / mois)** :
    * **10** candidatures IA complètes.
-   * **5** rédactions/corrections de Rapports ou Mémoires incluses dans l'Atelier.
+   * **5** rédactions/corrections de documents incluses dans l'Atelier.
    * **Lecture PDF** : Accès illimité en ligne + Option IA incluse gratuitement.
    * **Mode Hors-ligne (Offline)** : Inclus (téléchargement et chiffrement sécurisé des PDF sur l'appareil).
    * **Chat IA** : Limité à **1 000 messages** de chat par mois.
+   * **Exports Atelier** : PDF sans watermark ; export Word indisponible.
 3. **Pass Elite (5 000 FCFA / mois)** :
    * **20** candidatures IA complètes.
-   * **10** rédactions/corrections de Rapports ou Mémoires incluses dans l'Atelier.
+   * **10** rédactions/corrections de documents incluses dans l'Atelier.
    * **Lecture PDF** : Accès illimité en ligne et hors-ligne (Offline) + Option IA incluse.
    * **Chat IA** : Limité à **2 000 messages** de chat par mois.
    * Badge "Profil Boosté" (visibilité maximale dans la CVthèque des recruteurs).
+   * **Exports Atelier** : PDF et Word sans watermark.
+
+### C. Offre gratuite et politique d'export
+L'offre gratuite permet la rédaction, la sauvegarde et l'aperçu avec watermark, mais interdit tout export PDF ou Word. Les droits sont contrôlés côté serveur avant toute génération de fichier.
+
+| Offre | Prix mensuel | PDF Atelier | Word Atelier | Watermark |
+|---|---:|---|---|---|
+| Gratuit | 0 FCFA | Non | Non | Aperçu uniquement |
+| Basique | 2 000 FCFA | Oui | Non | Oui sur le PDF |
+| Pro | 3 500 FCFA | Oui | Non | Non |
+| Elite | 5 000 FCFA | Oui | Oui | Non |
 
 ---
 
@@ -136,9 +158,22 @@ Le parcours commence par l'inscription de l'entreprise. Pour valider sa légitim
 * **Verrous CVthèque** : Le recruteur peut voir les compétences et profils des étudiants inscrits, mais le bouton **"Contacter sur WhatsApp"** est désactivé tant que le score KYB de l'entreprise n'est pas validé.
 * **Parrainage B2B** : Une entreprise qui invite une autre entreprise active reçoit son prochain boost d'offre "URGENT" gratuitement.
 
+### C. Limite des rôles
+Les encadrants académiques n'ont aucun compte dans Campus 360. L'étudiant exporte ses documents et les présente à son encadrant en dehors de l'application. Le portail web est réservé aux recruteurs, entreprises et administrateurs Campus 360.
+
 ---
 
-## 6. Choix Technologiques & Organisation des Dossiers
+## 6. Alignement des surfaces
+
+* **Application mobile** : produit principal étudiant, avec les stages en première position.
+* **Site public** : explique d'abord le parcours stage, puis l'atelier de documents et les ressources.
+* **Portail recruteur** : offres, candidatures, matching, CVthèque, KYB, boosts et parrainage B2B.
+* **Administration** : utilisateurs, abonnements, wallet, crédits IA, documents, exports, catalogue PDF, recruteurs et revenus.
+* **Terminologie tarifaire unique** : Gratuit, Basique, Pro et Elite sur toutes les surfaces.
+
+---
+
+## 7. Choix Technologiques & Organisation des Dossiers
 
 1. **Client Mobile Étudiants** (`src/`) : Expo / React Native (Android, iOS, Web).
 2. **Portail Recruteur & Backend API** (`recruiter-web/`) : Next.js (App Router, Tailwind CSS, TypeScript, TanStack Query, TanStack Table).

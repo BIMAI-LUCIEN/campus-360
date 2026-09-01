@@ -1,5 +1,7 @@
 # Campus-Bordes Goals
 
+> **Document historique pour le module PDF.** Ces objectifs restent valides pour la sécurité et la qualité du catalogue, mais ne définissent plus seuls le périmètre de Campus 360. La hiérarchie produit actuelle est définie dans `docs/context.md` : stages en priorité, atelier de documents, puis ressources académiques.
+
 ## Mission
 
 Campus-Bordes doit devenir une app simple et fiable pour trouver, preview, acheter et lire des PDF academiques. Le produit reste volontairement concentre sur les PDF.
