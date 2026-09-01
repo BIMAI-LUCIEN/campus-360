@@ -1,7 +1,7 @@
 # Refonte de l'expérience Campus 360
 
-Date : 1er septembre 2026  
-Statut : conception validée  
+Date : 1er septembre 2026
+Statut : conception validée
 Périmètre : application mobile, site public, administration et portail recruteur
 
 ## 1. Objectif
