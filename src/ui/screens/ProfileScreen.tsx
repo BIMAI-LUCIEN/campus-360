@@ -15,6 +15,7 @@ import {
   Flame,
   BookOpen,
   LogOut,
+  LogIn,
   RefreshCw,
   ChevronRight,
   type LucideIcon,
@@ -62,6 +63,7 @@ interface ProfileScreenProps {
   onPremium: () => void;
   onLibrary: () => void;
   onDocuments: () => void;
+  onSignInPress?: () => void;
   onSignOut: () => void;
 }
 
@@ -121,10 +123,12 @@ export function ProfileScreen({
   onPremium,
   onLibrary,
   onDocuments,
+  onSignInPress,
   onSignOut,
 }: ProfileScreenProps) {
   const initials = studentProfile?.name?.slice(0, 2).toUpperCase() ?? 'CB';
   const email = studentProfile?.email ?? '—';
+  const isFreeAccount = subscriptionTier === 'free' || !studentProfile?.email;
   const tierLabel = getSubscriptionPlan(subscriptionTier).name;
 
   return (
@@ -257,6 +261,20 @@ export function ProfileScreen({
         </View>
       </GlassCard>
 
+      {/* Free account login card */}
+      {isFreeAccount && onSignInPress && (
+        <GlassCard style={{ ...styles.subscriptionCard, borderColor: 'rgba(139, 92, 246, 0.35)', backgroundColor: 'rgba(124, 58, 237, 0.12)' }}>
+          <View style={styles.subscriptionHeader}>
+            <LogIn size={18} color={stitchColors.sienna} />
+            <Text style={styles.subscriptionTitle}>Déjà un compte Campus 360 ?</Text>
+          </View>
+          <Text style={styles.subscriptionDesc}>
+            Connecte-toi avec ton adresse email pour récupérer tes PDF débloqués, tes stages favoris et ton solde.
+          </Text>
+          <PrimaryButton label="Se connecter à mon compte" onPress={onSignInPress} />
+        </GlassCard>
+      )}
+
       {/* Subscription card */}
       {subscriptionTier !== 'free' && (
         <GlassCard style={styles.subscriptionCard}>
@@ -294,6 +312,14 @@ export function ProfileScreen({
       <Text style={styles.groupLabel}>Système</Text>
       <MenuList
         rows={[
+          ...(onSignInPress
+            ? [{
+                key: 'signin',
+                label: 'Se connecter / Changer de compte',
+                Icon: LogIn,
+                onPress: onSignInPress,
+              }]
+            : []),
           {
             key: 'sync',
             label: syncingAccount ? 'Synchronisation…' : 'Synchroniser le compte',

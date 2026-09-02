@@ -106,8 +106,48 @@ import {
 } from './features/subscriptions/plans';
 
 const logo = require('../assets/icon.png');
+const ONBOARDING_COMPLETED_KEY = 'campus360_onboarding_completed_permanent';
 const onboardingStorageKey = 'campus-bordes.onboarding-seen';
 const introSeenStorageKey = 'campus-bordes.intro-seen';
+
+const getOnboardingCompletedPermanently = async (): Promise<boolean> => {
+  try {
+    if (Platform.OS === 'web') {
+      if (typeof localStorage !== 'undefined') {
+        return (
+          localStorage.getItem(ONBOARDING_COMPLETED_KEY) === '1' ||
+          localStorage.getItem(onboardingStorageKey) === '1'
+        );
+      }
+      return false;
+    }
+    const [perm, legacy] = await Promise.all([
+      SecureStore.getItemAsync(ONBOARDING_COMPLETED_KEY).catch(() => null),
+      SecureStore.getItemAsync(onboardingStorageKey).catch(() => null),
+    ]);
+    return perm === '1' || legacy === '1';
+  } catch {
+    return false;
+  }
+};
+
+const setOnboardingCompletedPermanent = async () => {
+  try {
+    if (Platform.OS === 'web') {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(ONBOARDING_COMPLETED_KEY, '1');
+        localStorage.setItem(onboardingStorageKey, '1');
+        localStorage.setItem(introSeenStorageKey, '1');
+      }
+    } else {
+      await Promise.all([
+        SecureStore.setItemAsync(ONBOARDING_COMPLETED_KEY, '1').catch(() => {}),
+        SecureStore.setItemAsync(onboardingStorageKey, '1').catch(() => {}),
+        SecureStore.setItemAsync(introSeenStorageKey, '1').catch(() => {}),
+      ]);
+    }
+  } catch {}
+};
 
 const formatCoins = (value: number) =>
   new Intl.NumberFormat('fr-CM', { maximumFractionDigits: 0 }).format(value);
@@ -273,7 +313,15 @@ export function AppShell() {
     },
     [],
   );
-  const [hasSeenOnboarding, setHasSeenOnboarding] = React.useState(false);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = React.useState<boolean>(() => {
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+      return (
+        localStorage.getItem(introSeenStorageKey) === '1' ||
+        localStorage.getItem(ONBOARDING_COMPLETED_KEY) === '1'
+      );
+    }
+    return false;
+  });
   const [notificationsVisible, setNotificationsVisible] = React.useState(false);
   const [notificationsSettingsVisible, setNotificationsSettingsVisible] = React.useState(false);
   const [editingDocumentId, setEditingDocumentId] = React.useState<string | null>(null);
@@ -325,6 +373,15 @@ export function AppShell() {
   const [authCapabilities, setAuthCapabilities] = React.useState({ passwordReset: false, google: false });
   const [resetToken, setResetToken] = React.useState('');
   const [onboardingVisible, setOnboardingVisible] = React.useState(false);
+  const [isOnboardingCompleted, setIsOnboardingCompleted] = React.useState<boolean>(() => {
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+      return (
+        localStorage.getItem(ONBOARDING_COMPLETED_KEY) === '1' ||
+        localStorage.getItem(onboardingStorageKey) === '1'
+      );
+    }
+    return false;
+  });
   const [freePdfSelectorVisible, setFreePdfSelectorVisible] = React.useState(false);
   const [onboardingIndex, setOnboardingIndex] = React.useState(0);
   const [studentSession, setStudentSession] = React.useState<StudentSession | null>(null);
@@ -416,9 +473,36 @@ export function AppShell() {
 
     const restoreSession = async () => {
       try {
+        const [isPermCompleted, isIntroSeen] = await Promise.all([
+          getOnboardingCompletedPermanently(),
+          Platform.OS === 'web'
+            ? Promise.resolve(
+                typeof localStorage !== 'undefined' &&
+                  (localStorage.getItem(introSeenStorageKey) === '1' ||
+                    localStorage.getItem(ONBOARDING_COMPLETED_KEY) === '1'),
+              )
+            : SecureStore.getItemAsync(introSeenStorageKey)
+                .then((v) => v === '1')
+                .catch(() => false),
+        ]);
+
+        if (mounted) {
+          if (isPermCompleted) {
+            setIsOnboardingCompleted(true);
+            setOnboardingVisible(false);
+            setHasSeenOnboarding(true);
+          }
+          if (isIntroSeen) {
+            setHasSeenOnboarding(true);
+          }
+        }
+
         const storedSession = await loadStudentSession();
         if (storedSession) {
-          if (mounted) setStudentSession(storedSession);
+          if (mounted) {
+            setStudentSession(storedSession);
+            setHasSeenOnboarding(true);
+          }
           await syncStudentAccount(storedSession);
         }
       } catch {
@@ -502,18 +586,20 @@ export function AppShell() {
 
   React.useEffect(() => {
     if (!studentSession) { setOnboardingVisible(false); return; }
+    let active = true;
     const checkOnboarding = async () => {
       try {
-        let seen = '0';
-        if (Platform.OS === 'web') {
-          seen = localStorage.getItem(onboardingStorageKey) || '0';
-        } else {
-          seen = await SecureStore.getItemAsync(onboardingStorageKey) || '0';
+        const completed = await getOnboardingCompletedPermanently();
+        if (active) {
+          setOnboardingVisible(!completed);
+          if (completed) setIsOnboardingCompleted(true);
         }
-        setOnboardingVisible(seen !== '1');
-      } catch { setOnboardingVisible(true); }
+      } catch {
+        if (active) setOnboardingVisible(false);
+      }
     };
     checkOnboarding();
+    return () => { active = false; };
   }, [studentSession]);
 
   // ── Handlers (copied verbatim from App.tsx) ──────────────────────────────
@@ -539,6 +625,11 @@ export function AppShell() {
     try {
       const account = await getStudentAccount();
       setStudentProfile(account.user);
+      if (account.user?.skills && account.user.skills.length > 0) {
+        setIsOnboardingCompleted(true);
+        setOnboardingVisible(false);
+        void setOnboardingCompletedPermanent();
+      }
       setBalance(account.wallet.balanceCoins);
       setIaCredits(account.wallet.iaCredits);
       setSubscriptionTier(account.subscription.tier);
@@ -647,11 +738,9 @@ export function AppShell() {
   };
 
   const finishOnboarding = async () => {
-    try {
-      if (Platform.OS === 'web') { localStorage.setItem(onboardingStorageKey, '1'); }
-      else { await SecureStore.setItemAsync(onboardingStorageKey, '1'); }
-    } catch {}
+    setIsOnboardingCompleted(true);
     setOnboardingVisible(false);
+    await setOnboardingCompletedPermanent();
   };
 
   const signOutStudent = async () => {
@@ -1005,10 +1094,12 @@ export function AppShell() {
             onSubmit={submitAuth}
             onGoogle={handleGoogleSignIn}
           />
-        ) : studentSession && (!studentProfile?.skills || studentProfile.skills.length === 0) ? (
+        ) : studentSession && !isOnboardingCompleted && (!studentProfile?.skills || studentProfile.skills.length === 0) ? (
           <OnboardingScreen
             initialName={studentProfile?.name || studentSession.user.name || 'Étudiant'}
-            onCompleteOnboarding={(onboardingData) => {
+            onSkip={finishOnboarding}
+            onCompleteOnboarding={async (onboardingData) => {
+              await finishOnboarding();
               const updated: StudentProfile = {
                 ...(studentProfile || {
                   id: studentSession.user.id,
@@ -1178,6 +1269,11 @@ export function AppShell() {
                   onPremium={() => openSection('premium')}
                   onLibrary={() => openSection('resources')}
                   onDocuments={() => openSection('documents')}
+                  onSignInPress={() => {
+                    setAuthMode('sign-in');
+                    setAuthNotice('');
+                    setAuthVisible(true);
+                  }}
                   onSignOut={signOutStudent}
                 />
               )}
@@ -1268,6 +1364,21 @@ export function AppShell() {
             <View style={{ marginTop: 8 }}>
               <PrimaryButtonLocal label="Recharger le wallet" fluid onPress={() => { setAccountVisible(false); setRechargeVisible(true); }} />
             </View>
+            {(subscriptionTier === 'free' || !studentProfile?.email) && (
+              <View style={{ marginTop: 8 }}>
+                <PrimaryButtonLocal
+                  label="Se connecter avec mon compte existant"
+                  variant="secondary"
+                  fluid
+                  onPress={() => {
+                    setAccountVisible(false);
+                    setAuthMode('sign-in');
+                    setAuthNotice('');
+                    setAuthVisible(true);
+                  }}
+                />
+              </View>
+            )}
             <View style={styles.modalFooterRow}>
               <Pressable style={styles.ghostAction} onPress={() => setAccountVisible(false)}><Text style={styles.ghostActionText}>Fermer</Text></Pressable>
               <Pressable style={styles.ghostDangerAction} onPress={signOutStudent}><Text style={styles.ghostDangerActionText}>Déconnexion</Text></Pressable>
@@ -1539,6 +1650,39 @@ export function AppShell() {
           onClose={() => setFreePdfSelectorVisible(false)}
           studentSession={studentSession}
         />
+
+        {/* Auth Modal when triggered from within the application */}
+        <Modal
+          visible={authVisible}
+          animationType="slide"
+          onRequestClose={() => setAuthVisible(false)}
+        >
+          <AuthScreen
+            mode={authMode}
+            email={authEmail}
+            password={authPassword}
+            name={authName}
+            whatsappPhone={authWhatsappPhone}
+            university={authUniversity}
+            faculty={authFaculty}
+            level={authLevel}
+            loading={authLoading}
+            notice={authNotice}
+            canGoogle={authCapabilities.google}
+            canPasswordReset={authCapabilities.passwordReset}
+            onModeChange={setAuthMode}
+            onEmailChange={setAuthEmail}
+            onPasswordChange={setAuthPassword}
+            onNameChange={setAuthName}
+            onWhatsappChange={setAuthWhatsappPhone}
+            onUniversityChange={setAuthUniversity}
+            onFacultyChange={setAuthFaculty}
+            onLevelChange={setAuthLevel}
+            onSubmit={submitAuth}
+            onGoogle={handleGoogleSignIn}
+            onClose={() => setAuthVisible(false)}
+          />
+        </Modal>
 
       </SafeAreaView>
     </SafeAreaProvider>

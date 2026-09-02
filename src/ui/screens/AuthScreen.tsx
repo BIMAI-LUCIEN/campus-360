@@ -201,6 +201,26 @@ export function AuthScreen({
       >
         <View style={styles.cardWrap}>
           <GlassCard style={styles.authCard}>
+            {onClose && (
+              <Pressable
+                onPress={onClose}
+                hitSlop={12}
+                style={{
+                  position: 'absolute',
+                  top: 16,
+                  right: 16,
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 10,
+                }}
+              >
+                <Text style={{ color: '#DDD6FE', fontSize: 16, fontWeight: '700' }}>✕</Text>
+              </Pressable>
+            )}
             {/* Editorial eyebrow */}
             <Text style={styles.eyebrow}>ACCÈS ÉTUDIANT</Text>
             <View style={styles.headerRule} />

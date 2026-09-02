@@ -8,24 +8,24 @@ const { width, height } = Dimensions.get('window');
 //  · `paper*` = the background/surface ramp (dark)
 //  · `sienna` = the brand accent (repurposed to violet/pink for solid accents)
 export const stitchColors = {
-  // Foreground ramp (text) — light on dark
-  ink: '#F7F7F8',
-  inkSoft: '#E4E4E7',
-  inkMuted: '#9A9AA2',
-  inkSubtle: '#6E6E78',
-  inkFaint: '#33333A',
+  // Foreground ramp (text) — crisp light on dark
+  ink: '#F8FAFC',
+  inkSoft: '#E2E8F0',
+  inkMuted: '#94A3B8',
+  inkSubtle: '#64748B',
+  inkFaint: '#334155',
 
-  // Background / surface ramp — dark élégant et profond
-  paper: '#0B0F17',
-  paperDeep: '#111622',
-  paperSoft: '#182030',
+  // Background / surface ramp — Deep Obsidian Violet (inspiré fintech reference)
+  paper: '#090714',
+  paperDeep: '#0D0A1C',
+  paperSoft: '#15112B',
 
-  // Brand accent (solid) — Indigo saphir élégant & moderne
-  sienna: '#6366F1',
-  siennaDeep: '#4F46E5',
-  siennaTone: '#818CF8',
-  siennaBg: 'rgba(99, 102, 241, 0.12)',
-  siennaSoft: 'rgba(99, 102, 241, 0.20)',
+  // Brand accent (solid) — Violet électrique & Royal Purple
+  sienna: '#8B5CF6',
+  siennaDeep: '#7C3AED',
+  siennaTone: '#A78BFA',
+  siennaBg: 'rgba(124, 58, 237, 0.14)',
+  siennaSoft: 'rgba(124, 58, 237, 0.22)',
 
   // Emerald (success / owned / IA) — bright on dark
   emerald: '#34D399',
@@ -45,47 +45,47 @@ export const stitchColors = {
   warningBg: 'rgba(251, 191, 36, 0.14)',
   warningTone: '#FCD34D',
 
-  // Modern UI Primary & Secondary
-  primary: '#4F46E5',
+  // Modern UI Primary & Secondary — Royal Violet & Sapphire
+  primary: '#7C3AED',
   onPrimary: '#FFFFFF',
-  primaryContainer: 'rgba(79, 70, 229, 0.14)',
-  onPrimaryContainer: '#C7D2FE',
-  primaryFixed: 'rgba(79, 70, 229, 0.14)',
-  onPrimaryFixed: '#C7D2FE',
-  primaryFixedDim: 'rgba(79, 70, 229, 0.22)',
-  onPrimaryFixedVariant: '#C7D2FE',
-  inversePrimary: '#818CF8',
+  primaryContainer: 'rgba(124, 58, 237, 0.16)',
+  onPrimaryContainer: '#DDD6FE',
+  primaryFixed: 'rgba(124, 58, 237, 0.16)',
+  onPrimaryFixed: '#DDD6FE',
+  primaryFixedDim: 'rgba(124, 58, 237, 0.24)',
+  onPrimaryFixedVariant: '#DDD6FE',
+  inversePrimary: '#A78BFA',
 
-  secondary: '#3B82F6',
+  secondary: '#6366F1',
   onSecondary: '#FFFFFF',
-  secondaryContainer: 'rgba(59, 130, 246, 0.14)',
-  onSecondaryContainer: '#BFDBFE',
-  secondaryFixed: 'rgba(59, 130, 246, 0.14)',
-  onSecondaryFixed: '#BFDBFE',
-  secondaryFixedDim: 'rgba(59, 130, 246, 0.22)',
-  onSecondaryFixedVariant: '#BFDBFE',
+  secondaryContainer: 'rgba(99, 102, 241, 0.14)',
+  onSecondaryContainer: '#C7D2FE',
+  secondaryFixed: 'rgba(99, 102, 241, 0.14)',
+  onSecondaryFixed: '#C7D2FE',
+  secondaryFixedDim: 'rgba(99, 102, 241, 0.22)',
+  onSecondaryFixedVariant: '#C7D2FE',
 
-  tertiary: '#0EA5E9',
+  tertiary: '#38BDF8',
   onTertiary: '#FFFFFF',
 
-  background: '#0B0F17',
+  background: '#090714',
   onBackground: '#F8FAFC',
-  surface: '#111622',
+  surface: '#131024',
   onSurface: '#F8FAFC',
-  surfaceVariant: '#182030',
-  onSurfaceVariant: '#94A3B8',
+  surfaceVariant: '#1A1435',
+  onSurfaceVariant: '#A78BFA',
 
-  surfaceContainerLowest: '#0E131E',
-  surfaceContainerLow: '#111622',
-  surfaceContainer: '#182030',
-  surfaceContainerHigh: '#1E283C',
-  surfaceContainerHighest: '#27344E',
+  surfaceContainerLowest: '#0A0816',
+  surfaceContainerLow: '#0E0B1F',
+  surfaceContainer: '#131024',
+  surfaceContainerHigh: '#191433',
+  surfaceContainerHighest: '#221B45',
 
   inverseSurface: '#F8FAFC',
-  inverseOnSurface: '#0B0F17',
+  inverseOnSurface: '#090714',
 
-  outline: 'rgba(255, 255, 255, 0.08)',
-  outlineVariant: 'rgba(255, 255, 255, 0.05)',
+  outline: 'rgba(139, 92, 246, 0.14)',
+  outlineVariant: 'rgba(139, 92, 246, 0.08)',
   success: '#34D399',
   successContainer: 'rgba(52, 211, 153, 0.14)',
   onError: '#FFFFFF',
@@ -93,19 +93,19 @@ export const stitchColors = {
   onErrorContainer: '#FCA5A5',
 
   // Glass tokens
-  glassSurface: '#111622',
-  glassBorder: 'rgba(255, 255, 255, 0.08)',
-  glassBorderLight: 'rgba(255, 255, 255, 0.12)',
-  glassOverlay: 'rgba(0,0,0,0.5)',
-  glassCardBg: '#111622',
-  glassCardBorder: 'rgba(255, 255, 255, 0.08)',
-  glassSurfaceDark: '#0B0F17',
-  glassBorderDark: 'rgba(255, 255, 255, 0.06)',
+  glassSurface: '#131024',
+  glassBorder: 'rgba(139, 92, 246, 0.14)',
+  glassBorderLight: 'rgba(139, 92, 246, 0.22)',
+  glassOverlay: 'rgba(9, 7, 20, 0.65)',
+  glassCardBg: '#131024',
+  glassCardBorder: 'rgba(139, 92, 246, 0.14)',
+  glassSurfaceDark: '#090714',
+  glassBorderDark: 'rgba(139, 92, 246, 0.10)',
 };
 
-// ── Brand gradient — refined Indigo / Sapphire modern tech gradient ─────────
+// ── Brand gradient — Royal Electric Violet gradient (inspiré carte neobank mockup 2) ─────────
 export const brandGradient = {
-  colors: ['#4F46E5', '#3B82F6'] as const, // indigo → modern blue
+  colors: ['#8B5CF6', '#6D28D9', '#4C1D95'] as const, // electric violet → deep purple
   horizontal: { start: { x: 0, y: 0 }, end: { x: 1, y: 0 } },
   diagonal: { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } },
 };
