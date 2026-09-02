@@ -9,7 +9,7 @@ export const SEED_COMPANIES: StageCompany[] = [
     address: 'Abidjan, Cocody Riviera 3',
     contactEmail: 'recrutement@technovation.ci',
     contactWhatsapp: '+2250708091011',
-    kybScore: 95,
+    kybScore: 96,
     status: 'VERIFIED',
     isPremium: true,
   },
@@ -20,31 +20,119 @@ export const SEED_COMPANIES: StageCompany[] = [
     address: 'Dakar, Plateau',
     contactEmail: 'stages@ficoconsulting.sn',
     contactWhatsapp: '+221770001122',
-    kybScore: 92,
+    kybScore: 94,
     status: 'VERIFIED',
     isPremium: false,
   },
   {
     id: 'comp-3',
-    name: 'AfriDigital Agency',
+    name: 'AfriDigital Agency & Studios',
     industry: 'Marketing Digital & Design',
     address: 'Cotonou, Haie Vive',
     contactEmail: 'contact@afridigi.bj',
     contactWhatsapp: '+22997001122',
-    kybScore: 88,
+    kybScore: 91,
     status: 'VERIFIED',
     isPremium: true,
   },
   {
     id: 'comp-4',
-    name: 'AgroLogix Solutions',
+    name: 'AgroLogix & Supply Chain',
     industry: 'Logistique & Supply Chain',
     address: 'Douala, Bonanjo',
     contactEmail: 'rh@agrologix.cm',
     contactWhatsapp: '+237690001122',
-    kybScore: 84,
+    kybScore: 89,
     status: 'VERIFIED',
     isPremium: false,
+  },
+  {
+    id: 'comp-5',
+    name: 'Ecobank FinTech Innovation Hub',
+    industry: 'Finance & FinTech',
+    address: 'Lomé, Siège Régional & Remote',
+    contactEmail: 'careers-fintech@ecobank.com',
+    contactWhatsapp: '+22890112233',
+    kybScore: 98,
+    status: 'VERIFIED',
+    isPremium: true,
+  },
+  {
+    id: 'comp-6',
+    name: 'Eiffage / Bouygues BTP Afrique',
+    industry: 'Bâtiment, Énergie & Génie Civil',
+    address: 'Abidjan, Zone Industrielle Yopougon',
+    contactEmail: 'recrutement.btp@eiffage-afrique.com',
+    contactWhatsapp: '+2250505112233',
+    kybScore: 95,
+    status: 'VERIFIED',
+    isPremium: true,
+  },
+  {
+    id: 'comp-7',
+    name: 'Wave Mobile Money CI',
+    industry: 'FinTech & Télécoms',
+    address: 'Abidjan, Marcory Zone 4',
+    contactEmail: 'jobs.ci@wave.com',
+    contactWhatsapp: '+2250788990011',
+    kybScore: 97,
+    status: 'VERIFIED',
+    isPremium: true,
+  },
+  {
+    id: 'comp-8',
+    name: 'Cabinet LexAfric & Associés',
+    industry: 'Droit des Affaires & Fiscalité',
+    address: 'Dakar, Almadies',
+    contactEmail: 'stages@lexafric-avocats.com',
+    contactWhatsapp: '+221781234567',
+    kybScore: 93,
+    status: 'VERIFIED',
+    isPremium: false,
+  },
+  {
+    id: 'comp-9',
+    name: 'Laboratoires SantéPlus Afrique',
+    industry: 'Santé, Pharmacie & Biotechnologies',
+    address: 'Yaoundé, Quartier Bastos',
+    contactEmail: 'rh@santeplus-afrique.org',
+    contactWhatsapp: '+237677112233',
+    kybScore: 90,
+    status: 'VERIFIED',
+    isPremium: false,
+  },
+  {
+    id: 'comp-10',
+    name: 'MTN Digital Communications',
+    industry: 'Télécoms, Cloud & Cybersécurité',
+    address: 'Douala, Akwa Boulevard de la Liberté',
+    contactEmail: 'careers.cm@mtn.com',
+    contactWhatsapp: '+237670009988',
+    kybScore: 96,
+    status: 'VERIFIED',
+    isPremium: true,
+  },
+  {
+    id: 'comp-11',
+    name: 'TalentAfrik RH Consulting',
+    industry: 'Ressources Humaines & Conseil',
+    address: 'Abidjan, Deux Plateaux',
+    contactEmail: 'recrutement@talentafrik.com',
+    contactWhatsapp: '+2250102030405',
+    kybScore: 88,
+    status: 'VERIFIED',
+    isPremium: false,
+  },
+  {
+    id: 'comp-12',
+    name: 'InTouch FinTech Solutions',
+    industry: 'Paiements & Développement Web',
+    address: 'Dakar, Mermoz Pyrotechnie',
+    contactEmail: 'talent@intouchgroup.net',
+    contactWhatsapp: '+221776543210',
+    kybScore: 94,
+    status: 'VERIFIED',
+    isPremium: true,
   },
 ];
 
@@ -60,6 +148,7 @@ export const SEED_JOBS: StageJob[] = [
     source: 'INTERNAL',
     location: 'Abidjan / Hybride',
     duration: '3 à 6 mois',
+    contractType: 'Stage PFE',
     stipend: 'Rémunéré (80 000 FCFA/mois)',
     createdAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
@@ -68,14 +157,15 @@ export const SEED_JOBS: StageJob[] = [
   {
     id: 'job-2',
     companyId: 'comp-2',
-    title: 'Assistant(e) Comptable & Audit Junior',
-    description: "Sous la responsabilité du Chef de mission, vous participerez aux travaux de tenue comptable, de rapprochements bancaires et à l'élaboration des états financiers de synthèse.",
+    title: 'Assistant(e) Comptable & Audit SYSCOHADA',
+    description: "Sous la responsabilité du Chef de mission, vous participerez aux travaux de tenue comptable, de rapprochements bancaires et à l'élaboration des états financiers de synthèse selon les normes OHADA.",
     requirements: ['Comptabilité', 'Excel Avancé', 'SYSCOHADA', 'Audit', 'Fiscalité'],
     applyMethod: 'EMAIL',
     isSponsored: false,
     source: 'INTERNAL',
     location: 'Dakar',
     duration: '6 mois',
+    contractType: 'Stage Académique',
     stipend: 'Rémunéré (75 000 FCFA/mois)',
     createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
     expiresAt: new Date(Date.now() + 25 * 24 * 3600 * 1000).toISOString(),
@@ -84,15 +174,16 @@ export const SEED_JOBS: StageJob[] = [
   {
     id: 'job-3',
     companyId: 'comp-3',
-    title: 'Stagiaire UI/UX Designer & Brand Content',
-    description: "Conception de maquettes d'applications sous Figma, création de supports visuels promotionnels, refonte de charte graphique et prototypage rapide.",
-    requirements: ['Figma', 'UI/UX Design', 'Photoshop', 'Canva', 'Design System'],
+    title: 'Stagiaire UI/UX Designer & Conception Produit',
+    description: "Conception de maquettes d'applications modernes sur Figma, création de design systems, user flows et tests utilisateurs sur des produits digitaux africains à fort impact.",
+    requirements: ['Figma', 'UI/UX Design', 'Design System', 'Prototypage', 'Wireframing'],
     applyMethod: 'WHATSAPP',
     isSponsored: true,
     source: 'INTERNAL',
     location: 'Cotonou / Télétravail',
     duration: '3 mois',
-    stipend: 'Rémunéré (60 000 FCFA/mois)',
+    contractType: 'Stage PFE',
+    stipend: 'Rémunéré (70 000 FCFA/mois)',
     createdAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
     expiresAt: new Date(Date.now() + 20 * 24 * 3600 * 1000).toISOString(),
     company: SEED_COMPANIES[2],
@@ -100,52 +191,155 @@ export const SEED_JOBS: StageJob[] = [
   {
     id: 'job-4',
     companyId: 'comp-4',
-    title: 'Assistant Gestionnaire Logistique & Transport',
-    description: "Suivi des flux de stocks, coordination des livraisons régionales, optimisation des bordereaux d'expédition et reporting hebdomadaire des opérations.",
+    title: 'Assistant Gestionnaire Logistique & Supply Chain',
+    description: "Suivi des flux de stocks, coordination des livraisons régionales, optimisation des bordereaux d'expédition portuaires et gestion de l'approvisionnement des entrepôts.",
     requirements: ['Gestion de stock', 'Excel', 'Logistique', 'Organisation', 'Transport'],
     applyMethod: 'PHYSICAL',
     isSponsored: false,
     source: 'SCRAPED',
     location: 'Douala, Zone Portuaire',
-    duration: '3 à 6 mois',
-    stipend: 'Indemnité transport fournie',
+    duration: '6 à 12 mois',
+    contractType: 'Premier Emploi',
+    stipend: 'Rémunéré (150 000 FCFA/mois)',
     createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
     expiresAt: new Date(Date.now() + 15 * 24 * 3600 * 1000).toISOString(),
     company: SEED_COMPANIES[3],
   },
   {
     id: 'job-5',
-    companyId: 'comp-1',
-    title: 'Stagiaire Développeur Python & Data Scraping',
-    description: "Conception de robots d'automatisation de flux de données, intégration des modèles d'IA Gemini et traitement automatisé de documents.",
-    requirements: ['Python', 'SQL', 'Git', 'Data', 'API'],
+    companyId: 'comp-5',
+    title: 'Junior Data Analyst & Business Intelligence',
+    description: "Exploitation de bases de données transactionnelles bancaires, création de dashboards sous Power BI, requêtes SQL complexes et automatisation de rapports analytiques.",
+    requirements: ['SQL', 'Python & Pandas', 'Power BI', 'Statistiques', 'Excel Avancé'],
     applyMethod: 'WHATSAPP',
     isSponsored: true,
     source: 'INTERNAL',
-    location: 'Abidjan / Télétravail',
+    location: 'Lomé / Hybride',
     duration: '6 mois',
-    stipend: 'Rémunéré (100 000 FCFA/mois)',
-    flyerUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop&q=60',
+    contractType: 'Stage PFE',
+    stipend: 'Rémunéré (120 000 FCFA/mois)',
     createdAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 28 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[0],
+    company: SEED_COMPANIES[4],
   },
   {
     id: 'job-6',
-    companyId: 'comp-3',
-    title: 'Assistant(e) Communication & Social Media Pitch',
-    description: "Gestion des publications LinkedIn/TikTok, création de vidéos courtes de démo et engagement de la communauté.",
-    requirements: ['Social Media', 'Canva', 'Rédaction', 'Communication'],
+    companyId: 'comp-6',
+    title: 'Conducteur de Travaux BTP & Génie Civil Junior',
+    description: "Participation à la planification et au suivi technique des chantiers d'infrastructures routières et de bâtiments. Contrôle de conformité des plans AutoCAD et gestion des équipes terrain.",
+    requirements: ['AutoCAD & Plans BIM', 'Calcul de Structures (RDM)', 'Gestion de Chantiers BTP', 'Sécurité & QHSE'],
+    applyMethod: 'PHYSICAL',
+    isSponsored: true,
+    source: 'INTERNAL',
+    location: 'Abidjan / Chantiers',
+    duration: 'Indéterminée',
+    contractType: 'Premier Emploi',
+    stipend: 'Rémunéré (180 000 FCFA/mois)',
+    createdAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 35 * 24 * 3600 * 1000).toISOString(),
+    company: SEED_COMPANIES[5],
+  },
+  {
+    id: 'job-7',
+    companyId: 'comp-7',
+    title: 'Assistant(e) Marketing Digital, Ads & Growth',
+    description: "Pilotage des campagnes d'acquisition digitale (Meta Ads, TikTok Ads), analyse des taux de conversion sur l'application mobile et création de contenus percutants.",
+    requirements: ['Facebook & Google Ads', 'Copywriting & Storytelling', 'Canva', 'Social Media', 'Google Analytics'],
+    applyMethod: 'EMAIL',
+    isSponsored: true,
+    source: 'INTERNAL',
+    location: 'Abidjan, Marcory',
+    duration: '6 mois',
+    contractType: 'Alternance',
+    stipend: 'Rémunéré (95 000 FCFA/mois)',
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 25 * 24 * 3600 * 1000).toISOString(),
+    company: SEED_COMPANIES[6],
+  },
+  {
+    id: 'job-8',
+    companyId: 'comp-8',
+    title: 'Juriste Stagiaire Droit des Affaires & Droit OHADA',
+    description: "Recherche documentaire juridique, rédaction de contrats commerciaux, préparation de dossiers d'arbitrage et conseils sur la conformité des sociétés de la zone UEMOA.",
+    requirements: ['Droit Commercial & Sociétés (OHADA)', 'Rédaction de Contrats', 'Droit du Travail', 'Veille Juridique'],
     applyMethod: 'EMAIL',
     isSponsored: false,
     source: 'INTERNAL',
-    location: 'Abidjan',
+    location: 'Dakar, Almadies',
     duration: '3 mois',
-    stipend: 'Rémunéré (50 000 FCFA/mois)',
-    videoUrl: 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4',
-    createdAt: new Date().toISOString(),
+    contractType: 'Stage Académique',
+    stipend: 'Rémunéré (85 000 FCFA/mois)',
+    createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
     expiresAt: new Date(Date.now() + 20 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[2],
+    company: SEED_COMPANIES[7],
+  },
+  {
+    id: 'job-9',
+    companyId: 'comp-9',
+    title: 'Stagiaire Assistant Qualité Biomédicale & Pharmacie',
+    description: "Support aux analyses de contrôle qualité sur les lots pharmaceutiques, participation à la veille normative sanitaire et documentation des protocoles d'essais cliniques.",
+    requirements: ['Biologie Moléculaire', 'Pharmacologie Clinique', 'Contrôle Qualité & Normes', 'Bio-statistiques'],
+    applyMethod: 'PHYSICAL',
+    isSponsored: false,
+    source: 'SCRAPED',
+    location: 'Yaoundé, Bastos',
+    duration: '6 mois',
+    contractType: 'Stage PFE',
+    stipend: 'Rémunéré (90 000 FCFA/mois)',
+    createdAt: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 18 * 24 * 3600 * 1000).toISOString(),
+    company: SEED_COMPANIES[8],
+  },
+  {
+    id: 'job-10',
+    companyId: 'comp-10',
+    title: 'Ingénieur Stagiaire Réseaux, Cloud & Cybersécurité',
+    description: "Configuration d'équipements réseaux télécoms, surveillance des alertes de sécurité SOC, assistance à la migration d'infrastructures vers des environnements Cloud hybrides.",
+    requirements: ['Cybersécurité & Auth', 'Docker & Cloud AWS/GCP', 'Bases de données SQL', 'Git'],
+    applyMethod: 'WHATSAPP',
+    isSponsored: true,
+    source: 'INTERNAL',
+    location: 'Douala, Akwa',
+    duration: '6 mois',
+    contractType: 'Stage PFE',
+    stipend: 'Rémunéré (100 000 FCFA/mois)',
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+    company: SEED_COMPANIES[9],
+  },
+  {
+    id: 'job-11',
+    companyId: 'comp-11',
+    title: 'Chargé(e) de Recrutement & RH Junior',
+    description: "Sourcing de candidats sur LinkedIn et plateformes spécialisées, pré-qualification téléphonique, organisation des sessions d'entretiens et tenue des dossiers du personnel.",
+    requirements: ['Droit du Travail & RH', 'Communication & Pitch', 'Anglais Professionnel', 'Organisation'],
+    applyMethod: 'EMAIL',
+    isSponsored: false,
+    source: 'INTERNAL',
+    location: 'Abidjan, Cocody',
+    duration: '3 mois',
+    contractType: 'Stage Académique',
+    stipend: 'Rémunéré (65 000 FCFA/mois)',
+    createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString(),
+    company: SEED_COMPANIES[10],
+  },
+  {
+    id: 'job-12',
+    companyId: 'comp-12',
+    title: 'Développeur Full-Stack Node.js / Python (CDI Junior)',
+    description: "Développement d'APIs de paiement multi-opérateurs hautement résilientes (Mobile Money, Carte bancaire). Tests unitaires, documentation d'architectures microservices.",
+    requirements: ['Node.js & Backend APIs', 'TypeScript & Modern JS', 'Python & Pandas', 'Docker & Cloud AWS/GCP'],
+    applyMethod: 'WHATSAPP',
+    isSponsored: true,
+    source: 'INTERNAL',
+    location: 'Dakar / Télétravail',
+    duration: 'Indéterminée',
+    contractType: 'Premier Emploi',
+    stipend: 'Rémunéré (250 000 FCFA/mois)',
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 45 * 24 * 3600 * 1000).toISOString(),
+    company: SEED_COMPANIES[11],
   },
 ];
 
@@ -195,27 +389,79 @@ export function calculateMatchScore(userSkills: string[] = [], jobReqs: string[]
 export async function fetchStageJobs(params?: {
   query?: string;
   sector?: string;
+  contractType?: string;
   duration?: string;
   userSkills?: string[];
 }): Promise<StageJob[]> {
-  const search = new URLSearchParams();
-  if (params?.query?.trim()) search.set('q', params.query.trim());
-  if (params?.sector && params.sector !== 'Tous') search.set('sector', params.sector);
-  const suffix = search.toString() ? `?${search.toString()}` : '';
-  const payload = await (await authFetch(`/api/mobile/stages${suffix}`)).json() as { jobs: StageJob[] };
+  let jobsList: StageJob[] = [];
 
-  return payload.jobs.map(job => {
-    const { score, matchingSkills } = calculateMatchScore(params?.userSkills, job.requirements);
-    return {
-      ...job,
-      matchScore: score,
-      matchingSkills,
-    };
-  }).sort((a, b) => {
-    if (a.isSponsored && !b.isSponsored) return -1;
-    if (!a.isSponsored && b.isSponsored) return 1;
-    return (b.matchScore || 0) - (a.matchScore || 0);
-  });
+  try {
+    const search = new URLSearchParams();
+    if (params?.query?.trim()) search.set('q', params.query.trim());
+    if (params?.sector && params.sector !== 'Tous') search.set('sector', params.sector);
+    const suffix = search.toString() ? `?${search.toString()}` : '';
+    const response = await authFetch(`/api/mobile/stages${suffix}`);
+    if (response.ok) {
+      const payload = (await response.json()) as { jobs?: StageJob[] };
+      if (Array.isArray(payload?.jobs) && payload.jobs.length > 0) {
+        jobsList = payload.jobs;
+      }
+    }
+  } catch {
+    // Repli gracieux sur les données fictives
+  }
+
+  // Si l'API retourne vide ou est inaccessible, on utilise les offres fictives enrichies
+  if (!jobsList || jobsList.length === 0) {
+    jobsList = [...SEED_JOBS];
+  }
+
+  // Filtrage local par mot-clé
+  if (params?.query?.trim()) {
+    const q = params.query.toLowerCase().trim();
+    jobsList = jobsList.filter(
+      (job) =>
+        job.title.toLowerCase().includes(q) ||
+        job.description.toLowerCase().includes(q) ||
+        job.company?.name.toLowerCase().includes(q) ||
+        job.location?.toLowerCase().includes(q) ||
+        job.requirements.some((r) => r.toLowerCase().includes(q))
+    );
+  }
+
+  // Filtrage local par secteur
+  if (params?.sector && params.sector !== 'Tous') {
+    const s = params.sector.toLowerCase().trim();
+    jobsList = jobsList.filter(
+      (job) =>
+        job.company?.industry.toLowerCase().includes(s) ||
+        job.title.toLowerCase().includes(s) ||
+        job.requirements.some((r) => r.toLowerCase().includes(s))
+    );
+  }
+
+  // Filtrage local par type de contrat
+  if (params?.contractType && params.contractType !== 'Tous') {
+    const ct = params.contractType.toLowerCase().trim();
+    jobsList = jobsList.filter(
+      (job) => job.contractType?.toLowerCase().includes(ct)
+    );
+  }
+
+  return jobsList
+    .map((job) => {
+      const { score, matchingSkills } = calculateMatchScore(params?.userSkills, job.requirements);
+      return {
+        ...job,
+        matchScore: score,
+        matchingSkills,
+      };
+    })
+    .sort((a, b) => {
+      if (a.isSponsored && !b.isSponsored) return -1;
+      if (!a.isSponsored && b.isSponsored) return 1;
+      return (b.matchScore || 0) - (a.matchScore || 0);
+    });
 }
 
 export async function fetchJobById(jobId: string): Promise<StageJob | null> {

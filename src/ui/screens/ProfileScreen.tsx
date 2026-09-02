@@ -218,48 +218,50 @@ export function ProfileScreen({
         </Pressable>
       </View>
 
-      {/* Boost & Social Portfolio Hero Card */}
-      <GlassCard style={styles.portfolioCard}>
-        <View style={styles.portfolioHeader}>
-          <View style={styles.portfolioBadge}>
-            <Sparkles size={14} color="#F59E0B" />
-            <Text style={styles.portfolioBadgeText}>Vitrine Sociale &amp; Portfolio</Text>
-          </View>
-          <Pressable style={styles.boostBtn} onPress={() => alert('Boost activé pour 3 jours ! Ton profil est épinglé en tête de liste des recruteurs.')}>
-            <Flame size={13} color="#FFFFFF" />
-            <Text style={styles.boostBtnText}>Booster (500 FCFA)</Text>
-          </Pressable>
-        </View>
-
-        <Text style={styles.portfolioTitle}>Mes Réalisations &amp; Projets</Text>
-        <Text style={styles.portfolioSubtitle}>
-          Présente tes projets, vidéos de démo et réalisations pour convaincre les recruteurs.
-        </Text>
-
-        <View style={styles.projectsList}>
-          <View style={styles.projectItem}>
-            <View style={styles.projectDot} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.projectName}>Application Mobile React Native</Text>
-              <Text style={styles.projectDesc}>Projet de fin d'études • Vidéo de démo attachée (GCS)</Text>
+      {/* Section Réalisations & Projets / Campagne (masquée pour l'instant - feature future) */}
+      {false && (
+        <GlassCard style={styles.portfolioCard}>
+          <View style={styles.portfolioHeader}>
+            <View style={styles.portfolioBadge}>
+              <Sparkles size={14} color="#F59E0B" />
+              <Text style={styles.portfolioBadgeText}>Vitrine Sociale &amp; Portfolio</Text>
             </View>
-            <View style={styles.mediaPill}>
-              <Text style={styles.mediaPillText}>Vidéo 45s</Text>
-            </View>
+            <Pressable style={styles.boostBtn} onPress={() => alert('Boost activé pour 3 jours ! Ton profil est épinglé en tête de liste des recruteurs.')}>
+              <Flame size={13} color="#FFFFFF" />
+              <Text style={styles.boostBtnText}>Booster (500 FCFA)</Text>
+            </Pressable>
           </View>
 
-          <View style={styles.projectItem}>
-            <View style={styles.projectDot} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.projectName}>Modèle d'Analyse Financière SYSCOHADA</Text>
-              <Text style={styles.projectDesc}>Tableau de bord Excel • Rapport PDF joint</Text>
+          <Text style={styles.portfolioTitle}>Mes Réalisations &amp; Projets</Text>
+          <Text style={styles.portfolioSubtitle}>
+            Présente tes projets, vidéos de démo et réalisations pour convaincre les recruteurs.
+          </Text>
+
+          <View style={styles.projectsList}>
+            <View style={styles.projectItem}>
+              <View style={styles.projectDot} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.projectName}>Application Mobile React Native</Text>
+                <Text style={styles.projectDesc}>Projet de fin d'études • Vidéo de démo attachée (GCS)</Text>
+              </View>
+              <View style={styles.mediaPill}>
+                <Text style={styles.mediaPillText}>Vidéo 45s</Text>
+              </View>
             </View>
-            <View style={styles.mediaPill}>
-              <Text style={styles.mediaPillText}>PDF</Text>
+
+            <View style={styles.projectItem}>
+              <View style={styles.projectDot} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.projectName}>Modèle d'Analyse Financière SYSCOHADA</Text>
+                <Text style={styles.projectDesc}>Tableau de bord Excel • Rapport PDF joint</Text>
+              </View>
+              <View style={styles.mediaPill}>
+                <Text style={styles.mediaPillText}>PDF</Text>
+              </View>
             </View>
           </View>
-        </View>
-      </GlassCard>
+        </GlassCard>
+      )}
 
       {/* Free account login card */}
       {isFreeAccount && onSignInPress && (

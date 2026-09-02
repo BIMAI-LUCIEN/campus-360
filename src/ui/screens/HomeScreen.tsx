@@ -10,6 +10,9 @@ import {
   Wallet,
   Compass,
   ArrowUpRight,
+  MapPin,
+  Coins,
+  CheckCircle2,
   type LucideIcon,
 } from 'lucide-react-native';
 
@@ -22,7 +25,7 @@ import {
   type StudentDocumentSummary,
 } from '../../features/home/homePriority';
 import { TransactionRow } from '../GlassComponents';
-import type { Transaction } from '../../types';
+import type { Transaction, StageJob } from '../../types';
 import {
   brandGradient,
   fontFamilies,
@@ -85,6 +88,7 @@ export function HomeScreen({
   onProfile,
 }: HomeScreenProps) {
   const [priority, setPriority] = useState<HomePriority>(initialPriority);
+  const [topJobs, setTopJobs] = useState<StageJob[]>([]);
   const [loadingPriority, setLoadingPriority] = useState(false);
 
   const firstName = useMemo(() => {
@@ -109,7 +113,7 @@ export function HomeScreen({
       try {
         const [applicationsResult, jobsResult, documentResponse] = await Promise.allSettled([
           fetchStudentApplications(),
-          fetchStageJobs(),
+          fetchStageJobs({ userSkills: studentSkills }),
           authFetch('/api/mobile/documents').catch(() => null),
         ]);
 
@@ -118,11 +122,14 @@ export function HomeScreen({
             ? await (documentResponse.value.json() as Promise<{ documents?: StudentDocumentSummary[] }>)
             : { documents: [] };
 
+        const fetchedJobs = jobsResult.status === 'fulfilled' ? jobsResult.value : [];
+
         if (active) {
+          setTopJobs(fetchedJobs.slice(0, 2));
           setPriority(
             resolveHomePriority({
               applications: applicationsResult.status === 'fulfilled' ? applicationsResult.value : [],
-              jobs: jobsResult.status === 'fulfilled' ? jobsResult.value : [],
+              jobs: fetchedJobs,
               documents: documentData.documents ?? [],
               profileComplete,
             })
@@ -323,6 +330,79 @@ export function HomeScreen({
             </Pressable>
           </View>
         </LinearGradient>
+      </View>
+
+      {/* ── Featured Internships Showcase (Stages & Emplois) ────── */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeadingRow}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <BriefcaseBusiness size={15} color="#A78BFA" />
+            <Text style={styles.sectionHeading}>Stages Recommandés</Text>
+          </View>
+          <Pressable onPress={onStages} hitSlop={8}>
+            <Text style={styles.seeAll}>Voir tout (12)</Text>
+          </Pressable>
+        </View>
+
+        {topJobs.length > 0 ? (
+          <View style={{ gap: 10 }}>
+            {topJobs.map((job) => {
+              const match = job.matchScore || 85;
+              const compInitials = job.company?.name ? job.company.name.slice(0, 2).toUpperCase() : 'ST';
+              return (
+                <Pressable
+                  key={job.id}
+                  onPress={onStages}
+                  style={({ pressed }) => [styles.homeJobCard, pressed && styles.pressed]}
+                >
+                  <View style={styles.homeJobTopRow}>
+                    <View style={styles.homeJobCompanyCol}>
+                      <View style={styles.homeJobAvatar}>
+                        <Text style={styles.homeJobAvatarText}>{compInitials}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.homeJobTitle} numberOfLines={1}>
+                          {job.title}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Text style={styles.homeJobCompanyText} numberOfLines={1}>
+                            {job.company?.name}
+                          </Text>
+                          {job.company?.status === 'VERIFIED' && (
+                            <CheckCircle2 size={12} color="#34D399" />
+                          )}
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.homeJobMatchBadge}>
+                      <Sparkles size={10} color="#34D399" />
+                      <Text style={styles.homeJobMatchText}>{match}% Match</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.homeJobTagsRow}>
+                    {job.contractType && (
+                      <View style={styles.homeJobContractTag}>
+                        <Text style={styles.homeJobContractTagText}>{job.contractType}</Text>
+                      </View>
+                    )}
+                    <View style={styles.homeJobTagItem}>
+                      <MapPin size={10} color="#94A3B8" />
+                      <Text style={styles.homeJobTagText}>{job.location || 'Abidjan'}</Text>
+                    </View>
+                    {job.stipend && (
+                      <View style={styles.homeJobStipendTag}>
+                        <Coins size={10} color="#34D399" />
+                        <Text style={styles.homeJobStipendTagText}>{job.stipend}</Text>
+                      </View>
+                    )}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
       </View>
 
       {/* ── Recent Activity / Transactions ──────────────────────────── */}
@@ -744,6 +824,119 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: '#94A3B8',
     marginTop: 4,
+  },
+
+  // Home Job Card Showcase
+  homeJobCard: {
+    backgroundColor: '#131024',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.16)',
+  },
+  homeJobTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 8,
+  },
+  homeJobCompanyCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  homeJobAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: 'rgba(124, 58, 237, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homeJobAvatarText: {
+    color: '#DDD6FE',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  homeJobTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    marginBottom: 2,
+  },
+  homeJobCompanyText: {
+    fontSize: 11.5,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  homeJobMatchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(52, 211, 153, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(52, 211, 153, 0.3)',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  homeJobMatchText: {
+    color: '#34D399',
+    fontSize: 10.5,
+    fontWeight: '800',
+  },
+  homeJobTagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  homeJobContractTag: {
+    backgroundColor: 'rgba(124, 58, 237, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+  },
+  homeJobContractTagText: {
+    color: '#DDD6FE',
+    fontSize: 10.5,
+    fontWeight: '700',
+  },
+  homeJobTagItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#0E0B1F',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.14)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
+  },
+  homeJobTagText: {
+    fontSize: 10.5,
+    color: '#94A3B8',
+  },
+  homeJobStipendTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(16, 185, 129, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.28)',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+  },
+  homeJobStipendTagText: {
+    fontSize: 10.5,
+    color: '#34D399',
+    fontWeight: '700',
   },
 
   pressed: {

@@ -38,6 +38,7 @@ export type StageJob = {
   expiresAt: string;
   location?: string;
   duration?: string; // ex: '3 mois', '6 mois'
+  contractType?: string; // ex: 'Stage PFE', 'Premier Emploi', 'Alternance'
   stipend?: string; // ex: 'Rémunéré (50 000 FCFA/mois)', 'Non rémunéré'
   company?: StageCompany;
   matchScore?: number; // Calculé dynamiquement (ex: 85)
