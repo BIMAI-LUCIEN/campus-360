@@ -15,17 +15,17 @@ export const stitchColors = {
   inkSubtle: '#6E6E78',
   inkFaint: '#33333A',
 
-  // Background / surface ramp — dark
-  paper: '#0E0E10',
-  paperDeep: '#1C1C1F',
-  paperSoft: '#26262A',
+  // Background / surface ramp — dark élégant et profond
+  paper: '#0B0F17',
+  paperDeep: '#111622',
+  paperSoft: '#182030',
 
-  // Brand accent (solid) — used where a gradient is impractical (icons, dots)
-  sienna: '#C084FC',
-  siennaDeep: '#A855F7',
-  siennaTone: '#E879C6',
-  siennaBg: 'rgba(168, 85, 247, 0.14)',
-  siennaSoft: 'rgba(168, 85, 247, 0.24)',
+  // Brand accent (solid) — Indigo saphir élégant & moderne
+  sienna: '#6366F1',
+  siennaDeep: '#4F46E5',
+  siennaTone: '#818CF8',
+  siennaBg: 'rgba(99, 102, 241, 0.12)',
+  siennaSoft: 'rgba(99, 102, 241, 0.20)',
 
   // Emerald (success / owned / IA) — bright on dark
   emerald: '#34D399',
@@ -45,72 +45,72 @@ export const stitchColors = {
   warningBg: 'rgba(251, 191, 36, 0.14)',
   warningTone: '#FCD34D',
 
-  // Old M3 names preserved as aliases so we don't break the world
-  primary: '#A855F7',
+  // Modern UI Primary & Secondary
+  primary: '#4F46E5',
   onPrimary: '#FFFFFF',
-  primaryContainer: 'rgba(168, 85, 247, 0.16)',
-  onPrimaryContainer: '#E9D5FF',
-  primaryFixed: 'rgba(168, 85, 247, 0.16)',
-  onPrimaryFixed: '#E9D5FF',
-  primaryFixedDim: 'rgba(168, 85, 247, 0.24)',
-  onPrimaryFixedVariant: '#E9D5FF',
-  inversePrimary: '#C084FC',
+  primaryContainer: 'rgba(79, 70, 229, 0.14)',
+  onPrimaryContainer: '#C7D2FE',
+  primaryFixed: 'rgba(79, 70, 229, 0.14)',
+  onPrimaryFixed: '#C7D2FE',
+  primaryFixedDim: 'rgba(79, 70, 229, 0.22)',
+  onPrimaryFixedVariant: '#C7D2FE',
+  inversePrimary: '#818CF8',
 
-  secondary: '#EC4899',
+  secondary: '#3B82F6',
   onSecondary: '#FFFFFF',
-  secondaryContainer: 'rgba(236, 72, 153, 0.16)',
-  onSecondaryContainer: '#FBCFE8',
-  secondaryFixed: 'rgba(236, 72, 153, 0.16)',
-  onSecondaryFixed: '#FBCFE8',
-  secondaryFixedDim: 'rgba(236, 72, 153, 0.24)',
-  onSecondaryFixedVariant: '#FBCFE8',
+  secondaryContainer: 'rgba(59, 130, 246, 0.14)',
+  onSecondaryContainer: '#BFDBFE',
+  secondaryFixed: 'rgba(59, 130, 246, 0.14)',
+  onSecondaryFixed: '#BFDBFE',
+  secondaryFixedDim: 'rgba(59, 130, 246, 0.22)',
+  onSecondaryFixedVariant: '#BFDBFE',
 
-  tertiary: '#3B82F6',
+  tertiary: '#0EA5E9',
   onTertiary: '#FFFFFF',
 
-  background: '#0E0E10',
-  onBackground: '#F7F7F8',
-  surface: '#1C1C1F',
-  onSurface: '#F7F7F8',
-  surfaceVariant: '#26262A',
-  onSurfaceVariant: '#9A9AA2',
+  background: '#0B0F17',
+  onBackground: '#F8FAFC',
+  surface: '#111622',
+  onSurface: '#F8FAFC',
+  surfaceVariant: '#182030',
+  onSurfaceVariant: '#94A3B8',
 
-  surfaceContainerLowest: '#141416',
-  surfaceContainerLow: '#1C1C1F',
-  surfaceContainer: '#26262A',
-  surfaceContainerHigh: '#2E2E33',
-  surfaceContainerHighest: '#38383F',
+  surfaceContainerLowest: '#0E131E',
+  surfaceContainerLow: '#111622',
+  surfaceContainer: '#182030',
+  surfaceContainerHigh: '#1E283C',
+  surfaceContainerHighest: '#27344E',
 
-  inverseSurface: '#F7F7F8',
-  inverseOnSurface: '#0E0E10',
+  inverseSurface: '#F8FAFC',
+  inverseOnSurface: '#0B0F17',
 
-  outline: '#3A3A42',
-  outlineVariant: '#2A2A30',
+  outline: 'rgba(255, 255, 255, 0.08)',
+  outlineVariant: 'rgba(255, 255, 255, 0.05)',
   success: '#34D399',
   successContainer: 'rgba(52, 211, 153, 0.14)',
   onError: '#FFFFFF',
   errorContainer: 'rgba(248, 113, 113, 0.14)',
   onErrorContainer: '#FCA5A5',
 
-  // Glass tokens (kept as no-op for compat)
-  glassSurface: '#1C1C1F',
-  glassBorder: '#2A2A30',
-  glassBorderLight: '#33333A',
-  glassOverlay: 'rgba(0,0,0,0.4)',
-  glassCardBg: '#1C1C1F',
-  glassCardBorder: '#2A2A30',
-  glassSurfaceDark: '#0E0E10',
-  glassBorderDark: '#2A2A30',
+  // Glass tokens
+  glassSurface: '#111622',
+  glassBorder: 'rgba(255, 255, 255, 0.08)',
+  glassBorderLight: 'rgba(255, 255, 255, 0.12)',
+  glassOverlay: 'rgba(0,0,0,0.5)',
+  glassCardBg: '#111622',
+  glassCardBorder: 'rgba(255, 255, 255, 0.08)',
+  glassSurfaceDark: '#0B0F17',
+  glassBorderDark: 'rgba(255, 255, 255, 0.06)',
 };
 
-// ── Brand gradient — the signature accent (buttons, active nav, progress) ─────
+// ── Brand gradient — refined Indigo / Sapphire modern tech gradient ─────────
 export const brandGradient = {
-  colors: ['#7C4DFF', '#E13D9E', '#3B82F6'] as const, // violet → pink → blue
+  colors: ['#4F46E5', '#3B82F6'] as const, // indigo → modern blue
   horizontal: { start: { x: 0, y: 0 }, end: { x: 1, y: 0 } },
   diagonal: { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } },
 };
 export const brandGradientTwo = {
-  colors: ['#8B5CF6', '#4F8DFF'] as const, // violet → blue (Continue button)
+  colors: ['#4F46E5', '#2563EB'] as const, // indigo → deep blue
   start: { x: 0, y: 0 },
   end: { x: 1, y: 0 },
 };

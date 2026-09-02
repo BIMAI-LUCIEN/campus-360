@@ -195,15 +195,15 @@ export function HomeScreen({
 
       <View style={styles.walletRow}>
         <View style={styles.walletMetric}>
-          <Wallet size={18} color={stitchColors.sienna} />
+          <Wallet size={16} color={stitchColors.sienna} />
           <View>
             <Text style={styles.metricValue}>{formatCoins(balance)} C</Text>
-            <Text style={styles.metricLabel}>Solde disponible</Text>
+            <Text style={styles.metricLabel}>Solde</Text>
           </View>
         </View>
         <View style={styles.walletDivider} />
         <View style={styles.walletMetric}>
-          <Sparkles size={18} color="#F472B6" />
+          <Sparkles size={16} color="#38BDF8" />
           <View>
             <Text style={styles.metricValue}>{iaCredits}</Text>
             <Text style={styles.metricLabel}>Crédits IA</Text>
@@ -215,8 +215,7 @@ export function HomeScreen({
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionKicker}>ACCÈS RAPIDES</Text>
-        <Text style={styles.sectionTitle}>Tout ton parcours, au même endroit</Text>
+        <Text style={styles.sectionTitle}>Accès rapides</Text>
         <View style={styles.quickList}>
           {actions.map((action) => <QuickActionCard key={action.key} action={action} />)}
         </View>
@@ -224,10 +223,7 @@ export function HomeScreen({
 
       <View style={styles.section}>
         <View style={styles.sectionHeadingRow}>
-          <View>
-            <Text style={styles.sectionKicker}>ACTIVITÉ</Text>
-            <Text style={styles.sectionTitle}>Derniers mouvements</Text>
-          </View>
+          <Text style={styles.sectionTitle}>Activité récente</Text>
           <Pressable onPress={onProfile} hitSlop={8}><Text style={styles.seeAll}>Tout voir</Text></Pressable>
         </View>
         <View style={styles.activityCard}>
@@ -242,10 +238,10 @@ export function HomeScreen({
             />
           )) : (
             <View style={styles.emptyActivity}>
-              <View style={styles.emptyIcon}><Sparkles size={20} color={stitchColors.sienna} /></View>
+              <View style={styles.emptyIcon}><Sparkles size={18} color={stitchColors.sienna} /></View>
               <View style={styles.emptyCopy}>
-                <Text style={styles.emptyTitle}>Ton activité commence ici</Text>
-                <Text style={styles.emptyText}>Tes créations, achats et recharges apparaîtront dans cet espace.</Text>
+                <Text style={styles.emptyTitle}>Aucune transaction récente</Text>
+                <Text style={styles.emptyText}>Vos activités s'afficheront ici au fur et à mesure.</Text>
               </View>
             </View>
           )}
@@ -271,70 +267,70 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit, fontSize: 29, lineHeight: 35, fontWeight: '700',
     letterSpacing: -0.7, color: stitchColors.ink,
   },
-  priorityBorder: { borderRadius: stitchRadius.xl + 2, padding: 1.5 },
-  priorityCard: { backgroundColor: '#171719', borderRadius: stitchRadius.xl, padding: 20 },
+  priorityBorder: { borderRadius: stitchRadius.xl + 2, padding: 1 },
+  priorityCard: { backgroundColor: '#111622', borderRadius: stitchRadius.xl, padding: 20 },
   priorityTopline: {
     minHeight: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   priorityBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(168,85,247,0.14)',
-    borderRadius: stitchRadius.full, paddingHorizontal: 10, paddingVertical: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(99,102,241,0.14)',
+    borderRadius: stitchRadius.full, paddingHorizontal: 10, paddingVertical: 5,
   },
   priorityEyebrow: {
-    fontFamily: fontFamilies.inter, fontSize: 10, fontWeight: '700', letterSpacing: 0.9, color: '#E9D5FF',
+    fontFamily: fontFamilies.inter, fontSize: 10, fontWeight: '700', letterSpacing: 0.9, color: '#C7D2FE',
   },
   priorityTitle: {
-    fontFamily: fontFamilies.outfit, fontSize: 24, lineHeight: 29, fontWeight: '700',
-    letterSpacing: -0.4, color: stitchColors.ink, marginTop: 20,
+    fontFamily: fontFamilies.outfit, fontSize: 23, lineHeight: 28, fontWeight: '700',
+    letterSpacing: -0.4, color: stitchColors.ink, marginTop: 16,
   },
   priorityDescription: {
-    ...stitchTypography.bodyMd, color: stitchColors.inkMuted, lineHeight: 22, marginTop: 9,
+    ...stitchTypography.bodyMd, color: stitchColors.inkMuted, lineHeight: 21, marginTop: 8,
   },
-  progressBlock: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 18 },
+  progressBlock: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
   progressTrack: {
-    flex: 1, height: 6, borderRadius: stitchRadius.full, overflow: 'hidden',
-    backgroundColor: stitchColors.surfaceContainerHighest,
+    flex: 1, height: 5, borderRadius: stitchRadius.full, overflow: 'hidden',
+    backgroundColor: '#1E283C',
   },
   progressFill: { height: '100%', borderRadius: stitchRadius.full },
   progressValue: {
     fontFamily: fontFamilies.inter, fontSize: 12, fontWeight: '700', color: stitchColors.inkSoft,
   },
   priorityButton: {
-    minHeight: 48, borderRadius: stitchRadius.button, backgroundColor: '#7C4DFF', paddingHorizontal: 17,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20,
+    minHeight: 46, borderRadius: stitchRadius.button, backgroundColor: '#4F46E5', paddingHorizontal: 18,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 18,
   },
   priorityButtonText: {
-    fontFamily: fontFamilies.inter, fontSize: 14, fontWeight: '700', color: '#FFFFFF',
+    fontFamily: fontFamilies.inter, fontSize: 13.5, fontWeight: '700', color: '#FFFFFF',
   },
   walletRow: {
-    minHeight: 70, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: stitchColors.surface,
-    borderWidth: 1, borderColor: stitchColors.glassBorder, borderRadius: stitchRadius.lg,
-    paddingHorizontal: 15, marginTop: 14,
+    minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#111622',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', borderRadius: stitchRadius.lg,
+    paddingHorizontal: 16, marginTop: 14,
   },
   walletMetric: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
-  walletDivider: { width: 1, height: 34, backgroundColor: stitchColors.outlineVariant },
+  walletDivider: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.08)' },
   metricValue: {
     fontFamily: fontFamilies.outfit, fontSize: 15, fontWeight: '700', color: stitchColors.ink,
   },
-  metricLabel: { fontFamily: fontFamilies.inter, fontSize: 10, color: stitchColors.inkMuted, marginTop: 1 },
+  metricLabel: { fontFamily: fontFamilies.inter, fontSize: 10.5, color: stitchColors.inkMuted, marginTop: 1 },
   rechargeButton: {
-    width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: stitchColors.primaryContainer,
+    width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(99,102,241,0.14)',
   },
-  rechargeLabel: { fontSize: 24, lineHeight: 26, color: stitchColors.sienna, fontWeight: '500' },
-  section: { marginTop: 30 },
+  rechargeLabel: { fontSize: 20, lineHeight: 22, color: '#818CF8', fontWeight: '600' },
+  section: { marginTop: 26 },
   sectionKicker: {
     fontFamily: fontFamilies.inter, fontSize: 10, fontWeight: '700', letterSpacing: 1.1,
-    color: stitchColors.sienna, marginBottom: 5,
+    color: '#818CF8', marginBottom: 5,
   },
   sectionTitle: {
-    fontFamily: fontFamilies.outfit, fontSize: 20, lineHeight: 25, fontWeight: '700',
+    fontFamily: fontFamilies.outfit, fontSize: 19, lineHeight: 24, fontWeight: '700',
     letterSpacing: -0.3, color: stitchColors.ink,
   },
-  quickList: { gap: 10, marginTop: 15 },
+  quickList: { gap: 9, marginTop: 12 },
   quickAction: {
-    minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: stitchRadius.lg,
-    borderWidth: 1, borderColor: stitchColors.glassBorder, backgroundColor: stitchColors.surface,
+    minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: stitchRadius.lg,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', backgroundColor: '#111622',
     paddingHorizontal: 14,
   },
   quickIcon: {

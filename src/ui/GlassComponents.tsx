@@ -377,7 +377,7 @@ export function SecondaryButton({
   );
 }
 
-// ─── BottomNav — floating dark bar, active = gradient pill ───────────────────
+// ─── BottomNav — floating dark bar, élégante & équilibrée ───────────────────
 export function BottomNav({
   activeSection,
   onPress,
@@ -390,25 +390,25 @@ export function BottomNav({
       <View style={styles.bottomNav}>
         {NAV_ITEMS.map(({ key, label, Icon }) => {
           const active = activeSection === key;
-          if (active) {
-            return (
-              <Pressable key={key} onPress={() => onPress(key)} style={styles.navItem}>
-                <LinearGradient
-                  colors={brandGradient.colors}
-                  start={brandGradient.horizontal.start}
-                  end={brandGradient.horizontal.end}
-                  style={styles.navPill}
-                >
-                  <Icon size={18} color="#FFFFFF" strokeWidth={2.2} />
-                  <Text style={styles.navPillText} numberOfLines={1}>{label}</Text>
-                </LinearGradient>
-              </Pressable>
-            );
-          }
           return (
-            <Pressable key={key} onPress={() => onPress(key)} style={styles.navItem}>
-              <Icon size={19} color={stitchColors.inkSubtle} strokeWidth={1.9} />
-              <Text style={styles.navLabelInactive} numberOfLines={1}>{label}</Text>
+            <Pressable
+              key={key}
+              onPress={() => onPress(key)}
+              style={({ pressed }) => [styles.navItem, pressed && { opacity: 0.7 }]}
+            >
+              <View style={[styles.navIconBox, active && styles.navIconBoxActive]}>
+                <Icon
+                  size={19}
+                  color={active ? '#FFFFFF' : stitchColors.inkSubtle}
+                  strokeWidth={active ? 2.3 : 1.8}
+                />
+              </View>
+              <Text
+                style={[styles.navLabel, active ? styles.navLabelActive : styles.navLabelInactive]}
+                numberOfLines={1}
+              >
+                {label}
+              </Text>
             </Pressable>
           );
         })}
@@ -783,10 +783,12 @@ const styles = StyleSheet.create({
 
   // Pill
   pillActive: {
-    backgroundColor: stitchColors.siennaDeep,
+    backgroundColor: '#1E283C',
+    borderWidth: 1,
+    borderColor: '#4F46E5',
     borderRadius: stitchRadius.full,
-    paddingVertical: 9,
-    paddingHorizontal: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
   pillInactive: {
     backgroundColor: stitchColors.surfaceContainer,
@@ -860,32 +862,55 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: 16,
-    paddingBottom: 24,
-    paddingTop: 8,
+    paddingBottom: 20,
+    paddingTop: 6,
   },
   bottomNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    backgroundColor: stitchColors.surfaceContainer,
+    justifyContent: 'space-between',
+    backgroundColor: '#0F1422',
     borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
-    borderRadius: stitchRadius.full,
-    paddingVertical: 8,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 28,
+    paddingVertical: 7,
     paddingHorizontal: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 8,
   },
-  navItem: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 44, height: 48 },
-  navPill: {
-    flexDirection: 'row',
+  navItem: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    borderRadius: stitchRadius.full,
+    paddingVertical: 3,
   },
-  navPillText: { fontFamily: SANS, fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
-  navLabelInactive: { fontFamily: SANS, fontSize: 10, fontWeight: '600', color: stitchColors.inkSubtle, marginTop: 2 },
+  navIconBox: {
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navIconBoxActive: {
+    backgroundColor: 'rgba(99, 102, 241, 0.22)',
+  },
+  navLabel: {
+    fontFamily: SANS,
+    fontSize: 10.5,
+    marginTop: 3,
+    textAlign: 'center',
+  },
+  navLabelActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  navLabelInactive: {
+    color: stitchColors.inkSubtle,
+    fontWeight: '500',
+  },
 
   // TopBar
   topBar: {

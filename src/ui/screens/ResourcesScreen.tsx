@@ -56,12 +56,12 @@ export function ResourcesScreen({
           <Text style={styles.title}>Ressources & Révisions</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Pressable style={styles.writingBtn} onPress={() => setWritingModalVisible(true)}>
-              <FileText size={13} color="#C084FC" />
+              <FileText size={13} color="#818CF8" />
               <Text style={styles.writingBtnText}>Atelier Écriture</Text>
             </Pressable>
             {onOpenAssistant && (
               <Pressable style={styles.assistantBtn} onPress={onOpenAssistant}>
-                <Sparkles size={13} color="#A855F7" />
+                <Sparkles size={13} color="#38BDF8" />
                 <Text style={styles.assistantBtnText}>IA Chat</Text>
               </Pressable>
             )}
@@ -151,34 +151,34 @@ const styles = StyleSheet.create({
   writingBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(192, 132, 252, 0.15)',
+    backgroundColor: 'rgba(99, 102, 241, 0.14)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 14,
     gap: 5,
     borderWidth: 1,
-    borderColor: 'rgba(192, 132, 252, 0.3)',
+    borderColor: 'rgba(99, 102, 241, 0.25)',
   },
   writingBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#C084FC',
+    color: '#818CF8',
   },
   assistantBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    backgroundColor: 'rgba(56, 189, 248, 0.14)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 14,
     gap: 5,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.3)',
+    borderColor: 'rgba(56, 189, 248, 0.25)',
   },
   assistantBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#60A5FA',
+    color: '#38BDF8',
   },
   subTabBar: {
     flexDirection: 'row',
