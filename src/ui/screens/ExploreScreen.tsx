@@ -109,7 +109,7 @@ export function ExploreScreen({
           kicker="Le Catalogue"
           title="Explorer"
           folio={`${documents.length} PDF`}
-          subtitle="Cours, TD et annales indexés par université, filière et matière."
+          subtitle="Cours, TD et annales d'examens."
         />
       </View>
 
@@ -259,21 +259,23 @@ const styles = StyleSheet.create({
   },
   toggleBtns: {
     flexDirection: 'row',
-    backgroundColor: stitchColors.surfaceContainerLow,
-    borderRadius: stitchRadius.sm,
+    backgroundColor: '#111622',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 10,
     padding: 2,
   },
   toggleBtn: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: stitchRadius.sm - 2,
+    borderRadius: 8,
   },
   toggleBtnActive: {
-    backgroundColor: stitchColors.siennaDeep,
+    backgroundColor: '#4F46E5',
   },
   toggleBtnText: {
     ...stitchTypography.labelSm,
-    color: stitchColors.inkMuted,
+    color: '#94A3B8',
     fontWeight: '600',
   },
   toggleBtnTextActive: {

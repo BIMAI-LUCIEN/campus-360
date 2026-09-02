@@ -1,7 +1,7 @@
 /**
- * Native Report & Thesis Editor — Campus 360
- * 100% Native, reliable, high-performance editor with instant typing,
- * working formatting toolbar, AI assistant, and clean modern styling.
+ * Word-like WYSIWYG Report & Thesis Editor — Campus 360
+ * Authentic Rich Text Editor with real Bold, Headings (H2, H3),
+ * genuine bullet and numbered lists, tables, callouts, and native Cover Page.
  */
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
@@ -9,15 +9,13 @@ import {
   TextInput, ActivityIndicator, Alert, Modal,
   Platform, KeyboardAvoidingView
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { authFetch } from '../auth/betterAuth';
-import { stitchColors } from '../../theme/stitch';
 import { EditorAiChat } from './EditorAiChat';
 import {
-  Sparkles, Bold, Italic, Underline, Heading2, Heading3,
-  List, ListOrdered, Table, Lightbulb, Network, Send,
-  ArrowLeft, Plus, Trash2
+  Sparkles, Send, ArrowLeft, Plus, Trash2
 } from 'lucide-react-native';
 
 type Document = {
@@ -43,7 +41,7 @@ type DocumentSection = {
 type DocumentEditorScreenProps = {
   documentId: string;
   onClose: () => void;
-  subscriptionTier: SubscriptionTier;
+  subscriptionTier: 'free' | 'basic' | 'premium';
   onUpgrade: () => void;
 };
 
@@ -59,58 +57,391 @@ const downloadBlobOnWeb = (blob: Blob, filename: string) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 };
 
-// Clean HTML to plain text for native editing
-function htmlToPlainText(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<p[^>]*>/gi, '')
-    .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n')
-    .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n')
-    .replace(/<strong>(.*?)<\/strong>/gi, '**$1**')
-    .replace(/<b>(.*?)<\/b>/gi, '**$1**')
-    .replace(/<em>(.*?)<\/em>/gi, '*$1*')
-    .replace(/<i>(.*?)<\/i>/gi, '*$1*')
-    .replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n')
-    .replace(/<ul[^>]*>/gi, '')
-    .replace(/<\/ul>/gi, '\n')
-    .replace(/<ol[^>]*>/gi, '')
-    .replace(/<\/ol>/gi, '\n')
-    .replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, '> $1\n\n')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .trim();
+const escapeHtml = (text: string): string => {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
+/**
+ * Builds a standalone, self-contained Word-like WYSIWYG HTML document.
+ * Toolbar buttons use event.preventDefault() on mousedown/touchstart
+ * to ensure the editable sheet never loses text selection.
+ */
+function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section'): string {
+  const content = initialContentHtml && initialContentHtml.trim()
+    ? initialContentHtml
+    : `<p>Commencez à rédiger votre ${escapeHtml(title)} ici comme dans Word...</p>`;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #0B0F17;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: #F8FAFC;
+    height: 100%;
+    overflow-x: hidden;
+  }
+  
+  /* Word Toolbar (Sticky on Top) */
+  .toolbar-container {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: #111622;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  
+  .tool-btn {
+    background: #182030;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #E2E8F0;
+    border-radius: 8px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  
+  .tool-btn:active {
+    background: #4F46E5;
+    color: #FFFFFF;
+    border-color: #4F46E5;
+  }
+  
+  .tool-divider {
+    width: 1px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.12);
+    margin: 0 2px;
+  }
+
+  /* Sheet Container */
+  .sheet-wrapper {
+    padding: 14px 10px 100px;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Authentic Word Document Page */
+  .document-sheet {
+    width: 100%;
+    max-width: 820px;
+    min-height: 540px;
+    background: #111622;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px 20px;
+    outline: none;
+    font-size: 15.5px;
+    line-height: 1.75;
+    color: #F1F5F9;
+    word-break: break-word;
+  }
+  
+  .document-sheet:focus {
+    border-color: rgba(99, 102, 241, 0.5);
+  }
+
+  /* Academic Headings */
+  .document-sheet h1 {
+    font-size: 26px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin: 22px 0 12px;
+    border-bottom: 2px solid rgba(99, 102, 241, 0.4);
+    padding-bottom: 8px;
+    line-height: 1.3;
+  }
+
+  .document-sheet h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #818CF8;
+    margin: 22px 0 10px;
+    line-height: 1.35;
+  }
+
+  .document-sheet h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #38BDF8;
+    margin: 18px 0 8px;
+    line-height: 1.4;
+  }
+
+  .document-sheet p {
+    margin: 0 0 14px 0;
+  }
+
+  .document-sheet b, .document-sheet strong {
+    font-weight: 700;
+    color: #FFFFFF;
+  }
+
+  .document-sheet i, .document-sheet em {
+    font-style: italic;
+    color: #E2E8F0;
+  }
+
+  .document-sheet u {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* Real Indented Lists */
+  .document-sheet ul {
+    list-style-type: disc;
+    margin: 10px 0 16px 26px;
+    padding: 0;
+  }
+
+  .document-sheet ol {
+    list-style-type: decimal;
+    margin: 10px 0 16px 26px;
+    padding: 0;
+  }
+
+  .document-sheet li {
+    margin-bottom: 6px;
+    line-height: 1.6;
+    padding-left: 4px;
+  }
+
+  /* Academic Callouts */
+  .document-sheet blockquote {
+    margin: 16px 0;
+    padding: 12px 16px;
+    background: rgba(99, 102, 241, 0.08);
+    border-left: 4px solid #4F46E5;
+    border-radius: 0 8px 8px 0;
+    color: #CBD5E1;
+    font-style: italic;
+  }
+
+  /* Academic Tables */
+  .document-sheet table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0;
+    font-size: 14px;
+  }
+
+  .document-sheet th, .document-sheet td {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 10px 12px;
+    text-align: left;
+  }
+
+  .document-sheet th {
+    background: #1E283C;
+    color: #818CF8;
+    font-weight: 700;
+  }
+
+  .document-sheet td {
+    background: rgba(255, 255, 255, 0.02);
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar-container">
+    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('bold')" ontouchstart="event.preventDefault(); execCmd('bold')"><b>B</b></button>
+    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('italic')" ontouchstart="event.preventDefault(); execCmd('italic')"><i>I</i></button>
+    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('underline')" ontouchstart="event.preventDefault(); execCmd('underline')"><u>U</u></button>
+    
+    <div class="tool-divider"></div>
+    
+    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); formatBlock('h2')" ontouchstart="event.preventDefault(); formatBlock('h2')"><span style="font-weight:700; color:#818CF8;">H2</span></button>
+    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); formatBlock('h3')" ontouchstart="event.preventDefault(); formatBlock('h3')"><span style="font-weight:600; color:#38BDF8;">H3</span></button>
+    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); formatBlock('p')" ontouchstart="event.preventDefault(); formatBlock('p')">¶</button>
+    
+    <div class="tool-divider"></div>
+    
+    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('insertUnorderedList')" ontouchstart="event.preventDefault(); execCmd('insertUnorderedList')">•— Liste</button>
+    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('insertOrderedList')" ontouchstart="event.preventDefault(); execCmd('insertOrderedList')">1. Num</button>
+    
+    <div class="tool-divider"></div>
+    
+    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); insertTable()" ontouchstart="event.preventDefault(); insertTable()">📊 Tableau</button>
+    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); insertCallout()" ontouchstart="event.preventDefault(); insertCallout()">💡 Note</button>
+    
+    <div class="tool-divider"></div>
+    
+    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('justifyLeft')" ontouchstart="event.preventDefault(); execCmd('justifyLeft')">⇤</button>
+    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('justifyCenter')" ontouchstart="event.preventDefault(); execCmd('justifyCenter')">≡</button>
+    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('justifyFull')" ontouchstart="event.preventDefault(); execCmd('justifyFull')">⇥</button>
+  </div>
+
+  <div class="sheet-wrapper">
+    <div id="editor" class="document-sheet" contenteditable="true" spellcheck="true">${content}</div>
+  </div>
+
+  <script>
+    const editor = document.getElementById('editor');
+    
+    function execCmd(command, value = null) {
+      document.execCommand(command, false, value);
+      editor.focus();
+      notifyChange();
+    }
+    
+    function formatBlock(tag) {
+      document.execCommand('formatBlock', false, '<' + tag + '>');
+      editor.focus();
+      notifyChange();
+    }
+    
+    function insertTable() {
+      const tableHtml = '<table><thead><tr><th>Critère</th><th>Description</th><th>Statut</th></tr></thead><tbody><tr><td>Analyse</td><td>Conforme aux exigences</td><td>Validé</td></tr><tr><td>Mise en oeuvre</td><td>Développement complété</td><td>En cours</td></tr></tbody></table><p><br></p>';
+      document.execCommand('insertHTML', false, tableHtml);
+      editor.focus();
+      notifyChange();
+    }
+    
+    function insertCallout() {
+      const calloutHtml = '<blockquote><b>Remarque académique :</b> Précisez ici votre réflexion méthodologique ou vos observations de stage.</blockquote><p><br></p>';
+      document.execCommand('insertHTML', false, calloutHtml);
+      editor.focus();
+      notifyChange();
+    }
+    
+    function insertAiContent(html) {
+      editor.focus();
+      document.execCommand('insertHTML', false, html);
+      notifyChange();
+    }
+
+    function setEditorContent(html) {
+      editor.innerHTML = html;
+      notifyChange();
+    }
+    
+    function getWordCount(text) {
+      const trimmed = text.trim();
+      if (!trimmed) return 0;
+      return trimmed.split(/\\s+/).length;
+    }
+    
+    function notifyChange() {
+      const html = editor.innerHTML;
+      const text = editor.innerText || editor.textContent || '';
+      const wordCount = getWordCount(text);
+      
+      const payload = JSON.stringify({
+        type: 'change',
+        html: html,
+        text: text,
+        wordCount: wordCount
+      });
+      
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+        window.ReactNativeWebView.postMessage(payload);
+      } else if (window.parent && window.parent.postMessage) {
+        window.parent.postMessage(payload, '*');
+      }
+    }
+    
+    editor.addEventListener('input', notifyChange);
+    editor.addEventListener('keyup', notifyChange);
+    editor.addEventListener('paste', () => setTimeout(notifyChange, 50));
+    
+    // Initial notify
+    setTimeout(notifyChange, 100);
+  </script>
+</body>
+</html>`;
 }
 
-// Convert plain/markdown text to structured HTML for export
-function plainTextToHtml(text: string): string {
-  if (!text || !text.trim()) return '<p><br></p>';
-  const blocks = text.split(/\n\n+/);
-  return blocks.map(block => {
-    const trimmed = block.trim();
-    if (trimmed.startsWith('## ')) {
-      return `<h2>${trimmed.slice(3).trim()}</h2>`;
+type EditorSurfaceHandle = {
+  injectJavaScript: (script: string) => void;
+};
+
+type EditorSurfaceProps = {
+  html: string;
+  onMessage: (event: any) => void;
+};
+
+const EditorSurface = React.forwardRef<EditorSurfaceHandle, EditorSurfaceProps>(
+  ({ html, onMessage }, forwardedRef) => {
+    const nativeRef = useRef<any>(null);
+    const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+    useEffect(() => {
+      if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+      const handleMessage = (event: MessageEvent) => {
+        if (event.source !== iframeRef.current?.contentWindow || !event.data) return;
+        const data = typeof event.data === 'string' ? event.data : JSON.stringify(event.data);
+        onMessage({ nativeEvent: { data } });
+      };
+      window.addEventListener('message', handleMessage);
+      return () => window.removeEventListener('message', handleMessage);
+    }, [onMessage]);
+
+    React.useImperativeHandle(forwardedRef, () => ({
+      injectJavaScript(script: string) {
+        if (Platform.OS === 'web') {
+          (iframeRef.current?.contentWindow as any)?.eval(script);
+          return;
+        }
+        nativeRef.current?.injectJavaScript(script);
+      },
+    }), []);
+
+    if (Platform.OS === 'web') {
+      return React.createElement('iframe', {
+        ref: iframeRef,
+        srcDoc: html,
+        title: 'Éditeur WYSIWYG Campus 360',
+        style: {
+          width: '100%',
+          height: '100%',
+          border: 0,
+          backgroundColor: '#0B0F17',
+        },
+      });
     }
-    if (trimmed.startsWith('### ')) {
-      return `<h3>${trimmed.slice(4).trim()}</h3>`;
-    }
-    if (trimmed.startsWith('> ')) {
-      return `<blockquote style="margin: 16px 0; padding: 12px 16px; background: #F8FAFC; border-left: 4px solid #4F46E5; font-style: italic; color: #334155; border-radius: 0 8px 8px 0;">${trimmed.slice(2).trim()}</blockquote>`;
-    }
-    if (trimmed.includes('|') && trimmed.includes('\n')) {
-      return `<div style="margin: 14px 0; overflow-x: auto;">${trimmed}</div>`;
-    }
-    let formatted = trimmed
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/\n/g, '<br/>');
-    return `<p>${formatted}</p>`;
-  }).join('\n');
-}
+
+    return (
+      <WebView
+        ref={nativeRef}
+        originWhitelist={['*']}
+        source={{ html }}
+        style={styles.webView}
+        javaScriptEnabled
+        domStorageEnabled
+        onMessage={onMessage}
+        scrollEnabled
+        showsVerticalScrollIndicator={false}
+        textZoom={100}
+        keyboardDisplayRequiresUserAction={false}
+      />
+    );
+  }
+);
 
 export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, onUpgrade }: DocumentEditorScreenProps) {
   const [loading, setLoading] = useState(true);
@@ -119,9 +450,9 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
   const [sections, setSections] = useState<DocumentSection[]>([]);
   const [currentSectionId, setCurrentSectionId] = useState<string | null>(null);
 
-  // Content for current editable section
-  const [sectionText, setSectionText] = useState('');
-  const [selection, setSelection] = useState({ start: 0, end: 0 });
+  // Content & word count for current section
+  const [currentHtml, setCurrentHtml] = useState('');
+  const [wordCount, setWordCount] = useState(0);
 
   // Save status
   const [saving, setSaving] = useState(false);
@@ -138,7 +469,7 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
   const [addingSection, setAddingSection] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  const textInputRef = useRef<TextInput | null>(null);
+  const editorSurfaceRef = useRef<EditorSurfaceHandle | null>(null);
 
   // Load report data
   const loadReport = useCallback(async () => {
@@ -157,7 +488,7 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
       setCurrentSectionId(initialId);
       if (initialId) {
         const currentSec = fetchedSections.find(s => s.id === initialId);
-        setSectionText(htmlToPlainText(currentSec?.content_html || ''));
+        setCurrentHtml(currentSec?.content_html || '');
       }
     } catch (err: any) {
       setError(err.message || 'Erreur de chargement.');
@@ -173,41 +504,50 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
   // When switching section
   const handleSelectSection = (sectionId: string) => {
     if (currentSectionId && currentSectionId !== sectionId) {
-      saveSectionContent(currentSectionId, sectionText);
+      saveSectionContent(currentSectionId, currentHtml);
     }
     setCurrentSectionId(sectionId);
     const sec = sections.find(s => s.id === sectionId);
-    setSectionText(htmlToPlainText(sec?.content_html || ''));
-    setSelection({ start: 0, end: 0 });
+    setCurrentHtml(sec?.content_html || '');
   };
 
   // Debounced auto-save for current section text
-  const handleTextChange = (text: string) => {
-    setSectionText(text);
-    if (!currentSectionId) return;
-
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
-      saveSectionContent(currentSectionId, text);
-    }, 1200);
-  };
-
-  const saveSectionContent = async (secId: string, textToSave: string) => {
+  const saveSectionContent = async (secId: string, htmlToSave: string) => {
     setSaving(true);
     try {
-      const htmlContent = plainTextToHtml(textToSave);
       const res = await authFetch(`/api/mobile/documents/${documentId}/sections/${secId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content_html: htmlContent }),
+        body: JSON.stringify({ content_html: htmlToSave }),
       });
       if (res.ok) {
-        setSections(prev => prev.map(s => s.id === secId ? { ...s, content_html: htmlContent } : s));
+        setSections(prev => prev.map(s => s.id === secId ? { ...s, content_html: htmlToSave } : s));
       }
     } catch (e) {
       console.warn('Auto-save error:', e);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Message handler from WYSIWYG editor
+  const handleEditorMessage = (event: any) => {
+    try {
+      const rawData = event.nativeEvent.data;
+      const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+      if (data.type === 'change') {
+        const updatedHtml = data.html || '';
+        setCurrentHtml(updatedHtml);
+        setWordCount(data.wordCount || 0);
+
+        if (!currentSectionId) return;
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => {
+          saveSectionContent(currentSectionId, updatedHtml);
+        }, 1200);
+      }
+    } catch (e) {
+      // Ignored
     }
   };
 
@@ -232,70 +572,7 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
     }, 1200);
   };
 
-  // Toolbar action helpers that actually work directly on the text!
-  const applyFormatting = (type: 'bold' | 'italic' | 'underline' | 'h2' | 'h3' | 'ul' | 'ol' | 'table' | 'callout' | 'diagram') => {
-    const { start, end } = selection;
-    const before = sectionText.substring(0, start);
-    const selected = sectionText.substring(start, end);
-    const after = sectionText.substring(end);
-
-    let newText = sectionText;
-
-    switch (type) {
-      case 'bold': {
-        const text = selected || 'texte en gras';
-        newText = `${before}**${text}**${after}`;
-        break;
-      }
-      case 'italic': {
-        const text = selected || 'texte en italique';
-        newText = `${before}*${text}*${after}`;
-        break;
-      }
-      case 'underline': {
-        const text = selected || 'texte souligné';
-        newText = `${before}<u>${text}</u>${after}`;
-        break;
-      }
-      case 'h2': {
-        const heading = selected || 'Titre de Section';
-        newText = `${before}\n\n## ${heading}\n\n${after}`;
-        break;
-      }
-      case 'h3': {
-        const heading = selected || 'Sous-Titre';
-        newText = `${before}\n\n### ${heading}\n\n${after}`;
-        break;
-      }
-      case 'ul': {
-        newText = `${before}\n- ${selected || 'Élément de liste'}\n${after}`;
-        break;
-      }
-      case 'ol': {
-        newText = `${before}\n1. ${selected || 'Premier point'}\n${after}`;
-        break;
-      }
-      case 'callout': {
-        newText = `${before}\n\n> **Remarque académique :** ${selected || 'Précision méthodologique importante pour le jury.'}\n\n${after}`;
-        break;
-      }
-      case 'table': {
-        const tableBlock = `\n\n| Critère d'Analyse | Description Technique | Validation |\n| :--- | :--- | :--- |\n| Architecture | Microservices & Base Postgres | Conforme |\n| Sécurité | Tokens chiffrés JWT | Validé |\n\n`;
-        newText = `${before}${tableBlock}${after}`;
-        break;
-      }
-      case 'diagram': {
-        const diagramBlock = `\n\n[Schéma : Architecture Technique Système]\n(Couche Client Mobile) <---> (Serveur API Next.js) <---> (PostgreSQL Pool)\n\n`;
-        newText = `${before}${diagramBlock}${after}`;
-        break;
-      }
-    }
-
-    handleTextChange(newText);
-    textInputRef.current?.focus();
-  };
-
-  // AI Prompt generation
+  // AI Prompt generation with WYSIWYG HTML insertion
   const handleRunAi = async (promptToSend: string) => {
     const prompt = promptToSend.trim();
     if (!prompt) {
@@ -319,14 +596,11 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erreur IA.');
 
-      const generatedPlainText = htmlToPlainText(data.html || data.text || '');
-      if (generatedPlainText) {
-        const updated = sectionText
-          ? `${sectionText}\n\n${generatedPlainText}`
-          : generatedPlainText;
-        handleTextChange(updated);
+      const generatedHtml = data.html || (data.text ? `<p>${data.text.replace(/\\n/g, '<br/>')}</p>` : '');
+      if (generatedHtml) {
+        editorSurfaceRef.current?.injectJavaScript(`insertAiContent(${JSON.stringify(generatedHtml)}); true;`);
         setAiPrompt('');
-        Alert.alert('✨ IA', 'Contenu généré et inséré avec succès !');
+        Alert.alert('✨ IA', 'Contenu rédigé et inséré dans votre document !');
       }
     } catch (err: any) {
       Alert.alert('Erreur IA', err.message);
@@ -444,7 +718,7 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
   // Export Word
   const handleExportDocx = async () => {
     if (!report) return;
-    if (!canExportDocx(subscriptionTier)) {
+    if (subscriptionTier !== 'premium') {
       Alert.alert(
         'Export Word Premium',
         "L'export Word (.docx) modifiable est réservé à l'abonnement Premium.",
@@ -492,8 +766,6 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
   const currentTitle = currentSection?.title ?? '';
   const isCoverSection = currentTitle.toLowerCase().includes('page de garde');
   const isTocSection = currentTitle.toLowerCase().includes('sommaire');
-
-  const wordCount = sectionText.trim() ? sectionText.trim().split(/\s+/).length : 0;
 
   if (loading) {
     return (
@@ -608,7 +880,7 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
         </ScrollView>
       </View>
 
-      {/* ── Workspace Area (Cover Form vs Native Text Editor) ────────── */}
+      {/* ── Workspace Area (Native Cover vs Native TOC vs Word-like WYSIWYG) */}
       <KeyboardAvoidingView
         style={styles.workspace}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -756,67 +1028,21 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
             </View>
           </ScrollView>
         ) : (
-          /* ── 3. NATIVE TEXT EDITOR (SECTIONS ACADÉMIQUES) ─────────────── */
+          /* ── 3. WORD-LIKE WYSIWYG SHEET EDITOR ────────────────────────── */
           <View style={styles.editorFlex}>
-            {/* Formatting Toolbar — 100% Native & Functional */}
-            <View style={styles.toolbar}>
-              <Pressable style={styles.toolBtn} onPress={() => applyFormatting('bold')}>
-                <Bold size={16} color="#F8FAFC" />
-              </Pressable>
-              <Pressable style={styles.toolBtn} onPress={() => applyFormatting('italic')}>
-                <Italic size={16} color="#F8FAFC" />
-              </Pressable>
-              <Pressable style={styles.toolBtn} onPress={() => applyFormatting('underline')}>
-                <Underline size={16} color="#F8FAFC" />
-              </Pressable>
-
-              <View style={styles.toolDivider} />
-
-              <Pressable style={styles.toolBtn} onPress={() => applyFormatting('h2')}>
-                <Heading2 size={16} color="#818CF8" />
-              </Pressable>
-              <Pressable style={styles.toolBtn} onPress={() => applyFormatting('h3')}>
-                <Heading3 size={16} color="#818CF8" />
-              </Pressable>
-              <Pressable style={styles.toolBtn} onPress={() => applyFormatting('ul')}>
-                <List size={16} color="#F8FAFC" />
-              </Pressable>
-              <Pressable style={styles.toolBtn} onPress={() => applyFormatting('ol')}>
-                <ListOrdered size={16} color="#F8FAFC" />
-              </Pressable>
-
-              <View style={styles.toolDivider} />
-
-              <Pressable style={styles.toolBtn} onPress={() => applyFormatting('table')}>
-                <Table size={16} color="#34D399" />
-              </Pressable>
-              <Pressable style={styles.toolBtn} onPress={() => applyFormatting('callout')}>
-                <Lightbulb size={16} color="#FBBF24" />
-              </Pressable>
-              <Pressable style={styles.toolBtn} onPress={() => applyFormatting('diagram')}>
-                <Network size={16} color="#38BDF8" />
-              </Pressable>
-            </View>
-
-            {/* Quick AI Suggestions & Section Header */}
+            {/* Meta info: Section title & Word count */}
             <View style={styles.editorMetaRow}>
               <Text style={styles.currentSectionTitle}>{currentTitle}</Text>
               <Text style={styles.wordCountBadge}>{wordCount} mots</Text>
             </View>
 
-            {/* Main Native TextInput Area */}
-            <View style={styles.textInputBox}>
-              <TextInput
-                ref={textInputRef}
-                style={styles.nativeEditorInput}
-                multiline
-                textAlignVertical="top"
-                placeholder="Rédigez votre texte ici... Utilisez la barre d'outils au-dessus pour structurer vos paragraphes, tableaux et citations."
-                placeholderTextColor="#64748B"
-                value={sectionText}
-                onChangeText={handleTextChange}
-                onSelectionChange={e => setSelection(e.nativeEvent.selection)}
-                autoCorrect={false}
+            {/* WYSIWYG Surface */}
+            <View style={styles.wysiwygContainer}>
+              <EditorSurface
+                key={currentSectionId || 'default-editor'}
+                ref={editorSurfaceRef}
+                html={buildWysiwygHtml(currentHtml, currentTitle)}
+                onMessage={handleEditorMessage}
               />
             </View>
 
@@ -890,8 +1116,7 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
           documentId={documentId}
           currentSectionTitle={currentTitle}
           onInsert={(html: string) => {
-            const added = htmlToPlainText(html);
-            handleTextChange(sectionText ? `${sectionText}\n\n${added}` : added);
+            editorSurfaceRef.current?.injectJavaScript(`insertAiContent(${JSON.stringify(html)}); true;`);
           }}
         />
       )}
@@ -1144,74 +1369,44 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Native Text Editor
+  // WYSIWYG Editor
   editorFlex: {
     flex: 1,
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 90,
-  },
-  toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-    backgroundColor: '#111622',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 14,
-    padding: 8,
-    marginBottom: 10,
-  },
-  toolBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 9,
-    backgroundColor: '#182030',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toolDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    marginHorizontal: 2,
+    paddingBottom: 85,
   },
   editorMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#0E131F',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
   },
   currentSectionTitle: {
     color: '#F8FAFC',
-    fontSize: 16,
+    fontSize: 14.5,
     fontWeight: '700',
   },
   wordCountBadge: {
     color: '#64748B',
     fontSize: 12,
   },
-  textInputBox: {
+  wysiwygContainer: {
     flex: 1,
-    backgroundColor: '#111622',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 14,
-    padding: 14,
+    backgroundColor: '#0B0F17',
   },
-  nativeEditorInput: {
+  webView: {
     flex: 1,
-    color: '#F1F5F9',
-    fontSize: 15,
-    lineHeight: 24,
+    backgroundColor: '#0B0F17',
   },
   aiDock: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 10,
+    marginHorizontal: 12,
+    marginTop: 8,
     backgroundColor: '#111622',
     borderWidth: 1,
     borderColor: 'rgba(99, 102, 241, 0.25)',

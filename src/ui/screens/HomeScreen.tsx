@@ -53,9 +53,9 @@ type QuickAction = {
 const initialPriority: HomePriority = {
   kind: 'resource',
   eyebrow: 'PROCHAINE ÉTAPE',
-  title: 'Prépare ta prochaine réussite',
-  description: 'Explore les ressources adaptées à ton parcours ou crée un document prêt à envoyer.',
-  actionLabel: 'Explorer Campus 360',
+  title: 'Prépare ta réussite',
+  description: 'Ressources ciblées et documents prêts à l’envoi.',
+  actionLabel: 'Explorer les ressources',
   destination: 'resources',
 };
 
@@ -63,13 +63,15 @@ function QuickActionCard({ action }: { action: QuickAction }) {
   return (
     <Pressable onPress={action.onPress} style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}>
       <View style={[styles.quickIcon, { backgroundColor: action.tint }]}>
-        <action.Icon size={21} color={action.color} strokeWidth={2.1} />
+        <action.Icon size={19} color={action.color} strokeWidth={2} />
       </View>
       <View style={styles.quickCopy}>
         <Text style={styles.quickLabel}>{action.label}</Text>
         <Text style={styles.quickDetail} numberOfLines={1}>{action.detail}</Text>
       </View>
-      <ArrowRight size={17} color={stitchColors.inkSubtle} />
+      <View style={styles.quickArrowWrap}>
+        <ArrowRight size={15} color="#94A3B8" strokeWidth={2} />
+      </View>
     </Pressable>
   );
 }
@@ -140,15 +142,15 @@ export function HomeScreen({
   const actions: QuickAction[] = [
     {
       key: 'stages', label: 'Trouver un stage', detail: 'Offres selon ton profil', Icon: BriefcaseBusiness,
-      color: '#60A5FA', tint: 'rgba(96,165,250,0.15)', onPress: onStages,
+      color: '#60A5FA', tint: 'rgba(96,165,250,0.14)', onPress: onStages,
     },
     {
-      key: 'documents', label: 'Créer un document', detail: 'CV, lettre, rapport, mémoire', Icon: FilePlus2,
-      color: '#F472B6', tint: 'rgba(244,114,182,0.15)', onPress: onDocuments,
+      key: 'documents', label: 'Créer un document', detail: 'CV, lettre, mémoire', Icon: FilePlus2,
+      color: '#F472B6', tint: 'rgba(244,114,182,0.14)', onPress: onDocuments,
     },
     {
-      key: 'resources', label: 'Voir les ressources', detail: 'Supports utiles et ciblés', Icon: BookOpen,
-      color: '#C084FC', tint: 'rgba(192,132,252,0.15)', onPress: onResources,
+      key: 'resources', label: 'Voir les ressources', detail: 'Annales, TD et cours', Icon: BookOpen,
+      color: '#C084FC', tint: 'rgba(192,132,252,0.14)', onPress: onResources,
     },
   ];
 
@@ -267,26 +269,33 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit, fontSize: 29, lineHeight: 35, fontWeight: '700',
     letterSpacing: -0.7, color: stitchColors.ink,
   },
-  priorityBorder: { borderRadius: stitchRadius.xl + 2, padding: 1 },
-  priorityCard: { backgroundColor: '#111622', borderRadius: stitchRadius.xl, padding: 20 },
+  priorityBorder: { borderRadius: 18, padding: 1 },
+  priorityCard: {
+    backgroundColor: '#111622',
+    borderRadius: 17,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
   priorityTopline: {
     minHeight: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   priorityBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(99,102,241,0.14)',
-    borderRadius: stitchRadius.full, paddingHorizontal: 10, paddingVertical: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(99,102,241,0.15)',
+    borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)',
+    borderRadius: stitchRadius.full, paddingHorizontal: 10, paddingVertical: 4,
   },
   priorityEyebrow: {
-    fontFamily: fontFamilies.inter, fontSize: 10, fontWeight: '700', letterSpacing: 0.9, color: '#C7D2FE',
+    fontFamily: fontFamilies.inter, fontSize: 10, fontWeight: '700', letterSpacing: 0.8, color: '#C7D2FE',
   },
   priorityTitle: {
-    fontFamily: fontFamilies.outfit, fontSize: 23, lineHeight: 28, fontWeight: '700',
-    letterSpacing: -0.4, color: stitchColors.ink, marginTop: 16,
+    fontFamily: fontFamilies.outfit, fontSize: 20, lineHeight: 26, fontWeight: '700',
+    letterSpacing: -0.3, color: '#F8FAFC', marginTop: 12,
   },
   priorityDescription: {
-    ...stitchTypography.bodyMd, color: stitchColors.inkMuted, lineHeight: 21, marginTop: 8,
+    fontSize: 13, color: '#94A3B8', lineHeight: 18, marginTop: 6,
   },
-  progressBlock: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
+  progressBlock: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 },
   progressTrack: {
     flex: 1, height: 5, borderRadius: stitchRadius.full, overflow: 'hidden',
     backgroundColor: '#1E283C',
@@ -296,15 +305,15 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.inter, fontSize: 12, fontWeight: '700', color: stitchColors.inkSoft,
   },
   priorityButton: {
-    minHeight: 46, borderRadius: stitchRadius.button, backgroundColor: '#4F46E5', paddingHorizontal: 18,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 18,
+    height: 42, borderRadius: 11, backgroundColor: '#4F46E5', paddingHorizontal: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16,
   },
   priorityButtonText: {
-    fontFamily: fontFamilies.inter, fontSize: 13.5, fontWeight: '700', color: '#FFFFFF',
+    fontFamily: fontFamilies.inter, fontSize: 13, fontWeight: '600', color: '#FFFFFF',
   },
   walletRow: {
-    minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#111622',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', borderRadius: stitchRadius.lg,
+    minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#111622',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 14,
     paddingHorizontal: 16, marginTop: 14,
   },
   walletMetric: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
@@ -314,34 +323,38 @@ const styles = StyleSheet.create({
   },
   metricLabel: { fontFamily: fontFamilies.inter, fontSize: 10.5, color: stitchColors.inkMuted, marginTop: 1 },
   rechargeButton: {
-    width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(99,102,241,0.14)',
   },
   rechargeLabel: { fontSize: 20, lineHeight: 22, color: '#818CF8', fontWeight: '600' },
-  section: { marginTop: 26 },
+  section: { marginTop: 24 },
   sectionKicker: {
     fontFamily: fontFamilies.inter, fontSize: 10, fontWeight: '700', letterSpacing: 1.1,
     color: '#818CF8', marginBottom: 5,
   },
   sectionTitle: {
-    fontFamily: fontFamilies.outfit, fontSize: 19, lineHeight: 24, fontWeight: '700',
+    fontFamily: fontFamilies.outfit, fontSize: 18, lineHeight: 23, fontWeight: '700',
     letterSpacing: -0.3, color: stitchColors.ink,
   },
-  quickList: { gap: 9, marginTop: 12 },
+  quickList: { gap: 8, marginTop: 12 },
   quickAction: {
-    minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: stitchRadius.lg,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', backgroundColor: '#111622',
-    paddingHorizontal: 14,
+    minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: '#111622',
+    paddingHorizontal: 14, paddingVertical: 10,
   },
   quickIcon: {
-    width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
+    width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center',
   },
   quickCopy: { flex: 1 },
   quickLabel: {
-    fontFamily: fontFamilies.inter, fontSize: 14, fontWeight: '700', color: stitchColors.ink,
+    fontFamily: fontFamilies.inter, fontSize: 13.5, fontWeight: '600', color: '#F8FAFC',
   },
   quickDetail: {
-    fontFamily: fontFamilies.inter, fontSize: 11, color: stitchColors.inkMuted, marginTop: 3,
+    fontFamily: fontFamilies.inter, fontSize: 11.5, color: '#94A3B8', marginTop: 2,
+  },
+  quickArrowWrap: {
+    width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   sectionHeadingRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   seeAll: {
@@ -349,12 +362,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   activityCard: {
-    borderRadius: stitchRadius.lg, borderWidth: 1, borderColor: stitchColors.glassBorder,
-    backgroundColor: stitchColors.surface, paddingHorizontal: 15, marginTop: 15,
+    borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#111622', paddingHorizontal: 15, marginTop: 12,
   },
-  emptyActivity: { minHeight: 96, flexDirection: 'row', alignItems: 'center', gap: 13 },
+  emptyActivity: { minHeight: 88, flexDirection: 'row', alignItems: 'center', gap: 13 },
   emptyIcon: {
-    width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
     backgroundColor: stitchColors.primaryContainer,
   },
   emptyCopy: { flex: 1 },

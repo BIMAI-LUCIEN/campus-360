@@ -283,8 +283,8 @@ export function StagesScreen({
                       handleShareReferral(job);
                     }}
                   >
-                    <Share2 size={14} color="#94A3B8" />
-                    <Text style={styles.shareBtnText}>Partager (+1 jeton)</Text>
+                    <Share2 size={13} color="#94A3B8" />
+                    <Text style={styles.shareBtnText}>Partager</Text>
                   </Pressable>
 
                   <Pressable
@@ -295,13 +295,13 @@ export function StagesScreen({
                     }}
                   >
                     <LinearGradient
-                      colors={['#8B5CF6', '#6D28D9']}
+                      colors={['#4F46E5', '#3B82F6']}
                       style={styles.applyGradient}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                     >
-                      <Sparkles size={14} color="#FFFFFF" />
-                      <Text style={styles.applyBtnText}>L'IA postule</Text>
+                      <Sparkles size={13} color="#FFFFFF" />
+                      <Text style={styles.applyBtnText}>Postuler avec l'IA</Text>
                     </LinearGradient>
                   </Pressable>
                 </View>
@@ -503,8 +503,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   jobCard: {
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    borderRadius: 18,
+    backgroundColor: '#111622',
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
@@ -519,15 +519,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingVertical: 3.5,
+    borderRadius: 8,
+    borderWidth: 1,
     gap: 4,
   },
   matchBadgeHigh: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.25)',
   },
   matchBadgeStandard: {
-    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    borderColor: 'rgba(99, 102, 241, 0.25)',
   },
   matchBadgeText: {
     fontSize: 11,
@@ -537,15 +540,17 @@ const styles = StyleSheet.create({
     color: '#34D399',
   },
   matchTextStandard: {
-    color: '#60A5FA',
+    color: '#818CF8',
   },
   sponsoredBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.25)',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingVertical: 3.5,
+    borderRadius: 8,
     gap: 4,
   },
   sponsoredText: {
@@ -574,16 +579,22 @@ const styles = StyleSheet.create({
   tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 8,
     marginBottom: 12,
   },
   tagItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
   },
   tagText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#94A3B8',
   },
   skillsRow: {
@@ -593,23 +604,23 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   skillPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   skillPillMatching: {
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
-    borderColor: 'rgba(168, 85, 247, 0.3)',
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    borderColor: 'rgba(99, 102, 241, 0.25)',
   },
   skillPillText: {
     fontSize: 11,
     color: '#94A3B8',
   },
   skillPillTextMatching: {
-    color: '#C084FC',
+    color: '#818CF8',
     fontWeight: '600',
   },
   cardFooter: {
@@ -626,7 +637,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   applyBtn: {
-    borderRadius: 12,
+    borderRadius: 10,
     overflow: 'hidden',
   },
   applyGradient: {

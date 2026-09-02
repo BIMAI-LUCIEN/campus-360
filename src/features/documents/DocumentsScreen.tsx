@@ -4,11 +4,26 @@ import {
   ActivityIndicator, Alert, Modal, TextInput, Linking, KeyboardAvoidingView, Platform
 } from 'react-native';
 
-import { FileText, Mail, Briefcase, GraduationCap, Sparkles } from 'lucide-react-native';
+import { FileText, Mail, Briefcase, GraduationCap, Sparkles, Edit3, Download, Trash2 } from 'lucide-react-native';
 import { authBaseUrl, authFetch, authClient, type StudentProfile } from '../auth/betterAuth';
 import { stitchColors } from '../../theme/stitch';
 import { GradientText } from '../../ui/GlassComponents';
 import { DocGenChat } from './DocGenChat';
+
+const getDocBadgeTheme = (type: string) => {
+  switch (type) {
+    case 'cv':
+      return { bg: 'rgba(99, 102, 241, 0.15)', text: '#818CF8', border: 'rgba(255, 255, 255, 0.1)' };
+    case 'lettre_motivation':
+      return { bg: 'rgba(56, 189, 248, 0.15)', text: '#38BDF8', border: 'rgba(255, 255, 255, 0.1)' };
+    case 'stage':
+      return { bg: 'rgba(251, 191, 36, 0.15)', text: '#FBBF24', border: 'rgba(255, 255, 255, 0.1)' };
+    case 'memoire':
+      return { bg: 'rgba(168, 85, 247, 0.15)', text: '#C084FC', border: 'rgba(255, 255, 255, 0.1)' };
+    default:
+      return { bg: 'rgba(99, 102, 241, 0.15)', text: '#818CF8', border: 'rgba(255, 255, 255, 0.1)' };
+  }
+};
 
 // ─── Document-type tiles (reference "upload options" grid layout) ─────────────
 const TYPE_TILES = [
@@ -474,10 +489,9 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         </View>
       ) : documents.length === 0 ? (
         <View style={styles.emptyBox}>
-          <View style={styles.emptyFolioRule} />
-          <Text style={styles.emptyTitle}>Le tiroir est vide.</Text>
+          <Text style={styles.emptyTitle}>Aucun document récent</Text>
           <Text style={styles.emptyText}>
-            Commence par un CV ou une lettre — l'IA pose les premières lignes, tu traces le reste.
+            Commence par créer un CV ou une lettre ci-dessus.
           </Text>
         </View>
       ) : (
@@ -486,16 +500,16 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
             const dateStr = new Date(doc.updated_at).toLocaleDateString('fr-FR', {
               day: 'numeric', month: 'short',
             });
+            const badgeTheme = getDocBadgeTheme(doc.template_type);
             return (
               <View key={doc.id} style={styles.documentCard}>
                 <View style={styles.cardHeader}>
                   <View style={[styles.templateBadge, {
-                    backgroundColor: doc.template_type === 'cv' ? stitchColors.ink :
-                      doc.template_type === 'lettre_motivation' ? stitchColors.ink :
-                      doc.template_type === 'memoire' ? stitchColors.ink : stitchColors.ink,
+                    backgroundColor: badgeTheme.bg,
+                    borderColor: badgeTheme.border,
                   }]}>
                     <Text style={[styles.templateBadgeText, {
-                      color: '#FFFFFF',
+                      color: badgeTheme.text,
                     }]}>{templateLabel(doc.template_type)}</Text>
                   </View>
                   <Text style={styles.cardDate}>{dateStr}</Text>
@@ -503,11 +517,13 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                 <Text style={styles.cardTitle}>{doc.title}</Text>
                 <View style={styles.cardActions}>
                   <Pressable style={[styles.actionButton, styles.editButton]} onPress={() => onEditDocument(doc.id)}>
-                    <Text style={styles.editButtonText}>Modifier</Text>
+                    <Edit3 size={13} color="#FFFFFF" strokeWidth={2.2} style={{ marginRight: 6 }} />
+                    <Text style={styles.editButtonText}>Éditer</Text>
                   </Pressable>
                   <Pressable style={[styles.actionButton, styles.pdfButton]} onPress={() => {
-                    Alert.alert('Ouvrir', 'Veuillez ouvrir le document en cliquant sur "Editer" pour générer et exporter le PDF nativement.');
+                    Alert.alert('Ouvrir', 'Veuillez ouvrir le document en cliquant sur "Éditer" pour générer et exporter le PDF nativement.');
                   }}>
+                    <Download size={13} color="#38BDF8" strokeWidth={2.2} style={{ marginRight: 6 }} />
                     <Text style={styles.pdfButtonText}>PDF</Text>
                   </Pressable>
                   <Pressable style={[styles.actionButton, styles.deleteButton]} onPress={() => {
@@ -524,7 +540,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                       },
                     ]);
                   }}>
-                    <Text style={styles.deleteButtonText}>✕</Text>
+                    <Trash2 size={14} color="#F87171" strokeWidth={1.8} />
                   </Pressable>
                 </View>
               </View>
@@ -813,18 +829,18 @@ const styles = StyleSheet.create({
 
   // Options de rédaction — tile grid
   optionsCard: {
-    backgroundColor: stitchColors.surface,
+    backgroundColor: '#111622',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     padding: 16,
-    marginBottom: 28,
+    marginBottom: 24,
   },
   optionsTitle: {
     fontFamily: SANS,
     fontSize: 15,
     fontWeight: '700',
-    color: stitchColors.ink,
+    color: '#F8FAFC',
     marginBottom: 14,
   },
   tileGrid: {
@@ -834,137 +850,147 @@ const styles = StyleSheet.create({
   },
   tile: {
     width: '48%',
-    backgroundColor: stitchColors.surfaceContainerLowest,
+    backgroundColor: '#131927',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
-    paddingVertical: 16,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    paddingVertical: 14,
     paddingHorizontal: 14,
     gap: 10,
   },
   tilePressed: {
-    backgroundColor: stitchColors.surfaceContainerHigh,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.16)',
   },
   tileIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tileLabel: {
     fontFamily: SANS,
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '600',
-    color: stitchColors.ink,
+    color: '#F8FAFC',
   },
   tileBadge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 10,
+    right: 10,
     fontFamily: MONO,
     fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 1,
-    color: stitchColors.sienna,
+    letterSpacing: 0.8,
+    color: '#818CF8',
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.3)',
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
 
   sectionLabel: {
-    color: stitchColors.inkMuted,
+    color: '#94A3B8',
     fontSize: 12,
     fontWeight: '700',
     fontFamily: MONO,
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   listContainer: { gap: 12, paddingBottom: 40 },
 
   documentCard: {
-    backgroundColor: stitchColors.surface,
-    borderRadius: 4,
+    backgroundColor: '#111622',
+    borderRadius: 16,
     padding: 18,
-    borderColor: stitchColors.glassBorder,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  templateBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 2, borderWidth: 1, borderColor: stitchColors.glassBorder },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  templateBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
   templateBadgeText: {
     fontFamily: MONO,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   cardDate: {
-    color: stitchColors.inkMuted,
+    color: '#94A3B8',
     fontFamily: MONO,
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
     letterSpacing: 0.5,
   },
   cardTitle: {
-    color: stitchColors.ink,
-    fontSize: 17,
+    color: '#F8FAFC',
+    fontSize: 16,
     fontWeight: '700',
-    fontFamily: SERIF,
+    fontFamily: SANS,
     lineHeight: 22,
-    marginBottom: 14,
+    marginBottom: 16,
   },
-  cardActions: { flexDirection: 'row', gap: 8 },
-  actionButton: { height: 36, borderRadius: 2, alignItems: 'center', justifyContent: 'center' },
-  editButton: { flex: 1, backgroundColor: stitchColors.surfaceContainerHigh },
+  cardActions: { flexDirection: 'row', gap: 10 },
+  actionButton: { height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
+  editButton: { flex: 1, backgroundColor: '#4F46E5' },
   editButtonText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: SERIF,
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: SANS,
   },
   pdfButton: {
-    width: 64,
-    backgroundColor: 'transparent',
-    borderColor: stitchColors.glassBorder,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    borderColor: 'rgba(56, 189, 248, 0.25)',
     borderWidth: 1,
   },
   pdfButtonText: {
-    color: stitchColors.ink,
+    color: '#38BDF8',
     fontSize: 12,
     fontWeight: '700',
     fontFamily: MONO,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
-  deleteButton: { width: 36, backgroundColor: 'transparent', borderWidth: 1, borderColor: stitchColors.sienna },
-  deleteButtonText: { color: stitchColors.sienna, fontSize: 14, fontWeight: 'bold' },
+  deleteButton: {
+    width: 38,
+    backgroundColor: 'rgba(248, 113, 113, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(248, 113, 113, 0.25)',
+  },
+  deleteButtonText: { color: '#F87171', fontSize: 13, fontWeight: 'bold' },
 
   emptyBox: {
-    paddingVertical: 60,
+    paddingVertical: 36,
     alignItems: 'center',
-    paddingHorizontal: 30,
-    backgroundColor: 'transparent',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: stitchColors.glassBorder,
-  },
-  emptyFolioRule: {
-    width: 40,
-    height: 1,
-    backgroundColor: stitchColors.sienna,
-    marginBottom: 16,
+    paddingHorizontal: 24,
+    backgroundColor: '#111622',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   emptyTitle: {
-    fontSize: 22,
+    fontSize: 16,
     fontWeight: '700',
-    color: stitchColors.ink,
-    fontFamily: SERIF,
-    marginBottom: 10,
-    fontStyle: 'italic',
+    color: '#F8FAFC',
+    fontFamily: SANS,
+    marginBottom: 6,
   },
   emptyText: {
-    fontSize: 14,
-    color: stitchColors.inkMuted,
+    fontSize: 13,
+    color: '#94A3B8',
     textAlign: 'center',
-    lineHeight: 22,
-    fontFamily: SERIF,
+    lineHeight: 19,
+    fontFamily: SANS,
     maxWidth: 280,
   },
   errorBox: { padding: 30, alignItems: 'center' },

@@ -147,7 +147,7 @@ export function ProfileScreen({
           <Text style={styles.profileEmail} numberOfLines={1}>{email}</Text>
           {subscriptionTier !== 'free' && (
             <View style={styles.premiumBadge}>
-              <Crown size={12} color="#FFFFFF" />
+              <Crown size={12} color="#818CF8" />
               <Text style={styles.premiumBadgeText}>{tierLabel}</Text>
             </View>
           )}
@@ -164,10 +164,12 @@ export function ProfileScreen({
       ) : null}
 
       {/* Wallet mini card */}
-      <GlassCard style={styles.walletMini}>
+      <View style={styles.walletMini}>
         <View style={styles.walletMiniRow}>
           <View style={styles.walletMiniLeft}>
-            <Wallet size={17} color={stitchColors.ink} strokeWidth={1.75} />
+            <View style={[styles.walletMiniIconWrap, { backgroundColor: 'rgba(99, 102, 241, 0.12)' }]}>
+              <Wallet size={15} color="#818CF8" strokeWidth={1.8} />
+            </View>
             <Text style={styles.walletMiniLabel}>Solde</Text>
           </View>
           <Text style={styles.walletMiniValue}>{formatCoins(balance)} C</Text>
@@ -175,7 +177,9 @@ export function ProfileScreen({
         <View style={styles.walletMiniDivider} />
         <View style={styles.walletMiniRow}>
           <View style={styles.walletMiniLeft}>
-            <Sparkles size={17} color={stitchColors.sienna} strokeWidth={1.75} />
+            <View style={[styles.walletMiniIconWrap, { backgroundColor: 'rgba(56, 189, 248, 0.12)' }]}>
+              <Sparkles size={15} color="#38BDF8" strokeWidth={1.8} />
+            </View>
             <Text style={styles.walletMiniLabel}>Crédits IA</Text>
           </View>
           <Text style={styles.walletMiniValue}>{iaCredits}</Text>
@@ -183,12 +187,14 @@ export function ProfileScreen({
         <View style={styles.walletMiniDivider} />
         <View style={styles.walletMiniRow}>
           <View style={styles.walletMiniLeft}>
-            <BookOpen size={17} color={stitchColors.emerald} strokeWidth={1.75} />
+            <View style={[styles.walletMiniIconWrap, { backgroundColor: 'rgba(52, 211, 153, 0.12)' }]}>
+              <BookOpen size={15} color="#34D399" strokeWidth={1.8} />
+            </View>
             <Text style={styles.walletMiniLabel}>Documents</Text>
           </View>
           <Text style={styles.walletMiniValue}>{purchasedDocumentsCount}</Text>
         </View>
-      </GlassCard>
+      </View>
 
       {/* Actions */}
       <View style={styles.actionsRow}>
@@ -371,10 +377,13 @@ const styles = StyleSheet.create({
   premiumBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: stitchColors.sienna,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    gap: 5,
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.3)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
     alignSelf: 'flex-start',
     marginTop: 6,
   },
@@ -382,8 +391,8 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.mono,
     fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 1,
-    color: '#FFFFFF',
+    letterSpacing: 0.8,
+    color: '#818CF8',
   },
   tagsRow: {
     flexDirection: 'row',
@@ -392,38 +401,49 @@ const styles = StyleSheet.create({
     marginBottom: stitchSpacing.stackMd,
   },
   walletMini: {
-    padding: 18,
+    backgroundColor: '#111622',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 16,
     marginBottom: stitchSpacing.stackMd,
   },
   walletMiniRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 9,
+    paddingVertical: 8,
   },
   walletMiniLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
+  walletMiniIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   walletMiniLabel: {
     ...stitchTypography.labelMd,
-    color: stitchColors.inkMuted,
+    color: '#94A3B8',
   },
   walletMiniValue: {
     fontFamily: fontFamilies.outfit,
-    fontSize: 18,
-    fontWeight: '800',
-    color: stitchColors.ink,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#F8FAFC',
     letterSpacing: -0.3,
   },
   walletMiniDivider: {
     height: 1,
-    backgroundColor: stitchColors.inkFaint,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     marginBottom: stitchSpacing.stackMd,
   },
   actionBtn: {
@@ -432,25 +452,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: stitchColors.surface,
+    backgroundColor: '#111622',
     borderWidth: 1,
-    borderColor: stitchColors.inkFaint,
-    borderRadius: stitchRadius.sm,
-    paddingVertical: 14,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    paddingVertical: 12,
   },
   actionBtnPrimary: {
-    backgroundColor: stitchColors.siennaDeep,
-    borderColor: stitchColors.siennaDeep,
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
   },
   actionBtnText: {
     ...stitchTypography.labelMd,
-    fontWeight: '700',
-    color: stitchColors.ink,
+    fontWeight: '600',
+    color: '#F8FAFC',
   },
   subscriptionCard: {
-    padding: 18,
+    padding: 16,
     marginBottom: stitchSpacing.stackMd,
-    backgroundColor: stitchColors.siennaBg,
+    backgroundColor: '#111622',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.25)',
   },
   subscriptionHeader: {
     flexDirection: 'row',
@@ -461,50 +484,55 @@ const styles = StyleSheet.create({
   subscriptionTitle: {
     ...stitchTypography.labelMd,
     fontWeight: '700',
-    color: stitchColors.siennaDeep,
+    color: '#818CF8',
   },
   subscriptionDesc: {
     ...stitchTypography.bodyMd,
-    color: stitchColors.inkMuted,
+    color: '#94A3B8',
     marginBottom: 14,
   },
   groupLabel: {
     fontFamily: fontFamilies.mono,
-    fontSize: 10,
-    letterSpacing: 1.8,
-    color: stitchColors.sienna,
+    fontSize: 10.5,
+    letterSpacing: 1.2,
+    color: '#94A3B8',
     fontWeight: '700',
-    marginBottom: 10,
-    marginTop: 4,
+    marginBottom: 8,
+    marginTop: 10,
     textTransform: 'uppercase',
   },
   menuList: {
-    backgroundColor: stitchColors.surface,
-    borderRadius: stitchRadius.md,
+    backgroundColor: '#111622',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     marginBottom: stitchSpacing.stackMd,
     overflow: 'hidden',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    gap: 14,
+    gap: 12,
   },
   menuItemDivider: {
     borderTopWidth: 1,
-    borderTopColor: stitchColors.paperDeep,
+    borderTopColor: 'rgba(255, 255, 255, 0.04)',
   },
   menuItemText: {
-    ...stitchTypography.labelMd,
-    flex: 1,
+    fontFamily: fontFamilies.inter,
+    fontSize: 13.5,
     fontWeight: '600',
-    color: stitchColors.ink,
+    flex: 1,
+    color: '#F8FAFC',
   },
   portfolioCard: {
     padding: 16,
     marginBottom: stitchSpacing.stackMd,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#111622',
+    borderRadius: 16,
+    borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   portfolioHeader: {
@@ -516,11 +544,13 @@ const styles = StyleSheet.create({
   portfolioBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.25)',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingVertical: 3.5,
+    borderRadius: 8,
   },
   portfolioBadgeText: {
     color: '#F59E0B',
@@ -531,35 +561,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#EA580C',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    backgroundColor: 'rgba(249, 115, 22, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(249, 115, 22, 0.3)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 8,
   },
   boostBtnText: {
-    color: '#FFFFFF',
+    color: '#FB923C',
     fontSize: 11,
     fontWeight: '700',
   },
   portfolioTitle: {
-    ...stitchTypography.displaySm,
-    color: '#FFFFFF',
+    fontFamily: fontFamilies.outfit,
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#F8FAFC',
     marginBottom: 4,
   },
   portfolioSubtitle: {
-    ...stitchTypography.bodySm,
+    fontSize: 12,
     color: '#94A3B8',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   projectsList: {
-    gap: 10,
+    gap: 8,
   },
   projectItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: '#131927',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     gap: 10,
   },
   projectDot: {
@@ -571,7 +607,7 @@ const styles = StyleSheet.create({
   projectName: {
     color: '#F8FAFC',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   projectDesc: {
     color: '#94A3B8',
@@ -579,13 +615,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   mediaPill: {
-    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-    paddingHorizontal: 8,
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.25)',
+    paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 6,
   },
   mediaPillText: {
-    color: '#60A5FA',
+    color: '#818CF8',
     fontSize: 10,
     fontWeight: '700',
   },
