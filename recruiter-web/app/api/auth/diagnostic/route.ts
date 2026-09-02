@@ -4,6 +4,10 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   // Diagnostic endpoint — shows EXACTLY what's missing or broken in the
   // Better Auth config. NEVER expose this in production after debugging.
 

@@ -14,7 +14,7 @@ interface PromoBannerProps {
 
 export function PromoBanner({
   endDate = "2026-09-30T23:59:59Z",
-  title = "Rentrée 2026 : -50% sur Premium",
+  title = "Découvre les offres Campus 360",
   ctaLabel = "Profiter",
   ctaHref = "/tarifs",
   dismissible = true,

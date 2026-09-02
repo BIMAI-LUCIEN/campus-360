@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 const screenshots = [
   { src: "/images/app-home.png", alt: "Écran d'accueil de Campus 360", label: "Accueil" },
   { src: "/images/app-explore.png", alt: "Catalogue de PDF Campus 360", label: "Catalogue" },
-  { src: "/images/app-premium.png", alt: "Offres Premium Campus 360", label: "Premium" },
+  { src: "/images/app-premium.png", alt: "Offres Campus 360", label: "Abonnements" },
 ];
 
 export function Screenshots() {

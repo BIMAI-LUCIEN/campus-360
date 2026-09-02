@@ -43,7 +43,7 @@ type DocumentSection = {
 type DocumentEditorScreenProps = {
   documentId: string;
   onClose: () => void;
-  subscriptionTier: 'free' | 'basic' | 'premium';
+  subscriptionTier: SubscriptionTier;
   onUpgrade: () => void;
 };
 
@@ -444,7 +444,7 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
   // Export Word
   const handleExportDocx = async () => {
     if (!report) return;
-    if (subscriptionTier !== 'premium') {
+    if (!canExportDocx(subscriptionTier)) {
       Alert.alert(
         'Export Word Premium',
         "L'export Word (.docx) modifiable est réservé à l'abonnement Premium.",

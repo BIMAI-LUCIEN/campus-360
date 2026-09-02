@@ -97,6 +97,13 @@ import { DocumentsScreen } from './features/documents/DocumentsScreen';
 import { StagesScreen } from './ui/screens/StagesScreen';
 import { ApplicationsTimelineScreen } from './ui/screens/ApplicationsTimelineScreen';
 import { ResourcesScreen } from './ui/screens/ResourcesScreen';
+import {
+  SUBSCRIPTION_PLANS,
+  getSubscriptionPlan,
+  hasActiveSubscription,
+  type PaidSubscriptionTier,
+  type SubscriptionTier,
+} from './features/subscriptions/plans';
 
 const logo = require('../assets/icon.png');
 const onboardingStorageKey = 'campus-bordes.onboarding-seen';
@@ -282,7 +289,7 @@ export function AppShell() {
   const [supportModalVisible, setSupportModalVisible] = React.useState(false);
   const [balance, setBalance] = React.useState(0);
   const [iaCredits, setIaCredits] = React.useState(0);
-  const [subscriptionTier, setSubscriptionTier] = React.useState<'free' | 'basic' | 'premium'>('free');
+  const [subscriptionTier, setSubscriptionTier] = React.useState<SubscriptionTier>('free');
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] = React.useState<string | null>(null);
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [purchasedDocuments, setPurchasedDocuments] = React.useState<string[]>([]);
@@ -685,7 +692,7 @@ export function AppShell() {
   };
 
   const buyDocument = (document: CampusDocument) => {
-    const isOwned = effectivePurchasedDocuments.includes(document.id) || document.price === 0 || subscriptionTier === 'basic' || subscriptionTier === 'premium';
+    const isOwned = effectivePurchasedDocuments.includes(document.id) || document.price === 0 || hasActiveSubscription(subscriptionTier);
     if (isOwned) {
       setReadingDocument(document);
       return;
@@ -857,10 +864,10 @@ export function AppShell() {
     if (rechargePollRef.current) clearInterval(rechargePollRef.current);
   }, []);
 
-  const buySubscription = async (tier: 'basic' | 'premium') => {
+  const buySubscription = async (tier: PaidSubscriptionTier) => {
     try {
       const result = await purchaseSubscription(tier);
-      setSubscriptionTier(result.tier as 'basic' | 'premium');
+      setSubscriptionTier(result.tier as PaidSubscriptionTier);
       setSubscriptionExpiresAt(result.expiresAt);
       Alert.alert('Abonnement activé', `Tu as souscrit au forfait ${tier}.`);
       await syncStudentAccount(studentSession ?? undefined);
@@ -886,7 +893,7 @@ export function AppShell() {
   };
 
   // ── Derived state ────────────────────────────────────────────────────────
-  const hasSubscription = subscriptionTier === 'basic' || subscriptionTier === 'premium';
+  const hasSubscription = hasActiveSubscription(subscriptionTier);
   const effectivePurchasedDocuments = hasSubscription
     ? Array.from(new Set([...pdfDocuments.map((d) => d.id), ...purchasedDocuments]))
     : purchasedDocuments;
@@ -1243,7 +1250,7 @@ export function AppShell() {
                 </Pressable>
               </View>
               <Text style={styles.walletAmount}>{formatCoins(balance)} C</Text>
-              <Text style={styles.walletHint}>{subscriptionTier === 'premium' ? 'Premium' : subscriptionTier === 'basic' ? 'Basic' : 'Gratuit'} • {iaCredits} cr IA</Text>
+              <Text style={styles.walletHint}>{getSubscriptionPlan(subscriptionTier).name} • {iaCredits} cr IA</Text>
             </View>
             <View style={styles.accountQuickRow}>
               <Pressable style={styles.accountQuickAction} onPress={() => { setAccountVisible(false); openSection('library'); }}>
@@ -1256,7 +1263,7 @@ export function AppShell() {
               </Pressable>
             </View>
             <View style={{ marginTop: 8 }}>
-              <PrimaryButtonLocal label="👑 Passer en Premium" fluid onPress={() => { setAccountVisible(false); openSection('premium'); }} />
+              <PrimaryButtonLocal label="Comparer les offres" fluid onPress={() => { setAccountVisible(false); openSection('premium'); }} />
             </View>
             <View style={{ marginTop: 8 }}>
               <PrimaryButtonLocal label="Recharger le wallet" fluid onPress={() => { setAccountVisible(false); setRechargeVisible(true); }} />
@@ -1592,51 +1599,24 @@ function PremiumSection({
   onBuyIaPack,
   onRecharge,
 }: {
-  subscriptionTier: 'free' | 'basic' | 'premium';
+  subscriptionTier: SubscriptionTier;
   balance: number;
   iaCredits: number;
-  onBuySubscription: (tier: 'basic' | 'premium') => void;
+  onBuySubscription: (tier: PaidSubscriptionTier) => void;
   onBuyIaPack: (packId: 'micro' | 'standard' | 'boost') => void;
   onRecharge: () => void;
 }) {
-  const PASSES = [
-    {
-      key: 'free' as const,
-      folio: '— 01',
-      name: 'Découverte',
-      price: 'Gratuit',
-      priceUnit: "toujours",
-      kicker: 'Pour commencer',
-      body: "Tu fouilles le catalogue, tu achètes les PDFs à l'unité. C'est le pied dedans.",
-      bullets: ["Aperçu gratuit de chaque PDF", "Achat à l'unité depuis ton wallet", "5 questions IA par jour"],
-      isFeatured: false,
-      cta: 'Tu es ici',
-    },
-    {
-      key: 'basic' as const,
-      folio: '— 02',
-      name: 'Étudiant',
-      price: '1 000',
-      priceUnit: 'C / mois',
-      kicker: 'Pour les sessions intenses',
-      body: "Tout le catalogue ouvert. Tu lis, tu révises, tu reprends. L'IA attendra l'année prochaine.",
-      bullets: ["Tout le catalogue, sans limite", "Lecture hors-ligne", "Synchronisation multi-appareils"],
-      isFeatured: false,
-      cta: "S'abonner",
-    },
-    {
-      key: 'premium' as const,
-      folio: '— 03',
-      name: 'Bibliothécaire',
-      price: '2 000',
-      priceUnit: 'C / mois',
-      kicker: 'Pour ceux qui posent les bonnes questions',
-      body: "Le catalogue entier, plus 100 questions IA par mois. L'assistant te résume, t'explique, te quiz.",
-      bullets: ["Tout Découverte et Étudiant inclus", "100 crédits IA par mois", "Fiches, résumés et quiz générés"],
-      isFeatured: true,
-      cta: "Passer Bibliothécaire",
-    },
-  ];
+  const PASSES = SUBSCRIPTION_PLANS.map((plan, index) => ({
+    ...plan,
+    folio: `— 0${index + 1}`,
+    price: plan.price === 0 ? 'Gratuit' : new Intl.NumberFormat('fr-CM').format(plan.price),
+    priceUnit: plan.price === 0 ? 'toujours' : 'FCFA / mois',
+    kicker: plan.key === 'free' ? 'Pour commencer' : plan.key === 'elite' ? 'Expérience complète' : 'Pour progresser',
+    body: plan.summary,
+    bullets: [...plan.benefits],
+    isFeatured: plan.key === 'pro',
+    cta: plan.key === 'free' ? 'Tu es ici' : `Choisir ${plan.name}`,
+  }));
 
   const IA_PACKS = [
     { id: 'micro' as const, name: 'Micro', credits: 20, price: 250, note: 'Une soirée' },
@@ -1647,8 +1627,8 @@ function PremiumSection({
   return (
     <View style={[styles.premiumContainer, styles.premiumContent]}>
       <View style={styles.premiumHero}>
-        <Text style={styles.premiumEyebrow}>PREMIUM</Text>
-        <Text style={styles.premiumTitle}>Débloquez tout.</Text>
+        <Text style={styles.premiumEyebrow}>ABONNEMENTS</Text>
+        <Text style={styles.premiumTitle}>Choisis les bons outils.</Text>
         <Text style={styles.premiumSubtitle}>
           Choisis ton rythme. Change ou annule à tout moment.
         </Text>
@@ -1656,7 +1636,7 @@ function PremiumSection({
 
       <View style={styles.passStack}>
         {PASSES.map((pass) => {
-          const isCurrent = (pass.key === 'free' && subscriptionTier === 'free') || (pass.key === 'basic' && subscriptionTier === 'basic') || (pass.key === 'premium' && subscriptionTier === 'premium');
+          const isCurrent = pass.key === subscriptionTier;
           return (
             <View
               key={pass.key}
@@ -1704,7 +1684,7 @@ function PremiumSection({
 
               {pass.isFeatured ? (
                 <Pressable
-                  onPress={() => onBuySubscription('premium')}
+                  onPress={() => onBuySubscription('pro')}
                   disabled={isCurrent}
                   style={({ pressed }) => [isCurrent && { opacity: 0.5 }, pressed && !isCurrent && { opacity: 0.9 }]}
                 >
@@ -1720,7 +1700,7 @@ function PremiumSection({
               ) : (
                 <Pressable
                   style={[styles.passCta, isCurrent && { opacity: 0.5 }]}
-                  onPress={() => { if (pass.key === 'free') return; onBuySubscription(pass.key as 'basic' | 'premium'); }}
+                  onPress={() => { if (pass.key === 'free') return; onBuySubscription(pass.key); }}
                   disabled={pass.key === 'free' || isCurrent}
                 >
                   <Text style={styles.passCtaText}>{isCurrent ? 'Tu es ici' : pass.cta}</Text>

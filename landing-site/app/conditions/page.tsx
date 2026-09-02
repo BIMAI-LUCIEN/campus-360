@@ -23,10 +23,10 @@ export default function ConditionsPage() {
         <p>Pas de revente des PDFs que t&apos;achètes. Pas de redistribution. Pas de scraping massif de notre catalogue. Pas d&apos;utilisation pour former d&apos;autres modèles d&apos;IA.</p>
       </LegalSection>
       <LegalSection title="4. Tes achats">
-        <p>Une fois un PDF acheté (ou inclus dans ton Premium), il est à toi pour toujours. Tu peux le lire sur tous tes appareils connectés à ton compte.</p>
+        <p>Une fois un PDF acheté, il reste accessible sur les appareils connectés à ton compte, sous réserve des droits associés au document.</p>
       </LegalSection>
       <LegalSection title="5. Annulation et remboursement">
-        <p>Premium sans engagement. Annulation à tout moment depuis l&apos;app. Garantie satisfait ou remboursé 14 jours pour le premier abonnement.</p>
+        <p>Les abonnements Basique, Pro et Elite sont sans engagement et peuvent être annulés depuis l&apos;app. La garantie de 14 jours s&apos;applique au premier abonnement.</p>
       </LegalSection>
       <LegalSection title="6. On peut fermer ton compte si...">
         <p>Tu fais du tort à d&apos;autres étudiants (arnaque, spam, partage massif de PDFs piratés). Dans ce cas, on te prévient d&apos;abord.</p>

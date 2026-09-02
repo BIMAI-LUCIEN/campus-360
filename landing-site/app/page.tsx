@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { PromoBanner } from "@/components/promo-banner";
 import { Screenshots } from "@/components/screenshots";
 import { Download } from "@/components/download";
 import { Button } from "@/components/ui/button";
@@ -52,7 +51,6 @@ const features = [
 export default function HomePage() {
   return (
     <>
-      <PromoBanner />
       <Navbar />
       <main>
 

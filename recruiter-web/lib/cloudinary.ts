@@ -13,17 +13,23 @@ export interface CloudinaryUploadResult {
 }
 
 export const getCloudinaryConfig = () => {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dngtng7d4';
-  const apiKey = process.env.CLOUDINARY_API_KEY || '477236452447892';
-  const apiSecret = process.env.CLOUDINARY_API_SECRET || 'VPm-MMHKLgEy1aZUyPHpITD6T7k';
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+  const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
+  const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error('Cloudinary credentials are not configured.');
+  }
 
   return { cloudName, apiKey, apiSecret };
 };
 
-export const isCloudinaryConfigured = () => {
-  const { cloudName, apiKey, apiSecret } = getCloudinaryConfig();
-  return Boolean(cloudName && apiKey && apiSecret);
-};
+export const isCloudinaryConfigured = () =>
+  Boolean(
+    process.env.CLOUDINARY_CLOUD_NAME?.trim() &&
+      process.env.CLOUDINARY_API_KEY?.trim() &&
+      process.env.CLOUDINARY_API_SECRET?.trim(),
+  );
 
 export const uploadToCloudinary = async (
   bytes: Buffer,
@@ -34,9 +40,6 @@ export const uploadToCloudinary = async (
   } = {},
 ): Promise<CloudinaryUploadResult> => {
   const { cloudName, apiKey, apiSecret } = getCloudinaryConfig();
-  if (!cloudName || !apiKey || !apiSecret) {
-    throw new Error('Cloudinary credentials are not configured.');
-  }
 
   const resourceType = options.resourceType || 'image';
   const folder = options.folder || 'campus-360/documents';

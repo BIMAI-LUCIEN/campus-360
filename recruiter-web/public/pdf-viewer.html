@@ -98,6 +98,7 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     let pdfUrl = urlParams.get('url');
+    const documentId = urlParams.get('id');
     const container = document.getElementById('viewer-container');
     const statusOverlay = document.getElementById('status-overlay');
     const statusText = document.getElementById('status-text');
@@ -138,11 +139,15 @@
       if (pdfUrl.includes('cloudinary.com') && pdfUrl.includes('/image/upload/')) {
         renderCloudinaryImages(pdfUrl);
       } else {
-        const streamUrl = 'https://api.campus360b.site/api/mobile/pdf/stream?url=' + encodeURIComponent(pdfUrl);
+        const streamUrl = documentId
+          ? '/api/mobile/pdf/stream?id=' + encodeURIComponent(documentId)
+          : null;
 
         const fallbackTimer = setTimeout(() => {
           if (container.children.length === 0) {
-            statusText.innerHTML = "Chargement alternatif en cours...<br><br><a class='fallback-btn' href='" + streamUrl + "' target='_blank'>Ouvrir le document directement</a>";
+            statusText.innerHTML = streamUrl
+              ? "Chargement alternatif en cours...<br><br><a class='fallback-btn' href='" + streamUrl + "' target='_blank'>Ouvrir le document directement</a>"
+              : "Le lecteur alternatif n'est pas disponible pour ce document.";
           }
         }, 8000);
 
@@ -155,7 +160,7 @@
         };
 
         tryPdfJs(pdfUrl)
-          .catch(() => tryPdfJs(streamUrl))
+          .catch((error) => streamUrl ? tryPdfJs(streamUrl) : Promise.reject(error))
           .then(pdf => {
             clearTimeout(fallbackTimer);
             statusOverlay.style.display = 'none';
@@ -199,7 +204,8 @@
             if (pdfUrl.includes('cloudinary.com')) {
               renderCloudinaryImages(pdfUrl);
             } else {
-              window.location.replace(streamUrl);
+              if (streamUrl) window.location.replace(streamUrl);
+              else statusText.innerHTML = "Impossible de charger ce document.";
             }
           });
       }

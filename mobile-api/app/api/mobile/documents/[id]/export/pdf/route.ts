@@ -115,7 +115,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (!exportPolicy.canExportPdf) {
       return withCors(
         NextResponse.json(
-          { error: 'Un abonnement Basic ou Premium est requis pour exporter en PDF.', code: 'SUBSCRIPTION_REQUIRED' },
+          { error: 'Un abonnement Basic, Pro ou Elite est requis pour exporter en PDF.', code: 'SUBSCRIPTION_REQUIRED' },
           { status: 403 },
         ),
         request,

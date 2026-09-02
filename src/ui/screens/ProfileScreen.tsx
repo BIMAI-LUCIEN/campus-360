@@ -28,6 +28,7 @@ import {
 } from '../GlassComponents';
 import type { StudentProfile } from '../../features/auth/betterAuth';
 import type { Transaction } from '../../types';
+import { getSubscriptionPlan, type SubscriptionTier } from '../../features/subscriptions/plans';
 import {
   stitchColors,
   stitchSpacing,
@@ -43,7 +44,7 @@ interface ProfileScreenProps {
   studentProfile: StudentProfile | null;
   balance: number;
   iaCredits: number;
-  subscriptionTier: 'free' | 'basic' | 'premium';
+  subscriptionTier: SubscriptionTier;
   transactions: Transaction[];
   purchasedDocumentsCount: number;
   syncingAccount: boolean;
@@ -124,12 +125,7 @@ export function ProfileScreen({
 }: ProfileScreenProps) {
   const initials = studentProfile?.name?.slice(0, 2).toUpperCase() ?? 'CB';
   const email = studentProfile?.email ?? '—';
-  const tierLabel =
-    subscriptionTier === 'premium'
-      ? 'Bibliothécaire'
-      : subscriptionTier === 'basic'
-        ? 'Étudiant'
-        : 'Découverte';
+  const tierLabel = getSubscriptionPlan(subscriptionTier).name;
 
   return (
     <View style={styles.container}>
@@ -208,7 +204,7 @@ export function ProfileScreen({
           onPress={onPremium}
         >
           <Crown size={19} color="#FFFFFF" strokeWidth={1.75} />
-          <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Premium</Text>
+          <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Voir les offres</Text>
         </Pressable>
       </View>
 

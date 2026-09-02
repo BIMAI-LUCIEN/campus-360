@@ -70,11 +70,11 @@ const googleConfigured =
   !googleClientId.startsWith("replace") &&
   !googleClientSecret.startsWith("replace");
 
-// Secret with dev fallback
+// Development can use a local fallback, but production auth must fail closed.
 const authSecret = process.env.BETTER_AUTH_SECRET?.trim();
 const finalSecret = authSecret || "dev-only-insecure-secret-do-not-use-in-prod";
 if (!authSecret && isProd) {
-  console.warn("[auth] BETTER_AUTH_SECRET not set — using fallback in production.");
+  console.warn("[auth] BETTER_AUTH_SECRET not set — authentication is disabled.");
 }
 
 const baseURL = detectBaseUrl();
@@ -90,7 +90,7 @@ if (!googleConfigured) {
 let auth: ReturnType<typeof betterAuth> | null = null;
 let authAvailable = false;
 
-if (databasePool) {
+if (databasePool && (!isProd || Boolean(authSecret))) {
   try {
     const config: Parameters<typeof betterAuth>[0] = {
       appName: "Campus 360",
@@ -155,7 +155,7 @@ if (databasePool) {
   } catch (err) {
     console.error("[auth] Failed to initialize Better Auth:", err);
   }
-} else {
+} else if (!databasePool) {
   console.warn("[auth] No database — Better Auth disabled. Set DATABASE_URL to enable auth.");
 }
 

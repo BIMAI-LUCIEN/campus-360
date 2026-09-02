@@ -14,7 +14,7 @@ export default function RemboursementPage() {
       description="Satisfait ou remboursé pendant 14 jours, sans condition. Voici comment ça marche."
     >
       <LegalSection title="Garantie 14 jours">
-        <p>Pour ton premier abonnement Premium, tu as 14 jours pour tester sans risque. Si ça te convient pas, on te rembourse intégralement.</p>
+        <p>Pour ton premier abonnement Basique, Pro ou Elite, tu as 14 jours pour tester sans risque. Si l&apos;offre ne te convient pas, nous te remboursons intégralement.</p>
       </LegalSection>
       <LegalSection title="Achats unitaires de PDFs">
         <p>Le PDF n&apos;a pas été téléchargé ou ouvert ? On te rembourse sous 7 jours.</p>

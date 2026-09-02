@@ -1132,7 +1132,7 @@ export function PdfStudentSection({
                   ) : readerUrl ? (
                     Platform.OS === 'web' ? (
                       createElement('iframe', {
-                        src: `/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}`,
+                        src: `/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}&id=${encodeURIComponent(readerDocument.id)}`,
                         title: readerDocument.title,
                         style: {
                           width: '100%',
@@ -1143,7 +1143,7 @@ export function PdfStudentSection({
                       })
                     ) : (
                       <WebView
-                        source={{ uri: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}` }}
+                        source={{ uri: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}&id=${encodeURIComponent(readerDocument.id)}` }}
                         style={styles.inAppWebViewFull}
                         startInLoadingState
                         renderLoading={() => (
@@ -1154,6 +1154,8 @@ export function PdfStudentSection({
                         )}
                         javaScriptEnabled
                         domStorageEnabled
+                        sharedCookiesEnabled
+                        thirdPartyCookiesEnabled
                         scalesPageToFit
                       />
                     )

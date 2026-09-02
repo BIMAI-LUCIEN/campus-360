@@ -359,13 +359,13 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                   </View>
                   {Platform.OS === 'web' ? (
                     createElement('iframe', {
-                      src: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}`,
+                      src: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}&id=${encodeURIComponent(document.id)}`,
                       title: document.title,
                       style: { width: '100%', height: '100%', border: '0', backgroundColor: stitchColors.paper },
                     })
                   ) : (
                     <WebView
-                      source={{ uri: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}` }}
+                      source={{ uri: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}&id=${encodeURIComponent(document.id)}` }}
                       style={styles.webview}
                       startInLoadingState
                       renderLoading={() => (
@@ -376,6 +376,8 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                       )}
                       javaScriptEnabled
                       domStorageEnabled
+                      sharedCookiesEnabled
+                      thirdPartyCookiesEnabled
                       scalesPageToFit
                     />
                   )}

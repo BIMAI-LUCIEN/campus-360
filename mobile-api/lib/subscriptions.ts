@@ -2,7 +2,7 @@ import type { PoolClient } from 'pg';
 
 import { databasePool } from './database';
 
-export type SubscriptionTier = 'basic' | 'premium';
+export type SubscriptionTier = 'basic' | 'pro' | 'elite';
 export type SubscriptionStatus = 'active' | 'canceled' | 'expired' | 'payment_failed';
 
 export type ActiveSubscription = {
@@ -39,8 +39,9 @@ const mapRow = (row: SubRow): ActiveSubscription => ({
 });
 
 const SUBSCRIPTION_PRICES: Record<SubscriptionTier, number> = {
-  basic: 1000,
-  premium: 2000,
+  basic: 2000,
+  pro: 3500,
+  elite: 5000,
 };
 
 const SUBSCRIPTION_DURATION_DAYS = 30;
@@ -58,10 +59,10 @@ const SUBSCRIPTION_DURATION_DAYS = 30;
  */
 export const getActiveSubscription = async (
   userId: string,
-  client: PoolClient | typeof databasePool = databasePool,
+  client?: PoolClient,
 ): Promise<ActiveSubscription | null> => {
-  const ownClient = 'connect' in client ? false : true;
-  const c = ownClient ? await databasePool.connect() : (client as PoolClient);
+  const ownClient = !client;
+  const c = client ?? (await databasePool.connect());
 
   try {
     if (ownClient) await c.query('begin');
@@ -190,6 +191,13 @@ export const purchaseSubscription = async (
         await client.query('rollback');
         return { ok: false, code: 'downgrade_blocked', current: mapped };
       }
+
+      await client.query(
+        `update public.app_subscriptions
+            set status = 'expired', updated_at = now()
+          where id = $1`,
+        [existingRow.id],
+      );
     }
 
     const walletRes = await client.query(

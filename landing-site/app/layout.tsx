@@ -1,30 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Source_Serif_4, Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
-
-const sourceSerif = Source_Serif_4({
-  subsets: ["latin"],
-  weight: ["600", "700", "900"],
-  style: ["normal", "italic"],
-  variable: "--font-source-serif",
-  display: "swap",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const jbMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["500", "700"],
-  variable: "--font-jbmono",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -168,10 +145,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="fr"
-      className={`${sourceSerif.variable} ${inter.variable} ${jbMono.variable} scroll-smooth`}
-    >
+    <html lang="fr" className="scroll-smooth">
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/images/icon.png" />
