@@ -18,17 +18,17 @@ if (!process.env.DATABASE_URL) {
 }
 
 const emailArg = process.argv[2];
-const tierArg = process.argv[3] || 'premium'; // free, basic, premium
+const tierArg = process.argv[3] || 'elite'; // free, basic, pro, elite
 const coinsArg = process.argv[4] !== undefined ? parseInt(process.argv[4], 10) : 5000;
 const creditsArg = process.argv[5] !== undefined ? parseInt(process.argv[5], 10) : 100;
 
 if (!emailArg) {
   console.error('Usage: node scripts/set-premium.mjs <email> [tier] [coins] [ia_credits]');
-  console.error('Example: node scripts/set-premium.mjs student@test.com premium 10000 500');
+  console.error('Example: node scripts/set-premium.mjs student@test.com elite 10000 500');
   process.exit(1);
 }
 
-const validTiers = ['free', 'basic', 'premium'];
+const validTiers = ['free', 'basic', 'pro', 'elite'];
 if (!validTiers.includes(tierArg.toLowerCase())) {
   console.error(`Invalid tier "${tierArg}". Valid tiers are: ${validTiers.join(', ')}`);
   process.exit(1);

@@ -39,6 +39,9 @@ create table if not exists public.stage_students (
   created_at timestamptz not null default now()
 );
 
+alter table public.stage_students add column if not exists app_user_id uuid references public.app_users(id) on delete cascade;
+create unique index if not exists idx_stage_students_app_user on public.stage_students(app_user_id) where app_user_id is not null;
+
 -- Table Companies
 create table if not exists public.stage_companies (
   id uuid primary key default gen_random_uuid(),
@@ -50,6 +53,7 @@ create table if not exists public.stage_companies (
   kyb_score integer not null default 0 check (kyb_score between 0 and 100),
   status company_status not null default 'UNVERIFIED',
   is_premium boolean not null default false,
+  logo_url text,
   created_at timestamptz not null default now()
 );
 
@@ -66,6 +70,8 @@ create table if not exists public.stage_jobs (
   location text default 'Abidjan / Hybride',
   duration text default '3 à 6 mois',
   stipend text default 'Rémunéré',
+  flyer_url text,
+  video_url text,
   created_at timestamptz not null default now(),
   expires_at timestamptz not null default (now() + interval '30 days')
 );
@@ -83,6 +89,16 @@ create table if not exists public.stage_applications (
   generated_letter_text text,
   last_reminded_at timestamptz
 );
+
+alter table public.stage_companies add column if not exists logo_url text;
+alter table public.stage_jobs add column if not exists flyer_url text;
+alter table public.stage_jobs add column if not exists video_url text;
+alter table public.stage_applications add column if not exists notes text;
+delete from public.stage_applications a
+using public.stage_applications newer
+where a.student_id = newer.student_id and a.job_id = newer.job_id
+  and (a.applied_at < newer.applied_at or (a.applied_at = newer.applied_at and a.id::text < newer.id::text));
+create unique index if not exists idx_stage_apps_student_job on public.stage_applications(student_id, job_id);
 
 -- Indexes for high performance querying
 create index if not exists idx_stage_jobs_company on public.stage_jobs(company_id);

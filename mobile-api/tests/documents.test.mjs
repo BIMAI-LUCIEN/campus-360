@@ -159,6 +159,7 @@ async function run() {
     console.log('');
     // Run basic unauthenticated checks
     await smokeTests();
+    if (failed > 0) process.exit(1);
     return;
   }
 
@@ -294,16 +295,28 @@ async function smokeTests() {
     { url: '/api/health', expect: 200 },
     { url: '/api/mobile/documents', expect: 401 },
     { url: `/api/mobile/documents/${'00000000-0000-0000-0000-000000000000'}`, expect: 401 },
+    { url: '/api/mobile/stages', expect: 401 },
+    { url: '/api/mobile/stages/applications', expect: 401 },
   ];
 
-  for (const t of tests) {
+  let serverReachable = false;
+
+  for (const [index, t] of tests.entries()) {
     try {
       const res = await fetch(`${BASE_URL}${t.url}`);
-      const ok = res.status === t.expect ? '✅' : '⚠️';
+      serverReachable = true;
+      const matches = res.status === t.expect;
+      const ok = matches ? '✅' : '❌';
       const body = await res.json().catch(() => null);
       console.log(`  ${ok} ${t.url} → HTTP ${res.status} (expected ${t.expect}) ${body?.error ? '| ' + body.error : ''}`);
+      if (!matches) failed++;
     } catch (err) {
+      if (index === 0 && !serverReachable) {
+        console.log(`  ⚠️ API smoke tests skipped — no server available at ${BASE_URL}`);
+        return;
+      }
       console.log(`  ❌ ${t.url} → ${err.message}`);
+      failed++;
     }
   }
 }

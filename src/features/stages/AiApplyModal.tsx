@@ -16,7 +16,6 @@ import {
   Sparkles,
   CheckCircle2,
   Mail,
-  Download,
   X,
   Send,
   Building2,
@@ -28,7 +27,7 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { StageJob } from '../../types';
-import { generateIaApplication, type GeneratedApplicationResult } from './stagesApi';
+import { generateIaApplication, submitStageApplication, type GeneratedApplicationResult } from './stagesApi';
 
 interface AiApplyModalProps {
   visible: boolean;
@@ -61,6 +60,19 @@ export function AiApplyModal({
   const [isEditing, setIsEditing] = useState(false);
   const [editableLetter, setEditableLetter] = useState('');
   const [editableCv, setEditableCv] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const persistApplication = async () => {
+    if (!result || !job) throw new Error('Candidature non générée.');
+    setSubmitting(true);
+    try {
+      const applicationId = await submitStageApplication(job.id, editableCv, editableLetter);
+      setResult((current) => current ? { ...current, applicationId } : current);
+      return applicationId;
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (visible && job) {
@@ -121,6 +133,7 @@ export function AiApplyModal({
 
   const handleInAppApply = async () => {
     try {
+      await persistApplication();
       setStep('sent');
       onApplicationComplete?.();
     } catch (e) {
@@ -131,6 +144,7 @@ export function AiApplyModal({
   const handleOpenWhatsapp = async () => {
     if (!result?.whatsappUrl) return;
     try {
+      await persistApplication();
       await Linking.openURL(result.whatsappUrl);
       setStep('sent');
       onApplicationComplete?.();
@@ -143,30 +157,13 @@ export function AiApplyModal({
     if (!result) return;
     const mailto = `mailto:${result.recipientEmail}?subject=${result.emailSubject}&body=${encodeURIComponent(editableLetter)}`;
     try {
+      await persistApplication();
       await Linking.openURL(mailto);
       setStep('sent');
       onApplicationComplete?.();
     } catch (e) {
       Alert.alert('Info', 'Ouverture de votre messagerie...');
     }
-  };
-
-  const handleDownloadPdf = () => {
-    Alert.alert(
-      'Téléchargement Prêt',
-      'Votre dossier PDF haute fidélité est prêt.',
-      [
-        {
-          text: 'Ouvrir',
-          onPress: () => {
-            if (result?.pdfDownloadUrl) Linking.openURL(result.pdfDownloadUrl);
-            setStep('sent');
-            onApplicationComplete?.();
-          },
-        },
-        { text: 'Fermer', style: 'cancel' },
-      ]
-    );
   };
 
   return (
@@ -303,10 +300,9 @@ export function AiApplyModal({
                   </Pressable>
                 </View>
 
-                <Pressable style={styles.downloadLink} onPress={handleDownloadPdf}>
-                  <Download size={14} color="#94A3B8" />
-                  <Text style={styles.downloadLinkText}>Télécharger le PDF haute définition</Text>
-                </Pressable>
+                <Text style={styles.savedHint}>
+                  {submitting ? 'Enregistrement sécurisé…' : 'Le CV et la lettre seront conservés dans votre suivi.'}
+                </Text>
               </View>
             </View>
           )}
@@ -318,7 +314,7 @@ export function AiApplyModal({
               </View>
               <Text style={styles.sentTitle}>Candidature Transmise !</Text>
               <Text style={styles.sentDesc}>
-                Votre dossier a été enregistré dans vos candidatures. Relance automatique prévue à J+7 si aucune réponse.
+                Votre dossier a été enregistré dans vos candidatures. Vous pourrez préparer une relance depuis le suivi.
               </Text>
               <Pressable style={styles.doneBtn} onPress={onClose}>
                 <Text style={styles.doneBtnText}>Fermer et Suivre</Text>
@@ -587,18 +583,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  downloadLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    marginTop: 6,
-    gap: 6,
-  },
-  downloadLinkText: {
+  savedHint: {
     fontSize: 12,
-    color: '#94A3B8',
-    textDecorationLine: 'underline',
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 16,
   },
   sentContainer: {
     alignItems: 'center',

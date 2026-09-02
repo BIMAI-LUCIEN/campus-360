@@ -6,6 +6,7 @@ import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 
 import { publicEnv } from '../../config/env';
+import type { PaidSubscriptionTier, SubscriptionTier } from '../subscriptions/plans';
 
 export type StudentSession = {
   user: {
@@ -42,7 +43,7 @@ export type StudentProfileUpdateInput = {
 export type StudentAccount = {
   user: StudentProfile;
   wallet: { balanceCoins: number; iaCredits: number; reportCredits: number };
-  subscription: { tier: 'free' | 'basic' | 'premium'; expiresAt: string | null };
+  subscription: { tier: SubscriptionTier; expiresAt: string | null };
   purchasedDocumentIds: string[];
   purchasedPackIds: string[];
   transactions: Array<{
@@ -474,7 +475,7 @@ export const checkTopUpStatus = async (reference: string) =>
     method: 'GET',
   })).json() as Promise<{ status: string; balanceCoins?: number }>;
 
-export const purchaseSubscription = async (tier: 'basic' | 'premium') =>
+export const purchaseSubscription = async (tier: PaidSubscriptionTier) =>
   (await authFetch('/api/mobile/subscription/purchase', {
     method: 'POST',
     body: JSON.stringify({ tier }),

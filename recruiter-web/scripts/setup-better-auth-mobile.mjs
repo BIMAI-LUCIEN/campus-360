@@ -29,7 +29,7 @@ create table if not exists public.app_users (
   university text,
   faculty text,
   level text,
-  subscription_tier text not null default 'free' check (subscription_tier in ('free', 'basic', 'premium')),
+  subscription_tier text not null default 'free' check (subscription_tier in ('free', 'basic', 'pro', 'elite')),
   subscription_expires_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -37,7 +37,7 @@ create table if not exists public.app_users (
 
 alter table public.app_users add column if not exists phone text;
 alter table public.app_users add column if not exists whatsapp_phone text;
-alter table public.app_users add column if not exists subscription_tier text not null default 'free' check (subscription_tier in ('free', 'basic', 'premium'));
+alter table public.app_users add column if not exists subscription_tier text not null default 'free';
 alter table public.app_users add column if not exists subscription_expires_at timestamptz;
 
 create table if not exists public.app_wallets (

@@ -115,7 +115,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (!exportPolicy.canExportPdf) {
       return withCors(
         NextResponse.json(
-          { error: 'Un abonnement Basic ou Premium est requis pour exporter en PDF.', code: 'SUBSCRIPTION_REQUIRED' },
+          { error: 'Un abonnement Basic, Pro ou Elite est requis pour exporter en PDF.', code: 'SUBSCRIPTION_REQUIRED' },
           { status: 403 },
         ),
         request,
@@ -233,7 +233,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const contentSections = rawSections.filter((s) => s.title.toLowerCase() !== 'page de garde');
     
     // Build TOC Items with page estimates
-    let runningPage = 2; // page 2 is Fiche / Remerciements
+    let runningPage = 2;
     const tocItems: Array<{ title: string; page: number; isChapter: boolean }> = [];
 
     contentSections.forEach((s) => {
@@ -243,7 +243,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
         page: runningPage,
         isChapter,
       });
-      // Estimate pages: roughly 1-2 pages per section
       runningPage += (s.content_html && s.content_html.length > 2500) ? 2 : 1;
     });
 

@@ -41,7 +41,7 @@ create table if not exists public.profiles (
   university text,
   faculty text,
   level text,
-  subscription_tier text not null default 'free' check (subscription_tier in ('free', 'basic', 'premium')),
+  subscription_tier text not null default 'free' check (subscription_tier in ('free', 'basic', 'pro', 'elite')),
   subscription_expires_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -165,8 +165,9 @@ create table if not exists public.subscription_plans (
 
 insert into public.subscription_plans (id, name, price_coins, duration_days, ia_credits_included)
 values
-  ('basic', 'Basic', 1000, 30, 0),
-  ('premium', 'Premium', 2000, 30, 100)
+  ('basic', 'Basique', 2000, 30, 0),
+  ('pro', 'Pro', 3500, 30, 0),
+  ('elite', 'Elite', 5000, 30, 100)
 on conflict (id) do update set price_coins = excluded.price_coins, ia_credits_included = excluded.ia_credits_included;
 
 create table if not exists public.ia_packs (

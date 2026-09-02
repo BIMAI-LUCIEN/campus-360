@@ -4,6 +4,7 @@
  * Only AI calls and data persistence require the server.
  */
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { canExportDocx, previewRequiresWatermark, type SubscriptionTier } from '../subscriptions/plans';
 import {
   StyleSheet, View, Text, Pressable, SafeAreaView, ScrollView,
   TextInput, ActivityIndicator, Alert, Modal,
@@ -40,7 +41,7 @@ type DocumentSection = {
 type DocumentEditorScreenProps = {
   documentId: string;
   onClose: () => void;
-  subscriptionTier: 'free' | 'basic' | 'premium';
+  subscriptionTier: SubscriptionTier;
   onUpgrade: () => void;
 };
 
@@ -1170,7 +1171,7 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
     if (subscriptionTier === 'free') {
       Alert.alert(
         'Export réservé aux abonnés',
-        'Passe à Basic pour un PDF filigrané, ou à Premium pour un export sans filigrane.',
+        'Passe à Basique pour un PDF filigrané, ou à Pro pour un export sans filigrane.',
         [{ text: 'Plus tard', style: 'cancel' }, { text: 'Voir les offres', onPress: onUpgrade }],
       );
       return;
@@ -1218,11 +1219,11 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
 
   const handleExportDocx = useCallback(async () => {
     if (!report) return;
-    if (subscriptionTier !== 'premium') {
+    if (!canExportDocx(subscriptionTier)) {
       Alert.alert(
-        'Export Word Premium',
-        "L'export Word sans filigrane est réservé à l'abonnement Premium.",
-        [{ text: 'Plus tard', style: 'cancel' }, { text: 'Voir Premium', onPress: onUpgrade }],
+        'Export Word Elite',
+        "L'export Word sans filigrane est réservé à l'abonnement Elite.",
+        [{ text: 'Plus tard', style: 'cancel' }, { text: 'Voir Elite', onPress: onUpgrade }],
       );
       return;
     }
@@ -1321,7 +1322,7 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
             onPress={handleExportDocx}
             disabled={exporting}
           >
-            <Text style={styles.wordBtnText}>{subscriptionTier === 'premium' ? 'Word' : 'Word 🔒'}</Text>
+            <Text style={styles.wordBtnText}>{canExportDocx(subscriptionTier) ? 'Word' : 'Word 🔒'}</Text>
           </Pressable>
           <Pressable
             style={[styles.headerActionBtn, styles.pdfBtn]}
@@ -1336,7 +1337,7 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
         </View>
       </View>
 
-      {subscriptionTier !== 'premium' && (
+      {previewRequiresWatermark(subscriptionTier) && (
         <View pointerEvents="none" style={styles.previewWatermark}>
           <Text style={styles.previewWatermarkText}>CAMPUS 360 • APERÇU {subscriptionTier.toUpperCase()}</Text>
         </View>

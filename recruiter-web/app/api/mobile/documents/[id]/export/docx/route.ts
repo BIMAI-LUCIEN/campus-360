@@ -49,7 +49,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (!exportPolicy.canExportDocx) {
       return withCors(
         NextResponse.json(
-          { error: "L'export Word est réservé à l'abonnement Premium.", code: 'PREMIUM_REQUIRED' },
+          { error: "L'export Word est réservé à l'abonnement Elite.", code: 'ELITE_REQUIRED' },
           { status: 403 },
         ),
         request,

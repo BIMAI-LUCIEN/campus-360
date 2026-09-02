@@ -7,7 +7,7 @@ import { SearchableFAQ } from "@/components/searchable-faq";
 export const metadata: Metadata = {
   title: "Centre d'aide Campus 360 — FAQ, contact, WhatsApp",
   description:
-    "Trouve des réponses à tes questions sur Campus 360. Installation, paiement, catalogue, abonnement Premium.",
+    "Trouve des réponses à tes questions sur Campus 360. Installation, catalogue et abonnements.",
   alternates: { canonical: "/aide" },
   openGraph: {
     title: "Centre d'aide Campus 360",
@@ -27,7 +27,7 @@ const categories = [
       },
       {
         q: "L'app est gratuite ?",
-        a: "Oui. L'inscription est gratuite, le catalogue est consultable gratuitement, et tu as 3 PDFs offerts par mois. Pour aller plus loin, l'abonnement Premium est à 9 900 FCFA/mois (ou 4 950 avec le code RENTREE2026).",
+        a: "Oui. L'inscription et la prévisualisation sont gratuites. Les offres Basique, Pro et Elite ajoutent progressivement l'export PDF avec filigrane, l'export PDF sans filigrane, puis l'export Word.",
       },
       {
         q: "Puis-je essayer sans créer de compte ?",
@@ -76,12 +76,12 @@ const categories = [
     ],
   },
   {
-    name: "Abonnement Premium",
+    name: "Abonnements",
     icon: "⭐",
     faqs: [
       {
-        q: "Que comprend Premium ?",
-        a: "PDFs illimités, IA illimitée, mode hors-ligne prioritaire, support prioritaire, accès anticipé aux nouveaux contenus.",
+        q: "Que comprennent les offres ?",
+        a: "Basique permet l'export PDF avec filigrane, Pro permet l'export PDF sans filigrane et Elite ajoute l'export Word sans filigrane. Les détails à jour sont disponibles sur la page Tarifs.",
       },
       {
         q: "Comment annuler ?",
@@ -89,7 +89,7 @@ const categories = [
       },
       {
         q: "Puis-je partager mon compte ?",
-        a: "Non, le compte est personnel. Mais notre programme de parrainage te permet d'offrir 1 mois Premium à 3 amis chaque année.",
+        a: "Non, le compte et les droits d'export sont personnels.",
       },
     ],
   },

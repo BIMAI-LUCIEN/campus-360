@@ -1,4 +1,5 @@
 import type { StageJob, StageApplication, StageCompany, StudentProfileData, AppStatus, ApplyMethod } from '../../types';
+import { authFetch } from '../auth/betterAuth';
 
 export const SEED_COMPANIES: StageCompany[] = [
   {
@@ -197,28 +198,13 @@ export async function fetchStageJobs(params?: {
   duration?: string;
   userSkills?: string[];
 }): Promise<StageJob[]> {
-  await new Promise(r => setTimeout(r, 200));
+  const search = new URLSearchParams();
+  if (params?.query?.trim()) search.set('q', params.query.trim());
+  if (params?.sector && params.sector !== 'Tous') search.set('sector', params.sector);
+  const suffix = search.toString() ? `?${search.toString()}` : '';
+  const payload = await (await authFetch(`/api/mobile/stages${suffix}`)).json() as { jobs: StageJob[] };
 
-  let results = [...SEED_JOBS];
-
-  if (params?.sector && params.sector !== 'Tous') {
-    results = results.filter(j => 
-      j.company?.industry.toLowerCase().includes(params.sector!.toLowerCase()) ||
-      j.title.toLowerCase().includes(params.sector!.toLowerCase())
-    );
-  }
-
-  if (params?.query && params.query.trim()) {
-    const q = params.query.toLowerCase().trim();
-    results = results.filter(j =>
-      j.title.toLowerCase().includes(q) ||
-      j.description.toLowerCase().includes(q) ||
-      j.company?.name.toLowerCase().includes(q) ||
-      j.requirements.some(r => r.toLowerCase().includes(q))
-    );
-  }
-
-  return results.map(job => {
+  return payload.jobs.map(job => {
     const { score, matchingSkills } = calculateMatchScore(params?.userSkills, job.requirements);
     return {
       ...job,
@@ -233,16 +219,15 @@ export async function fetchStageJobs(params?: {
 }
 
 export async function fetchJobById(jobId: string): Promise<StageJob | null> {
-  await new Promise(r => setTimeout(r, 100));
-  const job = SEED_JOBS.find(j => j.id === jobId);
-  return job || null;
+  const jobs = await fetchStageJobs();
+  return jobs.find((job) => job.id === jobId) ?? null;
 }
 
 export type GeneratedApplicationResult = {
   applicationId: string;
   cvText: string;
   letterText: string;
-  pdfDownloadUrl: string;
+  pdfDownloadUrl?: string;
   whatsappUrl: string;
   emailSubject: string;
   emailBody: string;
@@ -316,27 +301,10 @@ ${student.email}`.trim();
   const emailSubject = encodeURIComponent(`Candidature : ${job.title} — ${student.fullName}`);
   const emailBody = encodeURIComponent(letterText);
 
-  const newAppId = 'app-' + Date.now();
-  const newApplication: StageApplication = {
-    id: newAppId,
-    studentId: 'student-current',
-    jobId: job.id,
-    status: 'PENDING',
-    appliedAt: new Date().toISOString(),
-    cvFileUrl: `https://campus360.app/storage/cv-${newAppId}.pdf`,
-    letterFileUrl: `https://campus360.app/storage/letter-${newAppId}.pdf`,
-    generatedCvText: cvText,
-    generatedLetterText: letterText,
-    job,
-  };
-
-  localApplications = [newApplication, ...localApplications];
-
   return {
-    applicationId: newAppId,
+    applicationId: '',
     cvText,
     letterText,
-    pdfDownloadUrl: `https://campus360.app/storage/cv-${newAppId}.pdf`,
     whatsappUrl,
     emailSubject,
     emailBody,
@@ -345,19 +313,34 @@ ${student.email}`.trim();
   };
 }
 
+export async function submitStageApplication(
+  jobId: string,
+  cvText: string,
+  letterText: string,
+): Promise<string> {
+  const response = await authFetch('/api/mobile/stages/apply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jobId, cvText, letterText }),
+  });
+  const payload = await response.json() as { application: { id: string } };
+  return payload.application.id;
+}
+
 export async function fetchStudentApplications(): Promise<StageApplication[]> {
-  await new Promise(r => setTimeout(r, 150));
-  return [...localApplications];
+  const payload = await (await authFetch('/api/mobile/stages/applications')).json() as {
+    applications: StageApplication[];
+  };
+  return payload.applications;
 }
 
 export async function updateApplicationStatus(applicationId: string, status: AppStatus): Promise<boolean> {
-  await new Promise(r => setTimeout(r, 100));
-  const app = localApplications.find(a => a.id === applicationId);
-  if (app) {
-    app.status = status;
-    return true;
-  }
-  return false;
+  await authFetch('/api/mobile/stages/applications', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ applicationId, status }),
+  });
+  return true;
 }
 
 export function generateFollowupReminderMessage(app: StageApplication, studentName: string): string {

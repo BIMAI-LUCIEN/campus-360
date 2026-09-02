@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, GraduationCap, Sparkles, Wallet } from "lucide-react";
+import { Check, Crown, FileText, GraduationCap } from "lucide-react";
 import { Button } from "./ui/button";
 
 const APK_URL =
@@ -9,51 +9,58 @@ const APK_URL =
 
 const plans = [
   {
-    name: "Étudiant",
+    name: "Gratuit",
     icon: GraduationCap,
     price: "Gratuit",
     description: "Pour découvrir Campus 360",
     features: [
-      "Accès au catalogue complet",
-      "Prévisualisation gratuite",
-      "3 PDF gratuits par mois",
-      "Assistant IA (5 requêtes/jour)",
+      "Rédaction et aperçu filigrané",
+      "Catalogue et achats à la carte",
+      "Aucun export de document",
     ],
     cta: "Télécharger l'app",
     ctaVariant: "secondary" as const,
     popular: false,
   },
   {
-    name: "Premium",
-    icon: Sparkles,
-    price: "9 900 FCFA",
-    description: "Pour les sérieux de la révisions",
+    name: "Basique",
+    icon: FileText,
+    price: "2 000 FCFA",
+    description: "Pour démarrer chaque mois",
     period: "/mois",
     features: [
-      "Accès illimité au catalogue",
-      "PDFs illimités",
-      "Assistant IA illimité",
-      "Fiches de révision générées",
-      "Mode hors-ligne prioritaire",
-      "Support prioritaire",
+      "5 candidatures IA",
+      "3 rédactions ou corrections",
+      "500 messages IA",
+      "PDF avec filigrane",
     ],
-    cta: "Télécharger Premium",
+    cta: "Choisir Basique",
+    ctaVariant: "secondary" as const,
+    popular: false,
+  },
+  {
+    name: "Pro",
+    icon: GraduationCap,
+    price: "3 500 FCFA",
+    description: "Pour produire sans filigrane",
+    features: [
+      "10 candidatures IA",
+      "5 rédactions ou corrections",
+      "1 000 messages IA",
+      "PDF propre et mode hors ligne",
+    ],
+    cta: "Choisir Pro",
     ctaVariant: "primary" as const,
     popular: true,
   },
   {
-    name: "Wallet",
-    icon: Wallet,
-    price: "À la carte",
-    description: "Paye uniquement ce que tu achètes",
-    features: [
-      "Recharge par Mobile Money",
-      "Cartes bancaires acceptées",
-      "Codes promo disponibles",
-      "Solde jamais expiré",
-      "Achats à l'unité dès 500 FCFA",
-    ],
-    cta: "Télécharger l'app",
+    name: "Elite",
+    icon: Crown,
+    price: "5 000 FCFA",
+    description: "Pour disposer de tous les formats",
+    period: "/mois",
+    features: ["20 candidatures IA", "10 rédactions ou corrections", "2 000 messages IA", "PDF et Word sans filigrane"],
+    cta: "Choisir Elite",
     ctaVariant: "secondary" as const,
     popular: false,
   },
@@ -81,7 +88,7 @@ export function Pricing() {
         </div>
 
         {/* Plans grid */}
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6 lg:gap-8 max-w-7xl mx-auto">
           {plans.map((plan) => {
             const Icon = plan.icon;
             return (
@@ -194,8 +201,7 @@ export function Pricing() {
 
         {/* Footer note */}
         <p className="text-center text-sm text-[var(--color-ink-light)] mt-10">
-          💳 Paiement sécurisé par Mobile Money et carte bancaire. Toutes les
-          transactions sont historisées.
+          Les achats à la carte restent disponibles sans abonnement depuis l’application.
         </p>
       </div>
     </section>

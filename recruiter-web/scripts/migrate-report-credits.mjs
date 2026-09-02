@@ -45,7 +45,7 @@ try {
     set report_credits = 3
     from public.app_users u
     where w.user_id = u.id
-      and u.subscription_tier in ('basic', 'premium')
+      and u.subscription_tier in ('basic', 'pro', 'elite')
       and u.subscription_expires_at > now()
       and w.report_credits = 0
     returning w.user_id

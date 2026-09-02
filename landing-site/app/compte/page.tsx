@@ -82,9 +82,9 @@ export default async function ComptePage() {
               style={{ background: "var(--gradient-brand)" }}
             >
               <Sparkles className="w-8 h-8 mb-3" />
-              <h3 className="font-bold font-display mb-1">Passer Premium</h3>
+              <h3 className="font-bold font-display mb-1">Choisir une offre</h3>
               <p className="text-sm text-white/80">
-                PDFs illimités, IA illimitée, mode hors-ligne.
+                Compare Basique, Pro et Elite selon tes besoins d&apos;export.
               </p>
             </Link>
           </div>

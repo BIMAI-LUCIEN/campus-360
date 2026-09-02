@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Check, GraduationCap, Sparkles, Wallet } from "lucide-react";
+import { Check, Crown, FileText, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SiteShell } from "@/components/site-shell";
 
@@ -8,66 +8,71 @@ const APK_URL =
   "https://campus360b.site/downloads/campus-360.apk";
 
 export const metadata: Metadata = {
-  title: "Tarifs Campus 360 — Gratuit, Premium, Wallet",
+  title: "Tarifs Campus 360 — Gratuit, Basique, Pro et Elite",
   description:
-    "Tarifs transparents : gratuit (3 PDFs/mois), Premium 9 900 FCFA/mois (-50% rentrée), Wallet à la carte. Sans engagement.",
+    "Tarifs transparents : Gratuit, Basique à 2 000 FCFA, Pro à 3 500 FCFA et Elite à 5 000 FCFA par mois.",
   alternates: { canonical: "/tarifs" },
   openGraph: {
     title: "Tarifs Campus 360",
-    description: "Gratuit, Premium, Wallet. Sans engagement.",
+    description: "Gratuit, Basique, Pro et Elite. Sans engagement.",
     url: "/tarifs",
   },
 };
 
 const plans = [
   {
-    name: "Étudiant",
+    name: "Gratuit",
     icon: GraduationCap,
     price: "Gratuit",
     description: "Pour découvrir Campus 360",
     features: [
-      "Accès au catalogue complet",
-      "Prévisualisation gratuite",
-      "3 PDF gratuits par mois",
-      "Assistant IA (5 requêtes/jour)",
+      "Rédaction et aperçu filigrané",
+      "Catalogue et achats à la carte",
+      "Aucun export de document",
     ],
     cta: "Télécharger l'app",
     ctaVariant: "secondary" as const,
     popular: false,
   },
   {
-    name: "Premium",
-    icon: Sparkles,
-    price: "9 900 FCFA",
-    oldPrice: "9 900 FCFA",
-    promoPrice: "4 950 FCFA",
-    description: "Pour les sérieux de la révisions",
+    name: "Basique",
+    icon: FileText,
+    price: "2 000 FCFA",
+    description: "Les essentiels mensuels",
     period: "/mois",
     features: [
-      "Accès illimité au catalogue",
-      "PDFs illimités",
-      "Assistant IA illimité",
-      "Fiches de révision générées",
-      "Mode hors-ligne prioritaire",
-      "Support prioritaire",
+      "5 candidatures IA",
+      "3 rédactions ou corrections",
+      "500 messages IA",
+      "PDF avec filigrane",
     ],
-    cta: "Passer Premium",
+    cta: "Choisir Basique",
+    ctaVariant: "secondary" as const,
+    popular: false,
+  },
+  {
+    name: "Pro",
+    icon: GraduationCap,
+    price: "3 500 FCFA",
+    description: "Pour produire sans filigrane",
+    features: [
+      "10 candidatures IA",
+      "5 rédactions ou corrections",
+      "1 000 messages IA",
+      "PDF propre et mode hors ligne",
+    ],
+    cta: "Choisir Pro",
     ctaVariant: "primary" as const,
     popular: true,
   },
   {
-    name: "Wallet",
-    icon: Wallet,
-    price: "À la carte",
-    description: "Paye uniquement ce que tu achètes",
-    features: [
-      "Recharge par Mobile Money",
-      "Cartes bancaires acceptées",
-      "Codes promo disponibles",
-      "Solde jamais expiré",
-      "Achats à l'unité dès 500 FCFA",
-    ],
-    cta: "Recharger mon wallet",
+    name: "Elite",
+    icon: Crown,
+    price: "5 000 FCFA",
+    description: "Tous les formats et volumes maximum",
+    period: "/mois",
+    features: ["20 candidatures IA", "10 rédactions ou corrections", "2 000 messages IA", "PDF et Word sans filigrane"],
+    cta: "Choisir Elite",
     ctaVariant: "secondary" as const,
     popular: false,
   },
@@ -76,7 +81,7 @@ const plans = [
 const faq = [
   {
     q: "Puis-je annuler à tout moment ?",
-    a: "Oui. Premium est sans engagement. Tu peux annuler depuis l'app ou en contactant le support. Le remboursement est garanti 14 jours.",
+    a: "Oui. Chaque offre est sans engagement et reste active jusqu'à la fin de la période en cours.",
   },
   {
     q: "Comment payer ?",
@@ -87,8 +92,8 @@ const faq = [
     a: "Oui. Tous les PDFs achetés via le wallet restent à toi pour toujours, même sans abonnement actif.",
   },
   {
-    q: "Puis-je partager mon compte Premium ?",
-    a: "Non. Le compte est personnel. Mais notre programme de parrainage te permet d'offrir 1 mois Premium à 3 amis chaque année.",
+    q: "Puis-je partager mon abonnement ?",
+    a: "Non. Le compte et les exports sont personnels.",
   },
 ];
 
@@ -97,7 +102,7 @@ export default function TarifsPage() {
     <SiteShell>
       <section className="py-20 lg:py-28 border-b border-[var(--color-ink-faint)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="kicker justify-center flex mb-6">Promo Rentrée · -50% sur Premium</p>
+          <p className="kicker justify-center flex mb-6">Quatre niveaux, des droits clairs</p>
           <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] mb-6">
             Des tarifs transparents.
           </h1>
@@ -110,7 +115,7 @@ export default function TarifsPage() {
 
       <section className="py-16 lg:py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-px bg-[var(--color-ink)]/10 border border-[var(--color-ink)]/10">
+          <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-px bg-[var(--color-ink)]/10 border border-[var(--color-ink)]/10">
             {plans.map((plan) => {
               const Icon = plan.icon;
               return (
@@ -139,34 +144,9 @@ export default function TarifsPage() {
                     </div>
                   </div>
                   <div className="mb-7">
-                    {plan.promoPrice ? (
-                      <div>
-                        <span className={`text-sm line-through mr-2 ${plan.popular ? "text-[var(--color-paper)]/50" : "text-[var(--color-ink-subtle)]"}`}>{plan.oldPrice}</span>
-                        <span className="font-display text-3xl font-extrabold tracking-[-0.02em]">
-                          {plan.promoPrice}
-                        </span>
-                        {plan.period && (
-                          <span className={`text-sm ${plan.popular ? "text-[var(--color-paper)]/65" : "text-[var(--color-ink-muted)]"}`}>
-                            {" "}
-                            {plan.period}
-                          </span>
-                        )}
-                        <div className="font-mono text-xs mt-1.5 font-semibold text-[var(--color-sienna-tone)] tracking-wide uppercase">
-                          -50% promo rentrée
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <span className="font-display text-3xl font-extrabold tracking-[-0.02em]">
-                          {plan.price}
-                        </span>
-                        {plan.period && (
-                          <span className={`text-sm ${plan.popular ? "text-[var(--color-paper)]/65" : "text-[var(--color-ink-muted)]"}`}>
-                            {" "}
-                            {plan.period}
-                          </span>
-                        )}
-                      </div>
+                    <span className="font-display text-3xl font-extrabold tracking-[-0.02em]">{plan.price}</span>
+                    {plan.period && (
+                      <span className={`text-sm ${plan.popular ? "text-[var(--color-paper)]/65" : "text-[var(--color-ink-muted)]"}`}> {plan.period}</span>
                     )}
                   </div>
                   <ul className="flex flex-col gap-3 mb-8 flex-1">
