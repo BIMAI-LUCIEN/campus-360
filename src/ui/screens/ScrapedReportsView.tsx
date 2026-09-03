@@ -23,10 +23,12 @@ import {
   Award,
   RefreshCw,
   Layers,
+  Presentation,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ScrapedStageReport } from '../../types';
 import { authFetch } from '../../features/auth/betterAuth';
+import { DefenseCoachModal } from './DefenseCoachModal';
 
 const FIELDS = [
   'Tous',
@@ -47,6 +49,7 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeField, setActiveField] = useState('Tous');
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
+  const [defenseTargetReport, setDefenseTargetReport] = useState<ScrapedStageReport | null>(null);
 
   const loadReports = async () => {
     setLoading(true);
@@ -254,6 +257,14 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
                     </Pressable>
                   ) : null}
 
+                  <Pressable
+                    style={styles.coachBtn}
+                    onPress={() => setDefenseTargetReport(item)}
+                  >
+                    <Presentation size={13} color="#FDE047" />
+                    <Text style={styles.coachBtnText}>Coach Soutenance</Text>
+                  </Pressable>
+
                   {onUseStructure && (
                     <Pressable
                       style={styles.useStructureBtn}
@@ -269,6 +280,17 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
           })
         )}
       </ScrollView>
+
+      {/* Defense Coach Modal */}
+      {defenseTargetReport && (
+        <DefenseCoachModal
+          visible={!!defenseTargetReport}
+          onClose={() => setDefenseTargetReport(null)}
+          reportTitle={defenseTargetReport.title}
+          field={defenseTargetReport.field}
+          company={defenseTargetReport.company}
+        />
+      )}
     </View>
   );
 }
@@ -494,6 +516,22 @@ const styles = StyleSheet.create({
   },
   openDocBtnText: {
     color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  coachBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.35)',
+  },
+  coachBtnText: {
+    color: '#FDE047',
     fontSize: 12,
     fontWeight: '600',
   },

@@ -16,6 +16,7 @@ from linkedin_agent import LinkedInScraperAgent
 from facebook_agent import FacebookScraperAgent
 from web_academic_agent import WebAcademicAgent
 from cameroon_jobs_agent import CameroonJobsAgent
+from ocr_flyer_agent import OCRFlyerAgent
 from ai_analyzer_agent import AIAnalyzerAgent
 from database_ingestor import DatabaseIngestor
 
@@ -28,6 +29,7 @@ class ScraperOrchestrator:
         self.facebook_agent = FacebookScraperAgent()
         self.web_agent = WebAcademicAgent()
         self.cameroon_agent = CameroonJobsAgent()
+        self.ocr_agent = OCRFlyerAgent()
         self.ai_agent = AIAnalyzerAgent()
         self.db_ingestor = DatabaseIngestor()
 
@@ -85,6 +87,20 @@ class ScraperOrchestrator:
         for idx, item in enumerate(collected_items, start=1):
             logger.info(f"[{idx}/{len(collected_items)}] Analyse IA de : {item['title'][:50]} ({item['platform']})")
             
+            # Si un flyer est disponible et que le texte est court, l'OCR Flyer enrichit l'analyse
+            if item.get("flyer_url") and len(item.get("snippet", "")) < 200:
+                try:
+                    ocr_res = self.ocr_agent.read_flyer(item["flyer_url"], item.get("snippet", ""))
+                    if ocr_res.get("success") and ocr_res.get("data"):
+                        ocr_data = ocr_res["data"]
+                        item["snippet"] = f"{item.get('snippet', '')}\n[TEXTE EXTRAIT DU FLYER]: {ocr_data.get('raw_text_extracted', '')}\nEntreprise: {ocr_data.get('company')}\nLieu: {ocr_data.get('location')}"
+                        if ocr_data.get("contact_whatsapp") and not item.get("contact_whatsapp"):
+                            item["contact_whatsapp"] = ocr_data["contact_whatsapp"]
+                        if ocr_data.get("contact_email") and not item.get("contact_email"):
+                            item["contact_email"] = ocr_data["contact_email"]
+                except Exception as ocr_err:
+                    logger.debug(f"Erreur OCR flyer ignorée : {ocr_err}")
+
             try:
                 analysis = self.ai_agent.analyze_document_content(
                     text_snippet=item.get("snippet", ""),

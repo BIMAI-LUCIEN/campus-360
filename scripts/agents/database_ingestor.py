@@ -95,6 +95,15 @@ class DatabaseIngestor:
             resp = requests.post(url, headers=self.headers, json=payload, timeout=15)
             if resp.status_code in [200, 201]:
                 logger.info(f"✅ Rapport enregistré : {payload['title'][:60]}")
+                try:
+                    from in_app_push_notifier_agent import InAppPushNotifierAgent
+                    InAppPushNotifierAgent().notify_new_stage_report(
+                        report_title=payload['title'],
+                        field=payload['field'],
+                        school=payload.get('school')
+                    )
+                except Exception as push_err:
+                    logger.debug(f"Push notification ignorée : {push_err}")
                 return {"status": "success", "data": resp.json() if resp.text else payload}
             elif resp.status_code == 409:
                 logger.info(f"ℹ️ Rapport déjà existant (doublon ignoré) : {payload['source_url']}")
@@ -151,8 +160,17 @@ class DatabaseIngestor:
             }
             if company_id:
                 job_url = f"{self.supabase_url}/rest/v1/stage_jobs"
-                requests.post(job_url, headers=self.headers, json=job_payload, timeout=15)
+                j_resp = requests.post(job_url, headers=self.headers, json=job_payload, timeout=15)
                 logger.info(f"✅ Offre de stage insérée ({location}) : {job_payload['title']}")
+                try:
+                    from in_app_push_notifier_agent import InAppPushNotifierAgent
+                    InAppPushNotifierAgent().notify_new_stage_job(
+                        job_title=job_payload['title'],
+                        company=company_name,
+                        location=location
+                    )
+                except Exception as push_err:
+                    logger.debug(f"Push notification job ignorée : {push_err}")
                 return {"status": "job_inserted"}
         except Exception as e:
             logger.warning(f"Impossible d'insérer l'offre : {e}")

@@ -618,3 +618,12 @@ export function generateFollowupReminderMessage(app: StageApplication, studentNa
   const jobTitle = app.job?.title || 'le stage';
   return `Bonjour ${company}, je me permets de faire un retour concernant ma candidature transmise le ${new Date(app.appliedAt).toLocaleDateString('fr-FR')} pour le poste de "${jobTitle}". Toujours très motivé(e) par l'opportunité de rejoindre votre équipe, je reste à votre entière disposition pour échanger. Cordialement, ${studentName}.`;
 }
+
+export async function directReachRecruiter(jobId: string, customNotes?: string) {
+  const response = await authFetch('/api/mobile/stages/direct-reach', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jobId, customNotes }),
+  });
+  return response.json();
+}
