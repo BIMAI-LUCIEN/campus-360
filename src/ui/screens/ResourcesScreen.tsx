@@ -4,12 +4,14 @@ import {
   Text,
   StyleSheet,
   Pressable,
+  Platform,
 } from 'react-native';
-import { BookOpen, Sparkles, FileText, Layers } from 'lucide-react-native';
+import { BookOpen, Sparkles, FileText, Layers, GraduationCap } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ExploreScreen } from './ExploreScreen';
 import { LibraryScreen } from './LibraryScreen';
+import { ScrapedReportsView } from './ScrapedReportsView';
 import type { CampusDocument, CampusPdfPack } from '../../types';
-
 import { WritingWorkshopModal } from './WritingWorkshopModal';
 
 interface ResourcesScreenProps {
@@ -45,37 +47,64 @@ export function ResourcesScreen({
   onRefreshDocuments = () => {},
   onOpenAssistant,
 }: ResourcesScreenProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'catalogue' | 'library'>('catalogue');
+  const [activeSubTab, setActiveSubTab] = useState<'catalogue' | 'library' | 'reports'>('catalogue');
   const [writingModalVisible, setWritingModalVisible] = useState(false);
+
+  const ownedCount = ownedDocuments.length || purchasedDocumentIds.length;
 
   return (
     <View style={styles.container}>
-      {/* Sub-tabs header for secondary features */}
+      {/* Background ambient glow */}
+      <View style={styles.glowTop} />
+
+      {/* ── Refined Obsidian Violet Header ───────────────────────── */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>Ressources & Révisions</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Pressable style={styles.writingBtn} onPress={() => setWritingModalVisible(true)}>
-              <FileText size={13} color="#818CF8" />
-              <Text style={styles.writingBtnText}>Atelier Écriture</Text>
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <View style={styles.titleBadgeRow}>
+              <GraduationCap size={18} color="#A78BFA" />
+              <Text style={styles.title}>Ressources Académiques</Text>
+            </View>
+            <Text style={styles.subtitle}>
+              Annales d'examens, fiches de révision et rapports de référence
+            </Text>
+          </View>
+
+          <View style={styles.headerActions}>
+            <Pressable
+              style={styles.writingBtn}
+              onPress={() => setWritingModalVisible(true)}
+            >
+              <FileText size={13} color="#C4B5FD" />
+              <Text style={styles.writingBtnText}>Atelier IA</Text>
             </Pressable>
+
             {onOpenAssistant && (
               <Pressable style={styles.assistantBtn} onPress={onOpenAssistant}>
-                <Sparkles size={13} color="#38BDF8" />
-                <Text style={styles.assistantBtnText}>IA Chat</Text>
+                <Sparkles size={13} color="#34D399" />
+                <Text style={styles.assistantBtnText}>Chat IA</Text>
               </Pressable>
             )}
           </View>
         </View>
 
+        {/* Modern Sub-Tab Pill Bar */}
         <View style={styles.subTabBar}>
           <Pressable
             style={[styles.subTab, activeSubTab === 'catalogue' && styles.subTabActive]}
             onPress={() => setActiveSubTab('catalogue')}
           >
-            <Layers size={14} color={activeSubTab === 'catalogue' ? '#FFFFFF' : '#94A3B8'} />
-            <Text style={[styles.subTabText, activeSubTab === 'catalogue' && styles.subTabTextActive]}>
-              Catalogue d'Épreuves
+            <Layers
+              size={14}
+              color={activeSubTab === 'catalogue' ? '#FFFFFF' : '#94A3B8'}
+            />
+            <Text
+              style={[
+                styles.subTabText,
+                activeSubTab === 'catalogue' && styles.subTabTextActive,
+              ]}
+            >
+              Épreuves ({documents.length})
             </Text>
           </Pressable>
 
@@ -83,15 +112,41 @@ export function ResourcesScreen({
             style={[styles.subTab, activeSubTab === 'library' && styles.subTabActive]}
             onPress={() => setActiveSubTab('library')}
           >
-            <BookOpen size={14} color={activeSubTab === 'library' ? '#FFFFFF' : '#94A3B8'} />
-            <Text style={[styles.subTabText, activeSubTab === 'library' && styles.subTabTextActive]}>
-              Mes Documents ({ownedDocuments.length || purchasedDocumentIds.length})
+            <BookOpen
+              size={14}
+              color={activeSubTab === 'library' ? '#FFFFFF' : '#94A3B8'}
+            />
+            <Text
+              style={[
+                styles.subTabText,
+                activeSubTab === 'library' && styles.subTabTextActive,
+              ]}
+            >
+              Bibliothèque ({ownedCount})
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.subTab, activeSubTab === 'reports' && styles.subTabActive]}
+            onPress={() => setActiveSubTab('reports')}
+          >
+            <FileText
+              size={14}
+              color={activeSubTab === 'reports' ? '#FFFFFF' : '#94A3B8'}
+            />
+            <Text
+              style={[
+                styles.subTabText,
+                activeSubTab === 'reports' && styles.subTabTextActive,
+              ]}
+            >
+              Rapports de Stage
             </Text>
           </Pressable>
         </View>
       </View>
 
-      {/* Content depending on sub-tab */}
+      {/* ── Screen Body (without duplicate nested headers) ──────── */}
       <View style={styles.body}>
         {activeSubTab === 'catalogue' ? (
           <ExploreScreen
@@ -105,12 +160,18 @@ export function ResourcesScreen({
             purchasingDocumentId={purchasingDocumentId}
             purchasingPackId={purchasingPackId}
             onRefresh={onRefreshDocuments}
+            hideHeader={true}
           />
-        ) : (
+        ) : activeSubTab === 'library' ? (
           <LibraryScreen
             ownedDocuments={ownedDocuments}
             onOpenDocument={onOpenPdf}
             onExplore={() => setActiveSubTab('catalogue')}
+            hideHeader={true}
+          />
+        ) : (
+          <ScrapedReportsView
+            onUseStructure={() => setWritingModalVisible(true)}
           />
         )}
       </View>
@@ -127,65 +188,94 @@ export function ResourcesScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090D16',
+    backgroundColor: '#090714', // Deep obsidian violet
+  },
+  glowTop: {
+    position: 'absolute',
+    top: -50,
+    right: -30,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
   },
   header: {
-    paddingTop: 12,
+    paddingTop: Platform.OS === 'ios' ? 52 : 40,
     paddingHorizontal: 16,
-    paddingBottom: 10,
-    backgroundColor: '#0F172A',
+    paddingBottom: 12,
+    backgroundColor: 'rgba(9, 7, 20, 0.95)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: 'rgba(139, 92, 246, 0.14)',
   },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 12,
+  },
+  titleBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#F8FAFC',
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 3,
+    lineHeight: 16,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
   },
   writingBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(99, 102, 241, 0.14)',
+    backgroundColor: 'rgba(124, 58, 237, 0.18)',
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
+    paddingVertical: 6,
+    borderRadius: 12,
     gap: 5,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.25)',
+    borderColor: 'rgba(139, 92, 246, 0.3)',
   },
   writingBtnText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
-    color: '#818CF8',
+    color: '#DDD6FE',
   },
   assistantBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(56, 189, 248, 0.14)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
-    gap: 5,
+    backgroundColor: 'rgba(52, 211, 153, 0.14)',
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 4,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderColor: 'rgba(52, 211, 153, 0.3)',
   },
   assistantBtnText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
-    color: '#38BDF8',
+    color: '#34D399',
   },
   subTabBar: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
+    backgroundColor: '#131024',
+    borderRadius: 14,
     padding: 3,
     gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.16)',
   },
   subTab: {
     flex: 1,
@@ -193,11 +283,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    borderRadius: 9,
+    borderRadius: 11,
     gap: 6,
   },
   subTabActive: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#7C3AED',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 3,
   },
   subTabText: {
     fontSize: 12,

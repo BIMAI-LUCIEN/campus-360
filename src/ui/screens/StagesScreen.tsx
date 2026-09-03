@@ -54,6 +54,18 @@ interface StagesScreenProps {
   onOpenWallet?: () => void;
 }
 
+const DEFAULT_BANNERS: Record<string, string> = {
+  'Tech & IA': 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=900&auto=format&fit=crop&q=80',
+  'Finance & Audit': 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=900&auto=format&fit=crop&q=80',
+  'Design UI/UX': 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=900&auto=format&fit=crop&q=80',
+  'BTP & Génie Civil': 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=900&auto=format&fit=crop&q=80',
+  'Marketing & Com': 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=900&auto=format&fit=crop&q=80',
+  'Logistique': 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=900&auto=format&fit=crop&q=80',
+  'Santé': 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=900&auto=format&fit=crop&q=80',
+  'Droit': 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=900&auto=format&fit=crop&q=80',
+  default: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=900&auto=format&fit=crop&q=80',
+};
+
 const SECTORS = [
   'Tous',
   'Tech & IA',
@@ -253,6 +265,59 @@ export function StagesScreen({
           </View>
         </View>
 
+        {/* ── Featured Popular Carousel (Inspired by Image 1) ────────────────── */}
+        {!loading && jobs.length > 0 && !searchQuery && activeSector === 'Tous' && (
+          <View style={styles.featuredSection}>
+            <View style={styles.featuredHeaderRow}>
+              <Text style={styles.featuredSectionTitle}>En vedette &amp; Populaires</Text>
+              <Pressable onPress={() => setShowTopThreeOnly(!showTopThreeOnly)}>
+                <Text style={styles.seeAllText}>{showTopThreeOnly ? 'Voir tout' : 'Top Matches'}</Text>
+              </Pressable>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.featuredScrollContent}
+            >
+              {jobs.slice(0, 5).map((featuredJob) => {
+                const bannerUri =
+                  featuredJob.flyerUrl ||
+                  DEFAULT_BANNERS[featuredJob.company?.industry || 'default'] ||
+                  DEFAULT_BANNERS.default;
+                return (
+                  <Pressable
+                    key={`featured-${featuredJob.id}`}
+                    style={styles.featuredCard}
+                    onPress={() => setSelectedDetailJob(featuredJob)}
+                  >
+                    <Image source={{ uri: bannerUri }} style={styles.featuredCardImg} resizeMode="cover" />
+                    <LinearGradient
+                      colors={['transparent', 'rgba(9, 7, 20, 0.75)', '#090714']}
+                      style={styles.featuredGradient}
+                    >
+                      <View style={styles.featuredBadge}>
+                        <Sparkles size={11} color="#34D399" />
+                        <Text style={styles.featuredBadgeText}>
+                          {featuredJob.matchScore || 92}% Match
+                        </Text>
+                      </View>
+                      <Text style={styles.featuredJobTitle} numberOfLines={1}>
+                        {featuredJob.title}
+                      </Text>
+                      <Text style={styles.featuredCompanyText} numberOfLines={1}>
+                        {featuredJob.company?.name} • {featuredJob.location || 'Abidjan'}
+                      </Text>
+                      <Text style={styles.featuredStipendText}>
+                        {featuredJob.stipend ? featuredJob.stipend.replace(/\(.*\)/, '').trim() : 'Gratification'}
+                      </Text>
+                    </LinearGradient>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
         {loading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color="#8B5CF6" />
@@ -286,6 +351,10 @@ export function StagesScreen({
             const companyInitials = job.company?.name
               ? job.company.name.slice(0, 2).toUpperCase()
               : 'CP';
+            const cardBannerUri =
+              job.flyerUrl ||
+              DEFAULT_BANNERS[job.company?.industry || 'default'] ||
+              DEFAULT_BANNERS.default;
 
             return (
               <Pressable
@@ -293,27 +362,45 @@ export function StagesScreen({
                 style={styles.jobCard}
                 onPress={() => setSelectedDetailJob(job)}
               >
-                {/* Visual Flyer Attachment if exists */}
-                {job.flyerUrl && (
-                  <View style={styles.cardMediaContainer}>
-                    <Image
-                      source={{ uri: job.flyerUrl }}
-                      style={styles.cardFlyerImage}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.mediaBadge}>
-                      <Text style={styles.mediaBadgeText}>Flyer Recruteur</Text>
+                {/* 1. Large Card Hero Image (Hotel / Flight Card Style) */}
+                <View style={styles.cardHeroImageContainer}>
+                  <Image source={{ uri: cardBannerUri }} style={styles.cardHeroImage} resizeMode="cover" />
+                  <LinearGradient
+                    colors={['rgba(0,0,0,0.15)', 'rgba(19, 16, 36, 0.92)']}
+                    style={styles.cardHeroOverlay}
+                  />
+
+                  {/* Floating Top Badges */}
+                  <View style={styles.floatingBadgesRow}>
+                    <View style={styles.floatingContractBadge}>
+                      <Text style={styles.floatingContractText}>{job.contractType || 'Stage'}</Text>
+                    </View>
+
+                    <View style={[styles.floatingMatchBadge, isHighMatch && styles.floatingMatchBadgeHigh]}>
+                      <Sparkles size={11} color={isHighMatch ? '#34D399' : '#A78BFA'} />
+                      <Text style={[styles.floatingMatchText, isHighMatch && styles.floatingMatchTextHigh]}>
+                        {matchScore}% Match IA
+                      </Text>
                     </View>
                   </View>
-                )}
 
-                {/* Card Top Row: Company Avatar + Match Score + Urgent */}
-                <View style={styles.cardHeader}>
-                  <View style={styles.companyLeftCol}>
-                    <View style={styles.companyAvatarCircle}>
-                      <Text style={styles.companyAvatarText}>{companyInitials}</Text>
+                  <View style={styles.mediaBadge}>
+                    <Sparkles size={10} color="#FDE047" />
+                    <Text style={styles.mediaBadgeText}>Visuel Recruteur</Text>
+                  </View>
+                </View>
+                {/* 2. Card Content Body */}
+                <View style={styles.cardBody}>
+                  {/* Company Info Row */}
+                  <View style={styles.companyRow}>
+                    <View style={styles.companyAvatarBox}>
+                      {job.company?.logoUrl ? (
+                        <Image source={{ uri: job.company.logoUrl }} style={styles.companyLogoImg} resizeMode="cover" />
+                      ) : (
+                        <Text style={styles.companyInitialsText}>{companyInitials}</Text>
+                      )}
                     </View>
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, paddingRight: 6 }}>
                       <View style={styles.companyNameRow}>
                         <Text style={styles.cardCompanyName} numberOfLines={1}>
                           {job.company?.name}
@@ -323,118 +410,79 @@ export function StagesScreen({
                         )}
                       </View>
                       <Text style={styles.companyIndustry} numberOfLines={1}>
-                        {job.company?.industry}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.cardBadgesCol}>
-                    <View
-                      style={[
-                        styles.matchBadge,
-                        isHighMatch ? styles.matchBadgeHigh : styles.matchBadgeStandard,
-                      ]}
-                    >
-                      <Sparkles size={11} color={isHighMatch ? '#34D399' : '#A78BFA'} />
-                      <Text
-                        style={[
-                          styles.matchBadgeText,
-                          isHighMatch ? styles.matchTextHigh : styles.matchTextStandard,
-                        ]}
-                      >
-                        {matchScore}% Match
+                        {job.company?.industry || 'Entreprise'}
                       </Text>
                     </View>
 
                     {job.isSponsored && (
-                      <View style={styles.sponsoredBadge}>
-                        <Flame size={10} color="#FBBF24" />
-                        <Text style={styles.sponsoredText}>URGENT</Text>
+                      <View style={styles.urgentBadge}>
+                        <Flame size={11} color="#FBBF24" />
+                        <Text style={styles.urgentText}>URGENT</Text>
                       </View>
                     )}
                   </View>
-                </View>
 
-                {/* Job Title */}
-                <Text style={styles.cardJobTitle}>{job.title}</Text>
+                  {/* Job Title */}
+                  <Text style={styles.cardJobTitle} numberOfLines={2}>
+                    {job.title}
+                  </Text>
 
-                {/* Tags Row (Contract, Location, Duration, Stipend) */}
-                <View style={styles.tagsRow}>
-                  {job.contractType && (
-                    <View style={styles.contractTag}>
-                      <Briefcase size={11} color="#C4B5FD" />
-                      <Text style={styles.contractTagText}>{job.contractType}</Text>
+                  {/* Location & Duration Meta */}
+                  <View style={styles.metaRow}>
+                    <View style={styles.metaItem}>
+                      <MapPin size={12} color="#94A3B8" />
+                      <Text style={styles.metaItemText}>{job.location || 'Abidjan'}</Text>
                     </View>
-                  )}
-                  <View style={styles.tagItem}>
-                    <MapPin size={11} color="#94A3B8" />
-                    <Text style={styles.tagText}>{job.location || 'Abidjan'}</Text>
-                  </View>
-                  <View style={styles.tagItem}>
-                    <Clock size={11} color="#94A3B8" />
-                    <Text style={styles.tagText}>{job.duration || '3-6 mois'}</Text>
-                  </View>
-                  {job.stipend && (
-                    <View style={styles.stipendTag}>
-                      <Coins size={11} color="#34D399" />
-                      <Text style={styles.stipendTagText}>{job.stipend}</Text>
+                    <View style={styles.metaItem}>
+                      <Clock size={12} color="#94A3B8" />
+                      <Text style={styles.metaItemText}>{job.duration || '3 à 6 mois'}</Text>
                     </View>
-                  )}
-                </View>
+                  </View>
 
-                {/* Skills tags */}
-                <View style={styles.skillsRow}>
-                  {job.requirements.slice(0, 4).map((skill, index) => {
-                    const isMatching = job.matchingSkills?.includes(skill);
-                    return (
-                      <View
-                        key={index}
-                        style={[styles.skillPill, isMatching && styles.skillPillMatching]}
-                      >
-                        {isMatching && (
-                          <Check size={10} color="#DDD6FE" style={{ marginRight: 3 }} />
-                        )}
-                        <Text
-                          style={[
-                            styles.skillPillText,
-                            isMatching && styles.skillPillTextMatching,
-                          ]}
+                  {/* Skills Pills */}
+                  <View style={styles.skillsRow}>
+                    {job.requirements.slice(0, 3).map((skill, index) => {
+                      const isMatching = job.matchingSkills?.includes(skill);
+                      return (
+                        <View
+                          key={index}
+                          style={[styles.skillPill, isMatching && styles.skillPillMatching]}
                         >
-                          {skill}
-                        </Text>
+                          {isMatching && (
+                            <Check size={10} color="#DDD6FE" style={{ marginRight: 3 }} />
+                          )}
+                          <Text
+                            style={[
+                              styles.skillPillText,
+                              isMatching && styles.skillPillTextMatching,
+                            ]}
+                          >
+                            {skill}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                    {job.requirements.length > 3 && (
+                      <View style={styles.skillPill}>
+                        <Text style={styles.skillPillText}>+{job.requirements.length - 3}</Text>
                       </View>
-                    );
-                  })}
-                  {job.requirements.length > 4 && (
-                    <View style={styles.skillPill}>
-                      <Text style={styles.skillPillText}>+{job.requirements.length - 4}</Text>
+                    )}
+                  </View>
+
+                  {/* Divider */}
+                  <View style={styles.cardDivider} />
+
+                  {/* Bottom Row: Stipend on Left & Pill Button on Right */}
+                  <View style={styles.cardBottomRow}>
+                    <View style={styles.stipendCol}>
+                      <Text style={styles.stipendLabel}>Indemnité mensuelle</Text>
+                      <Text style={styles.stipendAmount}>
+                        {job.stipend ? job.stipend.replace(/\(.*\)/, '').trim() : 'Gratification'}
+                      </Text>
                     </View>
-                  )}
-                </View>
-
-                {/* Action CTA & Share Button */}
-                <View style={styles.cardFooter}>
-                  <Pressable
-                    style={styles.shareBtn}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleShareReferral(job);
-                    }}
-                  >
-                    <Share2 size={13} color="#A78BFA" />
-                    <Text style={styles.shareBtnText}>Partager</Text>
-                  </Pressable>
-
-                  <View style={styles.cardFooterRight}>
-                    <Pressable
-                      style={styles.detailBtn}
-                      onPress={() => setSelectedDetailJob(job)}
-                    >
-                      <Text style={styles.detailBtnText}>Détails</Text>
-                    </Pressable>
 
                     <Pressable
-                      style={styles.applyBtn}
+                      style={styles.applyPillBtn}
                       onPress={(e) => {
                         e.stopPropagation();
                         setApplyingJob(job);
@@ -442,12 +490,12 @@ export function StagesScreen({
                     >
                       <LinearGradient
                         colors={['#8B5CF6', '#7C3AED']}
-                        style={styles.applyGradient}
+                        style={styles.applyPillGradient}
                         start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
+                        end={{ x: 1, y: 0 }}
                       >
                         <Sparkles size={12} color="#FFFFFF" />
-                        <Text style={styles.applyBtnText}>Postuler avec l'IA</Text>
+                        <Text style={styles.applyPillBtnText}>Postuler 1-clic</Text>
                       </LinearGradient>
                     </Pressable>
                   </View>
@@ -826,64 +874,204 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Job Card
-  jobCard: {
-    backgroundColor: '#131024',
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.16)',
+  // ── Featured Popular Carousel (Image 1 "Popular Destinations" style) ──────
+  featuredSection: {
+    marginBottom: 20,
   },
-  cardMediaContainer: {
-    width: '100%',
-    height: 120,
-    borderRadius: 12,
-    overflow: 'hidden',
+  featuredHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
     marginBottom: 12,
+  },
+  featuredSectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#F8FAFC',
+    letterSpacing: -0.2,
+  },
+  seeAllText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#A78BFA',
+  },
+  featuredScrollContent: {
+    gap: 12,
+    paddingRight: 16,
+  },
+  featuredCard: {
+    width: 220,
+    height: 170,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#131024',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
     position: 'relative',
   },
-  cardFlyerImage: {
+  featuredCardImg: {
     width: '100%',
     height: '100%',
+    position: 'absolute',
+  },
+  featuredGradient: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    padding: 12,
+  },
+  featuredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(9, 7, 20, 0.75)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 9999,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(52, 211, 153, 0.4)',
+  },
+  featuredBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#34D399',
+  },
+  featuredJobTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  featuredCompanyText: {
+    fontSize: 11,
+    color: '#CBD5E1',
+    marginBottom: 4,
+  },
+  featuredStipendText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#34D399',
+  },
+
+  // ── Main Job Card (Hotel / Offer Card Style with 20px Radius & Elevation) ──
+  jobCard: {
+    backgroundColor: '#131024',
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.18)',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  cardHeroImageContainer: {
+    width: '100%',
+    height: 155,
+    position: 'relative',
+    backgroundColor: '#090714',
+  },
+  cardHeroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  cardHeroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(9, 7, 20, 0.25)',
   },
   mediaBadge: {
     position: 'absolute',
     bottom: 8,
     right: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  mediaBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    gap: 8,
-  },
-  companyLeftCol: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    flex: 1,
+    gap: 4,
+    backgroundColor: 'rgba(9, 7, 20, 0.85)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(253, 224, 71, 0.35)',
   },
-  companyAvatarCircle: {
-    width: 36,
-    height: 36,
+  mediaBadgeText: {
+    color: '#DDD6FE',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  floatingBadgesRow: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  floatingContractBadge: {
+    backgroundColor: 'rgba(9, 7, 20, 0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+  },
+  floatingContractText: {
+    color: '#F8FAFC',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  floatingMatchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(9, 7, 20, 0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.4)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+  },
+  floatingMatchBadgeHigh: {
+    borderColor: 'rgba(52, 211, 153, 0.5)',
+    backgroundColor: 'rgba(6, 44, 28, 0.85)',
+  },
+  floatingMatchText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#C4B5FD',
+  },
+  floatingMatchTextHigh: {
+    color: '#34D399',
+  },
+  cardBody: {
+    padding: 16,
+  },
+  companyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 10,
+  },
+  companyAvatarBox: {
+    width: 38,
+    height: 38,
     borderRadius: 12,
     backgroundColor: 'rgba(124, 58, 237, 0.22)',
     borderWidth: 1,
     borderColor: 'rgba(139, 92, 246, 0.35)',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  companyAvatarText: {
+  companyLogoImg: {
+    width: '100%',
+    height: '100%',
+  },
+  companyInitialsText: {
     color: '#DDD6FE',
     fontSize: 13,
     fontWeight: '800',
@@ -891,139 +1079,69 @@ const styles = StyleSheet.create({
   companyNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
   },
   cardCompanyName: {
-    fontSize: 13,
-    color: '#CBD5E1',
+    fontSize: 13.5,
+    color: '#E2E8F0',
     fontWeight: '700',
   },
   companyIndustry: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#94A3B8',
     marginTop: 1,
   },
-  cardBadgesCol: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  matchBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 4,
-  },
-  matchBadgeHigh: {
-    backgroundColor: 'rgba(52, 211, 153, 0.16)',
-    borderColor: 'rgba(52, 211, 153, 0.35)',
-  },
-  matchBadgeStandard: {
-    backgroundColor: 'rgba(124, 58, 237, 0.16)',
-    borderColor: 'rgba(139, 92, 246, 0.3)',
-  },
-  matchBadgeText: {
-    fontSize: 10.5,
-    fontWeight: '800',
-  },
-  matchTextHigh: {
-    color: '#34D399',
-  },
-  matchTextStandard: {
-    color: '#C4B5FD',
-  },
-  sponsoredBadge: {
+  urgentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(245, 158, 11, 0.14)',
     borderWidth: 1,
     borderColor: 'rgba(245, 158, 11, 0.3)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
     gap: 3,
   },
-  sponsoredText: {
-    fontSize: 9,
+  urgentText: {
+    fontSize: 9.5,
     fontWeight: '800',
     color: '#FBBF24',
   },
   cardJobTitle: {
-    fontSize: 15.5,
+    fontSize: 16.5,
     fontWeight: '800',
     color: '#F8FAFC',
-    lineHeight: 21,
-    marginTop: 4,
+    lineHeight: 22,
     marginBottom: 8,
   },
-  tagsRow: {
+  metaRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
+    alignItems: 'center',
+    gap: 12,
     marginBottom: 10,
   },
-  contractTag: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(124, 58, 237, 0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
   },
-  contractTagText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#DDD6FE',
-  },
-  tagItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#0E0B1F',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.14)',
-    borderRadius: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  tagText: {
-    fontSize: 11,
+  metaItemText: {
+    fontSize: 12,
     color: '#94A3B8',
-  },
-  stipendTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(16, 185, 129, 0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.28)',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  stipendTagText: {
-    fontSize: 11,
-    color: '#34D399',
-    fontWeight: '700',
   },
   skillsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 5,
-    marginBottom: 12,
+    gap: 6,
+    marginBottom: 14,
   },
   skillPill: {
-    backgroundColor: '#0E0B1F',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     paddingHorizontal: 8,
-    paddingVertical: 3.5,
+    paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.14)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   skillPillMatching: {
     flexDirection: 'row',
@@ -1032,66 +1150,54 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(139, 92, 246, 0.35)',
   },
   skillPillText: {
-    fontSize: 10.5,
+    fontSize: 11,
     color: '#94A3B8',
   },
   skillPillTextMatching: {
     color: '#DDD6FE',
     fontWeight: '700',
   },
-  cardFooter: {
+  cardDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+    marginBottom: 12,
+  },
+  cardBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(139, 92, 246, 0.12)',
   },
-  cardFooterRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  stipendCol: {
+    flex: 1,
   },
-  shareBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-  },
-  shareBtnText: {
-    fontSize: 11.5,
-    color: '#A78BFA',
+  stipendLabel: {
+    fontSize: 10.5,
+    color: '#94A3B8',
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 2,
   },
-  detailBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    backgroundColor: '#0E0B1F',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.22)',
+  stipendAmount: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#34D399',
   },
-  detailBtnText: {
-    fontSize: 11.5,
-    color: '#CBD5E1',
-    fontWeight: '600',
-  },
-  applyBtn: {
-    borderRadius: 10,
+  applyPillBtn: {
+    borderRadius: 9999,
     overflow: 'hidden',
   },
-  applyGradient: {
+  applyPillGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 7,
-    paddingHorizontal: 13,
-    gap: 5,
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
-  applyBtnText: {
+  applyPillBtnText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '800',
   },
 
   // Modal

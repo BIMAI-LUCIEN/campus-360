@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   ArrowRight,
@@ -15,6 +15,11 @@ import {
   CheckCircle2,
   type LucideIcon,
 } from 'lucide-react-native';
+
+const ICON_STAGE_3D = require('../../assets/icon_stage_3d.jpg');
+const ICON_DOCUMENTS_3D = require('../../assets/icon_documents_3d.jpg');
+const ICON_ANNALES_3D = require('../../assets/icon_annales_3d.jpg');
+const ICON_CANDIDATURES_3D = require('../../assets/icon_candidatures_3d.jpg');
 
 import { authFetch } from '../../features/auth/betterAuth';
 import { fetchStageJobs, fetchStudentApplications } from '../../features/stages/stagesApi';
@@ -59,6 +64,7 @@ type QuickAction = {
   detail: string;
   badge?: string;
   Icon: LucideIcon;
+  image?: any;
   color: string;
   tint: string;
   onPress: () => void;
@@ -163,9 +169,10 @@ export function HomeScreen({
     {
       key: 'stages',
       label: 'Stages',
-      detail: 'Offres & PFE',
+      detail: '12 offres actives',
       badge: 'Nouveau',
       Icon: BriefcaseBusiness,
+      image: ICON_STAGE_3D,
       color: '#A78BFA',
       tint: 'rgba(167, 139, 250, 0.16)',
       onPress: onStages,
@@ -176,6 +183,7 @@ export function HomeScreen({
       detail: 'Rapports & CV',
       badge: 'Word AI',
       Icon: FilePlus2,
+      image: ICON_DOCUMENTS_3D,
       color: '#EC4899',
       tint: 'rgba(236, 72, 153, 0.16)',
       onPress: onDocuments,
@@ -185,6 +193,7 @@ export function HomeScreen({
       label: 'Annales',
       detail: 'Examens & TD',
       Icon: BookOpen,
+      image: ICON_ANNALES_3D,
       color: '#38BDF8',
       tint: 'rgba(56, 189, 248, 0.16)',
       onPress: onResources,
@@ -194,6 +203,7 @@ export function HomeScreen({
       label: 'Candidatures',
       detail: 'Suivi en direct',
       Icon: Compass,
+      image: ICON_CANDIDATURES_3D,
       color: '#34D399',
       tint: 'rgba(52, 211, 153, 0.16)',
       onPress: onApplications,
@@ -266,9 +276,13 @@ export function HomeScreen({
               onPress={action.onPress}
               style={({ pressed }) => [styles.gridItem, pressed && styles.pressed]}
             >
-              <View style={[styles.gridIconWrap, { backgroundColor: action.tint }]}>
-                <action.Icon size={20} color={action.color} strokeWidth={2.2} />
-              </View>
+              {action.image ? (
+                <Image source={action.image} style={styles.gridImage3D} resizeMode="cover" />
+              ) : (
+                <View style={[styles.gridIconWrap, { backgroundColor: action.tint }]}>
+                  <action.Icon size={20} color={action.color} strokeWidth={2.2} />
+                </View>
+              )}
               <View style={styles.gridCopy}>
                 <View style={styles.gridLabelRow}>
                   <Text style={styles.gridLabel}>{action.label}</Text>
@@ -288,34 +302,33 @@ export function HomeScreen({
 
       {/* ── Priority Action Card (Inspired by Mockup 1 & 2) ─────────── */}
       <View style={styles.section}>
-        <Text style={styles.sectionHeading}>Quick Access</Text>
         <LinearGradient
-          colors={['#8B5CF6', '#6D28D9', '#3B0764']}
-          start={brandGradient.diagonal.start}
-          end={brandGradient.diagonal.end}
-          style={styles.priorityBorder}
+          colors={['#171131', '#110D25']}
+          style={styles.priorityCard}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
-          <View style={styles.priorityCard}>
-            <View style={styles.priorityTopline}>
-              <View style={styles.priorityBadge}>
-                <Sparkles size={13} color="#E9D5FF" />
-                <Text style={styles.priorityEyebrow}>{priority.eyebrow}</Text>
-              </View>
-              {loadingPriority && <ActivityIndicator size="small" color="#A78BFA" />}
+          <View style={styles.priorityGlowOrb} />
+
+          <View style={styles.priorityHeaderRow}>
+            <View style={styles.priorityEyebrowPill}>
+              <Sparkles size={11} color="#A78BFA" />
+              <Text style={styles.priorityEyebrow}>{priority.eyebrow}</Text>
             </View>
 
-            <Text style={styles.priorityTitle}>{priority.title}</Text>
-            <Text style={styles.priorityDescription}>{priority.description}</Text>
+            {loadingPriority && (
+              <ActivityIndicator size="small" color="#A78BFA" style={{ transform: [{ scale: 0.8 }] }} />
+            )}
+          </View>
 
+          <Text style={styles.priorityTitle}>{priority.title}</Text>
+          <Text style={styles.priorityDesc}>{priority.description}</Text>
+
+          <View style={styles.priorityFooter}>
             {typeof priority.progress === 'number' && (
-              <View style={styles.progressBlock}>
-                <View style={styles.progressTrack}>
-                  <LinearGradient
-                    colors={['#A78BFA', '#7C3AED']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={[styles.progressFill, { width: `${Math.min(100, priority.progress)}%` }]}
-                  />
+              <View style={styles.progressRow}>
+                <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarFill, { width: `${priority.progress}%` }]} />
                 </View>
                 <Text style={styles.progressValue}>{priority.progress}%</Text>
               </View>
@@ -355,11 +368,38 @@ export function HomeScreen({
                   onPress={onStages}
                   style={({ pressed }) => [styles.homeJobCard, pressed && styles.pressed]}
                 >
+                  {job.flyerUrl && (
+                    <View style={styles.homeJobMediaWrap}>
+                      <Image
+                        source={{ uri: job.flyerUrl }}
+                        style={styles.homeJobMediaImage}
+                        resizeMode="cover"
+                      />
+                      <LinearGradient
+                        colors={['transparent', 'rgba(19, 16, 36, 0.95)']}
+                        style={styles.homeJobMediaOverlay}
+                      />
+                      {job.contractType && (
+                        <View style={styles.homeJobOverlayContract}>
+                          <Text style={styles.homeJobOverlayContractText}>{job.contractType}</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
                   <View style={styles.homeJobTopRow}>
                     <View style={styles.homeJobCompanyCol}>
-                      <View style={styles.homeJobAvatar}>
-                        <Text style={styles.homeJobAvatarText}>{compInitials}</Text>
-                      </View>
+                      {job.company?.logoUrl ? (
+                        <Image
+                          source={{ uri: job.company.logoUrl }}
+                          style={styles.homeJobAvatarImg}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.homeJobAvatar}>
+                          <Text style={styles.homeJobAvatarText}>{compInitials}</Text>
+                        </View>
+                      )}
                       <View style={{ flex: 1 }}>
                         <Text style={styles.homeJobTitle} numberOfLines={1}>
                           {job.title}
@@ -382,11 +422,6 @@ export function HomeScreen({
                   </View>
 
                   <View style={styles.homeJobTagsRow}>
-                    {job.contractType && (
-                      <View style={styles.homeJobContractTag}>
-                        <Text style={styles.homeJobContractTagText}>{job.contractType}</Text>
-                      </View>
-                    )}
                     <View style={styles.homeJobTagItem}>
                       <MapPin size={10} color="#94A3B8" />
                       <Text style={styles.homeJobTagText}>{job.location || 'Abidjan'}</Text>
@@ -719,6 +754,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  priorityGlowOrb: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+  },
+  priorityHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  priorityEyebrowPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(124, 58, 237, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(124, 58, 237, 0.35)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
   priorityBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -735,6 +796,33 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.8,
     color: '#DDD6FE',
+  },
+  priorityDesc: {
+    fontSize: 13,
+    color: '#94A3B8',
+    lineHeight: 18,
+    marginTop: 6,
+  },
+  priorityFooter: {
+    marginTop: 14,
+  },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  progressBarBg: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+    backgroundColor: '#1E1438',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: '#34D399',
   },
   priorityTitle: {
     fontSize: 18,
@@ -937,6 +1025,54 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     color: '#34D399',
     fontWeight: '700',
+  },
+  // 3D Soft Claymorphism Grid Icons
+  gridImage3D: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.35)',
+  },
+
+  // Home Job Media Wrap
+  homeJobMediaWrap: {
+    width: '100%',
+    height: 100,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 10,
+    position: 'relative',
+  },
+  homeJobMediaImage: {
+    width: '100%',
+    height: '100%',
+  },
+  homeJobMediaOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  homeJobOverlayContract: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(9, 7, 20, 0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  homeJobOverlayContractText: {
+    color: '#DDD6FE',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  homeJobAvatarImg: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.35)',
   },
 
   pressed: {

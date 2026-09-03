@@ -37,9 +37,10 @@ interface ExploreScreenProps {
   error: string;
   onBuyDocument: (doc: CampusDocument) => void;
   onBuyPack: (pack: CampusPdfPack) => void;
-  purchasingDocumentId: string | null;
-  purchasingPackId: string | null;
+  purchasingDocumentId?: string | null;
+  purchasingPackId?: string | null;
   onRefresh: () => void;
+  hideHeader?: boolean;
 }
 
 export function ExploreScreen({
@@ -51,6 +52,7 @@ export function ExploreScreen({
   onBuyDocument,
   onBuyPack,
   onRefresh,
+  hideHeader = false,
 }: ExploreScreenProps) {
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('Tous');
@@ -104,14 +106,16 @@ export function ExploreScreen({
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerPad}>
-        <ScreenMasthead
-          kicker="Le Catalogue"
-          title="Explorer"
-          folio={`${documents.length} PDF`}
-          subtitle="Cours, TD et annales d'examens."
-        />
-      </View>
+      {!hideHeader && (
+        <View style={styles.headerPad}>
+          <ScreenMasthead
+            kicker="Le Catalogue"
+            title="Explorer"
+            folio={`${documents.length} PDF`}
+            subtitle="Cours, TD et annales d'examens."
+          />
+        </View>
+      )}
 
       {/* Search */}
       <View style={styles.searchSection}>

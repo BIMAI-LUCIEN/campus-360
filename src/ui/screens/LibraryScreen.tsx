@@ -9,25 +9,33 @@ interface LibraryScreenProps {
   ownedDocuments: CampusDocument[];
   onOpenDocument: (doc: CampusDocument) => void;
   onExplore?: () => void;
+  hideHeader?: boolean;
 }
 
-export function LibraryScreen({ ownedDocuments, onOpenDocument, onExplore }: LibraryScreenProps) {
+export function LibraryScreen({
+  ownedDocuments,
+  onOpenDocument,
+  onExplore,
+  hideHeader = false,
+}: LibraryScreenProps) {
   const count = ownedDocuments.length;
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerPad}>
-        <ScreenMasthead
-          kicker="Ma Bibliothèque"
-          title="Mes lectures"
-          folio={`${count} PDF`}
-          subtitle={
-            count === 0
-              ? 'Vos documents acquis vous attendront ici.'
-              : `${count} document${count !== 1 ? 's' : ''} acqui${count !== 1 ? 's' : ''}, prêt${count !== 1 ? 's' : ''} à relire.`
-          }
-        />
-      </View>
+      {!hideHeader && (
+        <View style={styles.headerPad}>
+          <ScreenMasthead
+            kicker="Ma Bibliothèque"
+            title="Mes lectures"
+            folio={`${count} PDF`}
+            subtitle={
+              count === 0
+                ? 'Vos documents acquis vous attendront ici.'
+                : `${count} document${count !== 1 ? 's' : ''} acqui${count !== 1 ? 's' : ''}, prêt${count !== 1 ? 's' : ''} à relire.`
+            }
+          />
+        </View>
+      )}
 
       {count === 0 ? (
         <EmptyState

@@ -134,3 +134,24 @@ export type CampusPdfPack = {
   createdAt: string;
 };
 
+export type ScrapedStageReport = {
+  id: string;
+  title: string;
+  theme?: string;
+  author?: string;
+  school?: string;
+  company?: string;
+  field: string;
+  level?: string;
+  academic_year?: string;
+  abstract?: string;
+  table_of_contents?: string[];
+  file_url: string;
+  source_platform: string;
+  source_url: string;
+  tags?: string[];
+  quality_score: number;
+  view_count?: number;
+  download_count?: number;
+  created_at: string;
+};
