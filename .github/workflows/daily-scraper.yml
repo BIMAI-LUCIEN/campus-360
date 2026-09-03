@@ -1,0 +1,46 @@
+name: Daily AI Scraper Cameroon Jobs & Stage Reports
+
+on:
+  schedule:
+    # 09:00 UTC = 10:00 WAT (Heure locale du Cameroun) tous les jours
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      query:
+        description: 'Secteur ou mot-clé à scraper'
+        required: false
+        default: 'stage emploi Cameroun'
+      limit:
+        description: 'Nombre de résultats par plateforme'
+        required: false
+        default: '10'
+
+jobs:
+  scrape-and-ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150 # Permet d'exécuter la session jusqu'à 2h+ si nécessaire
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run Cameroon Multi-Agent Scraper Pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          echo "🚀 Démarrage du scraping quotidien 10h-12h pour le Cameroun..."
+          python scripts/agents/run_scraper.py --platforms CAMEROON_JOBS,LINKEDIN,FACEBOOK,ACADEMIC_WEB --query "${{ github.event.inputs.query || 'stage Cameroun Douala Yaoundé' }}" --limit ${{ github.event.inputs.limit || 8 }}

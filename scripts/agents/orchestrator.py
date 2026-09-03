@@ -15,6 +15,7 @@ if hasattr(sys.stderr, 'reconfigure'):
 from linkedin_agent import LinkedInScraperAgent
 from facebook_agent import FacebookScraperAgent
 from web_academic_agent import WebAcademicAgent
+from cameroon_jobs_agent import CameroonJobsAgent
 from ai_analyzer_agent import AIAnalyzerAgent
 from database_ingestor import DatabaseIngestor
 
@@ -26,6 +27,7 @@ class ScraperOrchestrator:
         self.linkedin_agent = LinkedInScraperAgent()
         self.facebook_agent = FacebookScraperAgent()
         self.web_agent = WebAcademicAgent()
+        self.cameroon_agent = CameroonJobsAgent()
         self.ai_agent = AIAnalyzerAgent()
         self.db_ingestor = DatabaseIngestor()
 
@@ -34,7 +36,7 @@ class ScraperOrchestrator:
         Exécute le cycle complet : Collecte -> Analyse IA -> Sauvegarde.
         """
         if not platforms:
-            platforms = ["LINKEDIN", "FACEBOOK", "ACADEMIC_WEB"]
+            platforms = ["CAMEROON_JOBS", "LINKEDIN", "FACEBOOK", "ACADEMIC_WEB"]
 
         logger.info(f"🚀 Lancement de la mission de scraping multi-agents : Mot-clé='{query}', Plateformes={platforms}")
         start_time = time.time()
@@ -45,6 +47,13 @@ class ScraperOrchestrator:
         collected_items = []
 
         # 2. Phase de Collecte
+        if "CAMEROON_JOBS" in platforms:
+            try:
+                cam_items = self.cameroon_agent.search_cameroon_jobs(query=query, max_results_per_query=limit_per_platform)
+                collected_items.extend(cam_items)
+            except Exception as e:
+                logger.error(f"Erreur Agent Cameroun Jobs : {e}")
+
         if "LINKEDIN" in platforms:
             try:
                 li_items = self.linkedin_agent.search_linkedin_reports(query=f"rapport de stage {query}", max_results=limit_per_platform)

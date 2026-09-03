@@ -23,7 +23,7 @@ class AIAnalyzerAgent:
         rapport de stage, d'un mémoire ou d'une offre, et extrait les métadonnées.
         """
         prompt = f"""
-Tu es l'Agent IA d'analyse académique de Campus 360 en Afrique Francophone.
+Tu es l'Agent IA d'analyse de Campus 360 pour le Cameroun et l'Afrique Francophone.
 Analyse les informations suivantes extraites de {platform} :
 
 Titre source : {source_title}
@@ -31,37 +31,38 @@ URL source : {source_url}
 Contenu / Extrait :
 {text_snippet[:3500]}
 
-Détermine s'il s'agit d'un VRAI rapport de stage académique (ou mémoire), ou bien d'une OFFRE de stage, ou d'autre chose.
+Détermine s'il s'agit :
+1. D'une OFFRE DE STAGE ou D'EMPLOI (recrutement, recherche de stagiaire, opportunité professionnelle).
+2. D'un RAPPORT DE STAGE ACADÉMIQUE ou MÉMOIRE (document d'étudiant, travail de fin d'études).
+3. D'autre chose hors-sujet.
+
+SI c'est une offre de stage, une opportunité d'emploi OU un rapport de stage, mets OBLIGATOIREMENT "is_relevant": true !
+
 Réponds STRICTEMENT avec un objet JSON respectant exactement cette structure :
 
 {{
   "is_relevant": true ou false,
-  "document_type": "RAPPORT_DE_STAGE" ou "MEMOIRE" ou "OFFRE_DE_STAGE" ou "AUTRE",
-  "title": "Titre explicite et soigné du document",
-  "theme": "Sujet ou problématique centrale traitée",
-  "author": "Nom complet de l'étudiant/auteur si identifié, ou null",
-  "school": "Nom de l'université, école ou institut (ex: Université de Douala, INP-HB, etc.) ou null",
-  "company": "Nom de l'entreprise d'accueil ou partenaire ou null",
-  "field": "Filière / Spécialité (ex: Informatique / Génie Logiciel, Réseaux & Télécoms, Comptabilité & Gestion, Marketing, etc.)",
-  "level": "Niveau académique estimé (BTS, DUT, Licence, Master, Ingénieur)",
-  "academic_year": "Année académique (ex: 2023-2024) ou null",
-  "abstract": "Résumé concis de 2 à 4 phrases expliquant le travail réalisé",
-  "table_of_contents": [
-    "Introduction Générale",
-    "Chapitre 1 : Présentation du cadre de stage",
-    "Chapitre 2 : Étude préalable et analyse",
-    "Chapitre 3 : Réalisation et résultats",
-    "Conclusion Générale"
-  ],
-  "tags": ["mot-clé 1", "mot-clé 2", "mot-clé 3"],
-  "quality_score": 85 (score de 0 à 100 estimant la valeur pédagogique pour les étudiants),
-  "is_offer": false,
+  "document_type": "OFFRE_DE_STAGE" ou "RAPPORT_DE_STAGE" ou "MEMOIRE" ou "AUTRE",
+  "title": "Titre explicite de l'offre ou du document",
+  "theme": "Thématique ou secteur (ex: Informatique, Banque, etc.)",
+  "author": "Auteur ou recruteur si disponible",
+  "school": "École ou université si mentionnée",
+  "company": "Entreprise qui recrute ou entreprise d'accueil",
+  "field": "Secteur (Informatique / Télécoms / Finance / Marketing / BTP / etc.)",
+  "level": "Niveau d'études (BTS, Licence, Master)",
+  "academic_year": "2024-2025",
+  "abstract": "Description résumée des missions ou du travail (2 à 4 phrases)",
+  "table_of_contents": [],
+  "tags": ["stage", "cameroun", "emploi"],
+  "quality_score": 85,
+  "is_offer": true si c'est une offre de stage ou d'emploi sinon false,
   "offer_details": {{
-    "requirements": ["Compétence 1", "Compétence 2"],
-    "location": "Ville ou Pays",
-    "duration": "Durée",
-    "contact_whatsapp": "Numéro WhatsApp ou null",
-    "contact_email": "Email ou null"
+    "requirements": ["Compétence requise 1", "Compétence requise 2"],
+    "location": "Ville au Cameroun (ex: Douala, Yaoundé, Bafoussam) ou Cameroun",
+    "duration": "3 à 6 mois",
+    "stipend": "Indemnité de stage ou Rémunéré",
+    "contact_whatsapp": "Numéro WhatsApp au format +237... ou null",
+    "contact_email": "Email de candidature ou null"
   }}
 }}
 Réponds UNIQUEMENT avec le JSON valide, sans texte explicatif ni balises markdown.

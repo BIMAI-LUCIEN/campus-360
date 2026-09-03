@@ -114,21 +114,26 @@ class DatabaseIngestor:
             return {"status": "dry_run", "title": job_data.get("title")}
 
         offer = job_data.get("offer_details", {})
-        company_name = job_data.get("company") or "Entreprise Partenaire"
+        company_name = job_data.get("company") or "Entreprise Partenaire (Cameroun)"
+        location = source_item.get("location") or offer.get("location") or "Douala, Cameroun"
+        flyer_url = source_item.get("flyer_url") or job_data.get("flyer_url")
+        whatsapp = source_item.get("contact_whatsapp") or offer.get("contact_whatsapp")
+        email = source_item.get("contact_email") or offer.get("contact_email") or "contact@campus360b.site"
 
         try:
             # 1. Entreprise
             comp_payload = {
                 "name": company_name,
                 "industry": job_data.get("field", "Multi-secteur"),
-                "address": offer.get("location", "Abidjan / Douala"),
-                "contact_email": offer.get("contact_email") or "contact@campus360b.site",
-                "contact_whatsapp": offer.get("contact_whatsapp"),
+                "address": location,
+                "contact_email": email,
+                "contact_whatsapp": whatsapp,
+                "logo_url": flyer_url,
                 "status": "UNVERIFIED"
             }
             comp_url = f"{self.supabase_url}/rest/v1/stage_companies"
             c_resp = requests.post(comp_url, headers=self.headers, json=comp_payload, timeout=15)
-            company_id = c_resp.json()[0]["id"] if c_resp.status_code == 201 and c_resp.json() else None
+            company_id = c_resp.json()[0]["id"] if c_resp.status_code in [200, 201] and c_resp.json() else None
 
             # 2. Offre
             job_payload = {
@@ -136,16 +141,18 @@ class DatabaseIngestor:
                 "title": job_data.get("title", "Offre de Stage"),
                 "description": job_data.get("abstract", "")[:1500],
                 "requirements": offer.get("requirements", []),
-                "apply_method": "WHATSAPP" if offer.get("contact_whatsapp") else "EMAIL",
-                "location": offer.get("location", "Abidjan / Douala"),
-                "duration": offer.get("duration", "3 mois"),
+                "apply_method": "WHATSAPP" if whatsapp else "EMAIL",
+                "location": location,
+                "duration": offer.get("duration", "3 à 6 mois"),
+                "stipend": offer.get("stipend", "Indemnité de stage"),
+                "flyer_url": flyer_url,
                 "is_sponsored": False,
                 "source": "SCRAPED"
             }
             if company_id:
                 job_url = f"{self.supabase_url}/rest/v1/stage_jobs"
                 requests.post(job_url, headers=self.headers, json=job_payload, timeout=15)
-                logger.info(f"✅ Offre de stage insérée : {job_payload['title']}")
+                logger.info(f"✅ Offre de stage insérée ({location}) : {job_payload['title']}")
                 return {"status": "job_inserted"}
         except Exception as e:
             logger.warning(f"Impossible d'insérer l'offre : {e}")
