@@ -492,13 +492,49 @@ export async function GET(request: NextRequest, context: RouteContext) {
           .toc-num { font-weight: bold; color: #0284C7; }
 
           /* Figures & Tables */
-          .figure-container {
+          .figure-container, figure, .academic-figure {
             margin: 22px 0;
             text-align: center;
             page-break-inside: avoid;
           }
+          figure img, .academic-figure img {
+            max-width: 85%;
+            height: auto;
+            border-radius: 4px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+          }
+          figcaption {
+            font-size: 9.5pt;
+            font-style: italic;
+            color: #475569;
+            margin-top: 8px;
+          }
+          .academic-page-break {
+            page-break-before: always;
+            height: 0;
+            margin: 0;
+            padding: 0;
+            border: none;
+          }
+          .academic-page-break .break-tag {
+            display: none;
+          }
           table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 18px 0;
+            font-size: 10pt;
             page-break-inside: avoid;
+          }
+          th, td {
+            border: 1px solid #CBD5E1;
+            padding: 8px 10px;
+            text-align: left;
+          }
+          th {
+            background-color: #F1F5F9;
+            color: #0F172A;
+            font-weight: bold;
           }
           blockquote {
             margin: 16px 0;

@@ -76,3 +76,6 @@ dist-mvp-check/
 
 .vercel
 .env*
+scratch/
+__pycache__/
+*.pyc

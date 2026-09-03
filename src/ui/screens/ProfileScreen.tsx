@@ -18,8 +18,10 @@ import {
   LogIn,
   RefreshCw,
   ChevronRight,
+  Camera,
   type LucideIcon,
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   GlassCard,
   GlassPill,
@@ -88,11 +90,13 @@ function MenuList({ rows }: { rows: Row[] }) {
             pressed && { backgroundColor: stitchColors.paperSoft },
           ]}
         >
-          <row.Icon
-            size={18}
-            color={row.danger ? stitchColors.error : stitchColors.ink}
-            strokeWidth={1.75}
-          />
+          <View style={[styles.menuIconBadge, row.danger && styles.menuIconBadgeDanger]}>
+            <row.Icon
+              size={17}
+              color={row.danger ? stitchColors.error : '#A78BFA'}
+              strokeWidth={1.8}
+            />
+          </View>
           <Text style={[styles.menuItemText, row.danger && { color: stitchColors.error }]}>
             {row.label}
           </Text>
@@ -139,23 +143,33 @@ export function ProfileScreen({
         folio={tierLabel.toUpperCase()}
       />
 
-      {/* Identity hero */}
+      {/* Identity hero — Centered avatar with camera edit badge (Image 2 style) */}
       <View style={styles.profileHero}>
-        <View style={styles.avatarCircle}>
-          <Text style={styles.avatarText}>{initials}</Text>
+        <View style={styles.avatarWrapper}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <View style={styles.cameraBadge}>
+            <Camera size={13} color="#FFFFFF" />
+          </View>
         </View>
-        <View style={styles.profileInfo}>
-          <Text style={styles.profileName} numberOfLines={1}>
-            {studentProfile?.name ?? 'Étudiant Campus 360'}
-          </Text>
-          <Text style={styles.profileEmail} numberOfLines={1}>{email}</Text>
-          {subscriptionTier !== 'free' && (
-            <View style={styles.premiumBadge}>
-              <Crown size={12} color="#818CF8" />
-              <Text style={styles.premiumBadgeText}>{tierLabel}</Text>
-            </View>
-          )}
-        </View>
+
+        <Text style={styles.profileName} numberOfLines={1}>
+          {studentProfile?.name ?? 'Étudiant Campus 360'}
+        </Text>
+        <Text style={styles.profileEmail} numberOfLines={1}>{email}</Text>
+
+        {subscriptionTier !== 'free' ? (
+          <View style={styles.premiumBadge}>
+            <Crown size={12} color="#FDE047" />
+            <Text style={styles.premiumBadgeText}>{tierLabel.toUpperCase()}</Text>
+          </View>
+        ) : (
+          <Pressable style={styles.freeUpgradePill} onPress={onPremium}>
+            <Crown size={12} color="#A78BFA" />
+            <Text style={styles.freeUpgradeText}>Passer en Premium ⚡</Text>
+          </Pressable>
+        )}
       </View>
 
       {/* University tags */}
@@ -167,56 +181,41 @@ export function ProfileScreen({
         </View>
       ) : null}
 
-      {/* Wallet mini card */}
-      <View style={styles.walletMini}>
-        <View style={styles.walletMiniRow}>
-          <View style={styles.walletMiniLeft}>
-            <View style={[styles.walletMiniIconWrap, { backgroundColor: 'rgba(99, 102, 241, 0.12)' }]}>
-              <Wallet size={15} color="#818CF8" strokeWidth={1.8} />
-            </View>
-            <Text style={styles.walletMiniLabel}>Solde</Text>
+      {/* ── Neobank Credit Card Style Wallet Preview (Image 1 style) ──────── */}
+      <LinearGradient
+        colors={['#7C3AED', '#4C1D95', '#160F2E']}
+        style={styles.cardPreview}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.cardPreviewTop}>
+          <View style={styles.cardChipRow}>
+            <View style={styles.cardChip} />
+            <Text style={styles.cardBrandName}>CAMPUS 360 WALLET</Text>
           </View>
-          <Text style={styles.walletMiniValue}>{formatCoins(balance)} C</Text>
+          <Pressable style={styles.cardTopUpPill} onPress={onRecharge}>
+            <Text style={styles.cardTopUpText}>+ Recharger</Text>
+          </Pressable>
         </View>
-        <View style={styles.walletMiniDivider} />
-        <View style={styles.walletMiniRow}>
-          <View style={styles.walletMiniLeft}>
-            <View style={[styles.walletMiniIconWrap, { backgroundColor: 'rgba(56, 189, 248, 0.12)' }]}>
-              <Sparkles size={15} color="#38BDF8" strokeWidth={1.8} />
-            </View>
-            <Text style={styles.walletMiniLabel}>Crédits IA</Text>
-          </View>
-          <Text style={styles.walletMiniValue}>{iaCredits}</Text>
-        </View>
-        <View style={styles.walletMiniDivider} />
-        <View style={styles.walletMiniRow}>
-          <View style={styles.walletMiniLeft}>
-            <View style={[styles.walletMiniIconWrap, { backgroundColor: 'rgba(52, 211, 153, 0.12)' }]}>
-              <BookOpen size={15} color="#34D399" strokeWidth={1.8} />
-            </View>
-            <Text style={styles.walletMiniLabel}>Documents</Text>
-          </View>
-          <Text style={styles.walletMiniValue}>{purchasedDocumentsCount}</Text>
-        </View>
-      </View>
 
-      {/* Actions */}
-      <View style={styles.actionsRow}>
-        <Pressable
-          style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.85 }]}
-          onPress={onRecharge}
-        >
-          <Wallet size={19} color={stitchColors.ink} strokeWidth={1.75} />
-          <Text style={styles.actionBtnText}>Recharger</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.actionBtn, styles.actionBtnPrimary, pressed && { opacity: 0.9 }]}
-          onPress={onPremium}
-        >
-          <Crown size={19} color="#FFFFFF" strokeWidth={1.75} />
-          <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Voir les offres</Text>
-        </Pressable>
-      </View>
+        <View style={styles.cardBalanceWrap}>
+          <Text style={styles.cardBalanceLabel}>Solde disponible</Text>
+          <Text style={styles.cardBalanceText}>{formatCoins(balance)} FCFA</Text>
+        </View>
+
+        <View style={styles.cardPreviewBottom}>
+          <View>
+            <Text style={styles.cardHolderLabel}>Porteur de carte</Text>
+            <Text style={styles.cardHolderName} numberOfLines={1}>
+              {studentProfile?.name ? studentProfile.name.toUpperCase() : 'MEMBRE ÉTUDIANT'}
+            </Text>
+          </View>
+          <View style={styles.cardTokenBadge}>
+            <Sparkles size={12} color="#FDE047" />
+            <Text style={styles.cardTokenText}>{iaCredits} Jetons IA</Text>
+          </View>
+        </View>
+      </LinearGradient>
 
       {/* Section Réalisations & Projets / Campagne (masquée pour l'instant - feature future) */}
       {false && (
@@ -365,76 +364,219 @@ const styles = StyleSheet.create({
     paddingBottom: 160,
   },
   profileHero: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    marginBottom: stitchSpacing.stackMd,
+    justifyContent: 'center',
+    marginBottom: 20,
+    marginTop: 6,
+  },
+  avatarWrapper: {
+    position: 'relative',
+    marginBottom: 12,
   },
   avatarCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: stitchColors.siennaDeep,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#7C3AED',
+    borderWidth: 2,
+    borderColor: 'rgba(167, 139, 250, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     fontFamily: fontFamilies.outfit,
     color: '#FFFFFF',
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '800',
   },
-  profileInfo: {
-    flex: 1,
-    gap: 3,
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#6366F1',
+    borderWidth: 2,
+    borderColor: '#090714',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   profileName: {
     fontFamily: fontFamilies.outfit,
-    fontSize: 22,
-    lineHeight: 27,
-    fontWeight: '700',
+    fontSize: 21,
+    lineHeight: 26,
+    fontWeight: '800',
     color: stitchColors.ink,
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
+    textAlign: 'center',
   },
   profileEmail: {
     fontFamily: fontFamilies.mono,
-    fontSize: 11,
+    fontSize: 12,
     color: stitchColors.inkMuted,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+    marginTop: 2,
+    textAlign: 'center',
   },
   premiumBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    gap: 6,
+    backgroundColor: 'rgba(124, 58, 237, 0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    alignSelf: 'flex-start',
-    marginTop: 6,
+    borderColor: 'rgba(253, 224, 71, 0.4)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    marginTop: 8,
   },
   premiumBadgeText: {
     fontFamily: fontFamilies.mono,
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 10.5,
+    fontWeight: '800',
     letterSpacing: 0.8,
-    color: '#818CF8',
+    color: '#FDE047',
+  },
+  freeUpgradePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(124, 58, 237, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.35)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    marginTop: 8,
+  },
+  freeUpgradeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#DDD6FE',
   },
   tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: 6,
     marginBottom: stitchSpacing.stackMd,
   },
-  walletMini: {
-    backgroundColor: '#111622',
-    borderRadius: 16,
+
+  // ── Neobank Card Preview (Image 1 style) ──────────────────────────────────
+  cardPreview: {
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 16,
-    marginBottom: stitchSpacing.stackMd,
+    borderColor: 'rgba(167, 139, 250, 0.35)',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  cardPreviewTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+  cardChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  cardChip: {
+    width: 28,
+    height: 20,
+    borderRadius: 4,
+    backgroundColor: '#FDE047',
+    opacity: 0.85,
+  },
+  cardBrandName: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#DDD6FE',
+    letterSpacing: 1.2,
+  },
+  cardTopUpPill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+  },
+  cardTopUpText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  cardBalanceWrap: {
+    marginBottom: 20,
+  },
+  cardBalanceLabel: {
+    fontSize: 11,
+    color: '#DDD6FE',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  cardBalanceText: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    fontFamily: fontFamilies.outfit,
+    letterSpacing: -0.5,
+  },
+  cardPreviewBottom: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  cardHolderLabel: {
+    fontSize: 9.5,
+    color: '#C4B5FD',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  cardHolderName: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: 2,
+    maxWidth: 180,
+  },
+  cardTokenBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: 'rgba(253, 224, 71, 0.3)',
+  },
+  cardTokenText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#FDE047',
+  },
+
+  menuIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuIconBadgeDanger: {
+    backgroundColor: 'rgba(248, 113, 113, 0.15)',
   },
   walletMiniRow: {
     flexDirection: 'row',

@@ -42,13 +42,17 @@ export function EditorAiChat({
   onClose,
   documentId,
   currentSectionTitle,
+  sourcesCount = 0,
   onInsert,
+  onReplaceSection,
 }: {
   visible: boolean;
   onClose: () => void;
   documentId: string;
   currentSectionTitle?: string;
+  sourcesCount?: number;
   onInsert: (html: string) => void;
+  onReplaceSection?: (html: string) => void;
 }) {
   const [messages, setMessages] = React.useState<ChatMsg[]>([]);
   const [input, setInput] = React.useState('');
@@ -57,6 +61,43 @@ export function EditorAiChat({
 
   const scrollToEnd = () =>
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+
+  const draftFullSection = React.useCallback(async () => {
+    if (loading) return;
+    const prompt = `Rédige l'intégralité du contenu de la section « ${currentSectionTitle || 'Section courante'} » en t'appuyant sur mes documents de stage et nos échanges.`;
+    const next = [...messages, { role: 'user' as const, content: prompt }];
+    setMessages(next);
+    setLoading(true);
+    scrollToEnd();
+    try {
+      const res = await authFetch(`/api/mobile/documents/${documentId}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: next,
+          currentSectionTitle,
+          action: 'draft_section',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur IA.');
+      setMessages((prev) => [...prev, { role: 'assistant', content: String(data.reply || '') }]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content:
+            err instanceof Error
+              ? `⚠️ ${err.message}`
+              : "⚠️ Impossible de contacter l'assistant.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+      scrollToEnd();
+    }
+  }, [loading, messages, documentId, currentSectionTitle]);
 
   const send = React.useCallback(
     async (raw: string) => {
@@ -109,11 +150,18 @@ export function EditorAiChat({
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.headerTitle}>Assistant de rédaction</Text>
-              {currentSectionTitle ? (
-                <Text style={styles.headerSub} numberOfLines={1}>
-                  Section : {currentSectionTitle}
-                </Text>
-              ) : null}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                {currentSectionTitle ? (
+                  <Text style={styles.headerSub} numberOfLines={1}>
+                    Section : {currentSectionTitle}
+                  </Text>
+                ) : null}
+                {sourcesCount > 0 ? (
+                  <Text style={styles.sourcesBadge}>
+                    • 📚 {sourcesCount} source{sourcesCount > 1 ? 's' : ''}
+                  </Text>
+                ) : null}
+              </View>
             </View>
             <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
               <X size={18} color={stitchColors.inkMuted} />
@@ -132,9 +180,15 @@ export function EditorAiChat({
               <View style={styles.empty}>
                 <Text style={styles.emptyTitle}>Comment puis-je t&apos;aider ?</Text>
                 <Text style={styles.emptyBody}>
-                  Je connais ton document et ses sections. Demande-moi de rédiger,
-                  reformuler, corriger ou structurer.
+                  Je connais ton document, son plan et tes sources importées. Demande-moi de rédiger,
+                  reformuler, corriger ou générer.
                 </Text>
+                
+                <Pressable style={styles.autoDraftBtn} onPress={draftFullSection}>
+                  <Sparkles size={15} color="#FFFFFF" />
+                  <Text style={styles.autoDraftText}>⚡ Rédiger toute la section avec mes sources</Text>
+                </Pressable>
+
                 <View style={styles.suggestions}>
                   {SUGGESTIONS.map((s) => (
                     <Pressable key={s} style={styles.suggestion} onPress={() => send(s)}>
@@ -154,16 +208,31 @@ export function EditorAiChat({
                       {m.content}
                     </Text>
                     {m.role === 'assistant' && !m.content.startsWith('⚠️') ? (
-                      <Pressable
-                        style={styles.insertBtn}
-                        onPress={() => {
-                          onInsert(textToHtml(m.content));
-                          onClose();
-                        }}
-                      >
-                        <CornerDownLeft size={13} color={stitchColors.emerald} />
-                        <Text style={styles.insertText}>Insérer dans la section</Text>
-                      </Pressable>
+                      <View style={styles.actionRow}>
+                        <Pressable
+                          style={styles.insertBtn}
+                          onPress={() => {
+                            onInsert(textToHtml(m.content));
+                            onClose();
+                          }}
+                        >
+                          <CornerDownLeft size={13} color={stitchColors.emerald} />
+                          <Text style={styles.insertText}>Insérer au curseur</Text>
+                        </Pressable>
+
+                        {onReplaceSection ? (
+                          <Pressable
+                            style={styles.replaceBtn}
+                            onPress={() => {
+                              onReplaceSection(textToHtml(m.content));
+                              onClose();
+                            }}
+                          >
+                            <Sparkles size={13} color="#FFFFFF" />
+                            <Text style={styles.replaceText}>Remplacer la section</Text>
+                          </Pressable>
+                        ) : null}
+                      </View>
                     ) : null}
                   </View>
                 </View>
@@ -269,18 +338,58 @@ const styles = StyleSheet.create({
   },
   textUser: { color: stitchColors.ink, fontSize: 14.5, lineHeight: 21 },
   textAi: { color: stitchColors.inkSoft, fontSize: 14.5, lineHeight: 21 },
+  sourcesBadge: {
+    color: stitchColors.sienna,
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  autoDraftBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#4F46E5',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginTop: 6,
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  autoDraftText: {
+    color: '#FFFFFF',
+    fontSize: 13.5,
+    fontWeight: '700',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
   insertBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 10,
-    alignSelf: 'flex-start',
     backgroundColor: stitchColors.emeraldBg,
     borderRadius: 9,
     paddingVertical: 7,
     paddingHorizontal: 11,
   },
   insertText: { color: stitchColors.emerald, fontSize: 12.5, fontWeight: '700' },
+  replaceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#4338CA',
+    borderRadius: 9,
+    paddingVertical: 7,
+    paddingHorizontal: 11,
+  },
+  replaceText: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '700' },
   typing: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   typingText: { color: stitchColors.inkMuted, fontSize: 13 },
   inputBar: {

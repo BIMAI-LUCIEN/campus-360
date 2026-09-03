@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
-import { getDocumentById, getDocumentSections } from '@/lib/documents-db';
+import { getDocumentById, getDocumentSections, getDocumentSources } from '@/lib/documents-db';
 
 export const runtime = 'nodejs';
 
@@ -43,6 +43,7 @@ const chatSchema = z
       .optional()
       .default([]),
     currentSectionTitle: z.string().max(300).optional(),
+    action: z.enum(['chat', 'draft_section']).optional().default('chat'),
   })
   .passthrough();
 
@@ -62,13 +63,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const { id } = await context.params;
     const body = await request.json().catch(() => ({}));
     const parsed = chatSchema.safeParse(body);
-    const { messages, currentSectionTitle } = parsed.success
+    const { messages, currentSectionTitle, action } = parsed.success
       ? parsed.data
-      : { messages: [], currentSectionTitle: '' };
+      : { messages: [], currentSectionTitle: '', action: 'chat' };
 
     let documentTitle = 'Document académique';
     let documentType = 'document';
     let outline = '';
+    let sourcesContext = '';
 
     if (userId) {
       try {
@@ -84,6 +86,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
             return `${i + 1}. ${s.title}${excerpt ? ` — ${excerpt}${excerpt.length >= 220 ? '…' : ''}` : ' — (vide)'}`;
           })
           .join('\n');
+
+        const sources = await getDocumentSources(id, userId);
+        if (sources.length > 0) {
+          sourcesContext = sources
+            .map((src, idx) => {
+              const textSample = (src.extracted_text || src.summary || '').slice(0, 1500);
+              return `[Source ${idx + 1} : ${src.file_name} (${src.file_type})]\n${textSample || '(aucun extrait disponible)'}`;
+            })
+            .join('\n\n');
+        }
       } catch (err) {
         console.warn('[Doc Chat] Metadata error:', err);
       }
@@ -93,18 +105,22 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
     const systemPrompt = [
       `Tu es l'Assistant de Rédaction Universitaire d'Élite de Campus 360.`,
-      `Tu aides l'étudiant à rédiger, structurer, corriger, reformuler et enrichir son document.`,
+      `Tu aides l'étudiant à rédiger, structurer, corriger, reformuler et enrichir son rapport de stage / mémoire académique.`,
       '',
       `Contexte du document :`,
       `- Titre : ${documentTitle}`,
       `- Type : ${documentType}`,
       currentSectionTitle ? `- Section en cours d'édition : « ${currentSectionTitle} »` : '',
       outline ? `- Plan et aperçu actuel :\n${outline}` : '',
+      sourcesContext ? `\n--- SOURCES ET PIÈCES JOINTES DE L'ÉTUDIANT (À UTILISER EN PRIORITÉ) ---\n${sourcesContext}\n--- FIN DES SOURCES ---` : '',
       '',
-      `Directives pédagogiques :`,
-      `- Réponds toujours en français chaleureux, précis et professionnel.`,
-      `- Quand tu proposes du texte à insérer, fournis des paragraphes rédigés de qualité supérieure, prêts à être insérés dans la section.`,
-      `- Propose des transitions logiques, des arguments percutants et des exemples concrets.`,
+      action === 'draft_section'
+        ? `IMPORTANT : L'étudiant te demande de GÉNÉRER LE CONTENU COMPLET pour la section « ${currentSectionTitle} » en t'appuyant sur les sources et les échanges. Produis directement du code HTML académique propre et complet (balises <p>, <h2>, <h3>, <ul>, <ol>, <li>, <strong>, <blockquote>, ou <table> si pertinent). Ne mets AUCUNE balise <html>, <body> ni de bloc de code markdown. Réponds directement en HTML prêt à l'insertion.`
+        : `Directives pédagogiques :
+- Réponds toujours en français chaleureux, précis et professionnel.
+- Quand tu proposes du texte à insérer, fournis des paragraphes rédigés de qualité supérieure, prêts à être insérés dans la section.
+- Si des sources sont fournies, cite fidèlement les chiffres, faits et noms de l'entreprise mentionnés dans les sources.
+- Propose des transitions logiques, des arguments percutants et des exemples concrets.`,
     ]
       .filter(Boolean)
       .join('\n');

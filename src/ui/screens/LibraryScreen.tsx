@@ -75,12 +75,12 @@ const styles = StyleSheet.create({
   gridContent: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 14,
     paddingHorizontal: stitchSpacing.containerMargin,
     paddingTop: stitchSpacing.stackSm,
     paddingBottom: 160,
   },
   gridItemWrapper: {
-    width: '31%',
+    width: '47.8%',
   },
 });

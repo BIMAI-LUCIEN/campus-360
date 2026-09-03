@@ -9,7 +9,18 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Eye, EyeOff } from 'lucide-react-native';
+import {
+  Eye,
+  EyeOff,
+  User,
+  Mail,
+  Lock,
+  Phone,
+  GraduationCap,
+  CheckCircle2,
+  Sparkles,
+} from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   GlassCard,
   GlassInput,
@@ -24,6 +35,7 @@ import {
   stitchTypography,
   stitchShadows,
   stitchComponents,
+  fontFamilies,
 } from '../../theme/stitch';
 
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia, serif' }) as string;
@@ -205,32 +217,26 @@ export function AuthScreen({
               <Pressable
                 onPress={onClose}
                 hitSlop={12}
-                style={{
-                  position: 'absolute',
-                  top: 16,
-                  right: 16,
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 10,
-                }}
+                style={styles.closeModalBtn}
               >
                 <Text style={{ color: '#DDD6FE', fontSize: 16, fontWeight: '700' }}>✕</Text>
               </Pressable>
             )}
             {/* Editorial eyebrow */}
             <Text style={styles.eyebrow}>ACCÈS ÉTUDIANT</Text>
-            <View style={styles.headerRule} />
 
-            {/* Logo */}
+            {/* Logo Emblem (Image 2 style) */}
             <View style={styles.logoWrap}>
-              <View style={styles.logoMark}>
-                <Text style={styles.logoMarkText}>C</Text>
-              </View>
+              <LinearGradient
+                colors={['#8B5CF6', '#6D28D9']}
+                style={styles.logoMark}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <GraduationCap size={28} color="#FFFFFF" strokeWidth={2} />
+              </LinearGradient>
               <Text style={styles.logoTitle}>Campus 360</Text>
+              <Text style={styles.logoSubtitle}>Portail Étudiant, Stages &amp; Réussite</Text>
             </View>
 
             {/* Title */}
@@ -265,6 +271,7 @@ export function AuthScreen({
                       onChangeText={onNameChange}
                       placeholder="Ex: Jean Kamga"
                       autoCapitalize="words"
+                      leftIcon={<User size={17} color="#A78BFA" strokeWidth={1.8} />}
                     />
                   </View>
                   <View style={styles.inputGroup}>
@@ -274,6 +281,7 @@ export function AuthScreen({
                       onChangeText={onWhatsappChange}
                       placeholder="Ex: +237680000000"
                       keyboardType="phone-pad"
+                      leftIcon={<Phone size={17} color="#A78BFA" strokeWidth={1.8} />}
                     />
                   </View>
                   <View style={styles.inputGroup}>
@@ -283,13 +291,13 @@ export function AuthScreen({
                       onPress={() => setUnivOpen(!univOpen)}
                     >
                       <Text style={[styles.dropdownValue, !university && styles.dropdownPlaceholder]}>
-                        {university || 'Choisir ton université'}
+                        {university || 'Choisir une université...'}
                       </Text>
                       <Text style={styles.dropdownArrow}>▼</Text>
                     </Pressable>
                     {univOpen && (
                       <View style={styles.dropdownList}>
-                        <ScrollView style={{ maxHeight: 140 }} nestedScrollEnabled>
+                        <ScrollView style={{ maxHeight: 160 }} nestedScrollEnabled>
                           {UNIVERSITIES.map((u) => (
                             <Pressable
                               key={u}
@@ -380,6 +388,7 @@ export function AuthScreen({
                     placeholder="ton@email.com"
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    leftIcon={<Mail size={17} color="#A78BFA" strokeWidth={1.8} />}
                   />
                 </View>
               )}
@@ -399,6 +408,7 @@ export function AuthScreen({
                     showPasswordToggle
                     showPassword={showPassword}
                     onTogglePassword={() => setShowPassword(!showPassword)}
+                    leftIcon={<Lock size={17} color="#A78BFA" strokeWidth={1.8} />}
                   />
                 </View>
               )}
@@ -469,6 +479,25 @@ export function AuthScreen({
               )}
             </View>
 
+            {/* Success Popup Dialog (Image 2 style) */}
+            {notice && (notice.toLowerCase().includes('succès') || notice.toLowerCase().includes('réussi') || notice.toLowerCase().includes('envoyé')) && (
+              <View style={styles.successModalBackdrop}>
+                <View style={styles.successModalCard}>
+                  <View style={styles.successIconCircle}>
+                    <CheckCircle2 size={36} color="#34D399" />
+                  </View>
+                  <Text style={styles.successTitle}>Opération Réussie !</Text>
+                  <Text style={styles.successMessage}>{notice}</Text>
+                  <PrimaryButton
+                    label="Continuer vers la connexion"
+                    onPress={() => onModeChange('sign-in')}
+                    fluid
+                    style={{ marginTop: 14 }}
+                  />
+                </View>
+              </View>
+            )}
+
             {onClose && (
               <Pressable style={styles.closeBtn} onPress={onClose}>
                 <Text style={styles.closeBtnText}>Fermer</Text>
@@ -494,11 +523,31 @@ const styles = StyleSheet.create({
   cardWrap: {
     alignItems: 'center',
   },
+  closeModalBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
   authCard: {
     width: '100%',
     maxWidth: 420,
-    padding: 28,
-    borderRadius: stitchRadius.xl,
+    padding: 24,
+    borderRadius: 22,
+    backgroundColor: '#131024',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.22)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 6,
   },
   eyebrow: {
     fontFamily: MONO,
@@ -507,6 +556,7 @@ const styles = StyleSheet.create({
     color: stitchColors.primary,
     fontWeight: '700',
     marginBottom: 8,
+    textAlign: 'center',
   },
   headerRule: {
     height: 1,
@@ -518,14 +568,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   logoMark: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: stitchColors.primary,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
-    ...stitchShadows.primary,
+    marginBottom: 10,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 5,
   },
   logoMarkText: {
     fontFamily: SERIF,
@@ -534,17 +587,34 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   logoTitle: {
-    fontFamily: SERIF,
+    fontFamily: fontFamilies.outfit,
     fontSize: 22,
     fontWeight: '900',
-    color: stitchColors.primary,
-    letterSpacing: -0.5,
+    color: '#F8FAFC',
+    letterSpacing: -0.4,
+  },
+  logoSubtitle: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 3,
+    textAlign: 'center',
+  },
+  iconInputWrap: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  leadingInputIcon: {
+    position: 'absolute',
+    left: 14,
+    zIndex: 5,
   },
   cardTitle: {
     ...stitchTypography.headlineMd,
-    color: stitchColors.onSurface,
+    color: '#F8FAFC',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 18,
+    fontSize: 19,
+    fontWeight: '800',
   },
   modeToggle: {
     flexDirection: 'row',
@@ -658,5 +728,56 @@ const styles = StyleSheet.create({
   closeBtnText: {
     ...stitchTypography.labelMd,
     color: stitchColors.onSurfaceVariant,
+  },
+  successModalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(9, 7, 20, 0.88)',
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    zIndex: 20,
+  },
+  successModalCard: {
+    width: '100%',
+    backgroundColor: '#160F2E',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(52, 211, 153, 0.4)',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  successIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(52, 211, 153, 0.15)',
+    borderWidth: 2,
+    borderColor: 'rgba(52, 211, 153, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  successTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  successMessage: {
+    fontSize: 13,
+    color: '#CBD5E1',
+    textAlign: 'center',
+    lineHeight: 19,
   },
 });

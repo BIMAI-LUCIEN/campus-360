@@ -124,7 +124,7 @@ export function ExploreScreen({
           onChangeText={setQuery}
           placeholder="Université, matière, niveau…"
           style={{ flex: 1 }}
-          rightIcon={<Search size={18} color={stitchColors.inkSubtle} />}
+          leftIcon={<Search size={18} color="#A78BFA" />}
         />
       </View>
 
@@ -263,24 +263,24 @@ const styles = StyleSheet.create({
   },
   toggleBtns: {
     flexDirection: 'row',
-    backgroundColor: '#111622',
+    backgroundColor: '#131024',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 10,
-    padding: 2,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
+    borderRadius: 12,
+    padding: 3,
   },
   toggleBtn: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 9,
   },
   toggleBtnActive: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#7C3AED',
   },
   toggleBtnText: {
     ...stitchTypography.labelSm,
     color: '#94A3B8',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   toggleBtnTextActive: {
     color: '#FFFFFF',
@@ -288,13 +288,13 @@ const styles = StyleSheet.create({
   gridContent: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 14,
     paddingHorizontal: stitchSpacing.containerMargin,
     paddingTop: stitchSpacing.stackSm,
     paddingBottom: 160,
   },
   gridItemWrapper: {
-    width: '31%',
+    width: '47.8%',
   },
   packListContent: {
     paddingHorizontal: stitchSpacing.containerMargin,

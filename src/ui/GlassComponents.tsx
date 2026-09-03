@@ -208,6 +208,7 @@ export function EditorialInput({
   autoCapitalize = 'none',
   multiline,
   style,
+  leftIcon,
   rightIcon,
 }: {
   label?: string;
@@ -222,6 +223,7 @@ export function EditorialInput({
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   multiline?: boolean;
   style?: ViewStyle;
+  leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
 }) {
   const [focused, setFocused] = React.useState(false);
@@ -229,6 +231,7 @@ export function EditorialInput({
     <View style={style}>
       {label ? <Text style={styles.inputLabel}>{label}</Text> : null}
       <View style={[styles.inputBox, focused && styles.inputBoxFocused]}>
+        {leftIcon}
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -614,13 +617,20 @@ export function DocumentGridCard({
   const accent = pickAccent(title + (subtitle ?? ''));
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.docCard, pressed && { opacity: 0.85 }, style]}>
-      {/* Square cover */}
+      {/* Book cover (Image 1 style) */}
       <View style={[styles.docCover, { backgroundColor: accent.tint }]}>
-        <FileText size={26} color={accent.icon} strokeWidth={1.7} />
+        {/* Floating rating badge */}
+        <View style={styles.docRatingBadge}>
+          <Text style={styles.docRatingStar}>★</Text>
+          <Text style={styles.docRatingText}>4.8</Text>
+        </View>
+
+        <FileText size={28} color={accent.icon} strokeWidth={1.7} />
         <Text style={[styles.docCoverInitials, { color: accent.icon }]}>{initialsOf(subtitle || title)}</Text>
+
         {isOwned ? (
           <View style={styles.docOwnedBadge}>
-            <Check size={11} color="#FFFFFF" strokeWidth={3} />
+            <Check size={12} color="#FFFFFF" strokeWidth={3} />
           </View>
         ) : price ? (
           <View style={styles.docPriceBadge}>
@@ -1019,53 +1029,86 @@ const styles = StyleSheet.create({
   packCardCta: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   packCardCtaText: { fontSize: 16, color: '#FFFFFF', fontWeight: '700' },
 
-  // DocumentGridCard — square cover tile (3-col comic-shelf grid)
+  // DocumentGridCard — book cover tile (Image 1 style)
   docCard: {
     width: '100%',
-    backgroundColor: '#111622',
-    borderRadius: 14,
+    backgroundColor: '#131024',
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 8,
+    borderColor: 'rgba(139, 92, 246, 0.18)',
+    padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
   docCover: {
     width: '100%',
-    aspectRatio: 1,
-    borderRadius: 10,
+    aspectRatio: 1.05,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
     marginBottom: 8,
     overflow: 'hidden',
+    position: 'relative',
   },
-  docCoverInitials: { fontFamily: SANS, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+  docRatingBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(9, 7, 20, 0.75)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: 'rgba(253, 224, 71, 0.3)',
+    zIndex: 5,
+  },
+  docRatingStar: {
+    fontSize: 9,
+    color: '#FDE047',
+  },
+  docRatingText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#FDE047',
+    fontFamily: MONO,
+  },
+  docCoverInitials: { fontFamily: SANS, fontSize: 13, fontWeight: '900', letterSpacing: 0.5 },
   docOwnedBadge: {
     position: 'absolute',
     top: 6,
     right: 6,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: stitchColors.emerald,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 5,
   },
   docPriceBadge: {
     position: 'absolute',
     bottom: 6,
-    left: 6,
-    backgroundColor: 'rgba(11, 15, 23, 0.85)',
+    right: 6,
+    backgroundColor: 'rgba(16, 185, 129, 0.18)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    borderColor: 'rgba(52, 211, 153, 0.35)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+    zIndex: 5,
   },
-  docPriceBadgeText: { fontFamily: MONO, fontSize: 9.5, fontWeight: '700', color: '#F8FAFC' },
-  docCardTitle: { fontFamily: SANS, fontSize: 11.5, lineHeight: 15, fontWeight: '600', color: '#F8FAFC', letterSpacing: -0.1 },
-  docCardSubtitle: { fontFamily: INTER, fontSize: 10, color: '#94A3B8', marginTop: 2 },
+  docPriceBadgeText: { fontFamily: MONO, fontSize: 10, fontWeight: '800', color: '#34D399' },
+  docCardTitle: { fontFamily: SANS, fontSize: 12.5, lineHeight: 16, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.2 },
+  docCardSubtitle: { fontFamily: INTER, fontSize: 10.5, color: '#94A3B8', marginTop: 3 },
 
   // TransactionRow
   txRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, gap: 14 },

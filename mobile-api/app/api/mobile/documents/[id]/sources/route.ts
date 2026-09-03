@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
-import { getDocumentById, updateDocumentSection, deleteDocumentSection } from '@/lib/documents-db';
-import { sanitizeHtml } from '@/lib/sanitize-html';
+import { getDocumentById, getDocumentSources, addDocumentSource } from '@/lib/documents-db';
 
 export const runtime = 'nodejs';
 
@@ -23,18 +22,39 @@ export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers });
 }
 
-const updateSectionSchema = z.object({
-  title: z.string().trim().min(1).max(200).optional(),
-  content_html: z.string().optional(),
-  content_json: z.any().optional(),
-  sort_order: z.number().int().optional(),
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(request: NextRequest, context: RouteContext) {
+  try {
+    const { id: documentId } = await context.params;
+    const access = await requireMobileUser(request);
+    if (access.response || !access.user) return withCors(access.response!, request);
+    const userId = access.user.id;
+
+    const document = await getDocumentById(documentId, userId);
+    if (!document) {
+      return withCors(NextResponse.json({ error: 'Document introuvable.' }, { status: 404 }), request);
+    }
+
+    const sources = await getDocumentSources(documentId, userId);
+    return withCors(NextResponse.json({ sources }), request);
+  } catch (error) {
+    return withCors(mobileErrorResponse(error, request), request);
+  }
+}
+
+const addSourceSchema = z.object({
+  fileName: z.string().min(1).max(255),
+  fileType: z.string().default('pdf'),
+  fileSize: z.number().optional().default(0),
+  fileUrl: z.string().min(1),
+  extractedText: z.string().optional().default(''),
+  summary: z.string().optional().default(''),
 });
 
-type RouteContext = { params: Promise<{ id: string; sectionId: string }> };
-
-export async function PATCH(request: NextRequest, context: RouteContext) {
+export async function POST(request: NextRequest, context: RouteContext) {
   try {
-    const { id: documentId, sectionId } = await context.params;
+    const { id: documentId } = await context.params;
     const access = await requireMobileUser(request);
     if (access.response || !access.user) return withCors(access.response!, request);
     const userId = access.user.id;
@@ -45,41 +65,31 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const body = await request.json().catch(() => null);
-    const parsed = updateSectionSchema.safeParse(body);
+    const parsed = addSourceSchema.safeParse(body);
     if (!parsed.success) {
-      return withCors(NextResponse.json({ error: 'Données invalides.' }, { status: 400 }), request);
+      return withCors(NextResponse.json({ error: 'Données invalides.', details: parsed.error.issues }, { status: 400 }), request);
     }
 
-    const payload = { ...parsed.data };
-    if (typeof payload.content_html === 'string') {
-      payload.content_html = sanitizeHtml(payload.content_html);
+    let extractedText = parsed.data.extractedText;
+    let summary = parsed.data.summary;
+
+    // If summary is empty but we have text, generate a quick 2-line summary
+    if (!summary && extractedText && extractedText.length > 50) {
+      summary = extractedText.slice(0, 240).replace(/\s+/g, ' ').trim() + '...';
     }
 
-    const section = await updateDocumentSection(documentId, sectionId, payload);
-    return withCors(NextResponse.json({ section }), request);
-  } catch (error) {
-    return withCors(mobileErrorResponse(error, request), request);
-  }
-}
+    const source = await addDocumentSource({
+      documentId,
+      userId,
+      fileName: parsed.data.fileName,
+      fileType: parsed.data.fileType,
+      fileSize: parsed.data.fileSize,
+      fileUrl: parsed.data.fileUrl,
+      extractedText,
+      summary,
+    });
 
-export async function DELETE(request: NextRequest, context: RouteContext) {
-  try {
-    const { id: documentId, sectionId } = await context.params;
-    const access = await requireMobileUser(request);
-    if (access.response || !access.user) return withCors(access.response!, request);
-    const userId = access.user.id;
-
-    const document = await getDocumentById(documentId, userId);
-    if (!document) {
-      return withCors(NextResponse.json({ error: 'Document introuvable.' }, { status: 404 }), request);
-    }
-
-    const success = await deleteDocumentSection(documentId, sectionId);
-    if (!success) {
-      return withCors(NextResponse.json({ error: 'Section introuvable ou non supprimable.' }, { status: 404 }), request);
-    }
-
-    return withCors(NextResponse.json({ success: true }), request);
+    return withCors(NextResponse.json({ source }), request);
   } catch (error) {
     return withCors(mobileErrorResponse(error, request), request);
   }

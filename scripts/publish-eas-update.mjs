@@ -14,17 +14,17 @@ const env = {
 };
 
 const requestedBranch = process.argv[2];
-const message = process.argv[3] || 'fix(editor): guaranteed rendering, stable webview, and full formatting toolbar';
+const message = process.argv.slice(3).join(' ') || 'OTA-Update';
 const branches = requestedBranch && requestedBranch !== 'all' ? [requestedBranch] : ['production', 'preview'];
 
 const easCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
 async function publishBranch(branch) {
   return new Promise((resolve, reject) => {
-    console.log(`\n🚀 Publishing EAS Update to branch [${branch}]...`);
-    console.log(`📝 Message: "${message}"`);
+    const safeMsg = (message || 'OTA-Update').replace(/["'\n\r]/g, ' ').trim();
+    console.log(`📝 Message: "${safeMsg}"`);
 
-    const args = ['eas', 'update', '--branch', branch, `--message=${message}`, '--non-interactive'];
+    const args = ['eas', 'update', '--branch', branch, `--message="${safeMsg}"`, '--non-interactive'];
 
     const child = spawn(easCmd, args, {
       env,

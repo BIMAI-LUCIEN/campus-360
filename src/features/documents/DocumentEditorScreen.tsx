@@ -14,8 +14,10 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { authFetch } from '../auth/betterAuth';
 import { EditorAiChat } from './EditorAiChat';
+import { DocumentSourcesModal } from './DocumentSourcesModal';
+import { DocumentImagesModal } from './DocumentImagesModal';
 import {
-  Sparkles, Send, ArrowLeft, Plus, Trash2
+  Sparkles, Send, ArrowLeft, Plus, Trash2, FileText, Image as ImageIcon
 } from 'lucide-react-native';
 
 type Document = {
@@ -168,29 +170,39 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
 
   /* Academic Headings */
   .document-sheet h1 {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 800;
     color: #FFFFFF;
-    margin: 22px 0 12px;
+    margin: 24px 0 12px;
     border-bottom: 2px solid rgba(99, 102, 241, 0.4);
     padding-bottom: 8px;
     line-height: 1.3;
   }
 
   .document-sheet h2 {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
     color: #818CF8;
     margin: 22px 0 10px;
+    border-left: 3.5px solid #6366F1;
+    padding-left: 10px;
     line-height: 1.35;
   }
 
   .document-sheet h3 {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 600;
     color: #38BDF8;
     margin: 18px 0 8px;
     line-height: 1.4;
+  }
+
+  .document-sheet h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #CBD5E1;
+    margin: 14px 0 6px;
+    font-style: italic;
   }
 
   .document-sheet p {
@@ -242,6 +254,48 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
     font-style: italic;
   }
 
+  /* Figures & Images */
+  .document-sheet .academic-figure, .document-sheet figure {
+    margin: 22px 0;
+    text-align: center;
+  }
+  .document-sheet .academic-figure img, .document-sheet figure img {
+    max-width: 90%;
+    height: auto;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+  .document-sheet figcaption {
+    font-size: 12.5px;
+    font-style: italic;
+    color: #94A3B8;
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  /* Visual Page Break */
+  .document-sheet .academic-page-break {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 28px 0;
+    border-top: 2px dashed rgba(99, 102, 241, 0.4);
+    padding-top: 8px;
+    user-select: none;
+  }
+  .document-sheet .break-tag {
+    background: #1E283C;
+    color: #818CF8;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    border: 1px solid rgba(129, 140, 248, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
   /* Academic Tables */
   .document-sheet table {
     width: 100%;
@@ -269,31 +323,42 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
 </head>
 <body>
   <div class="toolbar-container">
-    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('bold')" ontouchstart="event.preventDefault(); execCmd('bold')"><b>B</b></button>
-    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('italic')" ontouchstart="event.preventDefault(); execCmd('italic')"><i>I</i></button>
-    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('underline')" ontouchstart="event.preventDefault(); execCmd('underline')"><u>U</u></button>
+    <button type="button" class="tool-btn" title="Gras" onmousedown="event.preventDefault(); execCmd('bold')" ontouchstart="event.preventDefault(); execCmd('bold')"><b>B</b></button>
+    <button type="button" class="tool-btn" title="Italique" onmousedown="event.preventDefault(); execCmd('italic')" ontouchstart="event.preventDefault(); execCmd('italic')"><i>I</i></button>
+    <button type="button" class="tool-btn" title="Souligné" onmousedown="event.preventDefault(); execCmd('underline')" ontouchstart="event.preventDefault(); execCmd('underline')"><u>U</u></button>
     
     <div class="tool-divider"></div>
     
-    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); formatBlock('h2')" ontouchstart="event.preventDefault(); formatBlock('h2')"><span style="font-weight:700; color:#818CF8;">H2</span></button>
-    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); formatBlock('h3')" ontouchstart="event.preventDefault(); formatBlock('h3')"><span style="font-weight:600; color:#38BDF8;">H3</span></button>
-    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); formatBlock('p')" ontouchstart="event.preventDefault(); formatBlock('p')">¶</button>
+    <button type="button" class="tool-btn" title="Titre 1" onmousedown="event.preventDefault(); formatBlock('h1')" ontouchstart="event.preventDefault(); formatBlock('h1')"><span style="font-weight:800; color:#FFFFFF;">H1</span></button>
+    <button type="button" class="tool-btn" title="Titre 2" onmousedown="event.preventDefault(); formatBlock('h2')" ontouchstart="event.preventDefault(); formatBlock('h2')"><span style="font-weight:700; color:#818CF8;">H2</span></button>
+    <button type="button" class="tool-btn" title="Titre 3" onmousedown="event.preventDefault(); formatBlock('h3')" ontouchstart="event.preventDefault(); formatBlock('h3')"><span style="font-weight:600; color:#38BDF8;">H3</span></button>
+    <button type="button" class="tool-btn" title="Titre 4" onmousedown="event.preventDefault(); formatBlock('h4')" ontouchstart="event.preventDefault(); formatBlock('h4')"><span style="font-weight:600; color:#CBD5E1;">H4</span></button>
+    <button type="button" class="tool-btn" title="Paragraphe" onmousedown="event.preventDefault(); formatBlock('p')" ontouchstart="event.preventDefault(); formatBlock('p')">¶</button>
     
     <div class="tool-divider"></div>
     
-    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('insertUnorderedList')" ontouchstart="event.preventDefault(); execCmd('insertUnorderedList')">•— Liste</button>
-    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('insertOrderedList')" ontouchstart="event.preventDefault(); execCmd('insertOrderedList')">1. Num</button>
+    <button type="button" class="tool-btn" title="Liste à puces" onmousedown="event.preventDefault(); execCmd('insertUnorderedList')" ontouchstart="event.preventDefault(); execCmd('insertUnorderedList')">•—</button>
+    <button type="button" class="tool-btn" title="Liste numérotée" onmousedown="event.preventDefault(); execCmd('insertOrderedList')" ontouchstart="event.preventDefault(); execCmd('insertOrderedList')">1.</button>
     
     <div class="tool-divider"></div>
     
-    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); insertTable()" ontouchstart="event.preventDefault(); insertTable()">📊 Tableau</button>
-    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); insertCallout()" ontouchstart="event.preventDefault(); insertCallout()">💡 Note</button>
+    <button type="button" class="tool-btn" title="Insérer un tableau" onmousedown="event.preventDefault(); insertTable()" ontouchstart="event.preventDefault(); insertTable()">📊 Tableau</button>
+    <button type="button" class="tool-btn" title="Ajouter ligne" onmousedown="event.preventDefault(); tableAddRow()" ontouchstart="event.preventDefault(); tableAddRow()">+Ligne</button>
+    <button type="button" class="tool-btn" title="Ajouter colonne" onmousedown="event.preventDefault(); tableAddCol()" ontouchstart="event.preventDefault(); tableAddCol()">+Col</button>
+    <button type="button" class="tool-btn" title="Supprimer ligne" onmousedown="event.preventDefault(); tableDeleteRow()" ontouchstart="event.preventDefault(); tableDeleteRow()">-Ligne</button>
+    <button type="button" class="tool-btn" title="Supprimer colonne" onmousedown="event.preventDefault(); tableDeleteCol()" ontouchstart="event.preventDefault(); tableDeleteCol()">-Col</button>
     
     <div class="tool-divider"></div>
     
-    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('justifyLeft')" ontouchstart="event.preventDefault(); execCmd('justifyLeft')">⇤</button>
-    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('justifyCenter')" ontouchstart="event.preventDefault(); execCmd('justifyCenter')">≡</button>
-    <button type="button" class="tool-btn" onmousedown="event.preventDefault(); execCmd('justifyFull')" ontouchstart="event.preventDefault(); execCmd('justifyFull')">⇥</button>
+    <button type="button" class="tool-btn" title="Aligner à gauche" onmousedown="event.preventDefault(); execCmd('justifyLeft')" ontouchstart="event.preventDefault(); execCmd('justifyLeft')">⇤</button>
+    <button type="button" class="tool-btn" title="Centrer" onmousedown="event.preventDefault(); execCmd('justifyCenter')" ontouchstart="event.preventDefault(); execCmd('justifyCenter')">≡</button>
+    <button type="button" class="tool-btn" title="Aligner à droite" onmousedown="event.preventDefault(); execCmd('justifyRight')" ontouchstart="event.preventDefault(); execCmd('justifyRight')">⇥</button>
+    <button type="button" class="tool-btn" title="Justifier" onmousedown="event.preventDefault(); execCmd('justifyFull')" ontouchstart="event.preventDefault(); execCmd('justifyFull')">⇿</button>
+    
+    <div class="tool-divider"></div>
+    
+    <button type="button" class="tool-btn" title="Encadré académique" onmousedown="event.preventDefault(); insertCallout()" ontouchstart="event.preventDefault(); insertCallout()">💡 Note</button>
+    <button type="button" class="tool-btn" title="Saut de page A4" onmousedown="event.preventDefault(); insertPageBreak()" ontouchstart="event.preventDefault(); insertPageBreak()">📄 Saut</button>
   </div>
 
   <div class="sheet-wrapper">
@@ -316,8 +381,105 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
     }
     
     function insertTable() {
-      const tableHtml = '<table><thead><tr><th>Critère</th><th>Description</th><th>Statut</th></tr></thead><tbody><tr><td>Analyse</td><td>Conforme aux exigences</td><td>Validé</td></tr><tr><td>Mise en oeuvre</td><td>Développement complété</td><td>En cours</td></tr></tbody></table><p><br></p>';
+      const tableHtml = '<table><thead><tr><th>Critère / Phase</th><th>Détail & Missions</th><th>Observations</th></tr></thead><tbody><tr><td>Analyse préalable</td><td>Étude du cahier des charges et état de l\\'art</td><td>Validé</td></tr><tr><td>Mise en oeuvre</td><td>Développement et intégration technique</td><td>En cours</td></tr></tbody></table><p><br></p>';
       document.execCommand('insertHTML', false, tableHtml);
+      editor.focus();
+      notifyChange();
+    }
+
+    function getSelectedCell() {
+      const sel = window.getSelection();
+      if (!sel || !sel.anchorNode) return null;
+      let node = sel.anchorNode;
+      while (node && node !== editor) {
+        if (node.nodeName === 'TD' || node.nodeName === 'TH') return node;
+        node = node.parentNode;
+      }
+      return null;
+    }
+
+    function tableAddRow() {
+      const cell = getSelectedCell();
+      if (!cell) {
+        insertTable();
+        return;
+      }
+      const tr = cell.closest('tr');
+      const table = tr.closest('table');
+      const colCount = tr.children.length;
+      const newTr = document.createElement('tr');
+      for (let i = 0; i < colCount; i++) {
+        const newTd = document.createElement('td');
+        newTd.innerHTML = 'Texte...';
+        newTr.appendChild(newTd);
+      }
+      tr.parentNode.insertBefore(newTr, tr.nextSibling);
+      notifyChange();
+    }
+
+    function tableAddCol() {
+      const cell = getSelectedCell();
+      if (!cell) {
+        insertTable();
+        return;
+      }
+      const table = cell.closest('table');
+      const cellIndex = cell.cellIndex;
+      const rows = table.rows;
+      for (let i = 0; i < rows.length; i++) {
+        const isHeader = rows[i].parentElement.nodeName === 'THEAD' || i === 0;
+        const newCell = document.createElement(isHeader ? 'th' : 'td');
+        newCell.innerHTML = isHeader ? 'Col ' + (cellIndex + 2) : 'Donnée';
+        if (cellIndex + 1 < rows[i].cells.length) {
+          rows[i].insertBefore(newCell, rows[i].cells[cellIndex + 1]);
+        } else {
+          rows[i].appendChild(newCell);
+        }
+      }
+      notifyChange();
+    }
+
+    function tableDeleteRow() {
+      const cell = getSelectedCell();
+      if (!cell) return;
+      const tr = cell.closest('tr');
+      const table = tr.closest('table');
+      if (table.rows.length <= 1) {
+        table.remove();
+      } else {
+        tr.remove();
+      }
+      notifyChange();
+    }
+
+    function tableDeleteCol() {
+      const cell = getSelectedCell();
+      if (!cell) return;
+      const table = cell.closest('table');
+      const cellIndex = cell.cellIndex;
+      const rows = table.rows;
+      if (rows[0].cells.length <= 1) {
+        table.remove();
+      } else {
+        for (let i = 0; i < rows.length; i++) {
+          if (rows[i].cells[cellIndex]) {
+            rows[i].deleteCell(cellIndex);
+          }
+        }
+      }
+      notifyChange();
+    }
+
+    function insertPageBreak() {
+      const breakHtml = '<div class="academic-page-break" contenteditable="false"><span class="break-tag">📄 Saut de page académique (Page suivante)</span></div><p><br></p>';
+      document.execCommand('insertHTML', false, breakHtml);
+      editor.focus();
+      notifyChange();
+    }
+
+    function insertFigure(url, caption) {
+      const figureHtml = '<figure class="academic-figure" contenteditable="false"><img src="' + url + '" alt="' + caption.replace(/"/g, '') + '" /><figcaption contenteditable="true"><strong>' + caption + '</strong></figcaption></figure><p><br></p>';
+      document.execCommand('insertHTML', false, figureHtml);
       editor.focus();
       notifyChange();
     }
@@ -463,6 +625,12 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
   const [aiLoading, setAiLoading] = useState(false);
   const [chatVisible, setChatVisible] = useState(false);
 
+  // Sources & Images Modals
+  const [sourcesModalVisible, setSourcesModalVisible] = useState(false);
+  const [imagesModalVisible, setImagesModalVisible] = useState(false);
+  const [sourcesCount, setSourcesCount] = useState(0);
+  const [imagesCount, setImagesCount] = useState(0);
+
   // Section modal
   const [showAddSection, setShowAddSection] = useState(false);
   const [newSectionTitle, setNewSectionTitle] = useState('');
@@ -470,6 +638,24 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
   const [exporting, setExporting] = useState(false);
 
   const editorSurfaceRef = useRef<EditorSurfaceHandle | null>(null);
+
+  const loadCounts = useCallback(async () => {
+    try {
+      authFetch(`/api/mobile/documents/${documentId}/sources`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (Array.isArray(d.sources)) setSourcesCount(d.sources.length);
+        })
+        .catch(() => {});
+
+      authFetch(`/api/mobile/documents/${documentId}/images`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (Array.isArray(d.images)) setImagesCount(d.images.length);
+        })
+        .catch(() => {});
+    } catch {}
+  }, [documentId]);
 
   // Load report data
   const loadReport = useCallback(async () => {
@@ -490,12 +676,13 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
         const currentSec = fetchedSections.find(s => s.id === initialId);
         setCurrentHtml(currentSec?.content_html || '');
       }
+      loadCounts();
     } catch (err: any) {
       setError(err.message || 'Erreur de chargement.');
     } finally {
       setLoading(false);
     }
-  }, [documentId]);
+  }, [documentId, loadCounts]);
 
   useEffect(() => {
     loadReport();
@@ -819,6 +1006,24 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
 
         <View style={styles.headerActions}>
           <Pressable
+            style={[styles.headerActionBtn, styles.sourcesBtn]}
+            onPress={() => setSourcesModalVisible(true)}
+          >
+            <FileText size={13} color="#818CF8" />
+            <Text style={styles.sourcesBtnText}>
+              Sources{sourcesCount > 0 ? ` (${sourcesCount})` : ''}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.headerActionBtn, styles.imagesBtn]}
+            onPress={() => setImagesModalVisible(true)}
+          >
+            <ImageIcon size={13} color="#38BDF8" />
+            <Text style={styles.imagesBtnText}>
+              Images{imagesCount > 0 ? ` (${imagesCount})` : ''}
+            </Text>
+          </Pressable>
+          <Pressable
             style={[styles.headerActionBtn, styles.wordBtn]}
             onPress={handleExportDocx}
             disabled={exporting}
@@ -1115,11 +1320,41 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
           onClose={() => setChatVisible(false)}
           documentId={documentId}
           currentSectionTitle={currentTitle}
+          sourcesCount={sourcesCount}
           onInsert={(html: string) => {
             editorSurfaceRef.current?.injectJavaScript(`insertAiContent(${JSON.stringify(html)}); true;`);
           }}
+          onReplaceSection={(html: string) => {
+            editorSurfaceRef.current?.injectJavaScript(`setEditorContent(${JSON.stringify(html)}); true;`);
+            if (currentSectionId) {
+              saveSectionContent(currentSectionId, html);
+            }
+          }}
         />
       )}
+
+      {/* ── Sources Management Modal ─────────────────────────────────── */}
+      <DocumentSourcesModal
+        visible={sourcesModalVisible}
+        onClose={() => setSourcesModalVisible(false)}
+        documentId={documentId}
+        onSourcesUpdated={setSourcesCount}
+      />
+
+      {/* ── Images & AI Placement Modal ─────────────────────────────── */}
+      <DocumentImagesModal
+        visible={imagesModalVisible}
+        onClose={() => setImagesModalVisible(false)}
+        documentId={documentId}
+        sections={sections.map(s => ({ id: s.id, title: s.title }))}
+        currentSectionId={currentSectionId ?? undefined}
+        onInsertFigure={(imageUrl: string, caption: string) => {
+          editorSurfaceRef.current?.injectJavaScript(
+            `insertFigure(${JSON.stringify(imageUrl)}, ${JSON.stringify(caption)}); true;`
+          );
+        }}
+        onImagesUpdated={setImagesCount}
+      />
     </SafeAreaView>
   );
 }
@@ -1203,11 +1438,34 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerActionBtn: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    minWidth: 54,
+    minWidth: 50,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  sourcesBtn: {
+    backgroundColor: '#1E283C',
+    borderWidth: 1,
+    borderColor: 'rgba(129, 140, 248, 0.3)',
+  },
+  sourcesBtnText: {
+    color: '#818CF8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  imagesBtn: {
+    backgroundColor: '#1E283C',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.3)',
+  },
+  imagesBtnText: {
+    color: '#38BDF8',
+    fontSize: 12,
+    fontWeight: '700',
   },
   wordBtn: {
     backgroundColor: '#1E283C',
