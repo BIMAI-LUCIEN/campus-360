@@ -28,6 +28,7 @@ import {
   TransactionRow,
   PrimaryButton,
   ScreenMasthead,
+  TrustBadgeStrip,
 } from '../GlassComponents';
 import type { StudentProfile } from '../../features/auth/betterAuth';
 import type { Transaction } from '../../types';
@@ -350,6 +351,7 @@ export function ProfileScreen({
         </>
       )}
 
+      <TrustBadgeStrip style={{ marginHorizontal: 0, marginTop: 24, marginBottom: 16 }} />
       <View style={{ height: 40 }} />
     </View>
   );

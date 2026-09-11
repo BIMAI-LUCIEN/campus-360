@@ -38,6 +38,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { StageJob } from '../../types';
 import { fetchStageJobs } from '../../features/stages/stagesApi';
 import { AiApplyModal } from '../../features/stages/AiApplyModal';
+import { SearchFilterBar, TrustBadgeStrip } from '../GlassComponents';
 
 interface StagesScreenProps {
   studentProfile: {
@@ -164,21 +165,14 @@ export function StagesScreen({
         </View>
 
         {/* Search Input */}
-        <View style={styles.searchBar}>
-          <Search size={17} color="#A78BFA" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Poste, entreprise, compétences, ville..."
-            placeholderTextColor="#64748B"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
-              <X size={16} color="#94A3B8" />
-            </Pressable>
-          )}
-        </View>
+        <SearchFilterBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Poste, entreprise, compétences, ville..."
+          onFilterPress={() => setShowTopThreeOnly(!showTopThreeOnly)}
+          hasActiveFilters={showTopThreeOnly || activeSector !== 'Tous' || activeContractType !== 'Tous'}
+          style={{ paddingHorizontal: 0, marginBottom: 12 }}
+        />
 
         {/* Filter Scroll: Sectors */}
         <ScrollView
@@ -504,6 +498,7 @@ export function StagesScreen({
             );
           })
         )}
+        <TrustBadgeStrip style={{ marginTop: 16, marginBottom: 32 }} />
       </ScrollView>
 
       {/* ── Full Job Detail Modal ─────────────────────────────────── */}

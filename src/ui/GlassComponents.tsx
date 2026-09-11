@@ -33,6 +33,16 @@ import {
   Check,
   Briefcase,
   Layers,
+  MapPin,
+  ChevronDown,
+  ChevronRight,
+  SlidersHorizontal,
+  Coins,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+  Star,
+  Zap,
 } from 'lucide-react-native';
 
 // Cover accents — give each PDF tile a distinct hue (comic-shelf feel).
@@ -781,6 +791,221 @@ export function EmptyState({
   );
 }
 
+// ─── LocationHeader — Top bar with Location pin, Uni dropdown, Notifications & Tokens ────
+export function LocationHeader({
+  universityName = 'Université de Yaoundé I',
+  facultyOrCity = 'Cameroun • Faculté des Sciences',
+  onLocationPress,
+  onBellPress,
+  hasUnread = false,
+  iaCredits = 10,
+  onWalletPress,
+  style,
+}: {
+  universityName?: string;
+  facultyOrCity?: string;
+  onLocationPress?: () => void;
+  onBellPress?: () => void;
+  hasUnread?: boolean;
+  iaCredits?: number;
+  onWalletPress?: () => void;
+  style?: ViewStyle;
+}) {
+  return (
+    <View style={[styles.locHeader, style]}>
+      <Pressable
+        onPress={onLocationPress}
+        style={({ pressed }) => [styles.locLeft, pressed && { opacity: 0.8 }]}
+      >
+        <View style={styles.locPinBox}>
+          <MapPin size={17} color={stitchColors.emerald} strokeWidth={2.2} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <View style={styles.locTitleRow}>
+            <Text style={styles.locTitle} numberOfLines={1}>
+              {universityName}
+            </Text>
+            <ChevronDown size={14} color={stitchColors.inkMuted} style={{ marginLeft: 3 }} />
+          </View>
+          <Text style={styles.locSubtitle} numberOfLines={1}>
+            {facultyOrCity}
+          </Text>
+        </View>
+      </Pressable>
+
+      <View style={styles.locActions}>
+        <Pressable
+          onPress={onBellPress}
+          style={({ pressed }) => [styles.locActionBtn, pressed && { opacity: 0.75 }]}
+        >
+          <Bell size={18} color={stitchColors.ink} strokeWidth={1.9} />
+          {hasUnread && <View style={styles.locNotifDot} />}
+        </Pressable>
+
+        <Pressable
+          onPress={onWalletPress}
+          style={({ pressed }) => [styles.locWalletPill, pressed && { opacity: 0.8 }]}
+        >
+          <Coins size={14} color="#FBBF24" />
+          <Text style={styles.locWalletText}>{iaCredits} cr</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+// ─── SearchFilterBar — Rounded pill search bar with filter sliders button ────
+export function SearchFilterBar({
+  value,
+  onChangeText,
+  placeholder = 'Rechercher un stage, entreprise, document...',
+  onFilterPress,
+  onSubmitEditing,
+  hasActiveFilters = false,
+  style,
+}: {
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+  onFilterPress?: () => void;
+  onSubmitEditing?: () => void;
+  hasActiveFilters?: boolean;
+  style?: ViewStyle;
+}) {
+  return (
+    <View style={[styles.searchFilterWrap, style]}>
+      <View style={styles.searchPill}>
+        <Search size={17} color={stitchColors.inkSubtle} />
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={stitchColors.inkSubtle}
+          style={styles.searchInput}
+          returnKeyType="search"
+          onSubmitEditing={onSubmitEditing}
+          autoCorrect={false}
+          autoCapitalize="none"
+        />
+        <Pressable
+          onPress={onFilterPress}
+          style={({ pressed }) => [
+            styles.searchFilterBtn,
+            hasActiveFilters && styles.searchFilterBtnActive,
+            pressed && { opacity: 0.7 },
+          ]}
+        >
+          <SlidersHorizontal
+            size={16}
+            color={hasActiveFilters ? '#FFFFFF' : stitchColors.inkMuted}
+            strokeWidth={2}
+          />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+// ─── CategoryGrid — 4x2 grid of thematic tiles ──────────────────────────────
+export interface CategoryItem {
+  id: string;
+  label: string;
+  icon: any;
+  color: string;
+  bg: string;
+}
+
+export function CategoryGrid({
+  categories,
+  activeId,
+  onSelectCategory,
+  onSeeAllPress,
+  title = 'Filières Populaires',
+  seeAllLabel = 'Voir tout',
+  style,
+}: {
+  categories: CategoryItem[];
+  activeId?: string;
+  onSelectCategory: (id: string) => void;
+  onSeeAllPress?: () => void;
+  title?: string;
+  seeAllLabel?: string;
+  style?: ViewStyle;
+}) {
+  return (
+    <View style={[styles.categorySection, style]}>
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.categorySectionTitle}>{title}</Text>
+        {onSeeAllPress ? (
+          <Pressable onPress={onSeeAllPress} hitSlop={8}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <Text style={styles.seeAllText}>{seeAllLabel}</Text>
+              <ChevronRight size={14} color={stitchColors.emerald} />
+            </View>
+          </Pressable>
+        ) : null}
+      </View>
+
+      <View style={styles.categoryGrid}>
+        {categories.map((cat) => {
+          const active = activeId === cat.id;
+          const Icon = cat.icon;
+          return (
+            <Pressable
+              key={cat.id}
+              onPress={() => onSelectCategory(cat.id)}
+              style={({ pressed }) => [
+                styles.categoryCard,
+                active && styles.categoryCardActive,
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <View style={[styles.categoryIconCircle, { backgroundColor: cat.bg }]}>
+                <Icon size={20} color={cat.color} strokeWidth={2} />
+              </View>
+              <Text
+                style={[
+                  styles.categoryLabel,
+                  active && { color: stitchColors.ink, fontWeight: '700' },
+                ]}
+                numberOfLines={2}
+              >
+                {cat.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// ─── TrustBadgeStrip — 4 horizontal trust & guarantee badges ────────────────
+export function TrustBadgeStrip({ style }: { style?: ViewStyle }) {
+  const BADGES = [
+    { label: 'Entreprises\nVérifiées', icon: ShieldCheck, color: stitchColors.emerald },
+    { label: 'Indemnités\nClaires', icon: Coins, color: '#38BDF8' },
+    { label: 'Postulation\nIA 1-Clic', icon: Zap, color: '#FBBF24' },
+    { label: 'Suivi Direct\nJ+7', icon: Clock, color: '#A78BFA' },
+  ];
+
+  return (
+    <View style={[styles.trustStrip, style]}>
+      {BADGES.map((b, i) => {
+        const Icon = b.icon;
+        return (
+          <View key={i} style={styles.trustItem}>
+            <View style={[styles.trustIconCircle, { backgroundColor: b.color + '1A' }]}>
+              <Icon size={16} color={b.color} strokeWidth={2.2} />
+            </View>
+            <Text style={styles.trustLabel}>{b.label}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 // ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   rule: { height: 1, backgroundColor: stitchColors.glassBorder },
@@ -1153,4 +1378,221 @@ const styles = StyleSheet.create({
   emptyStateBody: { fontFamily: INTER, fontSize: 14, lineHeight: 21, color: stitchColors.inkMuted, textAlign: 'center', maxWidth: 300 },
   emptyStateCta: { marginTop: 8, paddingHorizontal: 24, paddingVertical: 14, borderRadius: stitchRadius.button, alignItems: 'center' },
   emptyStateCtaText: { fontFamily: SANS, fontSize: 14, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3 },
+
+  // LocationHeader
+  locHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: stitchSpacing.containerMargin,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  locLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+    marginRight: 12,
+  },
+  locPinBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(52, 211, 153, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  locTitle: {
+    fontFamily: SANS,
+    fontSize: 15,
+    fontWeight: '700',
+    color: stitchColors.ink,
+    letterSpacing: -0.2,
+  },
+  locSubtitle: {
+    fontFamily: INTER,
+    fontSize: 11.5,
+    color: stitchColors.inkMuted,
+    marginTop: 1,
+  },
+  locActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  locActionBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: stitchColors.surfaceContainerHigh,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  locNotifDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: stitchColors.error,
+  },
+  locWalletPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(251, 191, 36, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.28)',
+    paddingVertical: 7,
+    paddingHorizontal: 11,
+    borderRadius: 9999,
+  },
+  locWalletText: {
+    fontFamily: SANS,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FBBF24',
+  },
+
+  // SearchFilterBar
+  searchFilterWrap: {
+    paddingHorizontal: stitchSpacing.containerMargin,
+    marginBottom: 16,
+  },
+  searchPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: stitchColors.surfaceContainerLowest,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    borderRadius: 9999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: INTER,
+    fontSize: 13.5,
+    color: stitchColors.ink,
+    padding: 0,
+    outlineStyle: 'none',
+    outlineWidth: 0,
+  } as any,
+  searchFilterBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: stitchColors.surfaceContainerHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchFilterBtnActive: {
+    backgroundColor: stitchColors.primary,
+  },
+
+  // CategoryGrid
+  categorySection: {
+    paddingHorizontal: stitchSpacing.containerMargin,
+    marginBottom: 24,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  categorySectionTitle: {
+    fontFamily: SANS,
+    fontSize: 18,
+    fontWeight: '700',
+    color: stitchColors.ink,
+    letterSpacing: -0.3,
+  },
+  seeAllText: {
+    fontFamily: INTER,
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: stitchColors.emerald,
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'space-between',
+  },
+  categoryCard: {
+    width: '22.5%',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    backgroundColor: stitchColors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    borderRadius: 14,
+  },
+  categoryCardActive: {
+    borderColor: stitchColors.primary,
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
+  },
+  categoryIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  categoryLabel: {
+    fontFamily: INTER,
+    fontSize: 10.5,
+    lineHeight: 13,
+    fontWeight: '500',
+    color: stitchColors.inkMuted,
+    textAlign: 'center',
+  },
+
+  // TrustBadgeStrip
+  trustStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: stitchColors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    marginHorizontal: stitchSpacing.containerMargin,
+    marginBottom: 24,
+  },
+  trustItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+  },
+  trustIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trustLabel: {
+    fontFamily: INTER,
+    fontSize: 9.5,
+    lineHeight: 12,
+    fontWeight: '600',
+    color: stitchColors.inkMuted,
+    textAlign: 'center',
+  },
 });

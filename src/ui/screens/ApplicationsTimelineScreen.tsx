@@ -32,6 +32,7 @@ import {
   updateApplicationStatus,
   generateFollowupReminderMessage,
 } from '../../features/stages/stagesApi';
+import { TrustBadgeStrip } from '../GlassComponents';
 
 interface ApplicationsTimelineProps {
   studentName: string;
@@ -240,6 +241,7 @@ export function ApplicationsTimelineScreen({ studentName }: ApplicationsTimeline
             );
           })
         )}
+        <TrustBadgeStrip style={{ marginTop: 16, marginBottom: 32 }} />
       </ScrollView>
     </View>
   );

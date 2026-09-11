@@ -15,6 +15,8 @@ import {
   PackCard,
   ScreenMasthead,
   EmptyState,
+  SearchFilterBar,
+  TrustBadgeStrip,
 } from '../GlassComponents';
 import type { CampusDocument, CampusPdfPack } from '../../types';
 import {
@@ -119,12 +121,11 @@ export function ExploreScreen({
 
       {/* Search */}
       <View style={styles.searchSection}>
-        <GlassInput
+        <SearchFilterBar
           value={query}
           onChangeText={setQuery}
           placeholder="Université, matière, niveau…"
-          style={{ flex: 1 }}
-          leftIcon={<Search size={18} color="#A78BFA" />}
+          style={{ paddingHorizontal: 0, marginBottom: 0 }}
         />
       </View>
 
