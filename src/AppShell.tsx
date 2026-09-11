@@ -1196,6 +1196,7 @@ export function AppShell() {
 
               {activeSection === 'home' && (
                 <HomeScreen
+                  studentProfile={studentProfile}
                   studentName={studentProfile?.name}
                   studentSkills={studentProfile?.skills ?? []}
                   profileComplete={Boolean(

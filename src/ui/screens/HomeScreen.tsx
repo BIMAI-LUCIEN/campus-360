@@ -1,49 +1,40 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   ArrowRight,
   BookOpen,
   BriefcaseBusiness,
-  FilePlus2,
-  Sparkles,
-  Wallet,
-  Compass,
-  ArrowUpRight,
-  MapPin,
-  Coins,
+  Check,
   CheckCircle2,
-  type LucideIcon,
+  Clock,
+  Coins,
+  FilePlus2,
+  MapPin,
+  Sparkles,
 } from 'lucide-react-native';
 
-const ICON_STAGE_3D = require('../../assets/icon_stage_3d.jpg');
-const ICON_DOCUMENTS_3D = require('../../assets/icon_documents_3d.jpg');
-const ICON_ANNALES_3D = require('../../assets/icon_annales_3d.jpg');
-const ICON_CANDIDATURES_3D = require('../../assets/icon_candidatures_3d.jpg');
-
-import { authFetch } from '../../features/auth/betterAuth';
+import { authFetch, type StudentProfile } from '../../features/auth/betterAuth';
 import { fetchStageJobs, fetchStudentApplications } from '../../features/stages/stagesApi';
-import {
-  resolveHomePriority,
-  type HomeDestination,
-  type HomePriority,
-  type StudentDocumentSummary,
-} from '../../features/home/homePriority';
-import { TransactionRow } from '../GlassComponents';
-import type { Transaction, StageJob } from '../../types';
+import { AiApplyModal } from '../../features/stages/AiApplyModal';
+import type { StageApplication, StageJob, Transaction } from '../../types';
 import {
   brandGradient,
-  fontFamilies,
   stitchColors,
   stitchRadius,
   stitchSpacing,
   stitchTypography,
 } from '../../theme/stitch';
 
-const formatCoins = (value: number) =>
-  new Intl.NumberFormat('fr-CM', { maximumFractionDigits: 0 }).format(value);
-
 interface HomeScreenProps {
+  studentProfile?: StudentProfile | null;
   studentName?: string;
   studentSkills?: string[];
   profileComplete: boolean;
@@ -58,34 +49,12 @@ interface HomeScreenProps {
   onProfile: () => void;
 }
 
-type QuickAction = {
-  key: string;
-  label: string;
-  detail: string;
-  badge?: string;
-  Icon: LucideIcon;
-  image?: any;
-  color: string;
-  tint: string;
-  onPress: () => void;
-};
-
-const initialPriority: HomePriority = {
-  kind: 'resource',
-  eyebrow: 'PROCHAINE ÉTAPE',
-  title: 'Prépare ta réussite académique',
-  description: 'Ressources ciblées, annales et documents officiels prêts.',
-  actionLabel: 'Explorer les ressources',
-  destination: 'resources',
-};
-
 export function HomeScreen({
+  studentProfile,
   studentName,
   studentSkills = [],
-  profileComplete,
   balance,
   iaCredits,
-  transactions,
   onRecharge,
   onStages,
   onApplications,
@@ -93,389 +62,301 @@ export function HomeScreen({
   onResources,
   onProfile,
 }: HomeScreenProps) {
-  const [priority, setPriority] = useState<HomePriority>(initialPriority);
-  const [topJobs, setTopJobs] = useState<StageJob[]>([]);
-  const [loadingPriority, setLoadingPriority] = useState(false);
+  const [jobs, setJobs] = useState<StageJob[]>([]);
+  const [recentApp, setRecentApp] = useState<StageApplication | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [applyingJob, setApplyingJob] = useState<StageJob | null>(null);
+
+  const effectiveSkills = useMemo(() => {
+    if (studentSkills && studentSkills.length > 0) return studentSkills;
+    if (studentProfile?.skills && studentProfile.skills.length > 0) return studentProfile.skills;
+    return [];
+  }, [studentSkills, studentProfile]);
 
   const firstName = useMemo(() => {
-    const trimmed = studentName?.trim();
+    const raw = studentProfile?.name || studentName;
+    const trimmed = raw?.trim();
     if (!trimmed) return 'Étudiant';
     return trimmed.split(/\s+/)[0] ?? 'Étudiant';
-  }, [studentName]);
+  }, [studentProfile, studentName]);
 
   const initials = useMemo(() => {
-    const trimmed = studentName?.trim();
+    const raw = studentProfile?.name || studentName;
+    const trimmed = raw?.trim();
     if (!trimmed) return 'ET';
     const parts = trimmed.split(/\s+/);
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0][0] + parts[1][0]).toUpperCase();
-  }, [studentName]);
+  }, [studentProfile, studentName]);
 
   useEffect(() => {
     let active = true;
 
-    const loadPriority = async () => {
-      setLoadingPriority(true);
+    const loadData = async () => {
+      setLoading(true);
       try {
-        const [applicationsResult, jobsResult, documentResponse] = await Promise.allSettled([
+        const [jobsRes, appsRes] = await Promise.allSettled([
+          fetchStageJobs({ userSkills: effectiveSkills }),
           fetchStudentApplications(),
-          fetchStageJobs({ userSkills: studentSkills }),
-          authFetch('/api/mobile/documents').catch(() => null),
         ]);
 
-        const documentData =
-          documentResponse.status === 'fulfilled' && documentResponse.value?.ok
-            ? await (documentResponse.value.json() as Promise<{ documents?: StudentDocumentSummary[] }>)
-            : { documents: [] };
-
-        const fetchedJobs = jobsResult.status === 'fulfilled' ? jobsResult.value : [];
-
         if (active) {
-          setTopJobs(fetchedJobs.slice(0, 2));
-          setPriority(
-            resolveHomePriority({
-              applications: applicationsResult.status === 'fulfilled' ? applicationsResult.value : [],
-              jobs: fetchedJobs,
-              documents: documentData.documents ?? [],
-              profileComplete,
-            })
-          );
+          if (jobsRes.status === 'fulfilled') {
+            setJobs(jobsRes.value);
+          }
+          if (appsRes.status === 'fulfilled' && appsRes.value.length > 0) {
+            setRecentApp(appsRes.value[0]);
+          }
         }
       } catch {
-        if (active) {
-          setPriority(resolveHomePriority({ applications: [], jobs: [], documents: [], profileComplete }));
-        }
+        // Fallback gracieux déjà géré par stagesApi
       } finally {
-        if (active) setLoadingPriority(false);
+        if (active) setLoading(false);
       }
     };
 
-    void loadPriority();
+    void loadData();
     return () => {
       active = false;
     };
-  }, [profileComplete, studentSkills]);
+  }, [effectiveSkills]);
 
-  const destinations: Record<HomeDestination, () => void> = {
-    applications: onApplications,
-    stages: onStages,
-    documents: onDocuments,
-    account: onProfile,
-    resources: onResources,
-  };
+  // The single best matching offer for the student
+  const topJob = useMemo(() => {
+    if (!jobs || jobs.length === 0) return null;
+    return jobs[0];
+  }, [jobs]);
 
-  // 4 Featured Actions (Inspired by "Frequently Used" grid from Mockup 2)
-  const quickGridActions: QuickAction[] = [
-    {
-      key: 'stages',
-      label: 'Stages',
-      detail: '12 offres actives',
-      badge: 'Nouveau',
-      Icon: BriefcaseBusiness,
-      image: ICON_STAGE_3D,
-      color: '#A78BFA',
-      tint: 'rgba(167, 139, 250, 0.16)',
-      onPress: onStages,
-    },
-    {
-      key: 'documents',
-      label: 'Rédiger',
-      detail: 'Rapports & CV',
-      badge: 'Word AI',
-      Icon: FilePlus2,
-      image: ICON_DOCUMENTS_3D,
-      color: '#EC4899',
-      tint: 'rgba(236, 72, 153, 0.16)',
-      onPress: onDocuments,
-    },
-    {
-      key: 'resources',
-      label: 'Annales',
-      detail: 'Examens & TD',
-      Icon: BookOpen,
-      image: ICON_ANNALES_3D,
-      color: '#38BDF8',
-      tint: 'rgba(56, 189, 248, 0.16)',
-      onPress: onResources,
-    },
-    {
-      key: 'applications',
-      label: 'Candidatures',
-      detail: 'Suivi en direct',
-      Icon: Compass,
-      image: ICON_CANDIDATURES_3D,
-      color: '#34D399',
-      tint: 'rgba(52, 211, 153, 0.16)',
-      onPress: onApplications,
-    },
-  ];
+  const totalOtherCount = Math.max(0, jobs.length - 1);
 
   return (
     <View style={styles.container}>
-      {/* ── Top Welcome Bar (Inspired by Mockup 2) ────────────────── */}
-      <View style={styles.topHeader}>
-        <View style={styles.topUserWrap}>
-          <Pressable onPress={onProfile} style={styles.avatarCircle}>
+      {/* ── 1. Header Sobre & Accueil Épuré ────────────────────────── */}
+      <View style={styles.headerRow}>
+        <Pressable onPress={onProfile} style={styles.userBlock}>
+          <View style={styles.avatarWrap}>
             <Text style={styles.avatarText}>{initials}</Text>
-          </Pressable>
-          <View>
-            <Text style={styles.welcomeEyebrow}>Welcome Back 👋</Text>
-            <Text style={styles.welcomeName}>Hi, {firstName}</Text>
           </View>
-        </View>
+          <View style={styles.userTextCol}>
+            <Text style={styles.greetingText}>Bonjour, {firstName} 👋</Text>
+            <Text style={styles.subGreetingText} numberOfLines={1}>
+              {studentProfile?.faculty || studentProfile?.university || 'Prêt pour ton stage'}
+            </Text>
+          </View>
+        </Pressable>
 
-        <Pressable onPress={onProfile} style={styles.headerIconButton}>
-          <Wallet size={18} color="#C4B5FD" />
+        <Pressable onPress={onRecharge} style={styles.tokenPill}>
+          <Sparkles size={13} color={stitchColors.emerald} />
+          <Text style={styles.tokenPillText}>
+            {iaCredits > 0 ? `${iaCredits} Jeton${iaCredits > 1 ? 's' : ''} IA` : '1 Offert'}
+          </Text>
         </Pressable>
       </View>
 
-      {/* ── Hero Fintech Card (Inspired by Violet Credit Card in Mockup 2) ── */}
-      <View style={styles.cardContainer}>
-        <LinearGradient
-          colors={['#7C3AED', '#5B21B6', '#31105C']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroCard}
-        >
-          {/* Decorative geometric glassy overlay shapes */}
-          <View style={styles.cardDecoShape1} />
-          <View style={styles.cardDecoShape2} />
-
-          <View style={styles.cardTopline}>
-            <View>
-              <Text style={styles.cardBalanceLabel}>Total Balance</Text>
-              <Text style={styles.cardBalanceValue}>{formatCoins(balance)} C</Text>
-            </View>
-            <View style={styles.cardChipBadge}>
-              <Text style={styles.cardChipText}>CAMPUS 360</Text>
-            </View>
+      {/* ── 2. Statut Candidature Récente (si existante) ─────────────── */}
+      {recentApp && (
+        <Pressable onPress={onApplications} style={styles.recentAppBanner}>
+          <View style={styles.recentAppDot} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.recentAppTitle} numberOfLines={1}>
+              Candidature chez {recentApp.job?.company?.name || 'Entreprise'}
+            </Text>
+            <Text style={styles.recentAppSub}>
+              Statut : {recentApp.status === 'INTERVIEW' ? 'Entretien programmé 🎉' : 'En cours d\'examen'}
+            </Text>
           </View>
+          <ArrowRight size={14} color={stitchColors.emerald} />
+        </Pressable>
+      )}
 
-          <View style={styles.cardBottomRow}>
-            <View style={styles.cardCreditsBlock}>
-              <Sparkles size={14} color="#FDE047" />
-              <Text style={styles.cardCreditsLabel}>
-                Crédits IA : <Text style={styles.cardCreditsBold}>{iaCredits}</Text>
-              </Text>
-            </View>
+      {/* ── 3. L'Offre Unique en Vedette ("Le Match Idéal pour Toi") ── */}
+      <View style={styles.featuredSection}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionKicker}>⭐ TON MEILLEUR MATCH DU JOUR</Text>
+          <Text style={styles.sectionSubKicker}>Recommandation IA</Text>
+        </View>
 
-            <Pressable onPress={onRecharge} style={styles.cardRechargePill}>
-              <Text style={styles.cardRechargeText}>+ Top Up</Text>
-            </Pressable>
+        {loading ? (
+          <View style={styles.loaderCard}>
+            <ActivityIndicator size="small" color={stitchColors.sienna} />
+            <Text style={styles.loaderCardText}>Analyse de ton profil & des offres...</Text>
           </View>
-        </LinearGradient>
-      </View>
+        ) : topJob ? (
+          <View style={styles.singleHeroCard}>
+            {/* Bannière / Flyer de l'offre si disponible */}
+            {topJob.flyerUrl && (
+              <View style={styles.mediaWrap}>
+                <Image source={{ uri: topJob.flyerUrl }} style={styles.mediaImage} resizeMode="cover" />
+                <LinearGradient
+                  colors={['transparent', 'rgba(15, 23, 42, 0.85)']}
+                  style={styles.mediaGradient}
+                />
+                {topJob.contractType && (
+                  <View style={styles.contractBadge}>
+                    <Text style={styles.contractBadgeText}>{topJob.contractType}</Text>
+                  </View>
+                )}
+              </View>
+            )}
 
-      {/* ── Frequently Used (2x2 Grid, Inspired by Mockup 2) ─────────── */}
-      <View style={styles.section}>
-        <Text style={styles.sectionHeading}>Frequently Used</Text>
-        <View style={styles.frequentlyGrid}>
-          {quickGridActions.map((action) => (
-            <Pressable
-              key={action.key}
-              onPress={action.onPress}
-              style={({ pressed }) => [styles.gridItem, pressed && styles.pressed]}
-            >
-              {action.image ? (
-                <Image source={action.image} style={styles.gridImage3D} resizeMode="cover" />
-              ) : (
-                <View style={[styles.gridIconWrap, { backgroundColor: action.tint }]}>
-                  <action.Icon size={20} color={action.color} strokeWidth={2.2} />
-                </View>
-              )}
-              <View style={styles.gridCopy}>
-                <View style={styles.gridLabelRow}>
-                  <Text style={styles.gridLabel}>{action.label}</Text>
-                  {action.badge && (
-                    <View style={styles.gridBadge}>
-                      <Text style={styles.gridBadgeText}>{action.badge}</Text>
+            <View style={styles.cardBody}>
+              {/* Entreprise, Titre & Badge de Match */}
+              <View style={styles.jobTopRow}>
+                <View style={styles.companyRow}>
+                  {topJob.company?.logoUrl ? (
+                    <Image source={{ uri: topJob.company.logoUrl }} style={styles.companyLogo} />
+                  ) : (
+                    <View style={styles.companyLogoPlaceholder}>
+                      <Text style={styles.companyLogoText}>
+                        {topJob.company?.name ? topJob.company.name.slice(0, 2).toUpperCase() : 'ST'}
+                      </Text>
                     </View>
                   )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.jobTitle} numberOfLines={2}>
+                      {topJob.title}
+                    </Text>
+                    <View style={styles.companySubtitleRow}>
+                      <Text style={styles.companyName} numberOfLines={1}>
+                        {topJob.company?.name || "L'Entreprise"}
+                      </Text>
+                      {topJob.company?.status === 'VERIFIED' && (
+                        <CheckCircle2 size={13} color={stitchColors.emerald} />
+                      )}
+                    </View>
+                  </View>
                 </View>
-                <Text style={styles.gridDetail}>{action.detail}</Text>
-              </View>
-              <ArrowUpRight size={14} color="#6D28D9" style={styles.gridArrow} />
-            </Pressable>
-          ))}
-        </View>
-      </View>
 
-      {/* ── Priority Action Card (Inspired by Mockup 1 & 2) ─────────── */}
-      <View style={styles.section}>
-        <LinearGradient
-          colors={['#171131', '#110D25']}
-          style={styles.priorityCard}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.priorityGlowOrb} />
-
-          <View style={styles.priorityHeaderRow}>
-            <View style={styles.priorityEyebrowPill}>
-              <Sparkles size={11} color="#A78BFA" />
-              <Text style={styles.priorityEyebrow}>{priority.eyebrow}</Text>
-            </View>
-
-            {loadingPriority && (
-              <ActivityIndicator size="small" color="#A78BFA" style={{ transform: [{ scale: 0.8 }] }} />
-            )}
-          </View>
-
-          <Text style={styles.priorityTitle}>{priority.title}</Text>
-          <Text style={styles.priorityDesc}>{priority.description}</Text>
-
-          <View style={styles.priorityFooter}>
-            {typeof priority.progress === 'number' && (
-              <View style={styles.progressRow}>
-                <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: `${priority.progress}%` }]} />
+                <View style={styles.heroMatchBadge}>
+                  <Sparkles size={11} color="#FFFFFF" />
+                  <Text style={styles.heroMatchBadgeText}>
+                    {topJob.matchScore || 96}% Match
+                  </Text>
                 </View>
-                <Text style={styles.progressValue}>{priority.progress}%</Text>
               </View>
-            )}
 
-            <Pressable
-              onPress={destinations[priority.destination]}
-              style={({ pressed }) => [styles.priorityButton, pressed && styles.pressed]}
-            >
-              <Text style={styles.priorityButtonText}>{priority.actionLabel}</Text>
-              <ArrowRight size={16} color="#FFFFFF" strokeWidth={2.4} />
-            </Pressable>
-          </View>
-        </LinearGradient>
-      </View>
+              {/* Métadonnées essentielles : Lieu, Durée, Indemnité */}
+              <View style={styles.metaRow}>
+                <View style={styles.metaItem}>
+                  <MapPin size={13} color={stitchColors.inkSubtle} />
+                  <Text style={styles.metaItemText}>{topJob.location || 'Abidjan / Hybride'}</Text>
+                </View>
+                {topJob.duration && (
+                  <View style={styles.metaItem}>
+                    <Clock size={13} color={stitchColors.inkSubtle} />
+                    <Text style={styles.metaItemText}>{topJob.duration}</Text>
+                  </View>
+                )}
+                {topJob.stipend && (
+                  <View style={[styles.metaItem, styles.stipendItem]}>
+                    <Coins size={13} color={stitchColors.emerald} />
+                    <Text style={styles.stipendItemText}>{topJob.stipend}</Text>
+                  </View>
+                )}
+              </View>
 
-      {/* ── Featured Internships Showcase (Stages & Emplois) ────── */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeadingRow}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <BriefcaseBusiness size={15} color="#A78BFA" />
-            <Text style={styles.sectionHeading}>Stages Recommandés</Text>
-          </View>
-          <Pressable onPress={onStages} hitSlop={8}>
-            <Text style={styles.seeAll}>Voir tout (12)</Text>
-          </Pressable>
-        </View>
+              {/* Compétences clés alignées */}
+              <View style={styles.skillsSection}>
+                <Text style={styles.skillsHeading}>Tes compétences alignées avec cette offre :</Text>
+                <View style={styles.skillsPillRow}>
+                  {(topJob.matchingSkills && topJob.matchingSkills.length > 0
+                    ? topJob.matchingSkills
+                    : (topJob.requirements || []).slice(0, 3)
+                  ).map((sk, idx) => (
+                    <View key={idx} style={styles.skillPill}>
+                      <Check size={11} color={stitchColors.emerald} strokeWidth={2.5} />
+                      <Text style={styles.skillPillText}>{sk}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
 
-        {topJobs.length > 0 ? (
-          <View style={{ gap: 10 }}>
-            {topJobs.map((job) => {
-              const match = job.matchScore || 85;
-              const compInitials = job.company?.name ? job.company.name.slice(0, 2).toUpperCase() : 'ST';
-              return (
-                <Pressable
-                  key={job.id}
-                  onPress={onStages}
-                  style={({ pressed }) => [styles.homeJobCard, pressed && styles.pressed]}
+              {/* ── LE BOUTON SIGNATURE IA : 1-CLIC ── */}
+              <Pressable
+                onPress={() => setApplyingJob(topJob)}
+                style={({ pressed }) => [styles.applyAiButton, pressed && { opacity: 0.9 }]}
+              >
+                <LinearGradient
+                  colors={brandGradient.colors}
+                  start={brandGradient.horizontal.start}
+                  end={brandGradient.horizontal.end}
+                  style={styles.applyAiButtonGrad}
                 >
-                  {job.flyerUrl && (
-                    <View style={styles.homeJobMediaWrap}>
-                      <Image
-                        source={{ uri: job.flyerUrl }}
-                        style={styles.homeJobMediaImage}
-                        resizeMode="cover"
-                      />
-                      <LinearGradient
-                        colors={['transparent', 'rgba(19, 16, 36, 0.95)']}
-                        style={styles.homeJobMediaOverlay}
-                      />
-                      {job.contractType && (
-                        <View style={styles.homeJobOverlayContract}>
-                          <Text style={styles.homeJobOverlayContractText}>{job.contractType}</Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
+                  <Sparkles size={18} color="#FFFFFF" strokeWidth={2.2} />
+                  <Text style={styles.applyAiButtonText}>Postuler avec l'IA (1-Clic)</Text>
+                </LinearGradient>
+              </Pressable>
 
-                  <View style={styles.homeJobTopRow}>
-                    <View style={styles.homeJobCompanyCol}>
-                      {job.company?.logoUrl ? (
-                        <Image
-                          source={{ uri: job.company.logoUrl }}
-                          style={styles.homeJobAvatarImg}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View style={styles.homeJobAvatar}>
-                          <Text style={styles.homeJobAvatarText}>{compInitials}</Text>
-                        </View>
-                      )}
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.homeJobTitle} numberOfLines={1}>
-                          {job.title}
-                        </Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Text style={styles.homeJobCompanyText} numberOfLines={1}>
-                            {job.company?.name}
-                          </Text>
-                          {job.company?.status === 'VERIFIED' && (
-                            <CheckCircle2 size={12} color="#34D399" />
-                          )}
-                        </View>
-                      </View>
-                    </View>
-
-                    <View style={styles.homeJobMatchBadge}>
-                      <Sparkles size={10} color="#34D399" />
-                      <Text style={styles.homeJobMatchText}>{match}% Match</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.homeJobTagsRow}>
-                    <View style={styles.homeJobTagItem}>
-                      <MapPin size={10} color="#94A3B8" />
-                      <Text style={styles.homeJobTagText}>{job.location || 'Abidjan'}</Text>
-                    </View>
-                    {job.stipend && (
-                      <View style={styles.homeJobStipendTag}>
-                        <Coins size={10} color="#34D399" />
-                        <Text style={styles.homeJobStipendTagText}>{job.stipend}</Text>
-                      </View>
-                    )}
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-        ) : null}
-      </View>
-
-      {/* ── Recent Activity / Transactions ──────────────────────────── */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeadingRow}>
-          <Text style={styles.sectionHeading}>Recent Statement</Text>
-          <Pressable onPress={onProfile} hitSlop={8}>
-            <Text style={styles.seeAll}>See All</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.activityCard}>
-          {transactions.length > 0 ? (
-            transactions.slice(0, 3).map((transaction) => (
-              <TransactionRow
-                key={transaction.id}
-                label={transaction.label}
-                date={transaction.date}
-                amount={transaction.amount}
-                type={transaction.type}
-                formatCoins={formatCoins}
-              />
-            ))
-          ) : (
-            <View style={styles.emptyActivity}>
-              <View style={styles.emptyIcon}>
-                <Sparkles size={18} color="#A78BFA" />
-              </View>
-              <View style={styles.emptyCopy}>
-                <Text style={styles.emptyTitle}>Aucune transaction récente</Text>
-                <Text style={styles.emptyText}>Vos activités s'afficheront ici au fur et à mesure.</Text>
-              </View>
+              <Pressable onPress={onStages} style={styles.detailsLink}>
+                <Text style={styles.detailsLinkText}>Consulter les détails du poste →</Text>
+              </Pressable>
             </View>
-          )}
-        </View>
+          </View>
+        ) : (
+          <View style={styles.emptyCard}>
+            <BriefcaseBusiness size={24} color={stitchColors.inkSubtle} />
+            <Text style={styles.emptyCardText}>Aucune offre disponible pour le moment.</Text>
+          </View>
+        )}
       </View>
 
-      <View style={styles.bottomSpace} />
+      {/* ── 4. Lien Sobre Vers les Autres Offres ─────────────────────── */}
+      <Pressable onPress={onStages} style={styles.allOffersLink}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.allOffersTitle}>Explorer les autres stages</Text>
+          <Text style={styles.allOffersSub}>
+            {totalOtherCount > 0
+              ? `${totalOtherCount} autre${totalOtherCount > 1 ? 's' : ''} opportunité${totalOtherCount > 1 ? 's' : ''} disponible${totalOtherCount > 1 ? 's' : ''}`
+              : 'Accéder à l\'ensemble du catalogue'}
+          </Text>
+        </View>
+        <View style={styles.allOffersArrow}>
+          <ArrowRight size={16} color="#FFFFFF" />
+        </View>
+      </Pressable>
+
+      {/* ── 5. Raccourcis Métier Très Épurés (Atelier & Ressources) ──── */}
+      <View style={styles.footerShortcutsRow}>
+        <Pressable onPress={onDocuments} style={styles.shortcutTile}>
+          <View style={[styles.shortcutIconWrap, { backgroundColor: '#FDF2F8' }]}>
+            <FilePlus2 size={16} color="#DB2777" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.shortcutTileTitle}>Atelier Rédaction</Text>
+            <Text style={styles.shortcutTileSub}>CV, Rapport & Mémoire</Text>
+          </View>
+        </Pressable>
+
+        <Pressable onPress={onResources} style={styles.shortcutTile}>
+          <View style={[styles.shortcutIconWrap, { backgroundColor: '#F0FDF4' }]}>
+            <BookOpen size={16} color="#16A34A" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.shortcutTileTitle}>Hub Académique</Text>
+            <Text style={styles.shortcutTileSub}>Annales & PDF de cours</Text>
+          </View>
+        </Pressable>
+      </View>
+
+      {/* ── Modale IA de Postulation Directe ────────────────────────── */}
+      <AiApplyModal
+        visible={Boolean(applyingJob)}
+        job={applyingJob}
+        studentProfile={{
+          fullName: studentProfile?.name || studentName || 'Étudiant',
+          email: studentProfile?.email || 'etudiant@campus360.app',
+          phoneWhatsapp: studentProfile?.whatsappPhone || studentProfile?.phone,
+          major: studentProfile?.faculty || studentProfile?.university || 'Informatique & Télécoms',
+          educationLevel: studentProfile?.level || 'Licence 2',
+          skills: effectiveSkills,
+          tokens: iaCredits > 0 ? iaCredits : 2,
+        }}
+        onClose={() => setApplyingJob(null)}
+        onApplicationComplete={() => {
+          setApplyingJob(null);
+          onApplications();
+        }}
+      />
     </View>
   );
 }
@@ -483,603 +364,425 @@ export function HomeScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090714', // Deep obsidian-violet
-    paddingHorizontal: 18,
-    paddingTop: 12,
-    paddingBottom: 150,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 40,
+    gap: 20,
   },
 
-  // Top Welcome Bar
-  topHeader: {
+  // Header
+  headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
-    marginTop: 4,
+    alignItems: 'center',
+    paddingBottom: 4,
   },
-  topUserWrap: {
+  userBlock: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
-  avatarCircle: {
+  avatarWrap: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#1E1438',
-    borderWidth: 2,
-    borderColor: '#7C3AED',
+    backgroundColor: stitchColors.sienna,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: '#DDD6FE',
+    color: '#FFFFFF',
+    fontWeight: '800',
     fontSize: 15,
-    fontWeight: '800',
-    fontFamily: fontFamilies.inter,
   },
-  welcomeEyebrow: {
-    fontSize: 12,
-    color: '#A78BFA',
-    fontWeight: '500',
-    fontFamily: fontFamilies.inter,
+  userTextCol: {
+    flex: 1,
   },
-  welcomeName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#F8FAFC',
-    fontFamily: fontFamilies.outfit,
-    letterSpacing: -0.3,
+  greetingText: {
+    ...stitchTypography.headlineMd,
+    fontSize: 18,
+    color: stitchColors.ink,
+    fontWeight: '700',
   },
-  headerIconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#131024',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.18)',
+  subGreetingText: {
+    ...stitchTypography.bodySm,
+    color: stitchColors.inkSubtle,
+    marginTop: 1,
+  },
+  tokenPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: stitchColors.emeraldBg,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: stitchRadius.full,
+    borderWidth: 1,
+    borderColor: `${stitchColors.emerald}30`,
+  },
+  tokenPillText: {
+    ...stitchTypography.labelSm,
+    color: stitchColors.emeraldDeep,
+    fontWeight: '700',
   },
 
-  // Hero Card
-  cardContainer: {
-    marginBottom: 24,
-    borderRadius: 22,
-    overflow: 'hidden',
+  // Recent app alert
+  recentAppBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: stitchColors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: stitchRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(167, 139, 250, 0.28)',
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 10,
+    borderColor: `${stitchColors.emerald}40`,
   },
-  heroCard: {
-    padding: 22,
-    minHeight: 165,
+  recentAppDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: stitchColors.emerald,
+  },
+  recentAppTitle: {
+    ...stitchTypography.labelMd,
+    color: stitchColors.ink,
+    fontWeight: '700',
+  },
+  recentAppSub: {
+    ...stitchTypography.bodySm,
+    fontSize: 12,
+    color: stitchColors.emeraldTone,
+    marginTop: 2,
+  },
+
+  // Featured Section
+  featuredSection: {
+    gap: 10,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    position: 'relative',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+  },
+  sectionKicker: {
+    ...stitchTypography.labelSm,
+    fontWeight: '800',
+    color: stitchColors.sienna,
+    letterSpacing: 0.8,
+  },
+  sectionSubKicker: {
+    ...stitchTypography.labelSm,
+    color: stitchColors.inkSubtle,
+    fontSize: 11,
+  },
+
+  // Hero Card (The Single Offer)
+  singleHeroCard: {
+    backgroundColor: stitchColors.surface,
+    borderRadius: stitchRadius.xl,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
     overflow: 'hidden',
+    shadowColor: stitchColors.ink,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 3,
   },
-  cardDecoShape1: {
-    position: 'absolute',
-    right: -30,
-    top: -30,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  cardDecoShape2: {
-    position: 'absolute',
-    right: 35,
-    bottom: -40,
-    width: 120,
+  mediaWrap: {
     height: 120,
-    borderRadius: 40,
-    transform: [{ rotate: '45deg' }],
-    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    width: '100%',
+    position: 'relative',
   },
-  cardTopline: {
+  mediaImage: {
+    width: '100%',
+    height: '100%',
+  },
+  mediaGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  contractBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: stitchRadius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  contractBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  cardBody: {
+    padding: 20,
+    gap: 16,
+  },
+
+  jobTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-  },
-  cardBalanceLabel: {
-    fontSize: 12.5,
-    color: '#DDD6FE',
-    fontWeight: '600',
-    fontFamily: fontFamilies.inter,
-    marginBottom: 4,
-  },
-  cardBalanceValue: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    fontFamily: fontFamilies.outfit,
-    letterSpacing: -0.5,
-  },
-  cardChipBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
-  },
-  cardChipText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 1,
-  },
-  cardBottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  cardCreditsBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  cardCreditsLabel: {
-    fontSize: 12,
-    color: '#E2E8F0',
-    fontWeight: '500',
-  },
-  cardCreditsBold: {
-    fontWeight: '800',
-    color: '#FDE047',
-  },
-  cardRechargePill: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-  },
-  cardRechargeText: {
-    color: '#4C1D95',
-    fontWeight: '800',
-    fontSize: 12,
-  },
-
-  // Headings
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeading: {
-    fontSize: 16.5,
-    fontWeight: '800',
-    color: '#F8FAFC',
-    fontFamily: fontFamilies.outfit,
-    letterSpacing: -0.2,
-    marginBottom: 12,
-  },
-  sectionHeadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  seeAll: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#A78BFA',
-  },
-
-  // 2x2 Grid (Frequently Used)
-  frequentlyGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
   },
-  gridItem: {
-    width: '48%',
-    backgroundColor: '#131024',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.16)',
-    borderRadius: 16,
-    padding: 14,
+  companyRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    position: 'relative',
-  },
-  gridIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gridCopy: {
+    alignItems: 'flex-start',
+    gap: 12,
     flex: 1,
   },
-  gridLabelRow: {
-    flexDirection: 'row',
+  companyLogo: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+  },
+  companyLogoPlaceholder: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: stitchColors.surfaceContainerHigh,
     alignItems: 'center',
-    gap: 4,
-  },
-  gridLabel: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    color: '#F8FAFC',
-    fontFamily: fontFamilies.inter,
-  },
-  gridBadge: {
-    backgroundColor: 'rgba(236, 72, 153, 0.2)',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  gridBadgeText: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#F472B6',
-  },
-  gridDetail: {
-    fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 2,
-    fontFamily: fontFamilies.inter,
-  },
-  gridArrow: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-  },
-
-  // Priority Card
-  priorityBorder: {
-    borderRadius: 18,
-    padding: 1,
-  },
-  priorityCard: {
-    backgroundColor: '#131024',
-    borderRadius: 17,
-    padding: 18,
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.16)',
+    borderColor: stitchColors.glassBorder,
   },
-  priorityTopline: {
-    minHeight: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  companyLogoText: {
+    fontWeight: '800',
+    color: stitchColors.inkMuted,
+    fontSize: 15,
   },
-  priorityGlowOrb: {
-    position: 'absolute',
-    top: -20,
-    right: -20,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+  jobTitle: {
+    ...stitchTypography.headlineMd,
+    fontSize: 17,
+    fontWeight: '800',
+    color: stitchColors.ink,
+    lineHeight: 22,
   },
-  priorityHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  priorityEyebrowPill: {
+  companySubtitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(124, 58, 237, 0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(124, 58, 237, 0.35)',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  priorityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(124, 58, 237, 0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(124, 58, 237, 0.35)',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  priorityEyebrow: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    color: '#DDD6FE',
-  },
-  priorityDesc: {
-    fontSize: 13,
-    color: '#94A3B8',
-    lineHeight: 18,
-    marginTop: 6,
-  },
-  priorityFooter: {
-    marginTop: 14,
-  },
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  },
-  progressBarBg: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-    backgroundColor: '#1E1438',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 3,
-    backgroundColor: '#34D399',
-  },
-  priorityTitle: {
-    fontSize: 18,
-    lineHeight: 24,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-    color: '#F8FAFC',
-    marginTop: 12,
-    fontFamily: fontFamilies.outfit,
-  },
-  priorityDescription: {
-    fontSize: 13,
-    color: '#94A3B8',
-    lineHeight: 18,
-    marginTop: 6,
-  },
-  progressBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 14,
-  },
-  progressTrack: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-    backgroundColor: '#1E1438',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  progressValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#C4B5FD',
-  },
-  priorityButton: {
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: '#7C3AED',
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 16,
-  },
-  priorityButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-
-  // Activity Card
-  activityCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.14)',
-    backgroundColor: '#131024',
-    paddingHorizontal: 15,
-  },
-  emptyActivity: {
-    minHeight: 88,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 13,
-  },
-  emptyIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(124, 58, 237, 0.16)',
-  },
-  emptyCopy: {
-    flex: 1,
-  },
-  emptyTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#F8FAFC',
-  },
-  emptyText: {
-    fontSize: 11,
-    lineHeight: 16,
-    color: '#94A3B8',
     marginTop: 4,
   },
+  companyName: {
+    ...stitchTypography.bodySm,
+    fontWeight: '600',
+    color: stitchColors.inkMuted,
+  },
 
-  // Home Job Card Showcase
-  homeJobCard: {
-    backgroundColor: '#131024',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.16)',
-  },
-  homeJobTopRow: {
+  heroMatchBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 8,
+    gap: 5,
+    backgroundColor: stitchColors.emerald,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: stitchRadius.full,
   },
-  homeJobCompanyCol: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
-  homeJobAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: 'rgba(124, 58, 237, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  homeJobAvatarText: {
-    color: '#DDD6FE',
+  heroMatchBadgeText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
     fontSize: 12,
-    fontWeight: '800',
   },
-  homeJobTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#F8FAFC',
-    marginBottom: 2,
+
+  // Meta row
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    alignItems: 'center',
+    paddingVertical: 2,
   },
-  homeJobCompanyText: {
-    fontSize: 11.5,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  homeJobMatchBadge: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(52, 211, 153, 0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.3)',
-    borderRadius: 8,
-    paddingHorizontal: 7,
+    gap: 5,
+  },
+  metaItemText: {
+    ...stitchTypography.bodySm,
+    color: stitchColors.inkMuted,
+    fontSize: 13,
+  },
+  stipendItem: {
+    backgroundColor: stitchColors.emeraldBg,
+    paddingHorizontal: 8,
     paddingVertical: 3,
+    borderRadius: stitchRadius.sm,
   },
-  homeJobMatchText: {
-    color: '#34D399',
-    fontSize: 10.5,
-    fontWeight: '800',
+  stipendItemText: {
+    color: stitchColors.emeraldDeep,
+    fontSize: 12,
+    fontWeight: '700',
   },
-  homeJobTagsRow: {
+
+  // Skills
+  skillsSection: {
+    backgroundColor: stitchColors.surfaceContainerLowest,
+    padding: 12,
+    borderRadius: stitchRadius.md,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: stitchColors.outlineVariant,
+  },
+  skillsHeading: {
+    ...stitchTypography.labelSm,
+    color: stitchColors.inkSubtle,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  skillsPillRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
   },
-  homeJobContractTag: {
-    backgroundColor: 'rgba(124, 58, 237, 0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
-  },
-  homeJobContractTagText: {
-    color: '#DDD6FE',
-    fontSize: 10.5,
-    fontWeight: '700',
-  },
-  homeJobTagItem: {
+  skillPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    backgroundColor: '#0E0B1F',
+    gap: 4,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: stitchRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.14)',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2.5,
+    borderColor: `${stitchColors.emerald}40`,
   },
-  homeJobTagText: {
-    fontSize: 10.5,
-    color: '#94A3B8',
-  },
-  homeJobStipendTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(16, 185, 129, 0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.28)',
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
-  },
-  homeJobStipendTagText: {
-    fontSize: 10.5,
-    color: '#34D399',
-    fontWeight: '700',
-  },
-  // 3D Soft Claymorphism Grid Icons
-  gridImage3D: {
-    width: 44,
-    height: 44,
-    borderRadius: 13,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.35)',
+  skillPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: stitchColors.inkSoft,
   },
 
-  // Home Job Media Wrap
-  homeJobMediaWrap: {
+  // Signature IA Button
+  applyAiButton: {
     width: '100%',
-    height: 100,
-    borderRadius: 12,
+    borderRadius: stitchRadius.button,
     overflow: 'hidden',
-    marginBottom: 10,
-    position: 'relative',
+    shadowColor: stitchColors.sienna,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  homeJobMediaImage: {
-    width: '100%',
-    height: '100%',
+  applyAiButtonGrad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 15,
   },
-  homeJobMediaOverlay: {
-    ...StyleSheet.absoluteFillObject,
+  applyAiButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
-  homeJobOverlayContract: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(9, 7, 20, 0.75)',
+  detailsLink: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  detailsLinkText: {
+    ...stitchTypography.labelSm,
+    color: stitchColors.inkMuted,
+    fontWeight: '600',
+  },
+
+  // Loader & Empty
+  loaderCard: {
+    backgroundColor: stitchColors.surface,
+    borderRadius: stitchRadius.xl,
+    padding: 40,
+    alignItems: 'center',
+    gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    borderColor: stitchColors.glassBorder,
   },
-  homeJobOverlayContractText: {
-    color: '#DDD6FE',
-    fontSize: 10,
+  loaderCardText: {
+    ...stitchTypography.bodySm,
+    color: stitchColors.inkMuted,
+  },
+  emptyCard: {
+    backgroundColor: stitchColors.surface,
+    borderRadius: stitchRadius.xl,
+    padding: 36,
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+  },
+  emptyCardText: {
+    ...stitchTypography.bodyMd,
+    color: stitchColors.inkMuted,
+  },
+
+  // All Offers Banner
+  allOffersLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: stitchColors.surface,
+    padding: 16,
+    borderRadius: stitchRadius.lg,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    gap: 12,
+  },
+  allOffersTitle: {
+    ...stitchTypography.labelMd,
     fontWeight: '700',
+    color: stitchColors.ink,
   },
-  homeJobAvatarImg: {
+  allOffersSub: {
+    ...stitchTypography.bodySm,
+    fontSize: 12,
+    color: stitchColors.inkSubtle,
+    marginTop: 2,
+  },
+  allOffersArrow: {
     width: 34,
     height: 34,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.35)',
+    borderRadius: 17,
+    backgroundColor: stitchColors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  pressed: {
-    opacity: 0.78,
-    transform: [{ scale: 0.98 }],
+  // Shortcuts
+  footerShortcutsRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  bottomSpace: {
-    height: 24,
+  shortcutTile: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: stitchColors.surface,
+    padding: 12,
+    borderRadius: stitchRadius.md,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+  },
+  shortcutIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shortcutTileTitle: {
+    ...stitchTypography.labelSm,
+    fontWeight: '700',
+    color: stitchColors.ink,
+  },
+  shortcutTileSub: {
+    fontSize: 11,
+    color: stitchColors.inkSubtle,
+    marginTop: 1,
   },
 });

@@ -55,6 +55,7 @@ recruiter-web/public/uploads/pdfs/*
 # generated reports & artifacts
 generated_reports/
 dist-mvp-check/
+dist-test/
 .idea/
 
 # typescript
