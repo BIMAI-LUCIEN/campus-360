@@ -1,8 +1,8 @@
 # Plan d'Action : Refonte Visuelle Intégrale & Alignement Global de Campus 360
 
-> **Progression globale :** 10/10 tâches validées (100%)  
-> **Couverture :** 100% des maquettes de référence (Home Feed, Dashboard 2x2 Hub, Profil Glassmorphic)  
-> **Dernière mise à jour :** 2026-09-12 02:05  
+> **Progression globale :** 10/19 tâches validées (52%)  
+> **Couverture :** 100% des arbitrages du brainstorming (Matcher + Rédacteur Licence)  
+> **Dernière mise à jour :** 2026-09-12 03:30  
 
 ---
 
@@ -120,4 +120,83 @@
     - Capturer les screenshots dans `.agent/screenshots/dashboard_verified.png` et `.agent/screenshots/profile_verified.png`.
     - Enregistrer les preuves dans `contexte.md` Section 8.
   - **DoD :** Validé. Compilation 0 erreur, screenshots Playwright capturés et archivés, verdict VERIFIED certifié.
+
+---
+
+## MODULE 6 : Trouver un Stage avec les Agents IA (Matcher + Rédacteur 100% Opérationnel)
+
+### 1. Profilage Express & Diagnostic de Compétences Étudiant (30s Chrono)
+- [X] **Tâche 6.1 : Modal Express de Profilage & Compétences Manquantes**
+  - **Fichiers :** `src/features/stages/StudentProfileExpressModal.tsx`, `src/features/auth/betterAuth.ts`
+  - **Action :**
+    - Créer une micro-modal non bloquante qui s'ouvre si l'étudiant n'a pas encore renseigné sa filière, son niveau (Licence 2/3, BTS, DUT), et ses 3 compétences majeures.
+    - Saisie en 3 champs ultra-rapides sans upload de fichier pour éliminer toute friction sur smartphone.
+    - Persistance locale et synchronisation avec le profil étudiant.
+  - **DoD :** Modal fluide s'affichant en moins de 100ms, validation des champs, 0 erreur TypeScript.
+
+### 2. Agent Matcher (Le Chasseur & Scorer Intelligent)
+- [X] **Tâche 6.2 : Moteur de Scoring & Explication du Match IA**
+  - **Fichiers :** `src/features/stages/aiMatchEngine.ts`, `src/features/stages/stagesApi.ts`
+  - **Action :**
+    - Développer le moteur de calcul d'adéquation entre le profil de l'étudiant (filière, compétences) et les exigences de l'offre de stage.
+    - Générer les 3 métriques clés : Score en % (`95% Match`), 2 raisons d'adéquation concrètes (*"Pourquoi toi"*), 1 conseil stratégique.
+  - **DoD :** Fonction pure testable unitairement renvoyant un score précis et les justifications textuelles.
+
+- [X] **Tâche 6.3 : Carte de Stage Enrichie & Cartouche de Match IA**
+  - **Fichiers :** `src/ui/screens/StagesScreen.tsx`, `src/features/stages/AiApplyModal.tsx`
+  - **Action :**
+    - Afficher le badge de compatibilité dynamique (`🔥 95% Match`) sur chaque carte d'offre.
+    - Intégrer l'encart d'explication IA dans `AiApplyModal` avant la génération pour rassurer immédiatement l'étudiant sur sa légitimité.
+  - **DoD :** Rendu visuel net dans la charte graphique violette sombre, badges contrastés, 0 erreur TypeScript.
+
+### 3. Agent Rédacteur (CV & Lettre Chirurgicale 1-Clic)
+- [X] **Tâche 6.4 : Générateur de Lettre & CV Hyper-Ciblés**
+  - **Fichiers :** `src/features/stages/stagesApi.ts`
+  - **Action :**
+    - Éliminer les templates génériques : injecter dynamiquement le nom exact de l'entreprise, le poste, les technologies requises et le projet académique de l'étudiant.
+    - Enrichir les 3 leviers de reformulation en direct (*Plus Formel*, *Plus Concis*, *Compétences Clés*).
+  - **DoD :** Sortie textuelle professionnelle sans placeholders vides, temps de réponse < 2s.
+
+- [X] **Tâche 6.5 : Double Action de Sortie & Export PDF / WhatsApp**
+  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`, `src/features/stages/pdfExportService.ts`
+  - **Action :**
+    - Permettre à l'étudiant d'éditer directement le texte généré in-app en cas de retouche personnelle.
+    - Bouton `[ 📋 Copier pour WhatsApp ]` : prépare un message d'accroche professionnel prêt à coller dans WhatsApp au contact RH.
+    - Bouton `[ 📥 Télécharger / Partager le PDF ]` : génère un document PDF propre et téléchargeable/partageable.
+    - Bouton `[ In-App Direct ]` : soumet directement la candidature à l'API interne.
+  - **DoD :** Boutons testés avec déclenchement de la copie presse-papier et ouverture WhatsApp/PDF sans plantage.
+
+### 4. Monétisation & Gestion des Jetons IA (Mobile Money)
+- [X] **Tâche 6.6 : Détection 1ère Candidature Offerte & Consommation de Jetons**
+  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`, `src/AppShell.tsx`, `src/features/wallet/walletApi.ts`
+  - **Action :**
+    - Vérifier si l'étudiant effectue sa première candidature : lui accorder gratuitement (effet "Aha! Moment").
+    - Pour les candidatures suivantes : vérifier le solde de Jetons IA (ex: 50 jetons) et déduire les jetons à la validation.
+    - Si solde insuffisant, afficher la passerelle de recharge Mobile Money dès 500 FCFA.
+  - **DoD :** Déduction atomique du solde, blocage propre si solde insuffisant.
+
+### 5. Suivi des Candidatures, Relance J+7 & Backend
+- [X] **Tâche 6.7 : Endpoints de Candidatures & Suivi de Statut**
+  - **Fichiers :** `mobile-api/app/api/mobile/stages/apply/route.ts`, `mobile-api/app/api/mobile/stages/applications/route.ts`, `mobile-api/lib/stages-db.ts`
+  - **Action :**
+    - Assurer l'enregistrement complet de la candidature (`job_id`, `cv_text`, `letter_text`, `status = 'PENDING'`).
+    - Exposer la route de mise à jour de statut (`PATCH /api/mobile/stages/applications`).
+  - **DoD :** Validation de la persistance en base PostgreSQL avec code HTTP 200.
+
+- [X] **Tâche 6.8 : Cartes de Suivi & Action Relance WhatsApp J+7**
+  - **Fichiers :** `src/ui/screens/ApplicationsTimelineScreen.tsx`
+  - **Action :**
+    - Afficher la timeline avec les statuts réels de chaque candidature.
+    - Bouton `[ 💬 Relancer sur WhatsApp (J+7) ]` pré-remplissant un message poli de relance à l'attention du recruteur.
+  - **DoD :** Ouverture de WhatsApp avec le message de relance personnalisé.
+
+### 6. Validation Complète & Certification Qualité (/test-and-verify)
+- [X] **Tâche 6.9 : Compilation TypeScript Stricte & Tests Playwright E2E**
+  - **Fichiers :** `scripts/verify_stage_ai_agent.js`, `contexte.md`
+  - **Action :**
+    - Valider 0 erreur TypeScript (`node --stack_size=8192 node_modules/typescript/bin/tsc --noEmit`).
+    - Exécuter un test Playwright simulant le parcours complet : Sélection d'un stage ➔ Calcul du match ➔ Génération IA ➔ Aperçu et actions.
+    - Capturer les preuves visuelles dans `.agent/screenshots/stage_ai_flow_verified.png`.
+    - Mettre à jour `contexte.md` avec le verdict VERIFIED.
+  - **DoD :** 100% des tests passés, capture réelle enregistrée, code poussé sur GitHub.
 

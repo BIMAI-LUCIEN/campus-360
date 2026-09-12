@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Linking,
   Alert,
+  Platform,
 } from 'react-native';
 import {
   Clock,
@@ -82,14 +83,18 @@ export function ApplicationsTimelineScreen({ studentName }: ApplicationsTimeline
     const reminderMsg = generateFollowupReminderMessage(app, studentName || 'Étudiant');
     const rawPhone = (app.job?.company?.contactWhatsapp || '').replace(/[^0-9]/g, '') || '2250708091011';
     const waUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(reminderMsg)}`;
-    Alert.alert(
-      'Relance IA Préparée',
-      reminderMsg,
-      [
-        { text: 'Envoyer via WhatsApp', onPress: () => Linking.openURL(waUrl) },
-        { text: 'Annuler', style: 'cancel' },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      window.open(waUrl, '_blank');
+    } else {
+      Alert.alert(
+        'Relance IA Préparée',
+        reminderMsg,
+        [
+          { text: 'Envoyer via WhatsApp', onPress: () => Linking.openURL(waUrl) },
+          { text: 'Annuler', style: 'cancel' },
+        ]
+      );
+    }
   };
 
   return (

@@ -38,6 +38,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { StageJob } from '../../types';
 import { fetchStageJobs } from '../../features/stages/stagesApi';
 import { AiApplyModal } from '../../features/stages/AiApplyModal';
+import { analyzeJobMatch } from '../../features/stages/aiMatchEngine';
 import { SearchFilterBar, TrustBadgeStrip } from '../GlassComponents';
 
 interface StagesScreenProps {
@@ -135,12 +136,30 @@ export function StagesScreen({
     );
   };
 
+  const enrichedJobs = useMemo(() => {
+    return jobs.map((job) => {
+      const match = analyzeJobMatch(job, studentProfile);
+      return {
+        ...job,
+        matchScore: match.score,
+        matchHeadline: match.headline,
+        matchBadgeColor: match.badgeColor,
+        matchReasons: match.matchedPoints,
+        matchingSkills: match.keyStrengths.length > 0 ? match.keyStrengths : job.matchingSkills,
+      };
+    });
+  }, [jobs, studentProfile]);
+
   const displayedJobs = useMemo(() => {
     if (showTopThreeOnly) {
-      return [...jobs].sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)).slice(0, 3);
+      return [...enrichedJobs].sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)).slice(0, 3);
     }
-    return jobs;
-  }, [jobs, showTopThreeOnly]);
+    return enrichedJobs;
+  }, [enrichedJobs, showTopThreeOnly]);
+
+  const detailMatch = useMemo(() => {
+    return selectedDetailJob ? analyzeJobMatch(selectedDetailJob, studentProfile) : null;
+  }, [selectedDetailJob, studentProfile]);
 
   return (
     <View style={styles.container}>
@@ -273,7 +292,7 @@ export function StagesScreen({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.featuredScrollContent}
             >
-              {jobs.slice(0, 5).map((featuredJob) => {
+              {enrichedJobs.slice(0, 5).map((featuredJob) => {
                 const bannerUri =
                   featuredJob.flyerUrl ||
                   DEFAULT_BANNERS[featuredJob.company?.industry || 'default'] ||
@@ -567,6 +586,38 @@ export function StagesScreen({
                     </Text>
                   </View>
                 </View>
+
+                {/* Diagnostic Agent Matcher IA */}
+                {detailMatch && (
+                  <View style={styles.detailAiMatchBox}>
+                    <View style={styles.detailAiMatchHeader}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Sparkles size={15} color="#A78BFA" />
+                        <Text style={styles.detailAiMatchTitle}>Diagnostic Agent Matcher IA</Text>
+                      </View>
+                      <View style={[styles.detailAiMatchBadge, { backgroundColor: `${detailMatch.badgeColor}20`, borderColor: `${detailMatch.badgeColor}55` }]}>
+                        <Text style={[styles.detailAiMatchBadgeText, { color: detailMatch.badgeColor }]}>
+                          {detailMatch.score}% • {detailMatch.headline}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.detailMatchPoints}>
+                      {detailMatch.matchedPoints.map((pt, idx) => (
+                        <View key={idx} style={styles.detailMatchPointRow}>
+                          <CheckCircle2 size={13} color="#34D399" style={{ marginTop: 2 }} />
+                          <Text style={styles.detailMatchPointText}>{pt}</Text>
+                        </View>
+                      ))}
+                      <View style={styles.detailAdviceRow}>
+                        <Sparkles size={13} color="#FBBF24" style={{ marginTop: 2 }} />
+                        <Text style={styles.detailAdviceText}>
+                          <Text style={{ fontWeight: '700', color: '#FDE047' }}>Conseil IA : </Text>
+                          {detailMatch.strategicAdvice}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
 
                 <View style={styles.detailSection}>
                   <Text style={styles.detailSectionTitle}>Description de la Mission</Text>
@@ -1316,5 +1367,65 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '800',
+  },
+  detailAiMatchBox: {
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.28)',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+  },
+  detailAiMatchHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  detailAiMatchTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#DDD6FE',
+  },
+  detailAiMatchBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  detailAiMatchBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  detailMatchPoints: {
+    gap: 6,
+  },
+  detailMatchPointRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  detailMatchPointText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#C4B5FD',
+    lineHeight: 17,
+  },
+  detailAdviceRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(139, 92, 246, 0.15)',
+  },
+  detailAdviceText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#E2E8F0',
+    lineHeight: 17,
   },
 });

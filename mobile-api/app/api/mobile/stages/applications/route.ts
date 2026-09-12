@@ -5,7 +5,7 @@ import { ensureStageStudent, listStudentApplications, updateStudentApplicationSt
 import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 
 const updateSchema = z.object({
-  applicationId: z.string().uuid(),
+  applicationId: z.string().min(1),
   status: z.enum(['PENDING', 'REVIEWING', 'INTERVIEW', 'ACCEPTED', 'REJECTED']),
 });
 

@@ -5,7 +5,7 @@ import { createStageApplication, ensureStageStudent, getStageJob } from '@/lib/s
 import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 
 const applySchema = z.object({
-  jobId: z.string().uuid(),
+  jobId: z.string().min(1),
   cvText: z.string().max(50_000).optional(),
   letterText: z.string().max(50_000).optional(),
   cvFileUrl: z.string().url().optional(),
