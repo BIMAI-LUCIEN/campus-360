@@ -43,6 +43,8 @@ import {
   Clock,
   Star,
   Zap,
+  ArrowRight,
+  Heart,
 } from 'lucide-react-native';
 
 // Cover accents — give each PDF tile a distinct hue (comic-shelf feel).
@@ -68,6 +70,7 @@ import {
   stitchRadius,
   stitchTypography,
   brandGradient,
+  fontFamilies,
 } from '../theme/stitch';
 
 const SANS = Platform.select({ ios: 'System', android: 'sans-serif-medium', web: 'Outfit, sans-serif' }) as string;
@@ -390,7 +393,7 @@ export function SecondaryButton({
   );
 }
 
-// ─── BottomNav — floating dark bar, élégante & équilibrée ───────────────────
+// ─── BottomNav — barre flottante en pilule frosted calquée sur la maquette ──
 export function BottomNav({
   activeSection,
   onPress,
@@ -403,28 +406,132 @@ export function BottomNav({
       <View style={styles.bottomNav}>
         {NAV_ITEMS.map(({ key, label, Icon }) => {
           const active = activeSection === key;
+          if (active) {
+            return (
+              <Pressable
+                key={key}
+                testID={`nav-${key}`}
+                accessibilityLabel={label}
+                onPress={() => onPress(key)}
+                style={({ pressed }) => [styles.navActivePill, pressed && { opacity: 0.9 }]}
+              >
+                <Icon size={17} color="#FFFFFF" strokeWidth={2.4} />
+                <Text style={styles.navActiveLabel}>{label}</Text>
+              </Pressable>
+            );
+          }
           return (
             <Pressable
               key={key}
+              testID={`nav-${key}`}
+              accessibilityLabel={label}
               onPress={() => onPress(key)}
-              style={({ pressed }) => [styles.navItem, pressed && { opacity: 0.7 }]}
+              hitSlop={8}
+              style={({ pressed }) => [styles.navInactiveItem, pressed && { opacity: 0.6 }]}
             >
-              <View style={[styles.navIconBox, active && styles.navIconBoxActive]}>
-                <Icon
-                  size={19}
-                  color={active ? '#FFFFFF' : stitchColors.inkSubtle}
-                  strokeWidth={active ? 2.3 : 1.8}
-                />
-              </View>
-              <Text
-                style={[styles.navLabel, active ? styles.navLabelActive : styles.navLabelInactive]}
-                numberOfLines={1}
-              >
-                {label}
-              </Text>
+              <Icon size={20} color="#64748B" strokeWidth={1.8} />
             </Pressable>
           );
         })}
+      </View>
+    </View>
+  );
+}
+
+// ─── DashboardHubCard — Grande carte blanche arrondie avec icône 3D & flèche ──
+export function DashboardHubCard({
+  title,
+  subtitle,
+  icon: Icon,
+  iconBg = 'rgba(139, 92, 246, 0.12)',
+  iconColor = '#8B5CF6',
+  onPress,
+  style,
+}: {
+  title: string;
+  subtitle: string;
+  icon: any;
+  iconBg?: string;
+  iconColor?: string;
+  onPress: () => void;
+  style?: ViewStyle;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.hubCard,
+        pressed && { transform: [{ scale: 0.98 }], opacity: 0.92 },
+        style,
+      ]}
+    >
+      <View style={[styles.hubIconCircle, { backgroundColor: iconBg }]}>
+        <Icon size={25} color={iconColor} strokeWidth={2} />
+      </View>
+      <View style={styles.hubTextWrap}>
+        <Text style={styles.hubTitle}>{title}</Text>
+        <Text style={styles.hubSubtitle} numberOfLines={2}>
+          {subtitle}
+        </Text>
+      </View>
+      <View style={styles.hubArrowBtn}>
+        <ArrowRight size={15} color="#0F172A" strokeWidth={2.4} />
+      </View>
+    </Pressable>
+  );
+}
+
+// ─── DashboardGrid — Grille 2x2 organisant les 4 piliers du Dashboard ────────
+export function DashboardGrid({
+  onApplyIa,
+  onApplications,
+  onDocuments,
+  onStages,
+  style,
+}: {
+  onApplyIa: () => void;
+  onApplications: () => void;
+  onDocuments: () => void;
+  onStages: () => void;
+  style?: ViewStyle;
+}) {
+  return (
+    <View style={[styles.hubGridWrap, style]}>
+      <View style={styles.hubGridRow}>
+        <DashboardHubCard
+          title="Postuler IA"
+          subtitle="Génère CV & lettre ciblés pour décrocher ton stage."
+          icon={Sparkles}
+          iconBg="rgba(139, 92, 246, 0.15)"
+          iconColor="#7C3AED"
+          onPress={onApplyIa}
+        />
+        <DashboardHubCard
+          title="Mes Candidatures"
+          subtitle="Suis tes postulations et relances en temps réel."
+          icon={Briefcase}
+          iconBg="rgba(59, 130, 246, 0.15)"
+          iconColor="#2563EB"
+          onPress={onApplications}
+        />
+      </View>
+      <View style={styles.hubGridRow}>
+        <DashboardHubCard
+          title="Atelier Rédaction"
+          subtitle="Rédige et optimise tes rapports et mémoires."
+          icon={FileText}
+          iconBg="rgba(245, 158, 11, 0.15)"
+          iconColor="#D97706"
+          onPress={onDocuments}
+        />
+        <DashboardHubCard
+          title="Stages & Favoris"
+          subtitle="Explore et sauvegarde les meilleures opportunités."
+          icon={Heart}
+          iconBg="rgba(236, 72, 153, 0.15)"
+          iconColor="#DB2777"
+          onPress={onStages}
+        />
       </View>
     </View>
   );
@@ -1090,61 +1197,114 @@ const styles = StyleSheet.create({
   },
   btnSecondaryText: { fontFamily: SANS, fontSize: 15, fontWeight: '600', color: stitchColors.ink },
 
-  // BottomNav
+  // BottomNav — Frosted pill floating bar
   bottomNavWrap: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-    paddingTop: 6,
+    alignItems: 'center',
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+    paddingTop: 8,
+    zIndex: 100,
   },
   bottomNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#0F1422',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 28,
-    paddingVertical: 7,
-    paddingHorizontal: 8,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 8,
+    borderColor: 'rgba(226, 232, 240, 0.9)',
+    borderRadius: 9999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    gap: 6,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 22,
+    elevation: 10,
   },
-  navItem: {
-    flex: 1,
+  navActivePill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 3,
+    gap: 7,
+    backgroundColor: '#111827',
+    borderRadius: 9999,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
   },
-  navIconBox: {
-    paddingHorizontal: 12,
-    paddingVertical: 3,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navIconBoxActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.22)',
-  },
-  navLabel: {
+  navActiveLabel: {
     fontFamily: SANS,
-    fontSize: 10.5,
-    marginTop: 3,
-    textAlign: 'center',
-  },
-  navLabelActive: {
-    color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
-  navLabelInactive: {
-    color: stitchColors.inkSubtle,
-    fontWeight: '500',
+  navInactiveItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 9999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Dashboard Hub styles
+  hubGridWrap: {
+    gap: 14,
+    width: '100%',
+  },
+  hubGridRow: {
+    flexDirection: 'row',
+    gap: 14,
+    width: '100%',
+  },
+  hubCard: {
+    flex: 1,
+    minHeight: 180,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 26,
+    padding: 18,
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.95)',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
+    elevation: 4,
+  },
+  hubIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hubTextWrap: {
+    marginVertical: 8,
+  },
+  hubTitle: {
+    fontFamily: fontFamilies.serif,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 4,
+    letterSpacing: -0.2,
+  },
+  hubSubtitle: {
+    fontFamily: INTER,
+    fontSize: 11,
+    lineHeight: 15,
+    color: '#64748B',
+  },
+  hubArrowBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
   },
 
   // TopBar

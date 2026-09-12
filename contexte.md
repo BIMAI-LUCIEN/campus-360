@@ -308,8 +308,38 @@ campus-360/
   - **Éléments supprimés** : Suppression complète de la fausse carte bancaire violette, de la grille 2x2 redondante avec la barre de navigation, et de la liste de relevés de transactions.
 - **Passage de props (`src/AppShell.tsx`)** : Injection du profil complet de l'étudiant (`studentProfile`) dans `HomeScreen` pour alimenter le matching et l'IA.
 
-### 7.2 Contrôle Qualité & Statut Serveurs
-- **TypeScript** : 0 erreur détectée via `node --stack_size=8192 node_modules/typescript/bin/tsc --noEmit`.
-- **Expo Web** : Actif et accessible sur `http://localhost:8081`.
-- **Mobile API** : Actif et accessible sur `http://localhost:3002`.
+### 7.3 Refonte Glassmorphic du Dashboard & Profil (Maquette Complète)
+- **Objectif** : Aligner à 100% l'expérience visuelle sur la nouvelle maquette de référence mobile (Dashboard 2x2 et Écran Profil).
+- **Modifications appliquées** :
+  - **Composant `DashboardGrid` & `DashboardHubCard` (`src/ui/GlassComponents.tsx`)** :
+    - 4 grandes cartes blanches arrondies avec icônes 3D (`Postuler IA`, `Mes Candidatures`, `Atelier Rédaction`, `Stages & Favoris`), titres serif, sous-titres descriptifs et boutons flèches `→`.
+    - Intégré directement dans `HomeScreen.tsx` et disponible en vue dédiée `DashboardScreen.tsx`.
+  - **Barre de Navigation Flottante `BottomNav` (`src/ui/GlassComponents.tsx`)** :
+    - Pilule frosted glass flottante avec ombre douce.
+    - L'onglet actif se transforme en capsule noire/anthracite (`#111827`) avec icône et libellé blancs (`[ 🏠 Accueil ]` / `[ 👤 Profil ]`).
+    - Les onglets inactifs restent discrets sous forme d'icônes épurées.
+  - **Écran Profil Réinventé (`src/ui/screens/ProfileScreen.tsx`)** :
+    - En-tête avec titre Serif "Profil" et bouton circulaire blanc pour la cloche de notification `🔔`.
+    - Avatar centré avec anneau concentrique lumineux (effet halo).
+    - Nom de l'étudiant en typographie serif, handle `@campus360` et filière universitaire.
+    - Badge sombre `👑 Premium`.
+    - Ligne de 3 pilules statistiques : `[ 4 Candidatures ]`, `[ 0 Jetons IA ]`, `[ 0 PDF Débloqués ]`.
+    - Bannière de recharge sombre avec étoile `⭐`, texte incitatif et bouton `[ Recharger ]`.
+    - Carte de menu regroupée avec icônes sur fonds teintés et chevrons `>`.
+
+---
+
+## 8. Preuves de Validation Mécanique & Visuelle (/test-and-verify)
+
+- **Compilation TypeScript Strict** :
+  - Commande : `node --stack_size=8192 node_modules/typescript/bin/tsc --noEmit`
+  - Résultat : **0 erreur** (Code retour 0).
+- **Serveurs de Développement** :
+  - Expo Web : Actif sur `http://localhost:8081` (Background Task `task-418`).
+  - Next.js Mobile API : Actif sur `http://localhost:3002` (Background Task `task-416`).
+- **Preuves Visuelles Réelles (Playwright)** :
+  - Script : `scripts/verify_dashboard_profile.js`
+  - Capture 1 : [`.agent/screenshots/dashboard_verified.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/dashboard_verified.png) — Grille 2x2 Dashboard & barre de navigation pilule active.
+  - Capture 2 : [`.agent/screenshots/profile_verified.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/profile_verified.png) — Écran Profil complet avec halo, 3 stats pills, bannière sombre et menu chevrons.
+- **Verdict de conformité** : **VERIFIED** (100% conforme aux maquettes et à la charte Campus 360).
 

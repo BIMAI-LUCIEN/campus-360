@@ -97,6 +97,7 @@ import { DocumentsScreen } from './features/documents/DocumentsScreen';
 import { StagesScreen } from './ui/screens/StagesScreen';
 import { ApplicationsTimelineScreen } from './ui/screens/ApplicationsTimelineScreen';
 import { ResourcesScreen } from './ui/screens/ResourcesScreen';
+import { DashboardScreen } from './ui/screens/DashboardScreen';
 import {
   SUBSCRIPTION_PLANS,
   getSubscriptionPlan,
@@ -219,7 +220,7 @@ const CAMEROON_LEVELS = [
 ];
 
 type ClientCatalogTab = 'packs' | 'catalog' | 'library';
-type AppSection = 'stages' | 'applications' | 'resources' | 'account' | 'home' | 'explore' | 'library' | 'documents' | 'premium';
+type AppSection = 'stages' | 'applications' | 'resources' | 'account' | 'home' | 'dashboard' | 'explore' | 'library' | 'documents' | 'premium';
 
 const onboardingSlides = [
   { title: 'Trouve le bon PDF', text: 'Recherche par université, filière, matière ou niveau.' },
@@ -1129,14 +1130,16 @@ export function AppShell() {
           />
         ) : (
           <View style={styles.appShell}>
-            {/* TopBar */}
-            <TopBar
-              appName="Campus 360"
-              onBellPress={() => setNotificationsVisible(true)}
-              hasUnread={notifications.length > 0}
-              onAvatarPress={() => openSection('account')}
-              avatarInitials={initials}
-            />
+            {/* TopBar (masqué sur l'écran profil qui possède déjà son propre en-tête dédié) */}
+            {activeSection !== 'account' && (
+              <TopBar
+                appName="Campus 360"
+                onBellPress={() => setNotificationsVisible(true)}
+                hasUnread={notifications.length > 0}
+                onAvatarPress={() => openSection('account')}
+                avatarInitials={initials}
+              />
+            )}
 
             {/* Content */}
             <ScrollView
@@ -1218,6 +1221,21 @@ export function AppShell() {
                 />
               )}
 
+              {activeSection === 'dashboard' && (
+                <DashboardScreen
+                  studentProfile={studentProfile}
+                  balance={balance}
+                  iaCredits={iaCredits}
+                  onApplyIa={() => openSection('stages')}
+                  onApplications={() => openSection('applications')}
+                  onDocuments={() => openSection('documents')}
+                  onStages={() => openSection('stages')}
+                  onRecharge={() => { setActiveSection('account'); setRechargeVisible(true); }}
+                  onProfile={() => openSection('account')}
+                  onNotifications={() => setNotificationsSettingsVisible(true)}
+                />
+              )}
+
               {activeSection === 'explore' && (
                 <ExploreScreen
                   documents={pdfDocuments}
@@ -1270,6 +1288,7 @@ export function AppShell() {
                   onPremium={() => openSection('premium')}
                   onLibrary={() => openSection('resources')}
                   onDocuments={() => openSection('documents')}
+                  onApplications={() => openSection('applications')}
                   onSignInPress={() => {
                     setAuthMode('sign-in');
                     setAuthNotice('');
@@ -1290,7 +1309,7 @@ export function AppShell() {
                 />
               )}
 
-              {activeSection !== 'stages' && activeSection !== 'applications' && activeSection !== 'resources' && activeSection !== 'premium' && activeSection !== 'account' && activeSection !== 'home' && activeSection !== 'explore' && activeSection !== 'library' && activeSection !== 'documents' ? (
+              {activeSection !== 'stages' && activeSection !== 'applications' && activeSection !== 'resources' && activeSection !== 'premium' && activeSection !== 'account' && activeSection !== 'home' && activeSection !== 'dashboard' && activeSection !== 'explore' && activeSection !== 'library' && activeSection !== 'documents' ? (
                 <PdfStudentSection
                   documents={pdfDocuments}
                   packs={pdfPacks}

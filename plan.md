@@ -1,8 +1,8 @@
 # Plan d'Action : Refonte Visuelle Intégrale & Alignement Global de Campus 360
 
-> **Progression globale :** 6/6 tâches validées (100%)  
-> **Couverture :** 100% de la maquette de référence reproduite et déclinée sur tous les écrans  
-> **Dernière mise à jour :** 2026-09-12 01:32  
+> **Progression globale :** 10/10 tâches validées (100%)  
+> **Couverture :** 100% des maquettes de référence (Home Feed, Dashboard 2x2 Hub, Profil Glassmorphic)  
+> **Dernière mise à jour :** 2026-09-12 02:05  
 
 ---
 
@@ -78,12 +78,46 @@
 
 ---
 
-## MODULE 4 : Contrôle Qualité, Tests & Déploiement
+---
 
-- [X] **Tâche 4.1 : Validation Mécanique, Typecheck & Déploiement**
+## MODULE 5 : Dashboard Hub & Profil Calqués sur la Maquette de Référence
+
+### 1. Composants Spécifiques du Dashboard & Navigation Flottante
+- [X] **Tâche 5.1 : DashboardCard, 2x2 Grid & BottomNav Pilule Dynamique**
+  - **Fichiers :** `src/ui/GlassComponents.tsx`
   - **Action :**
-    - Compilation TypeScript stricte sans avertissement (`node --stack_size=8192 node_modules/typescript/bin/tsc --noEmit`).
-    - Validation du rendu sur Expo Web (`http://localhost:8081`).
-    - Commit git et push de mise en production sur `origin main`.
-  - **DoD :** Validé. 0 erreur TypeScript, interface responsive validée, prêt pour push de production.
+    - Créer le composant `DashboardHubCard` (grande carte blanche arrondie avec icône 3D/dégradé, titre serif, description et bouton flèche `→`).
+    - Créer `DashboardGrid` organisant les 4 cartes clés (Postuler IA, Mes Candidatures, Atelier Rédaction, Stages & Favoris).
+    - Moderniser `BottomNav` avec la pilule active foncée (`#111827`) contenant l'icône et le libellé, et les icônes inactives discrètes.
+  - **DoD :** Validé (0 erreur TypeScript). Composants créés, typés avec testID et intégrés.
+
+### 2. Écran Profil Réinventé (`ProfileScreen.tsx`)
+- [X] **Tâche 5.2 : Réplique Exacte du Profil Glassmorphic (Écran Droit)**
+  - **Fichiers :** `src/ui/screens/ProfileScreen.tsx`
+  - **Action :**
+    - Header avec titre Serif "Profil" et bouton circulaire blanc pour la cloche de notification.
+    - Avatar centré avec anneau concentrique lumineux (halo halo effect).
+    - Nom de l'étudiant en typographie serif, handle `@` et badge sombre `👑 Premium`.
+    - Ligne de 3 pilules statistiques : Candidatures, Jetons IA, PDF Débloqués.
+    - Bannière de recharge sombre avec icône étoile, texte d'incitation et bouton blanc `[ Recharger ]`.
+    - Liste de menu regroupée dans un conteneur blanc arrondi avec chevrons `>`.
+  - **DoD :** Validé (0 erreur TypeScript). 100% fidèle à l'écran de droite de la maquette.
+
+### 3. Écran Dashboard Hub (`DashboardScreen.tsx` & Intégration Home)
+- [X] **Tâche 5.3 : Dashboard Hub 2x2 et Bascule Intuitive**
+  - **Fichiers :** `src/ui/screens/DashboardScreen.tsx`, `src/ui/screens/HomeScreen.tsx`, `src/AppShell.tsx`
+  - **Action :**
+    - Créer `DashboardScreen.tsx` répliquant l'écran de gauche (titre Serif "Dashboard / Hub", grille 2x2 avec les 4 tuiles interactives).
+    - Intégrer la grille 2x2 sur `HomeScreen.tsx` pour accès immédiat dès l'accueil.
+    - Câbler les 4 actions vers `AiApplyModal`, `applications`, `documents`, et `stages`.
+  - **DoD :** Validé (0 erreur TypeScript). Navigation fluide et câblage opérationnel.
+
+### 4. Vérification Stricte (/test-and-verify)
+- [X] **Tâche 5.4 : Typecheck & Screenshots Playwright**
+  - **Fichiers :** `scripts/verify_dashboard_profile.js`, `contexte.md`
+  - **Action :**
+    - Exécuter la compilation TypeScript stricte (0 erreur).
+    - Capturer les screenshots dans `.agent/screenshots/dashboard_verified.png` et `.agent/screenshots/profile_verified.png`.
+    - Enregistrer les preuves dans `contexte.md` Section 8.
+  - **DoD :** Validé. Compilation 0 erreur, screenshots Playwright capturés et archivés, verdict VERIFIED certifié.
 
