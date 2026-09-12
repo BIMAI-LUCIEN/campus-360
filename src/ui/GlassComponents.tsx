@@ -429,7 +429,7 @@ export function BottomNav({
               hitSlop={8}
               style={({ pressed }) => [styles.navInactiveItem, pressed && { opacity: 0.6 }]}
             >
-              <Icon size={20} color="#64748B" strokeWidth={1.8} />
+              <Icon size={20} color="#94A3B8" strokeWidth={1.8} />
             </Pressable>
           );
         })}
@@ -475,7 +475,7 @@ export function DashboardHubCard({
         </Text>
       </View>
       <View style={styles.hubArrowBtn}>
-        <ArrowRight size={15} color="#0F172A" strokeWidth={2.4} />
+        <ArrowRight size={15} color="#A78BFA" strokeWidth={2.4} />
       </View>
     </Pressable>
   );
@@ -1212,16 +1212,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(13, 10, 28, 0.94)',
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.9)',
+    borderColor: 'rgba(139, 92, 246, 0.22)',
     borderRadius: 9999,
     paddingVertical: 6,
     paddingHorizontal: 10,
     gap: 6,
-    shadowColor: '#0F172A',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.4,
     shadowRadius: 22,
     elevation: 10,
   },
@@ -1229,10 +1229,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    backgroundColor: '#111827',
+    backgroundColor: '#7C3AED',
     borderRadius: 9999,
     paddingHorizontal: 16,
     paddingVertical: 9,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
   },
   navActiveLabel: {
     fontFamily: SANS,
@@ -1261,15 +1265,15 @@ const styles = StyleSheet.create({
   hubCard: {
     flex: 1,
     minHeight: 180,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.surface,
     borderRadius: 26,
     padding: 18,
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.95)',
-    shadowColor: '#0F172A',
+    borderColor: 'rgba(139, 92, 246, 0.18)',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.35,
     shadowRadius: 18,
     elevation: 4,
   },
@@ -1287,7 +1291,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.serif,
     fontSize: 16,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#FFFFFF',
     marginBottom: 4,
     letterSpacing: -0.2,
   },
@@ -1295,13 +1299,15 @@ const styles = StyleSheet.create({
     fontFamily: INTER,
     fontSize: 11,
     lineHeight: 15,
-    color: '#64748B',
+    color: stitchColors.inkMuted,
   },
   hubArrowBtn: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(139, 92, 246, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-start',

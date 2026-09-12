@@ -19,6 +19,7 @@ import type { StudentProfile } from '../../features/auth/betterAuth';
 import type { StageApplication } from '../../types';
 import {
   fontFamilies,
+  stitchColors,
   stitchSpacing,
 } from '../../theme/stitch';
 
@@ -78,7 +79,7 @@ export function DashboardScreen({
             onPress={onNotifications || onApplications}
             style={({ pressed }) => [styles.bellBtn, pressed && { opacity: 0.8 }]}
           >
-            <Bell size={18} color="#0F172A" strokeWidth={2} />
+            <Bell size={18} color="#FFFFFF" strokeWidth={2} />
           </Pressable>
         </View>
       </View>
@@ -154,7 +155,7 @@ export function DashboardScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: stitchColors.background,
   },
   scrollContent: {
     paddingHorizontal: stitchSpacing.containerMargin,
@@ -171,14 +172,14 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.mono,
     fontSize: 10.5,
     letterSpacing: 1.2,
-    color: '#64748B',
+    color: '#A78BFA',
     fontWeight: '700',
   },
   headerTitle: {
     fontFamily: fontFamilies.serif,
     fontSize: 34,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#FFFFFF',
     letterSpacing: -0.5,
   },
   headerActions: {
@@ -190,36 +191,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(251, 191, 36, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)',
+    borderColor: 'rgba(251, 191, 36, 0.28)',
     borderRadius: 9999,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
   },
   tokenPillText: {
     fontFamily: fontFamilies.outfit,
     fontSize: 12.5,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#FBBF24',
   },
   bellBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.surfaceContainerHigh,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)',
-    shadowColor: '#0F172A',
+    borderColor: 'rgba(139, 92, 246, 0.22)',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.2,
     shadowRadius: 6,
+    elevation: 3,
   },
   greetingRow: {
     marginBottom: 20,
@@ -227,32 +225,33 @@ const styles = StyleSheet.create({
   greetingText: {
     fontFamily: fontFamilies.outfit,
     fontSize: 16,
-    color: '#334155',
+    color: stitchColors.inkSoft,
   },
   greetingName: {
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#FFFFFF',
   },
   greetingSub: {
     fontFamily: fontFamilies.inter,
     fontSize: 12,
-    color: '#64748B',
+    color: '#A78BFA',
     marginTop: 2,
   },
   gridSection: {
     marginBottom: 18,
   },
   activeAppCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.surface,
     borderRadius: 22,
     padding: 18,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.95)',
-    shadowColor: '#0F172A',
+    borderColor: 'rgba(139, 92, 246, 0.18)',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.35,
     shadowRadius: 16,
+    elevation: 4,
   },
   activeAppHeader: {
     flexDirection: 'row',
@@ -270,12 +269,12 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.mono,
     fontSize: 10,
     fontWeight: '700',
-    color: '#64748B',
+    color: '#A78BFA',
     letterSpacing: 0.8,
     flex: 1,
   },
   activeAppBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: 'rgba(16, 185, 129, 0.14)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -284,46 +283,48 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.mono,
     fontSize: 10,
     fontWeight: '700',
-    color: '#059669',
+    color: '#34D399',
   },
   activeAppJobTitle: {
     fontFamily: fontFamilies.outfit,
     fontSize: 16,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#FFFFFF',
     marginBottom: 2,
   },
   activeAppCompany: {
     fontFamily: fontFamilies.inter,
     fontSize: 12.5,
-    color: '#64748B',
+    color: stitchColors.inkMuted,
     marginBottom: 12,
   },
   activeAppCta: {
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: 'rgba(139, 92, 246, 0.1)',
     paddingTop: 10,
   },
   activeAppCtaText: {
     fontFamily: fontFamilies.outfit,
     fontSize: 12,
     fontWeight: '700',
-    color: '#2563EB',
+    color: stitchColors.emerald,
   },
   walletQuickBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#18181B',
+    backgroundColor: '#1E143E',
     borderRadius: 22,
     paddingVertical: 14,
     paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
   },
   walletKicker: {
     fontFamily: fontFamilies.mono,
     fontSize: 9.5,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: '#C4B5FD',
     letterSpacing: 0.8,
     marginBottom: 2,
   },
@@ -334,15 +335,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   walletRechargeBtn: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#7C3AED',
     borderRadius: 9999,
     paddingHorizontal: 14,
     paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(167, 139, 250, 0.5)',
   },
   walletRechargeBtnText: {
     fontFamily: fontFamilies.outfit,
     fontSize: 12,
     fontWeight: '700',
-    color: '#18181B',
+    color: '#FFFFFF',
   },
 });

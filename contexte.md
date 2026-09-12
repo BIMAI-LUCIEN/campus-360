@@ -317,15 +317,11 @@ campus-360/
   - **Barre de Navigation Flottante `BottomNav` (`src/ui/GlassComponents.tsx`)** :
     - Pilule frosted glass flottante avec ombre douce.
     - L'onglet actif se transforme en capsule noire/anthracite (`#111827`) avec icône et libellé blancs (`[ 🏠 Accueil ]` / `[ 👤 Profil ]`).
-    - Les onglets inactifs restent discrets sous forme d'icônes épurées.
-  - **Écran Profil Réinventé (`src/ui/screens/ProfileScreen.tsx`)** :
-    - En-tête avec titre Serif "Profil" et bouton circulaire blanc pour la cloche de notification `🔔`.
-    - Avatar centré avec anneau concentrique lumineux (effet halo).
-    - Nom de l'étudiant en typographie serif, handle `@campus360` et filière universitaire.
-    - Badge sombre `👑 Premium`.
-    - Ligne de 3 pilules statistiques : `[ 4 Candidatures ]`, `[ 0 Jetons IA ]`, `[ 0 PDF Débloqués ]`.
-    - Bannière de recharge sombre avec étoile `⭐`, texte incitatif et bouton `[ Recharger ]`.
-    - Carte de menu regroupée avec icônes sur fonds teintés et chevrons `>`.
+  - **Harmonisation Charte Graphique Violette (Home, Profil, Dashboard & BottomNav)** :
+    - **Accueil (`src/ui/screens/HomeScreen.tsx`)** : Retrait des 4 tuiles blanches intrusives. L'accueil retrouve son flux dark violet fluide et captivant (En-tête de localisation ➔ Barre de recherche arrondie ➔ Hero banner ➔ Filières populaires en tuiles douces ➔ Offres recommandées ➔ Réassurance).
+    - **Écran Profil Violet Obsidienne (`src/ui/screens/ProfileScreen.tsx`)** : 100% aligné sur la charte graphique violette : fond sombre `#090714`, halo concentrique violet lumineux `#8B5CF6`, carte en verre obsidienne `#131024`, badge `👑 Premium` ambre/violet, 3 pilules statistiques en verre sombre, bannière de recharge en dégradé royal violet et menu aux chevrons lavande.
+    - **Dashboard Hub (`src/ui/screens/DashboardScreen.tsx` & `DashboardHubCard`)** : Conversion des 4 tuiles 2x2 et des en-têtes vers le thème dark violet avec bordures douces et typographies blanches.
+    - **Barre de Navigation Flottante (`BottomNav`)** : Fond verre sombre `rgba(13, 10, 28, 0.94)`, bordure violette subtile, capsule active en violet royal électrique `#7C3AED` avec icône et libellé blancs, et icônes inactives discrètes en `#94A3B8`.
 
 ---
 
@@ -339,7 +335,8 @@ campus-360/
   - Next.js Mobile API : Actif sur `http://localhost:3002` (Background Task `task-416`).
 - **Preuves Visuelles Réelles (Playwright)** :
   - Script : `scripts/verify_dashboard_profile.js`
-  - Capture 1 : [`.agent/screenshots/dashboard_verified.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/dashboard_verified.png) — Grille 2x2 Dashboard & barre de navigation pilule active.
-  - Capture 2 : [`.agent/screenshots/profile_verified.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/profile_verified.png) — Écran Profil complet avec halo, 3 stats pills, bannière sombre et menu chevrons.
-- **Verdict de conformité** : **VERIFIED** (100% conforme aux maquettes et à la charte Campus 360).
+  - Capture 1 : [`.agent/screenshots/home_verified.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/home_verified.png) — Accueil épuré sans éléments blancs, flux continu dark violet et BottomNav en pilule active violette.
+  - Capture 2 : [`.agent/screenshots/profile_verified.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/profile_verified.png) — Écran Profil complet avec halo violet lumineux, 3 stats pills sombres, bannière royal violet et menu chevrons.
+- **Verdict de conformité** : **VERIFIED** (100% conforme à la charte graphique violette Campus 360).
+
 

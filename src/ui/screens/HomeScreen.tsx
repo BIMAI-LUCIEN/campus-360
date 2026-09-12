@@ -47,7 +47,6 @@ import {
   LocationHeader,
   SearchFilterBar,
   CategoryGrid,
-  DashboardGrid,
   TrustBadgeStrip,
   type CategoryItem,
 } from '../GlassComponents';
@@ -179,28 +178,6 @@ export function HomeScreen({
           onFilterPress={onStages}
           onSubmitEditing={onStages}
         />
-
-        {/* ── 2b. Dashboard Hub (Grille 2x2 calquée sur la maquette de référence) ── */}
-        <View style={styles.dashboardHubSection}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Dashboard & Outils IA</Text>
-            <Pressable onPress={onStages} hitSlop={8}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                <Text style={styles.seeAllText}>Tout explorer</Text>
-                <ChevronRight size={14} color={stitchColors.emerald} />
-              </View>
-            </Pressable>
-          </View>
-          <DashboardGrid
-            onApplyIa={() => {
-              if (topJob) setApplyingJob(topJob);
-              else onStages();
-            }}
-            onApplications={onApplications}
-            onDocuments={onDocuments}
-            onStages={onStages}
-          />
-        </View>
 
         {/* ── 3. Hero Banner Carrousel ("AC not cooling? We'll fix it fast.") ── */}
         <View style={styles.heroSection}>
@@ -418,12 +395,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 8,
-  },
-
-  // Dashboard Hub Section
-  dashboardHubSection: {
-    paddingHorizontal: stitchSpacing.containerMargin,
-    marginBottom: 24,
   },
 
   // Hero Section

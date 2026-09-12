@@ -67,11 +67,11 @@ async function runVerification() {
     await page.waitForTimeout(2000);
   }
 
-  // 1. Capture Dashboard View (HomeScreen with 2x2 grid & floating bottom pill)
-  console.log('Capturing Dashboard Hub screenshot...');
-  const dashboardPath = path.join(screenshotsDir, 'dashboard_verified.png');
-  await page.screenshot({ path: dashboardPath, fullPage: false });
-  console.log(`[SCREENSHOT 1] Dashboard Hub captured: ${dashboardPath}`);
+  // 1. Capture Home View (HomeScreen without white cards, dark violet theme, bottom nav)
+  console.log('Capturing Home Screen screenshot...');
+  const homePath = path.join(screenshotsDir, 'home_verified.png');
+  await page.screenshot({ path: homePath, fullPage: false });
+  console.log(`[SCREENSHOT 1] Home Screen captured: ${homePath}`);
 
   // 2. Click on the "Profil" tab in BottomNav
   console.log('Navigating to Profil tab...');
@@ -101,6 +101,14 @@ async function runVerification() {
   const profilePath = path.join(screenshotsDir, 'profile_verified.png');
   await page.screenshot({ path: profilePath, fullPage: false });
   console.log(`[SCREENSHOT 2] Profile Screen captured: ${profilePath}`);
+
+  // Copy to Artifact Directory for markdown embedding
+  const artifactDir = 'C:\\Users\\MIGUEL IA\\.gemini\\antigravity\\brain\\710f8cd3-f507-4815-9708-73f32da6fef8';
+  if (fs.existsSync(artifactDir)) {
+    fs.copyFileSync(homePath, path.join(artifactDir, 'home_verified.png'));
+    fs.copyFileSync(profilePath, path.join(artifactDir, 'profile_verified.png'));
+    console.log('Copied verified screenshots to artifact directory.');
+  }
 
   await browser.close();
   console.log('VERIFICATION COMPLETE: All screenshots captured and saved to .agent/screenshots/ !');

@@ -92,13 +92,13 @@ function ProfileMenuList({ rows }: { rows: MenuRow[] }) {
           style={({ pressed }) => [
             styles.menuItem,
             i > 0 && styles.menuItemDivider,
-            pressed && { backgroundColor: '#F8FAFC' },
+            pressed && { backgroundColor: 'rgba(139, 92, 246, 0.12)' },
           ]}
         >
           <View
             style={[
               styles.menuIconCircle,
-              { backgroundColor: row.danger ? 'rgba(239, 68, 68, 0.12)' : row.iconBg },
+              { backgroundColor: row.danger ? 'rgba(239, 68, 68, 0.14)' : row.iconBg },
             ]}
           >
             <row.Icon
@@ -112,7 +112,7 @@ function ProfileMenuList({ rows }: { rows: MenuRow[] }) {
           </Text>
           <ChevronRight
             size={17}
-            color={row.danger ? '#EF4444' : '#94A3B8'}
+            color={row.danger ? '#EF4444' : '#A78BFA'}
             strokeWidth={1.8}
           />
         </Pressable>
@@ -247,7 +247,7 @@ export function ProfileScreen({
           onPress={onOpenNotificationsSettings}
           style={({ pressed }) => [styles.bellBtn, pressed && { opacity: 0.8 }]}
         >
-          <Bell size={18} color="#0F172A" strokeWidth={2} />
+          <Bell size={18} color="#FFFFFF" strokeWidth={2} />
         </Pressable>
       </View>
 
@@ -375,7 +375,7 @@ export function ProfileScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F1F5F9', // luminous soft silver background matching mockup
+    backgroundColor: stitchColors.background,
   },
   scrollContent: {
     paddingHorizontal: stitchSpacing.containerMargin,
@@ -394,21 +394,21 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.serif,
     fontSize: 32,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#FFFFFF',
     letterSpacing: -0.5,
   },
   bellBtn: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.surfaceContainerHigh,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)',
-    shadowColor: '#0F172A',
+    borderColor: 'rgba(139, 92, 246, 0.22)',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 3,
   },
@@ -422,41 +422,41 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   avatarHaloOuter: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.95)',
+    width: 98,
+    height: 98,
+    borderRadius: 49,
+    borderWidth: 3,
+    borderColor: 'rgba(167, 139, 250, 0.65)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(199, 210, 254, 0.4)',
+    backgroundColor: 'rgba(124, 58, 237, 0.22)',
     shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
     shadowRadius: 18,
     elevation: 8,
   },
   avatarImage: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    backgroundColor: '#E2E8F0',
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: '#1E1642',
   },
 
   // 3. Profile Card
   profileCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.surface,
     borderRadius: 28,
     paddingTop: 34,
     paddingBottom: 16,
     paddingHorizontal: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-    shadowColor: '#0F172A',
+    borderColor: 'rgba(139, 92, 246, 0.18)',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.06,
-    shadowRadius: 22,
-    elevation: 4,
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 6,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -466,22 +466,24 @@ const styles = StyleSheet.create({
   },
   studentName: {
     fontFamily: fontFamilies.serif,
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#FFFFFF',
     letterSpacing: -0.3,
   },
   studentHandle: {
     fontFamily: fontFamilies.inter,
     fontSize: 12,
-    color: '#64748B',
+    color: '#A78BFA',
     marginTop: 2,
   },
   premiumBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#18181B',
+    backgroundColor: 'rgba(124, 58, 237, 0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(167, 139, 250, 0.35)',
     borderRadius: 9999,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -490,7 +492,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 11,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#FDE047',
     letterSpacing: 0.4,
   },
 
@@ -502,32 +504,32 @@ const styles = StyleSheet.create({
   },
   statPill: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.surfaceContainerHigh,
     borderRadius: 18,
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: 'rgba(139, 92, 246, 0.16)',
   },
   statNumber: {
     fontFamily: fontFamilies.serif,
     fontSize: 20,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#FFFFFF',
     letterSpacing: -0.3,
   },
   statLabel: {
     fontFamily: fontFamilies.inter,
     fontSize: 11,
     fontWeight: '500',
-    color: '#64748B',
+    color: '#A78BFA',
     marginTop: 2,
   },
 
   // Dark Replenish Banner
   replenishBanner: {
-    backgroundColor: '#18181B',
+    backgroundColor: '#1E143E',
     borderRadius: 18,
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -535,6 +537,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
   },
   replenishLeft: {
     flexDirection: 'row',
@@ -546,7 +550,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(253, 224, 71, 0.15)',
+    backgroundColor: 'rgba(253, 224, 71, 0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -559,32 +563,34 @@ const styles = StyleSheet.create({
   replenishSub: {
     fontFamily: fontFamilies.inter,
     fontSize: 10.5,
-    color: '#94A3B8',
+    color: '#C4B5FD',
     marginTop: 1,
   },
   replenishBtn: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#7C3AED',
     borderRadius: 9999,
     paddingHorizontal: 14,
     paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: 'rgba(167, 139, 250, 0.5)',
   },
   replenishBtnText: {
     fontFamily: fontFamilies.outfit,
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#18181B',
+    color: '#FFFFFF',
   },
 
   // 4. Menu Card
   menuCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.surface,
     borderRadius: 24,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-    shadowColor: '#0F172A',
+    borderColor: 'rgba(139, 92, 246, 0.18)',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.3,
     shadowRadius: 18,
     elevation: 3,
     overflow: 'hidden',
@@ -598,7 +604,7 @@ const styles = StyleSheet.create({
   },
   menuItemDivider: {
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: 'rgba(139, 92, 246, 0.1)',
   },
   menuIconCircle: {
     width: 36,
@@ -612,7 +618,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.inter,
     fontSize: 13.5,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#F8FAFC',
   },
 
   // 5. Recent Transactions
@@ -623,18 +629,18 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 14,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#FFFFFF',
     marginBottom: 10,
   },
   txCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.surface,
     borderRadius: 20,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-    shadowColor: '#0F172A',
+    borderColor: 'rgba(139, 92, 246, 0.18)',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.2,
     shadowRadius: 12,
   },
 });
