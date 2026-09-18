@@ -1164,8 +1164,8 @@ export function AppShell() {
                     email: studentProfile?.email || 'etudiant@campus360.app',
                     phoneWhatsapp: studentProfile?.whatsappPhone || studentProfile?.phone,
                     major: studentProfile?.faculty || studentProfile?.university || 'Informatique & Télécoms',
-                    educationLevel: studentProfile?.level || 'Licence 2',
-                    skills: studentProfile?.skills ?? [],
+                    educationLevel: studentProfile?.level || 'Licence 3',
+                    skills: (studentProfile?.skills && studentProfile.skills.length > 0) ? studentProfile.skills : ['React', 'TypeScript', 'Node.js'],
                     tokens: iaCredits > 0 ? iaCredits : 2,
                   }}
                   onOpenWallet={() => openSection('account')}
@@ -1175,6 +1175,7 @@ export function AppShell() {
               {activeSection === 'applications' && (
                 <ApplicationsTimelineScreen
                   studentName={studentProfile?.name || 'Étudiant'}
+                  onBack={() => openSection('account')}
                 />
               )}
 

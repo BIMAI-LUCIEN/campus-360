@@ -27,7 +27,6 @@ import {
   Scale,
   ShieldCheck,
   Sparkles,
-  Star,
   TrendingUp,
   Zap,
 } from 'lucide-react-native';
@@ -179,32 +178,24 @@ export function HomeScreen({
           onSubmitEditing={onStages}
         />
 
-        {/* ── 3. Hero Banner Carrousel ("AC not cooling? We'll fix it fast.") ── */}
+        {/* ── 3. Hero Banner ("Stages & Emplois vérifiés") ── */}
         <View style={styles.heroSection}>
-          <LinearGradient
-            colors={['#1E1B4B', '#0F172A']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.heroBannerCard}
-          >
-            {/* Ambient subtle glow overlay */}
-            <View style={styles.heroGlow} />
-
+          <View style={styles.heroBannerCard}>
             <View style={styles.heroContentRow}>
-              {/* Left Column: Headlines & Dual Actions */}
+              {/* Left Column: Headlines & Actions */}
               <View style={styles.heroLeftCol}>
-                <Text style={styles.heroSubtitle}>Besoin d'un stage validé ?</Text>
-                <Text style={styles.heroHeadline}>L'IA postule pour toi.</Text>
+                <Text style={styles.heroSubtitle}>Stages &amp; Emplois vérifiés</Text>
+                <Text style={styles.heroHeadline}>Postulez plus vite avec des dossiers sur-mesure.</Text>
 
                 {/* Bullets with icons */}
                 <View style={styles.heroBullets}>
                   <View style={styles.heroBulletRow}>
-                    <Zap size={13} color="#FBBF24" />
-                    <Text style={styles.heroBulletText}>Candidature IA ciblée en 30s</Text>
+                    <CheckCircle2 size={13} color="#34D399" />
+                    <Text style={styles.heroBulletText}>Candidatures adaptées à chaque offre</Text>
                   </View>
                   <View style={styles.heroBulletRow}>
-                    <ShieldCheck size={13} color={stitchColors.emerald} />
-                    <Text style={styles.heroBulletText}>Entreprises vérifiées • Rapports validés</Text>
+                    <ShieldCheck size={13} color="#34D399" />
+                    <Text style={styles.heroBulletText}>Entreprises partenaires vérifiées</Text>
                   </View>
                 </View>
 
@@ -217,37 +208,25 @@ export function HomeScreen({
                     }}
                     style={({ pressed }) => [styles.heroPrimaryBtn, pressed && { opacity: 0.9 }]}
                   >
-                    <Zap size={14} color="#090714" strokeWidth={2.4} />
-                    <Text style={styles.heroPrimaryBtnText}>Instant Apply</Text>
+                    <Text style={styles.heroPrimaryBtnText}>Postuler</Text>
                   </Pressable>
 
                   <Pressable
                     onPress={onStages}
                     style={({ pressed }) => [styles.heroSecondaryBtn, pressed && { opacity: 0.8 }]}
                   >
-                    <Briefcase size={14} color="#FFFFFF" strokeWidth={1.8} />
-                    <Text style={styles.heroSecondaryBtnText}>Voir Offres</Text>
+                    <Text style={styles.heroSecondaryBtnText}>Toutes les offres</Text>
                   </Pressable>
                 </View>
               </View>
 
-              {/* Right Column: Visual 3D Graphic / Badge */}
+              {/* Right Column: Clean Visual Icon Box */}
               <View style={styles.heroRightCol}>
                 <View style={styles.heroIllustrationCircle}>
-                  <Sparkles size={36} color="#A78BFA" strokeWidth={1.8} />
-                  <View style={styles.matchScoreBadgeFloating}>
-                    <Text style={styles.matchScoreBadgeText}>98% Match</Text>
-                  </View>
+                  <Briefcase size={26} color="#A78BFA" strokeWidth={1.8} />
                 </View>
               </View>
             </View>
-          </LinearGradient>
-
-          {/* Pagination dots */}
-          <View style={styles.paginationDots}>
-            <View style={[styles.dot, styles.dotActive]} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
           </View>
         </View>
 
@@ -295,13 +274,16 @@ export function HomeScreen({
                 const cover = job.flyerUrl || DEFAULT_COVERS[idx % DEFAULT_COVERS.length];
                 const matchScore = job.matchScore ?? (90 + (idx % 8));
                 return (
-                  <View key={job.id} style={styles.recCard}>
-                    {/* Media image header with Match badge */}
+                  <Pressable
+                    key={job.id}
+                    style={styles.recCard}
+                    onPress={() => setApplyingJob(job)}
+                  >
+                    {/* Media image header with single functional badge */}
                     <View style={styles.recCardImageWrap}>
                       <Image source={{ uri: cover }} style={styles.recCardImage} resizeMode="cover" />
-                      <View style={styles.recMatchPill}>
-                        <Star size={11} color="#FDE047" fill="#FDE047" />
-                        <Text style={styles.recMatchPillText}>{matchScore}% Match</Text>
+                      <View style={styles.recContractBadge}>
+                        <Text style={styles.recContractText}>{job.contractType || 'Stage'}</Text>
                       </View>
                     </View>
 
@@ -311,26 +293,20 @@ export function HomeScreen({
                         {job.title}
                       </Text>
 
-                      {/* Rating & duration info */}
-                      <View style={styles.recMetaRow}>
-                        <View style={styles.recRatingBox}>
-                          <Star size={12} color="#FBBF24" fill="#FBBF24" />
-                          <Text style={styles.recRatingText}>4.9 (38)</Text>
-                        </View>
-                        <Text style={styles.recDot}>•</Text>
-                        <View style={styles.recDurationBox}>
-                          <Clock size={12} color={stitchColors.inkMuted} />
-                          <Text style={styles.recDurationText}>{job.duration || '6 mois'}</Text>
-                        </View>
+                      {/* Company Name & Verification */}
+                      <View style={styles.recCompanyRow}>
+                        <Text style={styles.recCompanyName} numberOfLines={1}>
+                          {job.company?.name || 'Entreprise Partenaire'}
+                        </Text>
+                        {job.company?.status === 'VERIFIED' && (
+                          <CheckCircle2 size={12} color="#34D399" />
+                        )}
                       </View>
 
-                      {/* Verified Company Badge */}
-                      <View style={styles.recCompanyBadge}>
-                        <CheckCircle2 size={12} color={stitchColors.emerald} />
-                        <Text style={styles.recCompanyName} numberOfLines={1}>
-                          {job.company?.name || 'Entreprise Partenaire Certifiée'}
-                        </Text>
-                      </View>
+                      {/* Location · Duration · Discreet match mention */}
+                      <Text style={styles.recMetaText} numberOfLines={1}>
+                        {job.location || 'Abidjan'} · {job.duration || '6 mois'} · {matchScore}% de correspondance
+                      </Text>
 
                       {/* Footer Row: Stipend + Action CTA */}
                       <View style={styles.recFooterRow}>
@@ -342,14 +318,17 @@ export function HomeScreen({
                         </View>
 
                         <Pressable
-                          onPress={() => setApplyingJob(job)}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            setApplyingJob(job);
+                          }}
                           style={({ pressed }) => [styles.recApplyBtn, pressed && { opacity: 0.85 }]}
                         >
                           <Text style={styles.recApplyBtnText}>Postuler</Text>
                         </Pressable>
                       </View>
                     </View>
-                  </View>
+                  </Pressable>
                 );
               })}
             </ScrollView>
@@ -400,25 +379,16 @@ const styles = StyleSheet.create({
   // Hero Section
   heroSection: {
     paddingHorizontal: stitchSpacing.containerMargin,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   heroBannerCard: {
-    borderRadius: 22,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
+    backgroundColor: '#120E22',
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
     overflow: 'hidden',
-    position: 'relative',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.22)',
-  },
-  heroGlow: {
-    position: 'absolute',
-    top: -40,
-    right: -40,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(124, 58, 237, 0.2)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   heroContentRow: {
     flexDirection: 'row',
@@ -431,24 +401,23 @@ const styles = StyleSheet.create({
   },
   heroSubtitle: {
     fontFamily: stitchTypography.displayHero.fontFamily,
-    fontSize: 13,
-    fontWeight: '600',
-    color: stitchColors.emeraldTone,
-    letterSpacing: 0.2,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#A78BFA',
     marginBottom: 2,
   },
   heroHeadline: {
     fontFamily: stitchTypography.displayHero.fontFamily,
-    fontSize: 22,
-    lineHeight: 26,
-    fontWeight: '800',
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: '600',
     color: '#FFFFFF',
-    letterSpacing: -0.4,
+    letterSpacing: -0.2,
     marginBottom: 10,
   },
   heroBullets: {
-    gap: 5,
-    marginBottom: 16,
+    gap: 4,
+    marginBottom: 14,
   },
   heroBulletRow: {
     flexDirection: 'row',
@@ -458,8 +427,8 @@ const styles = StyleSheet.create({
   heroBulletText: {
     fontFamily: stitchTypography.bodySm.fontFamily,
     fontSize: 11.5,
-    color: stitchColors.inkSoft,
-    fontWeight: '500',
+    color: '#94A3B8',
+    fontWeight: '400',
   },
   heroActionsRow: {
     flexDirection: 'row',
@@ -467,88 +436,44 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   heroPrimaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: 9999,
+    backgroundColor: '#7C3AED',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
   },
   heroPrimaryBtnText: {
     fontFamily: stitchTypography.labelMd.fontFamily,
     fontSize: 12.5,
-    fontWeight: '700',
-    color: '#090714',
+    fontWeight: '500',
+    color: '#FFFFFF',
   },
   heroSecondaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: 9,
-    paddingHorizontal: 13,
-    borderRadius: 9999,
+    backgroundColor: 'transparent',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
   },
   heroSecondaryBtnText: {
     fontFamily: stitchTypography.labelMd.fontFamily,
     fontSize: 12.5,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: '500',
+    color: '#CBD5E1',
   },
   heroRightCol: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroIllustrationCircle: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    backgroundColor: 'rgba(124, 58, 237, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(167, 139, 250, 0.3)',
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(124, 58, 237, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-  },
-  matchScoreBadgeFloating: {
-    position: 'absolute',
-    bottom: -6,
-    backgroundColor: stitchColors.emeraldDeep,
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  matchScoreBadgeText: {
-    fontFamily: stitchTypography.labelMonoSm.fontFamily,
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  paginationDots: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 12,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  dotActive: {
-    width: 16,
-    backgroundColor: stitchColors.emerald,
-    borderRadius: 4,
   },
 
   // Recommended Section
@@ -564,16 +489,16 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: stitchTypography.headlineMd.fontFamily,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
     color: stitchColors.ink,
     letterSpacing: -0.3,
   },
   seeAllText: {
     fontFamily: stitchTypography.labelMd.fontFamily,
     fontSize: 12.5,
-    fontWeight: '600',
-    color: stitchColors.emerald,
+    fontWeight: '500',
+    color: '#A78BFA',
   },
   recommendedLoadingWrap: {
     paddingVertical: 32,
@@ -601,130 +526,96 @@ const styles = StyleSheet.create({
   },
   recCard: {
     width: 250,
-    backgroundColor: stitchColors.surfaceContainerLow,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
+    backgroundColor: '#120E22',
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     overflow: 'hidden',
   },
   recCardImageWrap: {
     height: 110,
     position: 'relative',
-    backgroundColor: '#0F1422',
+    backgroundColor: '#090714',
   },
   recCardImage: {
     width: '100%',
     height: '100%',
   },
-  recMatchPill: {
+  recContractBadge: {
     position: 'absolute',
     top: 8,
     left: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(9, 7, 20, 0.85)',
+    backgroundColor: 'rgba(9, 7, 20, 0.75)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
     paddingVertical: 3,
     paddingHorizontal: 8,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: 'rgba(253, 224, 71, 0.4)',
+    borderRadius: 6,
   },
-  recMatchPillText: {
-    fontFamily: stitchTypography.labelMonoSm.fontFamily,
+  recContractText: {
     fontSize: 10,
-    fontWeight: '800',
-    color: '#FDE047',
+    fontWeight: '500',
+    color: '#F8FAFC',
   },
   recCardBody: {
     padding: 12,
   },
   recJobTitle: {
     fontFamily: stitchTypography.headlineMd.fontFamily,
-    fontSize: 14.5,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#FFFFFF',
     letterSpacing: -0.2,
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  recMetaRow: {
+  recCompanyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  recRatingBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  recRatingText: {
-    fontFamily: stitchTypography.labelSm.fontFamily,
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FBBF24',
-  },
-  recDot: {
-    color: stitchColors.inkSubtle,
-    fontSize: 10,
-  },
-  recDurationBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  recDurationText: {
-    fontFamily: stitchTypography.bodySm.fontFamily,
-    fontSize: 11,
-    color: stitchColors.inkMuted,
-  },
-  recCompanyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(52, 211, 153, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.2)',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 12,
+    gap: 4,
+    marginBottom: 4,
   },
   recCompanyName: {
     fontFamily: stitchTypography.bodySm.fontFamily,
+    fontSize: 11.5,
+    fontWeight: '500',
+    color: '#94A3B8',
+  },
+  recMetaText: {
+    fontFamily: stitchTypography.bodySm.fontFamily,
     fontSize: 11,
-    fontWeight: '600',
-    color: stitchColors.emeraldTone,
+    color: '#94A3B8',
+    fontWeight: '400',
+    marginBottom: 10,
   },
   recFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: stitchColors.glassBorder,
+    paddingTop: 8,
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
   },
   recStipendText: {
     fontFamily: stitchTypography.headlineMd.fontFamily,
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#34D399',
   },
   recStipendSub: {
     fontFamily: stitchTypography.bodySm.fontFamily,
     fontSize: 9.5,
-    color: stitchColors.inkMuted,
+    color: '#94A3B8',
   },
   recApplyBtn: {
-    backgroundColor: stitchColors.emeraldDeep,
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 9999,
+    backgroundColor: '#7C3AED',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
   },
   recApplyBtnText: {
     fontFamily: stitchTypography.labelMd.fontFamily,
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11.5,
+    fontWeight: '500',
     color: '#FFFFFF',
   },
 });

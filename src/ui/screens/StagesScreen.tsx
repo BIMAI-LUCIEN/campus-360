@@ -178,8 +178,7 @@ export function StagesScreen({
             </Text>
           </View>
           <Pressable style={styles.tokensPill} onPress={onOpenWallet}>
-            <Sparkles size={13} color="#FDE047" />
-            <Text style={styles.tokensText}>{studentProfile.tokens ?? 1} Jetons IA</Text>
+            <Text style={styles.tokensText}>{studentProfile.tokens ?? 1} Jetons</Text>
           </Pressable>
         </View>
 
@@ -204,9 +203,8 @@ export function StagesScreen({
             style={[styles.podiumChip, showTopThreeOnly && styles.podiumChipActive]}
             onPress={() => setShowTopThreeOnly(!showTopThreeOnly)}
           >
-            <Trophy size={13} color={showTopThreeOnly ? '#FFFFFF' : '#F59E0B'} />
             <Text style={[styles.podiumChipText, showTopThreeOnly && styles.podiumChipTextActive]}>
-              Top 3 Matches
+              Top 3
             </Text>
           </Pressable>
 
@@ -309,16 +307,15 @@ export function StagesScreen({
                       style={styles.featuredGradient}
                     >
                       <View style={styles.featuredBadge}>
-                        <Sparkles size={11} color="#34D399" />
                         <Text style={styles.featuredBadgeText}>
-                          {featuredJob.matchScore || 92}% Match
+                          {featuredJob.contractType || 'Stage'}
                         </Text>
                       </View>
                       <Text style={styles.featuredJobTitle} numberOfLines={1}>
                         {featuredJob.title}
                       </Text>
                       <Text style={styles.featuredCompanyText} numberOfLines={1}>
-                        {featuredJob.company?.name} • {featuredJob.location || 'Abidjan'}
+                        {featuredJob.company?.name} · {featuredJob.location || 'Abidjan'} · {featuredJob.matchScore || 92}% de correspondance
                       </Text>
                       <Text style={styles.featuredStipendText}>
                         {featuredJob.stipend ? featuredJob.stipend.replace(/\(.*\)/, '').trim() : 'Gratification'}
@@ -375,33 +372,28 @@ export function StagesScreen({
                 style={styles.jobCard}
                 onPress={() => setSelectedDetailJob(job)}
               >
-                {/* 1. Large Card Hero Image (Hotel / Flight Card Style) */}
+                {/* 1. Hero Image */}
                 <View style={styles.cardHeroImageContainer}>
                   <Image source={{ uri: cardBannerUri }} style={styles.cardHeroImage} resizeMode="cover" />
                   <LinearGradient
-                    colors={['rgba(0,0,0,0.15)', 'rgba(19, 16, 36, 0.92)']}
+                    colors={['rgba(0,0,0,0.15)', 'rgba(18, 14, 34, 0.95)']}
                     style={styles.cardHeroOverlay}
                   />
 
-                  {/* Floating Top Badges */}
+                  {/* Single functional badge */}
                   <View style={styles.floatingBadgesRow}>
-                    <View style={styles.floatingContractBadge}>
-                      <Text style={styles.floatingContractText}>{job.contractType || 'Stage'}</Text>
-                    </View>
-
-                    <View style={[styles.floatingMatchBadge, isHighMatch && styles.floatingMatchBadgeHigh]}>
-                      <Sparkles size={11} color={isHighMatch ? '#34D399' : '#A78BFA'} />
-                      <Text style={[styles.floatingMatchText, isHighMatch && styles.floatingMatchTextHigh]}>
-                        {matchScore}% Match IA
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.mediaBadge}>
-                    <Sparkles size={10} color="#FDE047" />
-                    <Text style={styles.mediaBadgeText}>Visuel Recruteur</Text>
+                    {job.isSponsored ? (
+                      <View style={styles.urgentBadge}>
+                        <Text style={styles.urgentText}>Urgent</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.floatingContractBadge}>
+                        <Text style={styles.floatingContractText}>{job.contractType || 'Stage'}</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
+
                 {/* 2. Card Content Body */}
                 <View style={styles.cardBody}>
                   {/* Company Info Row */}
@@ -426,13 +418,6 @@ export function StagesScreen({
                         {job.company?.industry || 'Entreprise'}
                       </Text>
                     </View>
-
-                    {job.isSponsored && (
-                      <View style={styles.urgentBadge}>
-                        <Flame size={11} color="#FBBF24" />
-                        <Text style={styles.urgentText}>URGENT</Text>
-                      </View>
-                    )}
                   </View>
 
                   {/* Job Title */}
@@ -440,44 +425,23 @@ export function StagesScreen({
                     {job.title}
                   </Text>
 
-                  {/* Location & Duration Meta */}
+                  {/* Location & Duration & Match Meta (discreet info line) */}
                   <View style={styles.metaRow}>
-                    <View style={styles.metaItem}>
-                      <MapPin size={12} color="#94A3B8" />
-                      <Text style={styles.metaItemText}>{job.location || 'Abidjan'}</Text>
-                    </View>
-                    <View style={styles.metaItem}>
-                      <Clock size={12} color="#94A3B8" />
-                      <Text style={styles.metaItemText}>{job.duration || '3 à 6 mois'}</Text>
-                    </View>
+                    <Text style={styles.metaText}>
+                      {job.location || 'Abidjan'} · {job.duration || '3 à 6 mois'} · {matchScore}% de correspondance
+                    </Text>
                   </View>
 
-                  {/* Skills Pills */}
+                  {/* Skills Outline Tags */}
                   <View style={styles.skillsRow}>
-                    {job.requirements.slice(0, 3).map((skill, index) => {
-                      const isMatching = job.matchingSkills?.includes(skill);
-                      return (
-                        <View
-                          key={index}
-                          style={[styles.skillPill, isMatching && styles.skillPillMatching]}
-                        >
-                          {isMatching && (
-                            <Check size={10} color="#DDD6FE" style={{ marginRight: 3 }} />
-                          )}
-                          <Text
-                            style={[
-                              styles.skillPillText,
-                              isMatching && styles.skillPillTextMatching,
-                            ]}
-                          >
-                            {skill}
-                          </Text>
-                        </View>
-                      );
-                    })}
+                    {job.requirements.slice(0, 3).map((skill, index) => (
+                      <View key={index} style={styles.skillTag}>
+                        <Text style={styles.skillTagText}>{skill}</Text>
+                      </View>
+                    ))}
                     {job.requirements.length > 3 && (
-                      <View style={styles.skillPill}>
-                        <Text style={styles.skillPillText}>+{job.requirements.length - 3}</Text>
+                      <View style={styles.skillTag}>
+                        <Text style={styles.skillTagText}>+{job.requirements.length - 3}</Text>
                       </View>
                     )}
                   </View>
@@ -485,7 +449,7 @@ export function StagesScreen({
                   {/* Divider */}
                   <View style={styles.cardDivider} />
 
-                  {/* Bottom Row: Stipend on Left & Pill Button on Right */}
+                  {/* Bottom Row: Stipend & Single Direct CTA */}
                   <View style={styles.cardBottomRow}>
                     <View style={styles.stipendCol}>
                       <Text style={styles.stipendLabel}>Indemnité mensuelle</Text>
@@ -495,21 +459,13 @@ export function StagesScreen({
                     </View>
 
                     <Pressable
-                      style={styles.applyPillBtn}
+                      style={styles.applyBtn}
                       onPress={(e) => {
                         e.stopPropagation();
                         setApplyingJob(job);
                       }}
                     >
-                      <LinearGradient
-                        colors={['#8B5CF6', '#7C3AED']}
-                        style={styles.applyPillGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                      >
-                        <Sparkles size={12} color="#FFFFFF" />
-                        <Text style={styles.applyPillBtnText}>Postuler 1-clic</Text>
-                      </LinearGradient>
+                      <Text style={styles.applyBtnText}>Postuler</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -587,31 +543,25 @@ export function StagesScreen({
                   </View>
                 </View>
 
-                {/* Diagnostic Agent Matcher IA */}
+                {/* Analyse de correspondance */}
                 {detailMatch && (
                   <View style={styles.detailAiMatchBox}>
                     <View style={styles.detailAiMatchHeader}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Sparkles size={15} color="#A78BFA" />
-                        <Text style={styles.detailAiMatchTitle}>Diagnostic Agent Matcher IA</Text>
-                      </View>
-                      <View style={[styles.detailAiMatchBadge, { backgroundColor: `${detailMatch.badgeColor}20`, borderColor: `${detailMatch.badgeColor}55` }]}>
-                        <Text style={[styles.detailAiMatchBadgeText, { color: detailMatch.badgeColor }]}>
-                          {detailMatch.score}% • {detailMatch.headline}
-                        </Text>
-                      </View>
+                      <Text style={styles.detailAiMatchTitle}>Analyse de correspondance</Text>
+                      <Text style={styles.detailAiMatchScoreText}>
+                        {detailMatch.score}% · {detailMatch.headline}
+                      </Text>
                     </View>
                     <View style={styles.detailMatchPoints}>
                       {detailMatch.matchedPoints.map((pt, idx) => (
                         <View key={idx} style={styles.detailMatchPointRow}>
-                          <CheckCircle2 size={13} color="#34D399" style={{ marginTop: 2 }} />
+                          <Text style={styles.detailBullet}>•</Text>
                           <Text style={styles.detailMatchPointText}>{pt}</Text>
                         </View>
                       ))}
                       <View style={styles.detailAdviceRow}>
-                        <Sparkles size={13} color="#FBBF24" style={{ marginTop: 2 }} />
                         <Text style={styles.detailAdviceText}>
-                          <Text style={{ fontWeight: '700', color: '#FDE047' }}>Conseil IA : </Text>
+                          <Text style={{ fontWeight: '600', color: '#E2E8F0' }}>Conseil : </Text>
                           {detailMatch.strategicAdvice}
                         </Text>
                       </View>
@@ -628,9 +578,8 @@ export function StagesScreen({
                   <Text style={styles.detailSectionTitle}>Compétences &amp; Prérequis</Text>
                   <View style={styles.skillsRow}>
                     {selectedDetailJob.requirements.map((req, i) => (
-                      <View key={i} style={styles.skillPillMatching}>
-                        <Check size={11} color="#DDD6FE" style={{ marginRight: 4 }} />
-                        <Text style={styles.skillPillTextMatching}>{req}</Text>
+                      <View key={i} style={styles.skillTag}>
+                        <Text style={styles.skillTagText}>{req}</Text>
                       </View>
                     ))}
                   </View>
@@ -653,8 +602,7 @@ export function StagesScreen({
                     setApplyingJob(j);
                   }}
                 >
-                  <Sparkles size={16} color="#FFFFFF" />
-                  <Text style={styles.detailApplyBtnText}>Lancer ma Candidature IA ✨</Text>
+                  <Text style={styles.detailApplyBtnText}>Postuler</Text>
                 </Pressable>
               </View>
             </View>
@@ -1001,23 +949,18 @@ const styles = StyleSheet.create({
     color: '#34D399',
   },
 
-  // ── Main Job Card (Hotel / Offer Card Style with 20px Radius & Elevation) ──
+  // ── Main Job Card (Anti-Saturation Direction Artistique Calme) ──
   jobCard: {
-    backgroundColor: '#131024',
-    borderRadius: 22,
+    backgroundColor: '#120E22',
+    borderRadius: 12,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.18)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 4,
   },
   cardHeroImageContainer: {
     width: '100%',
-    height: 155,
+    height: 140,
     position: 'relative',
     backgroundColor: '#090714',
   },
@@ -1029,72 +972,43 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(9, 7, 20, 0.25)',
   },
-  mediaBadge: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(9, 7, 20, 0.85)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(253, 224, 71, 0.35)',
-  },
-  mediaBadgeText: {
-    color: '#DDD6FE',
-    fontSize: 10,
-    fontWeight: '700',
-  },
   floatingBadgesRow: {
     position: 'absolute',
-    top: 12,
-    left: 12,
-    right: 12,
+    top: 10,
+    left: 10,
+    right: 10,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
   },
   floatingContractBadge: {
-    backgroundColor: 'rgba(9, 7, 20, 0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9999,
+    backgroundColor: 'rgba(9, 7, 20, 0.75)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   floatingContractText: {
     color: '#F8FAFC',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
   },
-  floatingMatchBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(9, 7, 20, 0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.4)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9999,
+  urgentBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.14)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(239, 68, 68, 0.35)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  floatingMatchBadgeHigh: {
-    borderColor: 'rgba(52, 211, 153, 0.5)',
-    backgroundColor: 'rgba(6, 44, 28, 0.85)',
-  },
-  floatingMatchText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#C4B5FD',
-  },
-  floatingMatchTextHigh: {
-    color: '#34D399',
+  urgentText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#F87171',
   },
   cardBody: {
-    padding: 16,
+    padding: 14,
   },
   companyRow: {
     flexDirection: 'row',
@@ -1103,12 +1017,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   companyAvatarBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(124, 58, 237, 0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.35)',
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: 'rgba(124, 58, 237, 0.16)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(139, 92, 246, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -1119,8 +1033,8 @@ const styles = StyleSheet.create({
   },
   companyInitialsText: {
     color: '#DDD6FE',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '600',
   },
   companyNameRow: {
     flexDirection: 'row',
@@ -1128,42 +1042,25 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   cardCompanyName: {
-    fontSize: 13.5,
+    fontSize: 13,
     color: '#E2E8F0',
-    fontWeight: '700',
+    fontWeight: '600',
   },
   companyIndustry: {
-    fontSize: 11.5,
+    fontSize: 11,
     color: '#94A3B8',
     marginTop: 1,
   },
-  urgentBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 8,
-    gap: 3,
-  },
-  urgentText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#FBBF24',
-  },
   cardJobTitle: {
-    fontSize: 16.5,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#F8FAFC',
-    lineHeight: 22,
-    marginBottom: 8,
+    lineHeight: 21,
+    marginBottom: 6,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     marginBottom: 10,
   },
   metaItem: {
@@ -1175,37 +1072,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94A3B8',
   },
+  metaText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '400',
+  },
   skillsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginBottom: 14,
+    marginBottom: 12,
   },
-  skillPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+  skillTag: {
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+    backgroundColor: 'transparent',
+    borderRadius: 6,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    paddingVertical: 3,
   },
-  skillPillMatching: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(124, 58, 237, 0.18)',
-    borderColor: 'rgba(139, 92, 246, 0.35)',
-  },
-  skillPillText: {
+  skillTagText: {
     fontSize: 11,
     color: '#94A3B8',
-  },
-  skillPillTextMatching: {
-    color: '#DDD6FE',
-    fontWeight: '700',
+    fontWeight: '400',
   },
   cardDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+    height: 0.5,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     marginBottom: 12,
   },
   cardBottomRow: {
@@ -1217,33 +1110,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stipendLabel: {
-    fontSize: 10.5,
+    fontSize: 10,
     color: '#94A3B8',
-    fontWeight: '600',
+    fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
     marginBottom: 2,
   },
   stipendAmount: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#34D399',
   },
-  applyPillBtn: {
-    borderRadius: 9999,
-    overflow: 'hidden',
-  },
-  applyPillGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  applyBtn: {
+    backgroundColor: '#7C3AED',
+    borderRadius: 8,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  applyPillBtnText: {
+  applyBtnText: {
     color: '#FFFFFF',
-    fontSize: 12.5,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '500',
   },
 
   // Modal
@@ -1253,69 +1143,69 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   detailContainer: {
-    backgroundColor: '#131024',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: '#120E22',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     maxHeight: '85%',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.24)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     borderBottomWidth: 0,
   },
   detailHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    padding: 20,
+    padding: 18,
     paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(139, 92, 246, 0.14)',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   detailCompany: {
-    fontSize: 12.5,
+    fontSize: 12,
     color: '#A78BFA',
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: 4,
   },
   detailTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '600',
     color: '#F8FAFC',
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   detailCloseBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#0E0B1F',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   detailScroll: {
-    padding: 20,
+    padding: 18,
   },
   detailFlyerImage: {
     width: '100%',
     height: 180,
-    borderRadius: 14,
+    borderRadius: 10,
     marginBottom: 16,
   },
   detailMetaGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 20,
+    marginBottom: 18,
   },
   detailMetaItem: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: '#0E0B1F',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.16)',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 8,
+    padding: 10,
   },
   detailMetaLabel: {
     fontSize: 11,
@@ -1324,19 +1214,18 @@ const styles = StyleSheet.create({
   },
   detailMetaValue: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#F8FAFC',
     marginTop: 2,
   },
   detailSection: {
-    marginBottom: 18,
+    marginBottom: 16,
   },
   detailSectionTitle: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#E2E8F0',
-    marginBottom: 8,
-    letterSpacing: 0.2,
+    marginBottom: 6,
   },
   detailBodyText: {
     fontSize: 13,
@@ -1345,36 +1234,29 @@ const styles = StyleSheet.create({
   },
   detailFooter: {
     padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(139, 92, 246, 0.14)',
-    backgroundColor: '#0E0B1F',
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#120E22',
   },
   detailApplyBtn: {
     backgroundColor: '#7C3AED',
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 14,
-    gap: 8,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
   detailApplyBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '500',
   },
   detailAiMatchBox: {
-    backgroundColor: 'rgba(124, 58, 237, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.28)',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 20,
+    backgroundColor: 'rgba(124, 58, 237, 0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(124, 58, 237, 0.25)',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 18,
   },
   detailAiMatchHeader: {
     flexDirection: 'row',
@@ -1382,22 +1264,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   detailAiMatchTitle: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#DDD6FE',
+  },
+  detailAiMatchScoreText: {
+    fontSize: 12,
+    color: '#A78BFA',
+    fontWeight: '500',
   },
   detailAiMatchBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 6,
+    borderWidth: 0.5,
   },
   detailAiMatchBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   detailMatchPoints: {
     gap: 6,
@@ -1405,7 +1292,12 @@ const styles = StyleSheet.create({
   detailMatchPointRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: 6,
+  },
+  detailBullet: {
+    color: '#7C3AED',
+    fontSize: 12,
+    marginRight: 4,
   },
   detailMatchPointText: {
     flex: 1,
@@ -1419,7 +1311,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 4,
     paddingTop: 8,
-    borderTopWidth: 1,
+    borderTopWidth: 0.5,
     borderTopColor: 'rgba(139, 92, 246, 0.15)',
   },
   detailAdviceText: {

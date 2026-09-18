@@ -88,6 +88,7 @@ function ProfileMenuList({ rows }: { rows: MenuRow[] }) {
       {rows.map((row, i) => (
         <Pressable
           key={row.key}
+          testID={`menu-${row.key}`}
           onPress={row.onPress}
           style={({ pressed }) => [
             styles.menuItem,

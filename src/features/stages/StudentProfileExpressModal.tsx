@@ -9,7 +9,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { Sparkles, X, Check, School, BookOpen, Layers } from 'lucide-react-native';
+import { X, Check, School, BookOpen, Layers, User } from 'lucide-react-native';
 import { stitchColors, fontFamilies } from '../../theme/stitch';
 
 interface StudentProfileExpressModalProps {
@@ -69,17 +69,17 @@ export function StudentProfileExpressModal({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
-              <View style={styles.aiBadge}>
-                <Sparkles size={14} color="#A78BFA" />
-                <Text style={styles.aiBadgeText}>Agent Matcher IA</Text>
+              <View style={styles.profileBadge}>
+                <User size={13} color="#A78BFA" />
+                <Text style={styles.profileBadgeText}>Profil candidat</Text>
               </View>
               <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
                 <X size={18} color="#94A3B8" />
               </Pressable>
             </View>
-            <Text style={styles.title}>Complète ton profil express</Text>
+            <Text style={styles.title}>Complétez votre profil express</Text>
             <Text style={styles.subtitle}>
-              L'IA a besoin de ces 3 informations pour aligner ton CV et ta lettre mot pour mot sur l'offre.
+              Ces informations permettent d'adapter votre CV et votre lettre de motivation aux exigences du recruteur.
             </Text>
           </View>
 
@@ -134,8 +134,8 @@ export function StudentProfileExpressModal({
             {/* Compétences clés */}
             <View style={styles.fieldGroup}>
               <View style={styles.labelRow}>
-                <Sparkles size={13} color="#34D399" />
-                <Text style={styles.label}>3 Compétences majeures (séparées par des virgules)</Text>
+                <Layers size={13} color="#A78BFA" />
+                <Text style={styles.label}>Compétences majeures (séparées par des virgules)</Text>
               </View>
               <TextInput
                 style={styles.input}
@@ -149,6 +149,7 @@ export function StudentProfileExpressModal({
 
           {/* Submit Button */}
           <Pressable
+            testID="btn-express-save"
             style={({ pressed }) => [styles.submitBtn, pressed && { opacity: 0.9 }]}
             onPress={handleSave}
             disabled={saving}
@@ -158,7 +159,7 @@ export function StudentProfileExpressModal({
             ) : (
               <View style={styles.submitBtnContent}>
                 <Check size={16} color="#FFFFFF" strokeWidth={2.4} />
-                <Text style={styles.submitBtnText}>Enregistrer et Lancer l'IA</Text>
+                <Text style={styles.submitBtnText}>Enregistrer et continuer</Text>
               </View>
             )}
           </Pressable>
@@ -179,16 +180,12 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     maxWidth: 440,
-    backgroundColor: '#131024',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
-    padding: 22,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.5,
-    shadowRadius: 24,
-    elevation: 8,
+    backgroundColor: '#120E22',
+    borderRadius: 14,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 20,
+    elevation: 4,
   },
   header: {
     marginBottom: 16,
@@ -199,37 +196,37 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
   },
-  aiBadge: {
+  profileBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(124, 58, 237, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: 'rgba(167, 139, 250, 0.3)',
+    gap: 6,
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    borderColor: 'rgba(167, 139, 250, 0.25)',
   },
-  aiBadgeText: {
-    fontFamily: fontFamilies.outfit,
+  profileBadgeText: {
+    fontFamily: fontFamilies.inter,
     fontSize: 11,
-    fontWeight: '700',
-    color: '#A78BFA',
+    fontWeight: '600',
+    color: '#DDD6FE',
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#191433',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontFamily: fontFamilies.serif,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
     marginBottom: 4,
   },
   subtitle: {
@@ -257,32 +254,26 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fontFamilies.inter,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#DDD6FE',
   },
   input: {
     backgroundColor: '#090714',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 12 : 9,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 8,
     color: '#FFFFFF',
     fontSize: 13,
     fontFamily: fontFamilies.inter,
   },
   submitBtn: {
     backgroundColor: '#7C3AED',
-    borderRadius: 14,
-    paddingVertical: 13,
+    borderRadius: 10,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(167, 139, 250, 0.4)',
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
   },
   submitBtnContent: {
     flexDirection: 'row',
@@ -292,8 +283,7 @@ const styles = StyleSheet.create({
   submitBtnText: {
     fontFamily: fontFamilies.outfit,
     fontSize: 13.5,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#FFFFFF',
-    letterSpacing: 0.2,
   },
 });

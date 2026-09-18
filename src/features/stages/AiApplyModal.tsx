@@ -21,12 +21,10 @@ import {
   Building2,
   FileText,
   ShieldCheck,
-  Wand2,
   Edit3,
   Check,
   Copy,
   Download,
-  Flame,
   Coins,
   ChevronRight,
 } from 'lucide-react-native';
@@ -178,19 +176,19 @@ export function AiApplyModal({
             'Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.'
           )
       );
-      Alert.alert('Ton Formel Appliqué ✨', 'Formules protocolaires de haut niveau insérées.');
+      Alert.alert('Ton formel appliqué', 'Formules protocolaires professionnelles insérées.');
     } else if (tone === 'concise') {
       setEditableLetter((prev) =>
         prev.split('\n\n').slice(0, 3).join('\n\n') +
         '\n\nRestant à votre entière disposition pour échanger lors d’un entretien.'
       );
-      Alert.alert('Version Concise ✂️', 'Format direct en 3 paragraphes opérationnels.');
+      Alert.alert('Version concise', 'Format direct en 3 paragraphes opérationnels.');
     } else if (tone === 'impact') {
       const skillsHighlight = currentProfile.skills.slice(0, 3).join(', ');
       setEditableLetter((prev) =>
-        prev + `\n\n🎯 Compétences clés directement opérationnelles : ${skillsHighlight}.`
+        prev + `\n\nCompétences clés directement opérationnelles : ${skillsHighlight}.`
       );
-      Alert.alert('Impact Clé 🚀', 'Compétences techniques mises en avant dans le corps de lettre.');
+      Alert.alert('Compétences mises en avant', 'Compétences clés insérées dans le corps du texte.');
     }
   };
 
@@ -236,7 +234,6 @@ export function AiApplyModal({
     try {
       await persistApplication();
       setStep('sent');
-      onApplicationComplete?.();
     } catch (e) {
       Alert.alert('Erreur', 'Impossible d’enregistrer la candidature.');
     }
@@ -249,7 +246,6 @@ export function AiApplyModal({
       await persistApplication();
       await Linking.openURL(result.whatsappUrl);
       setStep('sent');
-      onApplicationComplete?.();
     } catch (e) {
       Alert.alert('Info', 'Ouverture de WhatsApp...');
     }
@@ -265,7 +261,6 @@ export function AiApplyModal({
       await persistApplication();
       await Linking.openURL(mailto);
       setStep('sent');
-      onApplicationComplete?.();
     } catch (e) {
       Alert.alert('Info', 'Ouverture de votre messagerie...');
     }
@@ -280,14 +275,13 @@ export function AiApplyModal({
             <View style={styles.header}>
               <View style={styles.headerTitleRow}>
                 <View style={styles.aiBadge}>
-                  <Sparkles size={14} color="#A78BFA" />
-                  <Text style={styles.aiBadgeText}>Agent Matcher & Rédacteur</Text>
+                  <FileText size={13} color="#A78BFA" />
+                  <Text style={styles.aiBadgeText}>Dossier de candidature</Text>
                 </View>
 
                 {matchAnalysis && (
                   <View style={styles.matchBadgeTop}>
-                    <Flame size={13} color="#FBBF24" />
-                    <Text style={styles.matchBadgeTopText}>{matchAnalysis.score}% Match</Text>
+                    <Text style={styles.matchBadgeTopText}>{matchAnalysis.score}% de correspondance</Text>
                   </View>
                 )}
 
@@ -310,31 +304,30 @@ export function AiApplyModal({
               </Text>
             </View>
 
-            {/* Étape 1 : Génération & Analyse Matcher en temps réel */}
+            {/* Étape 1 : Génération & Analyse de correspondance */}
             {step === 'generating' && (
               <View style={styles.loadingContainer}>
-                <View style={styles.sparkleOrb}>
-                  <ActivityIndicator size="large" color="#8B5CF6" />
+                <View style={styles.loadingOrb}>
+                  <ActivityIndicator size="large" color="#7C3AED" />
                 </View>
-                <Text style={styles.loadingTitle}>Agents IA en Action...</Text>
+                <Text style={styles.loadingTitle}>Préparation de votre dossier</Text>
                 <Text style={styles.loadingSubtitle}>{progressMsg}</Text>
 
                 {matchAnalysis && (
                   <View style={styles.matchBriefCard}>
                     <View style={styles.matchBriefHeader}>
-                      <Flame size={16} color="#FBBF24" />
                       <Text style={styles.matchBriefTitle}>
-                        Diagnostic de Compatibilité : {matchAnalysis.score}%
+                        Correspondance de profil : {matchAnalysis.score}%
                       </Text>
                     </View>
                     {matchAnalysis.matchedPoints.slice(0, 2).map((point, idx) => (
                       <View key={idx} style={styles.matchPointRow}>
-                        <CheckCircle2 size={13} color={stitchColors.emerald} />
+                        <CheckCircle2 size={13} color="#34D399" />
                         <Text style={styles.matchPointText}>{point}</Text>
                       </View>
                     ))}
                     <Text style={styles.matchAdviceText}>
-                      💡 {matchAnalysis.strategicAdvice}
+                      Conseil : {matchAnalysis.strategicAdvice}
                     </Text>
                   </View>
                 )}
@@ -348,6 +341,7 @@ export function AiApplyModal({
                 <View style={styles.tabBar}>
                   <View style={styles.tabGroup}>
                     <Pressable
+                      testID="tab-letter"
                       style={[styles.tabBtn, activePreviewTab === 'letter' && styles.tabBtnActive]}
                       onPress={() => setActivePreviewTab('letter')}
                     >
@@ -361,11 +355,12 @@ export function AiApplyModal({
                           activePreviewTab === 'letter' && styles.tabBtnTextActive,
                         ]}
                       >
-                        Lettre Ciblée
+                        Lettre
                       </Text>
                     </Pressable>
 
                     <Pressable
+                      testID="tab-cv"
                       style={[styles.tabBtn, activePreviewTab === 'cv' && styles.tabBtnActive]}
                       onPress={() => setActivePreviewTab('cv')}
                     >
@@ -379,17 +374,18 @@ export function AiApplyModal({
                           activePreviewTab === 'cv' && styles.tabBtnTextActive,
                         ]}
                       >
-                        CV Synthétique
+                        CV
                       </Text>
                     </Pressable>
 
                     <Pressable
+                      testID="tab-match"
                       style={[styles.tabBtn, activePreviewTab === 'match' && styles.tabBtnActive]}
                       onPress={() => setActivePreviewTab('match')}
                     >
-                      <Flame
+                      <ShieldCheck
                         size={14}
-                        color={activePreviewTab === 'match' ? '#FDE047' : '#94A3B8'}
+                        color={activePreviewTab === 'match' ? '#FFFFFF' : '#94A3B8'}
                       />
                       <Text
                         style={[
@@ -397,7 +393,7 @@ export function AiApplyModal({
                           activePreviewTab === 'match' && styles.tabBtnTextActive,
                         ]}
                       >
-                        Diagnostic IA
+                        Correspondance
                       </Text>
                     </Pressable>
                   </View>
@@ -424,16 +420,13 @@ export function AiApplyModal({
                     contentContainerStyle={styles.aiToolbarContent}
                   >
                     <Pressable style={styles.aiPill} onPress={() => handleReformulateTone('formal')}>
-                      <Wand2 size={12} color="#A78BFA" />
-                      <Text style={styles.aiPillText}>🎩 Plus Formel</Text>
+                      <Text style={styles.aiPillText}>Plus formel</Text>
                     </Pressable>
                     <Pressable style={styles.aiPill} onPress={() => handleReformulateTone('concise')}>
-                      <Wand2 size={12} color="#38BDF8" />
-                      <Text style={styles.aiPillText}>✂️ Plus Concis</Text>
+                      <Text style={styles.aiPillText}>Plus concis</Text>
                     </Pressable>
                     <Pressable style={styles.aiPill} onPress={() => handleReformulateTone('impact')}>
-                      <Wand2 size={12} color="#34D399" />
-                      <Text style={styles.aiPillText}>🎯 Compétences Clés</Text>
+                      <Text style={styles.aiPillText}>Compétences clés</Text>
                     </Pressable>
                   </ScrollView>
                 )}
@@ -447,23 +440,22 @@ export function AiApplyModal({
                   {activePreviewTab === 'match' && matchAnalysis ? (
                     <View style={styles.matchTabCard}>
                       <View style={styles.matchHeaderScore}>
-                        <Flame size={24} color="#FBBF24" />
                         <Text style={styles.matchScoreBig}>{matchAnalysis.score}%</Text>
                         <Text style={styles.matchScoreHeadline}>{matchAnalysis.headline}</Text>
                       </View>
 
                       <View style={styles.divider} />
 
-                      <Text style={styles.matchSectionTitle}>Pourquoi ce stage est fait pour toi :</Text>
+                      <Text style={styles.matchSectionTitle}>Points forts du profil :</Text>
                       {matchAnalysis.matchedPoints.map((p, i) => (
                         <View key={i} style={styles.matchPointItem}>
-                          <CheckCircle2 size={16} color={stitchColors.emerald} />
+                          <CheckCircle2 size={15} color="#34D399" />
                           <Text style={styles.matchPointItemText}>{p}</Text>
                         </View>
                       ))}
 
                       <View style={styles.strategicBox}>
-                        <Text style={styles.strategicTitle}>🎯 Stratégie Rédactionnelle IA</Text>
+                        <Text style={styles.strategicTitle}>Stratégie recommandée</Text>
                         <Text style={styles.strategicText}>{matchAnalysis.strategicAdvice}</Text>
                       </View>
                     </View>
@@ -500,7 +492,7 @@ export function AiApplyModal({
                       <Copy size={14} color="#A78BFA" />
                     )}
                     <Text style={[styles.utilBtnText, copiedPitch && { color: '#10B981' }]}>
-                      {copiedPitch ? 'Texte Copié !' : 'Copier pour WhatsApp'}
+                      {copiedPitch ? 'Texte copié' : 'Copier le texte'}
                     </Text>
                   </Pressable>
 
@@ -514,22 +506,23 @@ export function AiApplyModal({
                     ) : (
                       <Download size={14} color="#A78BFA" />
                     )}
-                    <Text style={styles.utilBtnText}>Télécharger PDF</Text>
+                    <Text style={styles.utilBtnText}>Télécharger le PDF</Text>
                   </Pressable>
                 </View>
 
                 {/* Actions Box: Canaux d'envoi immédiat */}
                 <View style={styles.actionsBox}>
-                  <Text style={styles.actionsTitle}>Canal de transmission immédiate :</Text>
+                  <Text style={styles.actionsTitle}>Canal d'envoi :</Text>
                   <View style={styles.channelRow}>
                     {/* Direct In-App */}
                     <Pressable
+                      testID="btn-apply-inapp"
                       style={({ pressed }) => [styles.channelBtnInApp, pressed && { opacity: 0.85 }]}
                       onPress={handleInAppApply}
                       disabled={submitting}
                     >
-                      <Sparkles size={15} color="#FFFFFF" />
-                      <Text style={styles.channelBtnText}>In-App Direct</Text>
+                      <Send size={14} color="#FFFFFF" />
+                      <Text style={styles.channelBtnText}>In-App</Text>
                     </Pressable>
 
                     {/* WhatsApp */}
@@ -538,15 +531,8 @@ export function AiApplyModal({
                       onPress={handleOpenWhatsapp}
                       disabled={submitting}
                     >
-                      <LinearGradient
-                        colors={['#22C55E', '#16A34A']}
-                        style={styles.gradientBtn}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                      >
-                        <Send size={15} color="#FFFFFF" />
-                        <Text style={styles.channelBtnText}>WhatsApp RH</Text>
-                      </LinearGradient>
+                      <Send size={14} color="#FFFFFF" />
+                      <Text style={styles.channelBtnText}>WhatsApp RH</Text>
                     </Pressable>
 
                     {/* Email */}
@@ -555,15 +541,15 @@ export function AiApplyModal({
                       onPress={handleOpenEmail}
                       disabled={submitting}
                     >
-                      <Mail size={15} color="#FFFFFF" />
+                      <Mail size={14} color="#FFFFFF" />
                       <Text style={styles.channelBtnText}>Email RH</Text>
                     </Pressable>
                   </View>
 
                   <Text style={styles.savedHint}>
                     {submitting
-                      ? 'Enregistrement sécurisé en cours…'
-                      : '✅ Dossier conservé dans ton suivi avec rappel de relance automatique à J+7.'}
+                      ? 'Enregistrement en cours…'
+                      : 'Candidature enregistrée dans le suivi · Rappel de relance à J+7'}
                   </Text>
                 </View>
               </View>
@@ -573,14 +559,21 @@ export function AiApplyModal({
             {step === 'sent' && (
               <View style={styles.sentContainer}>
                 <View style={styles.sentIconCircle}>
-                  <CheckCircle2 size={52} color="#10B981" />
+                  <CheckCircle2 size={48} color="#10B981" />
                 </View>
-                <Text style={styles.sentTitle}>Candidature Transmise ! 🎯</Text>
+                <Text style={styles.sentTitle}>Candidature transmise</Text>
                 <Text style={styles.sentDesc}>
-                  Ton dossier sur-mesure a été enregistré dans ton espace. Si l’entreprise ne te répond pas d’ici 7 jours, tu pourras envoyer une relance WhatsApp en 1 clic.
+                  Votre dossier a été enregistré dans votre espace. En l'absence de réponse sous 7 jours, vous pourrez envoyer une relance en 1 clic.
                 </Text>
-                <Pressable style={styles.doneBtn} onPress={onClose} testID="ai-modal-done">
-                  <Text style={styles.doneBtnText}>Fermer et Consulter le Suivi</Text>
+                <Pressable
+                  style={styles.doneBtn}
+                  onPress={() => {
+                    onClose();
+                    onApplicationComplete?.();
+                  }}
+                  testID="ai-modal-done"
+                >
+                  <Text style={styles.doneBtnText}>Fermer et consulter le suivi</Text>
                 </Pressable>
               </View>
             )}
@@ -612,26 +605,21 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   container: {
-    backgroundColor: '#0D0A1C',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
+    backgroundColor: '#120E22',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     maxHeight: '92%',
     minHeight: 520,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 24,
-    elevation: 16,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(139, 92, 246, 0.15)',
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   headerTitleRow: {
     flexDirection: 'row',
@@ -644,55 +632,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(124, 58, 237, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: 'rgba(167, 139, 250, 0.3)',
+    backgroundColor: 'rgba(124, 58, 237, 0.14)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    borderColor: 'rgba(124, 58, 237, 0.3)',
   },
   aiBadgeText: {
     fontFamily: fontFamilies.outfit,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#A78BFA',
   },
   matchBadgeTop: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(251, 191, 36, 0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 9999,
+    borderRadius: 6,
   },
   matchBadgeTopText: {
     fontFamily: fontFamilies.outfit,
     fontSize: 11,
-    fontWeight: '700',
-    color: '#FBBF24',
+    fontWeight: '500',
+    color: '#CBD5E1',
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#191433',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   jobTitle: {
     fontFamily: fontFamilies.serif,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
     color: '#FFFFFF',
     letterSpacing: -0.2,
   },
   companyName: {
     fontFamily: fontFamilies.inter,
-    fontSize: 12.5,
-    color: '#A78BFA',
+    fontSize: 12,
+    color: '#94A3B8',
     marginTop: 2,
   },
 
@@ -703,39 +691,39 @@ const styles = StyleSheet.create({
     paddingVertical: 36,
     paddingHorizontal: 24,
   },
-  sparkleOrb: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: 'rgba(124, 58, 237, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(167, 139, 250, 0.3)',
+  loadingOrb: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(124, 58, 237, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   loadingTitle: {
     fontFamily: fontFamilies.serif,
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   loadingSubtitle: {
     fontFamily: fontFamilies.inter,
     fontSize: 13,
     color: stitchColors.inkMuted,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   matchBriefCard: {
     width: '100%',
-    backgroundColor: '#131024',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.22)',
-    borderRadius: 16,
-    padding: 14,
-    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 10,
+    padding: 12,
+    gap: 6,
   },
   matchBriefHeader: {
     flexDirection: 'row',
@@ -745,9 +733,9 @@ const styles = StyleSheet.create({
   },
   matchBriefTitle: {
     fontFamily: fontFamilies.outfit,
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FBBF24',
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#CBD5E1',
   },
   matchPointRow: {
     flexDirection: 'row',
@@ -765,7 +753,6 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: '#A78BFA',
     marginTop: 4,
-    fontStyle: 'italic',
   },
 
   // Preview Container
@@ -790,33 +777,33 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingHorizontal: 11,
     paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: '#131024',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.15)',
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   tabBtnActive: {
     backgroundColor: '#7C3AED',
-    borderColor: 'rgba(167, 139, 250, 0.4)',
+    borderColor: '#7C3AED',
   },
   tabBtnText: {
     fontFamily: fontFamilies.inter,
     fontSize: 11.5,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#94A3B8',
   },
   tabBtnTextActive: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '500',
   },
   editToggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    borderRadius: 6,
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
   },
   editToggleBtnActive: {
     backgroundColor: '#7C3AED',
@@ -824,7 +811,7 @@ const styles = StyleSheet.create({
   editToggleText: {
     fontFamily: fontFamilies.inter,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#A78BFA',
   },
   editToggleTextActive: {
@@ -845,17 +832,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 9999,
-    backgroundColor: '#191433',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: 'transparent',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
   },
   aiPillText: {
     fontFamily: fontFamilies.inter,
     fontSize: 11,
-    fontWeight: '600',
-    color: '#F8FAFC',
+    fontWeight: '400',
+    color: '#CBD5E1',
   },
 
   // Text Content
@@ -864,28 +851,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   previewScrollContent: {
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
   previewText: {
     fontFamily: fontFamilies.inter,
     fontSize: 13,
-    lineHeight: 21,
+    lineHeight: 20,
     color: '#E2E8F0',
-    backgroundColor: '#131024',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.16)',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   editorTextInput: {
     fontFamily: fontFamilies.inter,
     fontSize: 13,
-    lineHeight: 21,
+    lineHeight: 20,
     color: '#FFFFFF',
     backgroundColor: '#131024',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 0.5,
     borderColor: '#7C3AED',
     minHeight: 220,
     textAlignVertical: 'top',
@@ -893,38 +880,38 @@ const styles = StyleSheet.create({
 
   // Match Tab
   matchTabCard: {
-    backgroundColor: '#131024',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
-    padding: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 16,
   },
   matchHeaderScore: {
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 12,
+    gap: 2,
+    marginBottom: 10,
   },
   matchScoreBig: {
     fontFamily: fontFamilies.serif,
-    fontSize: 34,
-    fontWeight: '800',
-    color: '#FBBF24',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#A78BFA',
   },
   matchScoreHeadline: {
     fontFamily: fontFamilies.outfit,
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#34D399',
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#94A3B8',
   },
   divider: {
-    height: 1,
-    backgroundColor: 'rgba(139, 92, 246, 0.12)',
-    marginVertical: 12,
+    height: 0.5,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginVertical: 10,
   },
   matchSectionTitle: {
     fontFamily: fontFamilies.outfit,
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 8,
   },
@@ -932,33 +919,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   matchPointItemText: {
     fontFamily: fontFamilies.inter,
-    fontSize: 12.5,
-    lineHeight: 18,
-    color: '#E2E8F0',
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#CBD5E1',
     flex: 1,
   },
   strategicBox: {
     marginTop: 10,
-    backgroundColor: 'rgba(124, 58, 237, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: 'rgba(124, 58, 237, 0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(124, 58, 237, 0.2)',
+    borderRadius: 8,
+    padding: 10,
   },
   strategicTitle: {
     fontFamily: fontFamilies.outfit,
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11.5,
+    fontWeight: '600',
     color: '#A78BFA',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   strategicText: {
     fontFamily: fontFamilies.inter,
-    fontSize: 11.5,
+    fontSize: 11,
     lineHeight: 16,
     color: '#DDD6FE',
   },
@@ -977,35 +964,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#191433',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
-    paddingVertical: 9,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   utilBtnSuccess: {
     borderColor: '#10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
   },
   utilBtnText: {
     fontFamily: fontFamilies.inter,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#A78BFA',
+    fontSize: 11.5,
+    fontWeight: '500',
+    color: '#CBD5E1',
   },
 
   // Actions Box
   actionsBox: {
     paddingHorizontal: 16,
     paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(139, 92, 246, 0.15)',
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
   },
   actionsTitle: {
     fontFamily: fontFamilies.inter,
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: stitchColors.inkMuted,
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#94A3B8',
     marginBottom: 8,
   },
   channelRow: {
@@ -1019,22 +1006,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 5,
     backgroundColor: '#7C3AED',
-    paddingVertical: 11,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(167, 139, 250, 0.4)',
+    paddingVertical: 10,
+    borderRadius: 8,
   },
   channelBtnWhatsapp: {
     flex: 1.15,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  gradientBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    paddingVertical: 11,
+    backgroundColor: '#16A34A',
+    paddingVertical: 10,
+    borderRadius: 8,
   },
   channelBtnEmail: {
     flex: 1,
@@ -1042,21 +1025,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    backgroundColor: '#1F2937',
-    paddingVertical: 11,
-    borderRadius: 14,
-    borderWidth: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   channelBtnText: {
     fontFamily: fontFamilies.outfit,
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11.5,
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   savedHint: {
     fontFamily: fontFamilies.inter,
-    fontSize: 10.5,
+    fontSize: 10,
     color: '#94A3B8',
     textAlign: 'center',
     marginTop: 8,
@@ -1065,46 +1048,44 @@ const styles = StyleSheet.create({
   // Sent Confirmation
   sentContainer: {
     alignItems: 'center',
-    paddingVertical: 44,
-    paddingHorizontal: 28,
+    paddingVertical: 36,
+    paddingHorizontal: 24,
   },
   sentIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 18,
+    marginBottom: 16,
   },
   sentTitle: {
     fontFamily: fontFamilies.serif,
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 8,
+    marginBottom: 6,
     textAlign: 'center',
   },
   sentDesc: {
     fontFamily: fontFamilies.inter,
-    fontSize: 13,
-    lineHeight: 19,
-    color: stitchColors.inkMuted,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: '#94A3B8',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   doneBtn: {
     backgroundColor: '#7C3AED',
-    paddingHorizontal: 24,
-    paddingVertical: 13,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(167, 139, 250, 0.4)',
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+    borderRadius: 8,
   },
   doneBtnText: {
     fontFamily: fontFamilies.outfit,
-    fontSize: 13.5,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '500',
     color: '#FFFFFF',
   },
 });

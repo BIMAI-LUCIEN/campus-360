@@ -200,3 +200,59 @@
     - Mettre à jour `contexte.md` avec le verdict VERIFIED.
   - **DoD :** 100% des tests passés, capture réelle enregistrée, code poussé sur GitHub.
 
+---
+
+## MODULE 7 : Refonte Anti-Saturation IA (Direction Artistique Calme, Sobre et Crédible)
+
+### 1. Écran Stages & Cartes d'Offres
+- [X] **Tâche 7.1 : Épuration Anti-Saturation de l'Écran Stages (`StagesScreen.tsx`)**
+  - **Fichiers :** `src/ui/screens/StagesScreen.tsx`
+  - **Action :**
+    - Supprimer la cascade de badges superposés sur les cartes (match IA saturé, visuel recruteur avec sparkles, etc.).
+    - Maximum 1 seul badge fonctionnel par carte (ex: type de contrat "Stage PFE" ou statut "Urgent").
+    - Intégrer le pourcentage de match en texte simple et discret dans les métadonnées (ex: "Abidjan · 3 à 6 mois · 88% de correspondance").
+    - Remplacer le CTA dégradé "Postuler 1-clic" avec sparkles par un bouton sobre et direct "Postuler" avec fond d'accent violet uni.
+    - Remplacer les tags de compétences à fond plein par des tags à contour simple fin (0.5px).
+    - Simplifier le carrousel "En vedette" et l'en-tête (supprimer les étincelles décoratives du compteur de jetons).
+  - **DoD :** Cartes calmes, 1 seul badge, CTA direct "Postuler", 0 erreur TypeScript.
+
+### 2. Modale de Candidature IA
+- [X] **Tâche 7.2 : Épuration Anti-Saturation de la Modale de Candidature IA (`AiApplyModal.tsx`)**
+  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`
+  - **Action :**
+    - Réserver l'icône sparkle (✨) exclusivement à la génération IA réelle (candidature générée).
+    - Remplacer les pastilles pleines saturées des onglets par un soulignement ou style neutre calme.
+    - Passer les boutons de reformulation (Plus formel, Plus concis, Compétences clés) en contour simple sans icônes magiques décoratives.
+    - Simplifier les boutons d'export et d'envoi pour une hiérarchie visuelle apaisée.
+  - **DoD :** Modale claire et professionnelle, typographie regular/medium, 0 erreur TypeScript.
+
+### 3. Écran d'Accueil
+- [X] **Tâche 7.3 : Épuration Anti-Saturation de l'Accueil (`HomeScreen.tsx`)**
+  - **Fichiers :** `src/ui/screens/HomeScreen.tsx`
+  - **Action :**
+    - Supprimer les faux ratings décoratifs (ex: 4.9 (38)) sur les offres de stage.
+    - Nettoyer le badge "98% Match" avec sparkle géant dans la hero banner, remplacer par une information utile.
+    - Remplacer les pastilles de match saturées des cartes recommandées par une mention textuelle discrète.
+    - Bouton CTA unique et sobre "Postuler".
+  - **DoD :** Accueil aéré, hiérarchie claire, 0 artifice décoratif, 0 erreur TypeScript.
+
+### 4. Suivi des Candidatures & Composants Partagés
+- [X] **Tâche 7.4 : Épuration Anti-Saturation du Suivi (`ApplicationsTimelineScreen.tsx`, `GlassComponents.tsx`)**
+  - **Fichiers :** `src/ui/screens/ApplicationsTimelineScreen.tsx`
+  - **Action :**
+    - Épurer les billets de candidature : typographie sobre regular/medium, statut fonctionnel clair.
+    - Bouton de relance épuré : "Relancer (J+7)" au lieu de "🪄 Relance IA WhatsApp".
+  - **DoD :** Rendu sobre, lisible et crédible, 0 erreur TypeScript.
+
+### 5. Validation Mécanique, DevSecOps & Screenshots E2E (/test-and-verify)
+- [X] **Tâche 7.5 : Contrôle TypeScript Strict, Playwright E2E & Contexte Global**
+  - **Fichiers :** `scripts/verify_stage_ai_agent.js`, `contexte.md`
+  - **Action :**
+    - Lancer `node --stack_size=8192 node_modules/typescript/bin/tsc --noEmit` (0 erreur).
+    - Exécuter la suite Playwright pour capturer les nouveaux rendus calmes et anti-saturation.
+    - Vérifier la conformité DevSecOps (aucun secret, Zod strict).
+    - Mettre à jour `contexte.md` avec la certification de la nouvelle DA.
+    - Commit et push sur GitHub.
+  - **DoD :** Code retour 0, captures validées, git synchronisé.
+
+

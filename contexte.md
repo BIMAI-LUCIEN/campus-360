@@ -337,4 +337,25 @@ campus-360/
   - Timeline & Relance J+7 : [`.agent/screenshots/stage_timeline_verified.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/stage_timeline_verified.png)
 - **Vérification UI :** Rendu confirmé sans erreur console par l'agent Playwright sur viewport mobile (414x896). Charte violet obsidienne `#090714` et `#131024` respectée à 100%.
 
+### Certification : Refonte Anti-Saturation IA (Direction Artistique Sobre & Crédible)
+- **Date & Heure :** 18 Septembre 2026
+- **Verdict :** 🟢 **`VERIFIED`**
+- **Preuve CLI :** Compilation stricte TypeScript (`tsc --noEmit`) validée avec **0 erreur** (Code retour 0).
+- **Règles Anti-Saturation Contrôlées & Validées :**
+  1. **Couleur & Contraste :** Accent unique violet `#7C3AED`, 1 seul CTA principal par écran, fonds neutres obsidienne `#090714` / `#120E22`, bordures ultra-fines de 0.5px (`rgba(255,255,255,0.08)`), suppression totale des dégradés saturés et des ombres lourdes.
+  2. **Badges & Icônes :** Suppression de tous les sparkles décoratifs, 1 seul badge fonctionnel par carte (`Stage PFE`, `Premier Emploi` ou `Urgent`), vert réservé exclusivement au statut "Rémunéré" et orange/rouge à l'urgence réelle.
+  3. **Score de Correspondance :** Conversion des pastilles néon en discrète mention textuelle de métadonnées (`"{ville} · {durée} · {score}% de correspondance"`).
+  4. **Typographie & Composants :** Deux graisses max (regular et medium), suppression des faux ratings (`4.9 (38)`), tags de compétences en contour simple fin (0.5px) sans fond plein, CTA direct "Postuler".
+  5. **Dossier de Candidature :** Modale apaisée avec onglets sobres (`Lettre`, `CV`, `Correspondance`), reformulation sans artifice (`Plus formel`, `Plus concis`, `Compétences clés`), et canaux d'envoi limpides (`In-App`, `WhatsApp RH`, `Email RH`).
+  6. **Suivi & Relance :** Ticket timeline épuré sans émoticônes superflus, bouton sobre `[ 💬 Relancer (J+7) ]`.
+- **Preuves Visuelles Réelles (Screenshots Playwright) :**
+  - Accueil Sobre : [`.agent/screenshots/home_anti_saturation.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/home_anti_saturation.png)
+  - Flux d'Offres Épuré : [`.agent/screenshots/stages_anti_saturation.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/stages_anti_saturation.png)
+  - Dossier IA (Lettre) : [`.agent/screenshots/apply_modal_letter_tab.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/apply_modal_letter_tab.png)
+  - Diagnostic Matcher Sobre : [`.agent/screenshots/apply_modal_match_tab.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/apply_modal_match_tab.png)
+  - CV Structuré : [`.agent/screenshots/apply_modal_cv_tab.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/apply_modal_cv_tab.png)
+  - Confirmation d'Envoi : [`.agent/screenshots/apply_modal_sent.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/apply_modal_sent.png)
+  - Suivi des Candidatures & Relance J+7 : [`.agent/screenshots/timeline_anti_saturation.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/timeline_anti_saturation.png)
+
+
 

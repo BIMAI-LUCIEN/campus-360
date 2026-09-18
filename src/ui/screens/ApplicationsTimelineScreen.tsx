@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   XCircle,
   MessageSquare,
-  Sparkles,
   Calendar,
   Send,
   Building2,
@@ -25,8 +24,8 @@ import {
   MapPin,
   Briefcase,
   ChevronRight,
+  ArrowLeft,
 } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import type { StageApplication, AppStatus } from '../../types';
 import {
   fetchStudentApplications,
@@ -37,20 +36,21 @@ import { TrustBadgeStrip } from '../GlassComponents';
 
 interface ApplicationsTimelineProps {
   studentName: string;
+  onBack?: () => void;
 }
 
 const STATUS_CONFIG: Record<
   AppStatus,
   { label: string; bg: string; text: string; border: string; icon: any }
 > = {
-  PENDING: { label: 'En attente', bg: 'rgba(251, 191, 36, 0.15)', text: '#FBBF24', border: 'rgba(251, 191, 36, 0.35)', icon: Clock },
-  REVIEWING: { label: 'En revue', bg: 'rgba(59, 130, 246, 0.15)', text: '#60A5FA', border: 'rgba(59, 130, 246, 0.35)', icon: FileCheck },
-  INTERVIEW: { label: 'Entretien', bg: 'rgba(168, 85, 247, 0.15)', text: '#C084FC', border: 'rgba(168, 85, 247, 0.35)', icon: MessageSquare },
-  ACCEPTED: { label: 'Accepté ! 🎉', bg: 'rgba(16, 185, 129, 0.18)', text: '#34D399', border: 'rgba(16, 185, 129, 0.35)', icon: CheckCircle2 },
-  REJECTED: { label: 'Non retenu', bg: 'rgba(239, 68, 68, 0.15)', text: '#F87171', border: 'rgba(239, 68, 68, 0.35)', icon: XCircle },
+  PENDING: { label: 'En attente', bg: 'rgba(245, 158, 11, 0.12)', text: '#FBBF24', border: 'rgba(245, 158, 11, 0.25)', icon: Clock },
+  REVIEWING: { label: 'En examen', bg: 'rgba(59, 130, 246, 0.12)', text: '#60A5FA', border: 'rgba(59, 130, 246, 0.25)', icon: FileCheck },
+  INTERVIEW: { label: 'Entretien', bg: 'rgba(124, 58, 237, 0.12)', text: '#A78BFA', border: 'rgba(124, 58, 237, 0.25)', icon: MessageSquare },
+  ACCEPTED: { label: 'Accepté', bg: 'rgba(16, 185, 129, 0.12)', text: '#34D399', border: 'rgba(16, 185, 129, 0.25)', icon: CheckCircle2 },
+  REJECTED: { label: 'Non retenu', bg: 'rgba(239, 68, 68, 0.12)', text: '#F87171', border: 'rgba(239, 68, 68, 0.25)', icon: XCircle },
 };
 
-export function ApplicationsTimelineScreen({ studentName }: ApplicationsTimelineProps) {
+export function ApplicationsTimelineScreen({ studentName, onBack }: ApplicationsTimelineProps) {
   const [applications, setApplications] = useState<StageApplication[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -74,7 +74,7 @@ export function ApplicationsTimelineScreen({ studentName }: ApplicationsTimeline
     const nextStatus = options[(options.indexOf(currentStatus) + 1) % options.length];
     await updateApplicationStatus(appId, nextStatus);
     if (nextStatus === 'ACCEPTED') {
-      Alert.alert('Félicitations ! 🎓✨', 'Félicitations pour votre stage ! Nous célébrons votre réussite.');
+      Alert.alert('Félicitations !', 'Votre candidature a été acceptée par l’entreprise.');
     }
     loadData();
   };
@@ -87,7 +87,7 @@ export function ApplicationsTimelineScreen({ studentName }: ApplicationsTimeline
       window.open(waUrl, '_blank');
     } else {
       Alert.alert(
-        'Relance IA Préparée',
+        'Message de relance',
         reminderMsg,
         [
           { text: 'Envoyer via WhatsApp', onPress: () => Linking.openURL(waUrl) },
@@ -104,10 +104,17 @@ export function ApplicationsTimelineScreen({ studentName }: ApplicationsTimeline
 
       {/* ── Modern Header ────────────────────────────────────────── */}
       <View style={styles.header}>
-        <Text style={styles.title}>Suivi des Candidatures</Text>
-        <Text style={styles.subtitle}>
-          Historique, statut d'examen et relances automatisées par IA
-        </Text>
+        {onBack && (
+          <Pressable onPress={onBack} testID="btn-timeline-back" style={styles.backBtn}>
+            <ArrowLeft size={18} color="#FFFFFF" />
+          </Pressable>
+        )}
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Suivi des Candidatures</Text>
+          <Text style={styles.subtitle}>
+            Historique, statut d'examen et relances auprès des recruteurs
+          </Text>
+        </View>
       </View>
 
       <ScrollView
@@ -122,12 +129,12 @@ export function ApplicationsTimelineScreen({ studentName }: ApplicationsTimeline
         <View style={styles.duoCard}>
           <View style={styles.duoHeader}>
             <View style={styles.duoIconCircle}>
-              <Sparkles size={16} color="#F59E0B" />
+              <Briefcase size={14} color="#A78BFA" />
             </View>
-            <Text style={styles.duoBadgeText}>Conseil Recrutement • Campus 360</Text>
+            <Text style={styles.duoBadgeText}>Conseil candidature</Text>
           </View>
           <Text style={styles.duoMessage}>
-            « Les candidatures relancées à J+7 multiplient par 3 le taux de réponse des tuteurs de stage. »
+            « Relancer un recruteur à J+7 permet de confirmer votre motivation et d'accélérer le traitement de votre dossier. »
           </Text>
         </View>
 
@@ -138,7 +145,7 @@ export function ApplicationsTimelineScreen({ studentName }: ApplicationsTimeline
             </View>
             <Text style={styles.emptyTitle}>Aucune candidature enregistrée</Text>
             <Text style={styles.emptySubtitle}>
-              Utilisez le bouton "Postuler 1-clic" depuis les offres de stage pour générer votre premier dossier.
+              Utilisez le bouton "Postuler" depuis les offres de stage pour enregistrer votre premier dossier.
             </Text>
           </View>
         ) : (
@@ -203,9 +210,9 @@ export function ApplicationsTimelineScreen({ studentName }: ApplicationsTimeline
                     </Text>
                   </View>
 
-                  {/* QR Code Verification Preview (From Image 1 Flight Ticket) */}
+                  {/* QR Code Verification Preview */}
                   <View style={styles.qrBox}>
-                    <QrCode size={34} color="#DDD6FE" />
+                    <QrCode size={28} color="#CBD5E1" />
                     <Text style={styles.qrLabel}>Vérifié</Text>
                   </View>
                 </View>
@@ -227,18 +234,11 @@ export function ApplicationsTimelineScreen({ studentName }: ApplicationsTimeline
 
                   {isPendingLong && (
                     <Pressable
-                      style={styles.reminderPill}
+                      style={styles.reminderBtn}
                       onPress={() => handleSendReminder(app)}
                     >
-                      <LinearGradient
-                        colors={['#8B5CF6', '#7C3AED']}
-                        style={styles.reminderGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                      >
-                        <Sparkles size={12} color="#FFFFFF" />
-                        <Text style={styles.reminderPillText}>Relance IA WhatsApp</Text>
-                      </LinearGradient>
+                      <MessageSquare size={13} color="#FFFFFF" />
+                      <Text style={styles.reminderBtnText}>Relancer (J+7)</Text>
                     </Pressable>
                   )}
                 </View>
@@ -267,21 +267,32 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(124, 58, 237, 0.08)',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingTop: 18,
     paddingHorizontal: 20,
     paddingBottom: 16,
-    backgroundColor: '#0D0A1C',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(139, 92, 246, 0.12)',
+    backgroundColor: '#120E22',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  backBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '600',
     color: '#F8FAFC',
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: '#94A3B8',
     marginTop: 3,
   },
@@ -289,16 +300,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 18,
-    gap: 16,
+    padding: 16,
+    gap: 14,
     paddingBottom: 40,
   },
   duoCard: {
-    backgroundColor: '#131024',
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-    borderRadius: 20,
-    padding: 16,
+    backgroundColor: '#120E22',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    padding: 14,
   },
   duoHeader: {
     flexDirection: 'row',
@@ -307,162 +318,157 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   duoIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    backgroundColor: 'rgba(124, 58, 237, 0.14)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   duoBadgeText: {
-    color: '#F59E0B',
-    fontSize: 12,
-    fontWeight: '800',
+    color: '#A78BFA',
+    fontSize: 11.5,
+    fontWeight: '600',
   },
   duoMessage: {
     color: '#CBD5E1',
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12.5,
+    lineHeight: 18,
   },
   emptyBox: {
-    padding: 40,
+    padding: 32,
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#131024',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.16)',
+    gap: 10,
+    backgroundColor: '#120E22',
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     marginTop: 10,
   },
   emptyIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#F8FAFC',
   },
   emptySubtitle: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: '#94A3B8',
     textAlign: 'center',
     lineHeight: 18,
   },
 
-  // ── Boarding Pass / Flight Ticket Card (Image 1 style) ───────────────────
+  // Ticket Card (Anti-Saturation Calme)
   ticketCard: {
-    backgroundColor: '#131024',
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
-    padding: 18,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 4,
+    backgroundColor: '#120E22',
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 16,
   },
   ticketTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   ticketRefBadge: {
-    backgroundColor: 'rgba(139, 92, 246, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   ticketRefText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#DDD6FE',
-    letterSpacing: 0.5,
+    fontSize: 10.5,
+    fontWeight: '500',
+    color: '#CBD5E1',
+    letterSpacing: 0.4,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9999,
-    borderWidth: 1,
-    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    gap: 4,
   },
   statusText: {
-    fontSize: 11.5,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '500',
   },
   ticketJobTitle: {
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#FFFFFF',
-    lineHeight: 23,
-    marginBottom: 6,
+    lineHeight: 21,
+    marginBottom: 4,
   },
   ticketCompanyRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   ticketCompanyName: {
-    fontSize: 13,
-    color: '#CBD5E1',
-    fontWeight: '600',
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
   ticketDot: {
     color: '#64748B',
-    fontSize: 12,
+    fontSize: 11,
   },
   ticketLocationText: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#94A3B8',
   },
 
   // Perforated line
   ticketSeparator: {
     position: 'relative',
-    height: 20,
+    height: 18,
     justifyContent: 'center',
-    marginHorizontal: -18,
+    marginHorizontal: -16,
     marginVertical: 4,
   },
   cutoutLeft: {
     position: 'absolute',
     left: -1,
-    width: 14,
-    height: 20,
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
+    width: 12,
+    height: 18,
+    borderTopRightRadius: 9,
+    borderBottomRightRadius: 9,
     backgroundColor: '#090714',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderLeftWidth: 0,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   cutoutRight: {
     position: 'absolute',
     right: -1,
-    width: 14,
-    height: 20,
-    borderTopLeftRadius: 10,
-    borderBottomLeftRadius: 10,
+    width: 12,
+    height: 18,
+    borderTopLeftRadius: 9,
+    borderBottomLeftRadius: 9,
     backgroundColor: '#090714',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRightWidth: 0,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   dashedLine: {
-    marginHorizontal: 22,
-    borderBottomWidth: 1.5,
-    borderBottomColor: 'rgba(139, 92, 246, 0.25)',
+    marginHorizontal: 20,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
     borderStyle: 'dashed',
   },
 
@@ -470,88 +476,85 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   ticketMetaCol: {
     flex: 1,
   },
   ticketMetaLabel: {
-    fontSize: 10.5,
+    fontSize: 10,
     color: '#94A3B8',
-    fontWeight: '600',
+    fontWeight: '500',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 3,
+    letterSpacing: 0.4,
+    marginBottom: 2,
   },
   ticketMetaValue: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '600',
     color: '#F8FAFC',
   },
   qrBox: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(139, 92, 246, 0.12)',
-    borderRadius: 12,
-    padding: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 8,
+    padding: 5,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   qrLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#DDD6FE',
+    fontSize: 8.5,
+    fontWeight: '500',
+    color: '#94A3B8',
     marginTop: 2,
   },
 
   notesBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 12,
-    borderWidth: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 10,
+    borderWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   notesText: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#CBD5E1',
-    fontStyle: 'italic',
   },
   ticketFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    paddingTop: 10,
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
   },
   changeStatusPill: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: '#0E0B1F',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.22)',
+    paddingVertical: 7,
+    borderRadius: 6,
+    backgroundColor: 'transparent',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
   },
   changeStatusPillText: {
-    fontSize: 12,
-    color: '#CBD5E1',
-    fontWeight: '600',
+    fontSize: 11.5,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
-  reminderPill: {
-    borderRadius: 9999,
-    overflow: 'hidden',
-  },
-  reminderGradient: {
+  reminderBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    gap: 5,
+    backgroundColor: '#7C3AED',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 6,
   },
-  reminderPillText: {
-    fontSize: 12,
-    fontWeight: '800',
+  reminderBtnText: {
+    fontSize: 11.5,
+    fontWeight: '500',
     color: '#FFFFFF',
   },
 });
