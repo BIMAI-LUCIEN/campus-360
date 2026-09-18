@@ -357,5 +357,44 @@ campus-360/
   - Confirmation d'Envoi : [`.agent/screenshots/apply_modal_sent.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/apply_modal_sent.png)
   - Suivi des Candidatures & Relance J+7 : [`.agent/screenshots/timeline_anti_saturation.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/timeline_anti_saturation.png)
 
+---
 
+## 10. Historique des Déploiements & Releases (/deploy-and-push)
 
+### Release — 18 Septembre 2026 — `d5aadc4` : fix(recruiter-web): set dynamic = 'force-dynamic' on admin pages to skip prerender in CI
+- **Commit Git :** `d5aadc4` — `fix(recruiter-web): set dynamic = 'force-dynamic' on admin pages to skip prerender in CI`
+- **Commits associés poussés :**
+  - `3bfb352` — `build(css): compile tailwind styles for production deployment`
+  - `6f2aec0` — `fix(recruiter-web): add postcss dependency and disable eslint prompt in build`
+- **Statut Local Validé (Pre-Flight Checks) :**
+  - Expo Root Mobile App : `tsc --noEmit` -> 0 erreur TypeScript.
+  - `mobile-api` : `npm run typecheck` (0 erreur), `npm test` (10/10 tests unitaires passés avec succès), `npm run build` réussi.
+  - `recruiter-web` : `npm run css:build` + `next build` -> 34/34 pages compilées avec succès (0 erreur).
+- **Workflow GitHub Actions :**
+  - Workflow : `Deploy Backend to Vercel` (`.github/workflows/vercel-backend.yml`)
+  - Run ID : `35402083759` (Job ID : `105783961611`)
+  - Résultat : 🟢 `success` (12/12 steps terminées avec succès : Set up, Checkout, Setup Node.js 20, Install dependencies, Verify types and build, Install Vercel CLI, Pull Vercel Environment, Build Vercel App, Deploy to Vercel, Post hooks).
+- **Secrets GitHub Synchronisés :**
+  - Mise à niveau sécurisée des secrets du dépôt via GitHub API (`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `VERCEL_MOBILE_API_PROJECT_ID`, `VERCEL_LANDING_PROJECT_ID`).
+- **Déploiements Vercel Production :**
+  - **Recruiter Web / Admin (`campus-360-hi97`) :**
+    - Project ID : `prj_lCGtzfBeYp0nU7sRe8LczQsIQb6b`
+    - Déploiement UID : `dpl_77kXtVAUyc2mtvhCUwVnHvDqpBbB`
+    - Statut : 🟢 `READY` (Promoted)
+    - URL de production : `https://admin.campus360b.site`
+    - URL Vercel : `https://campus-360-hi97-jzyc5617c-bimai-s-projects.vercel.app`
+  - **Mobile API (`mobile-api`) :**
+    - Project ID : `prj_eSpHoUyIyiOy8tWyE4IruJS5TyWs`
+    - Déploiement UID : `dpl_82t2d8GgCg41WzTqQ96j7u8e4Kwh`
+    - Statut : 🟢 `READY` (Promoted)
+    - URL de production : `https://api.campus360b.site`
+    - URL Vercel : `https://mobile-api-iota-three.vercel.app`
+  - **Web App / Root (`campus-360`) :**
+    - Project ID : `prj_XBhaiwqCIBnTAlntOGKkSkhpESFS`
+    - Déploiement UID : `dpl_9AKMd9i2jY8GK6ZaJGyb6XnW416Z`
+    - Statut : 🟢 `READY` (Promoted)
+    - URL de production : `https://campus-360-two.vercel.app`
+- **Validation Live (Healthchecks HTTP 200) :**
+  - `https://admin.campus360b.site/api/health` -> HTTP 200 OK (`{"status":"ok","timestamp":"2026-09-18T22:49:32.229Z"}`)
+  - `https://api.campus360b.site/api/health` -> HTTP 200 OK (`{"status":"ok","timestamp":"2026-09-18T22:49:47.642Z"}`)
+  - `https://mobile-api-iota-three.vercel.app/api/health` -> HTTP 200 OK (`{"status":"ok"}`)
