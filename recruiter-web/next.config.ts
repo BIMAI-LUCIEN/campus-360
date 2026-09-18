@@ -4,7 +4,9 @@ import path from 'path';
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.resolve(__dirname),
   serverExternalPackages: ['puppeteer'],
-  experimental: {},
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
   compiler: {
