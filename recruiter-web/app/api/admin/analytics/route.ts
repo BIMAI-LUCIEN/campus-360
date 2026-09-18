@@ -3,6 +3,7 @@ import { requireAdminApi } from '@/lib/access';
 import { getSupabasePdfAnalytics, emptyAnalytics } from '@/lib/supabase-pdf';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const { response } = await requireAdminApi();
