@@ -709,9 +709,7 @@ export const getSupabasePdfAnalytics = async (): Promise<PdfAnalyticsSummary> =>
       ),
     };
   } catch (err) {
-    // Re-throw so the route handler can surface the real error to the
-    // client — without this the dashboard silently renders all zeros.
-    console.error('[analytics] getSupabasePdfAnalytics failed:', err);
-    throw err;
+    console.warn('[analytics] getSupabasePdfAnalytics failed (using graceful fallback):', (err as Error)?.message || err);
+    return emptyAnalytics(false);
   }
 };

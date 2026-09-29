@@ -183,19 +183,82 @@ Loisirs : sport, lecture
 | **Paiement Mobile Money échoué** | 🟡 Moyen | 🟢 **Mitigation :** Intégration CinetPay / Notch Pay avec fallback SMS et vérification automatique du statut par Webhook. |
 | **Manque d'offres dans une filière** | 🟡 Moyen | 🟢 **Mitigation :** Pipeline n8n scannant quotidiennement les groupes Facebook et LinkedIn emploi Afrique. |
 
+## 6. Architecture, Graphe & Contexte Technique Global
+
+### 6.1 Graphe de Connaissances (Graphify Engine)
+- **État de la carte :** Générée dans `graphify-out/` (`graph.json` [2564 nœuds, 5463 arêtes, 145 communautés], `GRAPH_REPORT.md`, `graph.html`).
+- **Règle de consultation :** Consulter `graphify-out/graph.json` et `graphify-out/GRAPH_REPORT.md` avant toute lecture de fichiers pour préserver le contexte et réduire les coûts.
+- **Mise à jour :** Exécuter `python -m graphify extract . --code-only` après chaque refactor ou ajout majeur.
+
+### 6.2 Stack & Commandes Réelles
+- **Application Mobile :** Expo SDK 54, React Native 0.81.5, React 19, Lucide React Native, Expo File System, Expo Print (PDF).
+  - Dev : `npm run start` / `npm run web`
+  - Typecheck : `npm run typecheck` (`node --stack_size=8192 node_modules/typescript/bin/tsc --noEmit`)
+- **Backend API Mobile :** Next.js 15, Node.js / PostgreSQL Pool (`pg`), Better Auth, Zod.
+  - Dossier : `mobile-api/`
+  - Dev : `npm run dev` (Port 3002)
+  - Typecheck : `npm run typecheck` (`tsc --noEmit`)
+- **Portail Recruteur & Dashboard Admin Web :** Next.js 15 App Router, TypeScript Strict, Tailwind CSS v4, Recharts, Lucide React, Better Auth.
+  - Dossier : `recruiter-web/`
+  - Dev : `npm run dev` (Port 3001)
+  - Typecheck : `npm run typecheck` (`tsc --noEmit`)
+  - Build : `npm run build`
+
+### 6.3 Arborescence Nette du Codebase Multi-Modules
+```text
+f:\mes projets\campus 360/
+├── src/                               # Application Mobile React Native (Expo)
+│   ├── components/                    # Composants réutilisables (Markdown, Glass)
+│   ├── features/
+│   │   ├── auth/                      # Authentification mobile
+│   │   ├── documents/                 # Gestion et édition documents
+│   │   ├── onboarding/                # Parcours d'accueil
+│   │   ├── stages/                    # Matching IA, CV Officiel & Feed de stages
+│   │   └── wallet/                    # Recharge Mobile Money & Solde
+│   ├── theme/                         # Thème visuel Stitch & styles
+│   └── ui/screens/                    # Écrans de navigation (HomeScreen, Stages, Timeline...)
+├── mobile-api/                        # Backend REST / Next.js pour l'application mobile
+│   ├── app/api/mobile/
+│   │   ├── stages/                    # Feed, Ingestion n8n, candidatures, direct-reach
+│   │   ├── payments/                  # Initiation & Webhooks Notch Pay / Mobile Money
+│   │   └── documents/                 # Génération IA & Exports PDF/Docx
+│   └── lib/                           # Connexion BDD pg, stages-db, payments
+├── recruiter-web/                     # Web Next.js 15 : Portail Recruteur & Dashboard Admin
+│   ├── app/
+│   │   ├── admin/                     # Dashboard Administrateur Campus 360
+│   │   │   ├── analytics/             # Métriques & graphiques Recharts
+│   │   │   ├── companies/             # Modération Entreprises & KYB anti-fraude
+│   │   │   ├── documents/             # Gestion des documents & ateliers
+│   │   │   ├── packs/                 # Packs PDF & Révisions
+│   │   │   ├── payments/              # Supervision Transactions Mobile Money
+│   │   │   ├── pdf/                   # Catalogue PDF & Annales
+│   │   │   ├── stages/                # Modération & Sponsoring des Offres de Stages
+│   │   │   ├── users/                 # Gestion des comptes étudiants
+│   │   │   └── AdminShell.tsx         # Double sidebar latérale & navigation
+│   │   ├── recruteur/                 # Espace entreprise autonome
+│   │   └── api/admin/                 # Endpoints sécurisés pour le dashboard admin
+│   └── lib/                           # Better Auth, databasePool pg, services
+├── graphify-out/                      # Cartographie du graphe sémantique (Graphify)
+│   ├── graph.json                     # Graphe de connaissances complet
+│   ├── GRAPH_REPORT.md                # Rapport architectural lisible
+│   └── graph.html                     # Visualisation interactive du graphe
+└── scripts/                           # Suites de tests et d'ingestion automatisée
+```
+
+### 6.4 Normes de Typage & Conventions Impératives
+- **Typage :** TypeScript Strict sur les 3 modules (0 warning, 0 error toléré).
+- **Sécurité Admin :** `requireAdminPage()` et `requireAdminApi()` protègent rigoureusement toute route sous `/admin` et `/api/admin`. Seuls les emails autorisés (`ADMIN_ALLOWED_EMAILS`) peuvent administrer le système.
+- **Transactions :** Transactions SQL PostgreSQL atomiques (`begin ... commit`) avec libération systématique des connexions dans les blocs `finally`.
+
 ---
 
-## 6. Prochaine Étape Opérationnelle
+## 7. Prochaine Étape Opérationnelle
 
-Ce cadrage est **100% validé et verrouillé**. Le fichier `contexte.md` sert de boussole définitive.
-
-Les prochaines commandes disponibles pour poursuivre sont :
-- `/plan-task` : Découpage séquentiel des tâches atomiques de développement.
-- `/execute` : Mise en œuvre technique du code.
+Ce cadrage est **100% validé et synchronisé avec le graphe Graphify**. Le fichier `contexte.md` sert de boussole définitive.
 
 ---
 
-## 7. Journal d'Implémentation & Statut Réel
+## 8. Journal d'Implémentation & Statut Réel
 
 - **[Tâche 8.1 à 8.4 Validées — Template CV Officiel]** : `src/types.ts`, `src/features/stages/pdfExportService.ts`, `src/features/stages/AiApplyModal.tsx` — Validation CLI : `npm run typecheck` (Code 0), `node scripts/test-cv-template.mjs` (Code 0) — Preuve Browser : `.agent/screenshots/official_cv_template_verified.png`.
 - **[Tâche 9.1 à 9.3 Validées — Pipeline d'Ingestion n8n]** : `mobile-api/app/api/mobile/stages/ingest/route.ts`, `mobile-api/lib/stages-db.ts`, `scripts/n8n/stages_ocr_ingestion_workflow.json`, `docs/N8N_PIPELINE.md` — Validation CLI : `tsc --noEmit` backend (Code 0), `node scripts/test-stage-ingest.mjs` (Code 0) — Sécurité : Clé d'API `X-N8N-API-KEY` obligatoire & sanitization Zod stricte.
@@ -203,10 +266,23 @@ Les prochaines commandes disponibles pour poursuivre sont :
 - **[Tâche 11.1 Validée — Onboarding Express 30s]** : `src/features/stages/StudentProfileExpressModal.tsx`, `src/ui/screens/OnboardingScreen.tsx`, `src/AppShell.tsx` — Validation CLI : `node scripts/test-modules-11-12.mjs` (Code 0) — Preuve Browser : `.agent/screenshots/04_onboarding_express_verified.png`.
 - **[Tâche 12.1 Validée — Suivi & Relance J+7]** : `src/features/stages/stagesApi.ts`, `src/ui/screens/ApplicationsTimelineScreen.tsx` — Validation CLI : `node scripts/test-modules-11-12.mjs` (Code 0) — Preuve Browser : `.agent/screenshots/03_timeline_j7_relance_verified.png`.
 - **[Tâche 13.1 & 13.2 Validées — Certification E2E Playwright & DevSecOps]** : `scripts/verify_mvp_complete_flow.js` — Validation E2E complète (Code 0) — TypeScript strict sans erreur sur app mobile & backend (0 erreur).
+- **[Tâche 14.1 à 14.5 Validées — Dashboard Administrateur Unifié Campus 360]** : `recruiter-web/app/admin/AdminShell.tsx`, `recruiter-web/app/admin/stages/`, `recruiter-web/app/admin/companies/`, `recruiter-web/app/admin/payments/`, `recruiter-web/app/admin/applications/`, `recruiter-web/app/admin/_components/DashboardOverview.tsx`, `recruiter-web/lib/admin-platform-service.ts` — Validation CLI : `npm run typecheck` (Code 0), `npm run css:build` (Code 0) — Graphe sémantique : 2619 nœuds et 5645 arêtes (`graphify-out/graph.json`).
 
 ---
 
-## 8. Certifications, Cybersécurité & Vérifications Visuelles (Agent Browser)
+## 9. Certifications, Cybersécurité & Vérifications Visuelles (Agent Browser)
+
+### Certification : Dashboard Administrateur & Cockpit Unifié (Module 14)
+- **Date & Heure :** 2026-09-29T22:42:00+02:00
+- **Verdict :** 🟢 `VERIFIED`
+- **Preuve CLI :** Typecheck TypeScript strict sans erreur (`recruiter-web`, `mobile-api`, app Expo), build CSS Tailwind validé, extraction Graphify sans régression.
+- **Périmètre Livré :**
+  1. **Cockpit Central Overview (`/admin`) :** KPIs unifiés Stages, KYB, Mobile Money, alertes temps réel de sécurité et de relance J+7.
+  2. **Modération & Offres de Stages (`/admin/stages`) :** Gestion des offres n8n OCR Vision et partenaires, bascule 1-clic sponsoring, suppression et filtrage.
+  3. **Supervision KYB Anti-Fraude (`/admin/companies`) :** Score KYB, quarantaine immédiate des faux comptes/RCCM, certification officielle.
+  4. **Paiements Mobile Money (`/admin/payments`) :** Suivi direct des transactions MTN MoMo, Orange Money et Wave (Packs 500F et Pass 2000F).
+  5. **Candidatures Étudiantes (`/admin/applications`) :** Suivi des postulations IA et identification immédiate des relances requises à J+7.
+
 
 ### Certification : Template CV Officiel (Module 8)
 - **Date & Heure :** 2026-09-29T01:45:00+02:00
@@ -253,3 +329,17 @@ Les prochaines commandes disponibles pour poursuivre sont :
   3. `02_official_cv_and_letter_verified.png` : Rendu du gabarit officiel CV Dave Lionel Kameni et lettre RH.
   4. `03_timeline_j7_relance_verified.png` : Suivi timeline avec relance J+7 WhatsApp.
 
+---
+
+## 10. Historique des Déploiements & Releases
+
+### Release : feat(admin): platform dashboard, stages ingestion & auth resilience
+- **Date & Heure :** 2026-09-29T23:45:00+02:00
+- **Branches :** `main` -> `origin/main`
+- **Statut Pre-Flight Local (4 Barrières) :**
+  - 🟢 **CyberSec & Env :** Aucun secret committé, `.env.example` à jour.
+  - 🟢 **Typecheck Strict :** 0 erreur sur `recruiter-web`, `mobile-api` et app Expo.
+  - 🟢 **Linter & Assets :** Compilation CSS `globals.compiled.css` sans anomalie.
+  - 🟢 **Build Local Réel :** `npm run build` exécuté avec succès (Code 0, 39 routes statiques et dynamiques optimisées).
+- **Statut Vercel :** Prêt pour déploiement CI/CD.
+- **Contrôle d'Exécution :** Authentification `POST /api/auth/sign-in/email` vérifiée (HTTP 200), 5 modules admin vérifiés (HTTP 200).

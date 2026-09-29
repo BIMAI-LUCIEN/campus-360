@@ -312,10 +312,12 @@ const pillToneStyles: Record<PillTone, string> = {
 export function Pill({
   tone = 'neutral',
   children,
+  label,
   className = '',
 }: {
   tone?: PillTone;
-  children: ReactNode;
+  children?: ReactNode;
+  label?: ReactNode;
   className?: string;
 }) {
   return (
@@ -326,7 +328,7 @@ export function Pill({
         className,
       ].join(' ')}
     >
-      {children}
+      {label ?? children}
     </span>
   );
 }

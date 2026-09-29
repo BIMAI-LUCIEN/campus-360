@@ -3,6 +3,9 @@ import { betterAuth } from 'better-auth';
 import { createAuthMiddleware } from 'better-auth/api';
 import { admin, bearer } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
+import { DatabaseSync } from 'node:sqlite';
+import path from 'node:path';
+import fs from 'node:fs';
 
 import { databasePool } from './database';
 import {
@@ -169,9 +172,26 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
     );
   }
 
+  const getAuthDatabase = () => {
+    // In production on Vercel with PostgreSQL configured, use databasePool
+    if (isProd && process.env.DATABASE_URL) {
+      return databasePool;
+    }
+    // In development or when explicitly requested, use local SQLite database if present
+    const sqlitePath = path.resolve(process.cwd(), 'campus360-admin.sqlite');
+    if (fs.existsSync(sqlitePath) && process.env.AUTH_FORCE_POSTGRES !== 'true') {
+      try {
+        return new DatabaseSync(sqlitePath);
+      } catch (err) {
+        console.warn('[auth] SQLite load failed, falling back to databasePool:', (err as Error).message);
+      }
+    }
+    return databasePool;
+  };
+
   const config: Parameters<typeof betterAuth>[0] = {
     appName: 'Campus-Bordes',
-    database: databasePool,
+    database: getAuthDatabase(),
     baseURL,
     secret: finalSecret,
     trustedOrigins,
@@ -243,7 +263,7 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
       enabled: true,
       window: 60,
       max: 100,
-      storage: 'database',
+      storage: isProd ? 'database' : 'memory',
     },
     onAPIError: {
       onError: async (error, ctx) => {

@@ -305,7 +305,7 @@ export const getOfflineStudentAccount = (storedUser?: Partial<StudentProfile>): 
     reportCredits: 5,
   },
   subscription: {
-    tier: 'premium',
+    tier: 'pro',
     expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
   },
   purchasedDocumentIds: [],

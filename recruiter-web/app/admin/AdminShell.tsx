@@ -28,6 +28,10 @@ import {
   ChevronRight,
   ChevronLeft,
   Loader2,
+  Briefcase,
+  Building2,
+  CreditCard,
+  Send,
   type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -55,24 +59,38 @@ type NavGroup = {
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    label: 'MARKETING',
+    label: 'VUE D\'ENSEMBLE',
     items: [
-      { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
-      { href: '/admin/pdf', icon: BookOpen, label: 'PDF Catalogue' },
-      { href: '/admin/packs', icon: Package, label: 'Packs' },
-      { href: '/admin/users', icon: Users, label: 'Étudiants' },
+      { href: '/admin', icon: LayoutDashboard, label: 'Dashboard Hub' },
+      { href: '/admin/analytics', icon: BarChart3, label: 'Analytics & KPIs' },
     ],
   },
   {
-    label: 'ANALYTICS',
+    label: 'STAGES & TALENTS',
     items: [
-      { href: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
-      { href: '/admin/reports', icon: FileText, label: 'Rapports' },
+      { href: '/admin/stages', icon: Briefcase, label: 'Offres de Stages' },
+      { href: '/admin/companies', icon: Building2, label: 'Entreprises & KYB' },
+      { href: '/admin/applications', icon: Send, label: 'Candidatures IA' },
     ],
   },
   {
-    label: 'SYSTÈME',
+    label: 'FINANCES',
     items: [
+      { href: '/admin/payments', icon: CreditCard, label: 'Mobile Money' },
+    ],
+  },
+  {
+    label: 'RESSOURCES ACADÉMIQUES',
+    items: [
+      { href: '/admin/pdf', icon: BookOpen, label: 'Catalogue PDF' },
+      { href: '/admin/packs', icon: Package, label: 'Packs Révision' },
+      { href: '/admin/documents', icon: FileText, label: 'Atelier Rédaction' },
+    ],
+  },
+  {
+    label: 'COMMUNAUTÉ & SYSTÈME',
+    items: [
+      { href: '/admin/users', icon: Users, label: 'Étudiants & Rôles' },
       { href: '/admin/settings', icon: SettingsIcon, label: 'Configuration' },
     ],
   },
@@ -84,23 +102,32 @@ function resolveBreadcrumb(pathname: string): { parent: string; current: string 
   if (pathname === '/admin' || pathname === '/admin/') {
     return { parent: 'Dashboard', current: 'Overview' };
   }
+  if (pathname.startsWith('/admin/stages')) {
+    return { parent: 'Stages & Talents', current: 'Offres de stages' };
+  }
+  if (pathname.startsWith('/admin/companies')) {
+    return { parent: 'Stages & Talents', current: 'Entreprises & KYB' };
+  }
+  if (pathname.startsWith('/admin/applications')) {
+    return { parent: 'Stages & Talents', current: 'Candidatures IA' };
+  }
+  if (pathname.startsWith('/admin/payments')) {
+    return { parent: 'Finances', current: 'Mobile Money' };
+  }
   if (pathname.startsWith('/admin/pdf')) {
-    return { parent: 'Marketing', current: 'Catalogue PDF' };
+    return { parent: 'Ressources', current: 'Catalogue PDF' };
   }
   if (pathname.startsWith('/admin/packs')) {
-    return { parent: 'Marketing', current: 'Packs' };
+    return { parent: 'Ressources', current: 'Packs' };
+  }
+  if (pathname.startsWith('/admin/documents')) {
+    return { parent: 'Ressources', current: 'Atelier Rédaction' };
   }
   if (pathname.startsWith('/admin/users')) {
-    return { parent: 'Marketing', current: 'Étudiants' };
+    return { parent: 'Communauté', current: 'Étudiants' };
   }
   if (pathname.startsWith('/admin/analytics')) {
-    return { parent: 'Analytics', current: 'Vue d\'ensemble' };
-  }
-  if (pathname.startsWith('/admin/reports/new')) {
-    return { parent: 'Analytics', current: 'Nouveau rapport' };
-  }
-  if (pathname.startsWith('/admin/reports')) {
-    return { parent: 'Analytics', current: 'Rapports' };
+    return { parent: 'Vue d\'ensemble', current: 'Analytics' };
   }
   if (pathname.startsWith('/admin/settings')) {
     return { parent: 'Système', current: 'Configuration' };

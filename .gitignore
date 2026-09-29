@@ -56,6 +56,7 @@ recruiter-web/public/uploads/pdfs/*
 generated_reports/
 dist-mvp-check/
 dist-test/
+graphify-out/
 .idea/
 
 # typescript

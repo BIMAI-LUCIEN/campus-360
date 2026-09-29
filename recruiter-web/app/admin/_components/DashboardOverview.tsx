@@ -26,9 +26,19 @@ import {
   TrendingUp,
   Users,
   Wallet,
+  Briefcase,
+  Building2,
+  CreditCard,
+  Send,
+  ShieldCheck,
+  ShieldAlert,
+  Sparkles,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 
 import type { PdfAnalyticsSummary } from '@/lib/supabase-pdf';
+import type { AdminUnifiedMetrics } from '@/lib/admin-platform-service';
 import { authClient } from '@/lib/auth-client';
 import {
   Button,
@@ -162,6 +172,7 @@ interface DashboardOverviewProps {
 
 export function DashboardOverview({ initialData }: DashboardOverviewProps) {
   const [data, setData] = useState<PdfAnalyticsSummary>(initialData);
+  const [platformMetrics, setPlatformMetrics] = useState<AdminUnifiedMetrics | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [isFetching, setIsFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string>('');
@@ -177,21 +188,40 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
 
   // ── Live refresh — every 15s, mirroring AnalyticsDashboard ──────────
   useEffect(() => {
+    const fetchPlatformData = async () => {
+      try {
+        const res = await fetch('/api/admin/overview', { cache: 'no-store' });
+        if (res.ok) {
+          const m = (await res.json()) as AdminUnifiedMetrics;
+          setPlatformMetrics(m);
+        }
+      } catch (err) {
+        console.warn('Overview metrics fetch warn:', err);
+      }
+    };
+    fetchPlatformData();
+
     const controller = new AbortController();
     const interval = setInterval(async () => {
       setIsFetching(true);
       try {
-        const res = await fetch('/api/admin/analytics', {
-          signal: controller.signal,
-          cache: 'no-store',
-        });
-        if (res.ok) {
-          const fresh = (await res.json()) as PdfAnalyticsSummary;
+        const [resAnalytics, resOverview] = await Promise.all([
+          fetch('/api/admin/analytics', { signal: controller.signal, cache: 'no-store' }),
+          fetch('/api/admin/overview', { signal: controller.signal, cache: 'no-store' }).catch(() => null),
+        ]);
+
+        if (resAnalytics.ok) {
+          const fresh = (await resAnalytics.json()) as PdfAnalyticsSummary;
           setData(fresh);
           setLastUpdated(new Date());
           setFetchError('');
         } else {
-          setFetchError(`Synchronisation impossible (${res.status}).`);
+          setFetchError(`Synchronisation impossible (${resAnalytics.status}).`);
+        }
+
+        if (resOverview && resOverview.ok) {
+          const m = (await resOverview.json()) as AdminUnifiedMetrics;
+          setPlatformMetrics(m);
         }
       } catch (err) {
         if ((err as { name?: string })?.name === 'AbortError') return;
@@ -210,12 +240,19 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
   const refresh = async () => {
     setIsFetching(true);
     try {
-      const res = await fetch('/api/admin/analytics', { cache: 'no-store' });
-      if (res.ok) {
-        const fresh = (await res.json()) as PdfAnalyticsSummary;
+      const [resAnalytics, resOverview] = await Promise.all([
+        fetch('/api/admin/analytics', { cache: 'no-store' }),
+        fetch('/api/admin/overview', { cache: 'no-store' }).catch(() => null),
+      ]);
+      if (resAnalytics.ok) {
+        const fresh = (await resAnalytics.json()) as PdfAnalyticsSummary;
         setData(fresh);
         setLastUpdated(new Date());
         setFetchError('');
+      }
+      if (resOverview && resOverview.ok) {
+        const m = (await resOverview.json()) as AdminUnifiedMetrics;
+        setPlatformMetrics(m);
       }
     } catch {
       setFetchError('Hors ligne.');
@@ -453,7 +490,165 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
         </div>
       ) : null}
 
+      {/* ── Platform Alerts Banner ──────────────────────────────────── */}
+      {platformMetrics && (platformMetrics.companies.suspended > 0 || platformMetrics.applications.eligibleForFollowup > 0) && (
+        <div className="flex flex-col gap-2">
+          {platformMetrics.companies.suspended > 0 && (
+            <div className="flex items-center justify-between rounded-xl bg-danger-bg border border-danger/30 p-4 text-sm text-danger">
+              <div className="flex items-center gap-3">
+                <span className="p-1.5 rounded-lg bg-danger/10 text-danger">
+                  <ShieldAlert size={18} />
+                </span>
+                <div>
+                  <span className="font-bold">Alerte Sécurité KYB :</span>{' '}
+                  {platformMetrics.companies.suspended} entreprise(s) en quarantaine suite à une tentative suspecte ou faux RCCM.
+                </div>
+              </div>
+              <Link
+                href="/admin/companies?status=SUSPENDED"
+                className="font-semibold underline hover:no-underline text-xs"
+              >
+                Gérer la quarantaine →
+              </Link>
+            </div>
+          )}
+          {platformMetrics.applications.eligibleForFollowup > 0 && (
+            <div className="flex items-center justify-between rounded-xl bg-chart-amber-soft border border-amber-500/30 p-4 text-sm text-amber-700">
+              <div className="flex items-center gap-3">
+                <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600">
+                  <AlertCircle size={18} />
+                </span>
+                <div>
+                  <span className="font-bold">Action RH Requise :</span>{' '}
+                  {platformMetrics.applications.eligibleForFollowup} candidature(s) sans réponse depuis 7 jours ou plus (Relance J+7 recommandée).
+                </div>
+              </div>
+              <Link
+                href="/admin/applications"
+                className="font-semibold underline hover:no-underline text-xs"
+              >
+                Voir les relances →
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Cœur de Métier Campus 360 (Stages, KYB & Mobile Money) ──── */}
+      {platformMetrics && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-lg font-bold text-fg">
+                Cockpit Opérationnel : Stages, KYB & Monétisation
+              </h2>
+              <p className="text-xs text-fg-subtle">
+                Indicateurs clés du matching IA, vérification entreprises et revenus Mobile Money.
+              </p>
+            </div>
+            <span className="rounded-full bg-primary-soft text-primary font-bold text-[11px] px-3 py-1 uppercase tracking-wider">
+              Campus 360 Core
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Stages Actifs */}
+            <Link href="/admin/stages" className="group block">
+              <Card className="hover:border-primary/50 transition-colors h-full">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-fg-subtle">
+                    Stages Actifs
+                  </span>
+                  <span className="p-2 rounded-lg bg-chart-blue-soft text-chart-blue group-hover:scale-105 transition-transform">
+                    <Briefcase size={16} />
+                  </span>
+                </div>
+                <div className="mt-3 text-3xl font-display font-bold text-fg">
+                  {platformMetrics.stages.active}
+                </div>
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-fg-subtle">
+                  <span className="inline-block w-2 h-2 rounded-full bg-success" />
+                  <span>{platformMetrics.stages.scraped} via n8n OCR Vision</span>
+                </div>
+              </Card>
+            </Link>
+
+            {/* Entreprises & KYB */}
+            <Link href="/admin/companies" className="group block">
+              <Card className="hover:border-primary/50 transition-colors h-full">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-fg-subtle">
+                    Entreprises & KYB
+                  </span>
+                  <span className="p-2 rounded-lg bg-chart-green-soft text-chart-green group-hover:scale-105 transition-transform">
+                    <Building2 size={16} />
+                  </span>
+                </div>
+                <div className="mt-3 text-3xl font-display font-bold text-fg">
+                  {platformMetrics.companies.verified}{' '}
+                  <span className="text-sm font-normal text-fg-subtle">/ {platformMetrics.companies.total}</span>
+                </div>
+                <div className="mt-2 text-xs text-fg-subtle">
+                  Score KYB Moyen : <strong className="text-success">{platformMetrics.companies.avgKybScore}%</strong>
+                </div>
+              </Card>
+            </Link>
+
+            {/* Candidatures IA */}
+            <Link href="/admin/applications" className="group block">
+              <Card className="hover:border-primary/50 transition-colors h-full">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-fg-subtle">
+                    Candidatures IA
+                  </span>
+                  <span className="p-2 rounded-lg bg-chart-purple-soft text-chart-purple group-hover:scale-105 transition-transform">
+                    <Send size={16} />
+                  </span>
+                </div>
+                <div className="mt-3 text-3xl font-display font-bold text-fg">
+                  {platformMetrics.applications.total}
+                </div>
+                <div className="mt-2 flex items-center justify-between text-xs text-fg-subtle">
+                  <span>{platformMetrics.applications.pending} en attente</span>
+                  {platformMetrics.applications.eligibleForFollowup > 0 && (
+                    <span className="text-danger font-semibold">
+                      {platformMetrics.applications.eligibleForFollowup} relances J+7
+                    </span>
+                  )}
+                </div>
+              </Card>
+            </Link>
+
+            {/* Mobile Money */}
+            <Link href="/admin/payments" className="group block">
+              <Card className="hover:border-primary/50 transition-colors h-full">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-fg-subtle">
+                    Mobile Money Direct
+                  </span>
+                  <span className="p-2 rounded-lg bg-chart-cyan-soft text-chart-cyan group-hover:scale-105 transition-transform">
+                    <CreditCard size={16} />
+                  </span>
+                </div>
+                <div className="mt-3 text-2xl font-display font-bold text-fg">
+                  {new Intl.NumberFormat('fr-CM').format(platformMetrics.payments.totalRevenueFcfa)} FCFA
+                </div>
+                <div className="mt-2 text-xs text-fg-subtle">
+                  {platformMetrics.payments.discoveryPacks} packs • {platformMetrics.payments.monthlyPasses} pass illimités
+                </div>
+              </Card>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* ── KPI Row ─────────────────────────────────────────────────── */}
+      <div className="space-y-4">
+        <h2 className="font-display text-lg font-bold text-fg">
+          Ressources Académiques & Analytics PDF
+        </h2>
+      </div>
+
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="REVENUS"

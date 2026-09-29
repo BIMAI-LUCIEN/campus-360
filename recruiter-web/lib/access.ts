@@ -30,6 +30,8 @@ export const getSessionUser = async (): Promise<SessionUser | null> => {
 };
 
 export const syncProfile = async (user: SessionUser) => {
+  if (user.role === 'admin') return;
+
   const role = adminAllowedEmails().has(user.email.toLowerCase()) ? 'admin' : user.role ?? 'student';
   const pool = getPool();
   

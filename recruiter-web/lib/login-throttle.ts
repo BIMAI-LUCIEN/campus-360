@@ -56,76 +56,89 @@ const keyFromRequest = (request: Request, email: string): { key: string; ip: str
 };
 
 export const checkLoginThrottle = async (request: Request, email: string) => {
-  if (!tableEnsured) {
-    await ensureTable();
-    tableEnsured = true;
-  }
+  try {
+    if (!tableEnsured) {
+      await ensureTable();
+      tableEnsured = true;
+    }
 
-  const { key } = keyFromRequest(request, email);
+    const { key } = keyFromRequest(request, email);
 
-  const result = await databasePool.query<LoginAttemptRow>(
-    `select attempts, first_attempt_at
-       from public.app_login_attempts
-       where key = $1`,
-    [key],
-  );
-  const row = result.rows[0];
-  if (!row) return { blocked: false, remainingAttempts: MAX_ATTEMPTS };
+    const result = await databasePool.query<LoginAttemptRow>(
+      `select attempts, first_attempt_at
+         from public.app_login_attempts
+         where key = $1`,
+      [key],
+    );
+    const row = result.rows[0];
+    if (!row) return { blocked: false, remainingAttempts: MAX_ATTEMPTS };
 
-  const ageMs = Date.now() - new Date(row.first_attempt_at).getTime();
-  if (ageMs > WINDOW_MS) {
-    // Window expired — the row is stale, treat as fresh.
+    const ageMs = Date.now() - new Date(row.first_attempt_at).getTime();
+    if (ageMs > WINDOW_MS) {
+      // Window expired — the row is stale, treat as fresh.
+      return { blocked: false, remainingAttempts: MAX_ATTEMPTS };
+    }
+
+    if (row.attempts >= MAX_ATTEMPTS) {
+      const retryAfter = Math.max(1, Math.ceil((WINDOW_MS - ageMs) / 1000));
+      return { blocked: true, retryAfterSeconds: retryAfter, remainingAttempts: 0 };
+    }
+
+    return {
+      blocked: false,
+      remainingAttempts: Math.max(0, MAX_ATTEMPTS - row.attempts),
+    };
+  } catch (err) {
+    console.warn('[login-throttle] Throttle check bypassed due to DB error:', (err as Error).message);
     return { blocked: false, remainingAttempts: MAX_ATTEMPTS };
   }
-
-  if (row.attempts >= MAX_ATTEMPTS) {
-    const retryAfter = Math.max(1, Math.ceil((WINDOW_MS - ageMs) / 1000));
-    return { blocked: true, retryAfterSeconds: retryAfter, remainingAttempts: 0 };
-  }
-
-  return {
-    blocked: false,
-    remainingAttempts: Math.max(0, MAX_ATTEMPTS - row.attempts),
-  };
 };
 
 export const recordLoginFailure = async (request: Request, email: string) => {
-  if (!tableEnsured) {
-    await ensureTable();
-    tableEnsured = true;
+  try {
+    if (!tableEnsured) {
+      await ensureTable();
+      tableEnsured = true;
+    }
+
+    const { key } = keyFromRequest(request, email);
+
+    await databasePool.query(
+      `insert into public.app_login_attempts (key, attempts, first_attempt_at, last_attempt_at)
+         values ($1, 1, now(), now())
+       on conflict (key) do update set
+         attempts = case
+           when public.app_login_attempts.first_attempt_at + interval '15 minutes' <= now()
+             then 1
+           else public.app_login_attempts.attempts + 1
+         end,
+         first_attempt_at = case
+           when public.app_login_attempts.first_attempt_at + interval '15 minutes' <= now()
+             then now()
+           else public.app_login_attempts.first_attempt_at
+         end,
+         last_attempt_at = now()`,
+      [key],
+    );
+  } catch (err) {
+    console.warn('[login-throttle] Failed to record failure in DB:', (err as Error).message);
   }
-
-  const { key } = keyFromRequest(request, email);
-
-  await databasePool.query(
-    `insert into public.app_login_attempts (key, attempts, first_attempt_at, last_attempt_at)
-       values ($1, 1, now(), now())
-     on conflict (key) do update set
-       attempts = case
-         when public.app_login_attempts.first_attempt_at + interval '15 minutes' <= now()
-           then 1
-         else public.app_login_attempts.attempts + 1
-       end,
-       first_attempt_at = case
-         when public.app_login_attempts.first_attempt_at + interval '15 minutes' <= now()
-           then now()
-         else public.app_login_attempts.first_attempt_at
-       end,
-       last_attempt_at = now()`,
-    [key],
-  );
 };
 
 export const recordLoginSuccess = async (request: Request, email: string) => {
-  if (!tableEnsured) {
-    await ensureTable();
-    tableEnsured = true;
+  try {
+    if (!tableEnsured) {
+      await ensureTable();
+      tableEnsured = true;
+    }
+    const { key } = keyFromRequest(request, email);
+    await databasePool.query(
+      `delete from public.app_login_attempts where key = $1`,
+      [key],
+    );
+  } catch (err) {
+    console.warn('[login-throttle] Failed to clear attempts in DB:', (err as Error).message);
   }
-  const { key } = keyFromRequest(request, email);
-  await databasePool.query(
-    `delete from public.app_login_attempts where key = $1`,
-    [key],
-  );
 };
 
 export const LOGIN_THROTTLE_LIMITS = { MAX_ATTEMPTS, WINDOW_MS } as const;
