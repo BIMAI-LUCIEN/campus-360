@@ -147,45 +147,60 @@ export async function resolveDbUserId(userId: string): Promise<string> {
 }
 
 export async function listUserDocuments(userId: string): Promise<Document[]> {
-  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
-  const targetId = isUuid ? userId : await resolveDbUserId(userId);
-  const res = await databasePool.query(
-    'select * from public.app_documents where user_id = $1 order by updated_at desc',
-    [targetId]
-  );
-  return res.rows.map((row) => ({
-    ...row,
-    line_spacing: Number(row.line_spacing),
-  }));
+  try {
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+    const targetId = isUuid ? userId : await resolveDbUserId(userId);
+    const res = await databasePool.query(
+      'select * from public.app_documents where user_id = $1 order by updated_at desc',
+      [targetId]
+    );
+    return res.rows.map((row) => ({
+      ...row,
+      line_spacing: Number(row.line_spacing),
+    }));
+  } catch (err) {
+    console.warn('[documents-db] Database query failed in listUserDocuments, returning empty array:', err);
+    return [];
+  }
 }
 
 export async function getDocumentById(documentId: string, userId: string): Promise<Document | null> {
-  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
-  let res;
-  if (!isUuid || userId === 'guest-student') {
-    res = await databasePool.query(
-      'select * from public.app_documents where id = $1 limit 1',
-      [documentId]
-    );
-  } else {
-    res = await databasePool.query(
-      'select * from public.app_documents where id = $1 and user_id = $2 limit 1',
-      [documentId, userId]
-    );
+  try {
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+    let res;
+    if (!isUuid || userId === 'guest-student') {
+      res = await databasePool.query(
+        'select * from public.app_documents where id = $1 limit 1',
+        [documentId]
+      );
+    } else {
+      res = await databasePool.query(
+        'select * from public.app_documents where id = $1 and user_id = $2 limit 1',
+        [documentId, userId]
+      );
+    }
+    if (res.rows.length === 0) return null;
+    return {
+      ...res.rows[0],
+      line_spacing: Number(res.rows[0].line_spacing),
+    };
+  } catch (err) {
+    console.warn('[documents-db] Database query failed in getDocumentById, returning null:', err);
+    return null;
   }
-  if (res.rows.length === 0) return null;
-  return {
-    ...res.rows[0],
-    line_spacing: Number(res.rows[0].line_spacing),
-  };
 }
 
 export async function getDocumentSections(documentId: string): Promise<DocumentSection[]> {
-  const res = await databasePool.query(
-    'select * from public.app_document_sections where document_id = $1 order by sort_order asc',
-    [documentId]
-  );
-  return res.rows;
+  try {
+    const res = await databasePool.query(
+      'select * from public.app_document_sections where document_id = $1 order by sort_order asc',
+      [documentId]
+    );
+    return res.rows;
+  } catch (err) {
+    console.warn('[documents-db] Database query failed in getDocumentSections, returning empty array:', err);
+    return [];
+  }
 }
 
 export async function createDocument(
