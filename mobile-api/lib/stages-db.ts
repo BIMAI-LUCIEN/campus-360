@@ -205,3 +205,140 @@ export const updateStudentApplicationStatus = async (
   );
   return result.rows[0] ?? null;
 };
+
+export interface IngestJobInput {
+  title: string;
+  description?: string;
+  companyName: string;
+  industry?: string;
+  location?: string;
+  duration?: string;
+  contractType?: string;
+  stipend?: string;
+  requirements?: string[];
+  flyerUrl?: string;
+  videoUrl?: string;
+  contactWhatsapp?: string;
+  contactEmail?: string;
+  source?: 'INTERNAL' | 'SCRAPED';
+  expiresInDays?: number;
+}
+
+export const ingestStageJob = async (input: IngestJobInput): Promise<{
+  jobId: string;
+  companyId: string;
+  isNew: boolean;
+}> => {
+  const client = await databasePool.connect();
+  try {
+    await client.query('begin');
+
+    const compName = input.companyName.trim();
+    const compIndustry = input.industry?.trim() || 'Technologies & Services';
+    const compLocation = input.location?.trim() || 'Yaoundé';
+    const compEmail = input.contactEmail?.trim() || `recrutement@${compName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'stage'}.org`;
+    const compWhatsapp = input.contactWhatsapp?.trim() || null;
+
+    // 1. Ensure company exists or insert it
+    const compRes = await client.query<{ id: string }>(
+      `select id from public.stage_companies where lower(trim(name)) = lower($1) limit 1`,
+      [compName],
+    );
+
+    let companyId: string;
+    if (compRes.rows.length > 0) {
+      companyId = compRes.rows[0].id;
+      // Update contact details if provided
+      if (compWhatsapp || compEmail) {
+        await client.query(
+          `update public.stage_companies set
+             contact_whatsapp = coalesce($1, contact_whatsapp),
+             contact_email = coalesce($2, contact_email)
+           where id = $3`,
+          [compWhatsapp, compEmail, companyId],
+        );
+      }
+    } else {
+      const insertComp = await client.query<{ id: string }>(
+        `insert into public.stage_companies (
+           name, industry, address, contact_email, contact_whatsapp, kyb_score, status
+         ) values ($1, $2, $3, $4, $5, 85, 'VERIFIED')
+         returning id`,
+        [compName, compIndustry, compLocation, compEmail, compWhatsapp],
+      );
+      companyId = insertComp.rows[0].id;
+    }
+
+    // 2. Check for deduplication (same company + same title + same location)
+    const normalizedTitle = input.title.trim();
+    const existingJobRes = await client.query<{ id: string }>(
+      `select id from public.stage_jobs
+        where company_id = $1
+          and lower(trim(title)) = lower($2)
+          and (location is null or lower(trim(location)) = lower($3))
+        limit 1`,
+      [companyId, normalizedTitle, compLocation],
+    );
+
+    const applyMethod = compWhatsapp ? 'WHATSAPP' : 'EMAIL';
+    const defaultDesc = input.description?.trim() ||
+      `Offre de stage "${normalizedTitle}" chez ${compName}. Profils recherchés : ${(input.requirements || []).join(', ') || 'étudiants motivés'}. Candidature certifiée via Campus 360.`;
+    const safeDesc = defaultDesc.length > 1990 ? defaultDesc.slice(0, 1990) + '...' : defaultDesc;
+    const reqs = input.requirements && input.requirements.length > 0 ? input.requirements : ['Motivation', 'Rigueur'];
+    const days = input.expiresInDays && input.expiresInDays > 0 ? input.expiresInDays : 30;
+
+    let jobId: string;
+    let isNew = false;
+
+    if (existingJobRes.rows.length > 0) {
+      // Update existing offer without duplicate
+      jobId = existingJobRes.rows[0].id;
+      await client.query(
+        `update public.stage_jobs set
+           requirements = $1,
+           flyer_url = coalesce($2, flyer_url),
+           video_url = coalesce($3, video_url),
+           duration = coalesce($4, duration),
+           stipend = coalesce($5, stipend),
+           expires_at = now() + ($6 || ' days')::interval
+         where id = $7`,
+        [reqs, input.flyerUrl || null, input.videoUrl || null, input.duration || null, input.stipend || null, days, jobId],
+      );
+    } else {
+      isNew = true;
+      const insertJob = await client.query<{ id: string }>(
+        `insert into public.stage_jobs (
+           company_id, title, description, requirements, apply_method,
+           source, location, duration, stipend, flyer_url, video_url, expires_at
+         ) values (
+           $1, $2, $3, $4, $5,
+           $6, $7, $8, $9, $10, $11, now() + ($12 || ' days')::interval
+         ) returning id`,
+        [
+          companyId,
+          normalizedTitle,
+          safeDesc,
+          reqs,
+          applyMethod,
+          input.source || 'SCRAPED',
+          compLocation,
+          input.duration || '3 à 6 mois',
+          input.stipend || 'Indemnité de stage',
+          input.flyerUrl || null,
+          input.videoUrl || null,
+          days,
+        ],
+      );
+      jobId = insertJob.rows[0].id;
+    }
+
+    await client.query('commit');
+    return { jobId, companyId, isNew };
+  } catch (err) {
+    await client.query('rollback');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+

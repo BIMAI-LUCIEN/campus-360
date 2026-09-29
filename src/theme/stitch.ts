@@ -173,6 +173,7 @@ export const fontFamilies = {
   serifItalic: serifItalicFamily,
   outfit: outfitFamily,
   inter: interFamily,
+  sans: interFamily,
   mono: monoFamily,
 };
 

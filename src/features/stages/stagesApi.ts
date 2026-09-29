@@ -1,4 +1,4 @@
-import type { StageJob, StageApplication, StageCompany, StudentProfileData, AppStatus, ApplyMethod } from '../../types';
+import type { StageJob, StageApplication, StageCompany, StudentProfileData, AppStatus, ApplyMethod, OfficialCvData } from '../../types';
 import { authFetch } from '../auth/betterAuth';
 
 export const SEED_COMPANIES: StageCompany[] = [
@@ -394,6 +394,14 @@ let localApplications: StageApplication[] = [
     lastRemindedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
     job: SEED_JOBS[2],
   },
+  {
+    id: 'app-seed-3',
+    studentId: 'student-current',
+    jobId: 'job-5',
+    status: 'PENDING',
+    appliedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
+    job: SEED_JOBS[4],
+  },
 ];
 
 export function calculateMatchScore(userSkills: string[] = [], jobReqs: string[] = []): { score: number; matchingSkills: string[] } {
@@ -497,6 +505,7 @@ export type GeneratedApplicationResult = {
   applicationId: string;
   cvText: string;
   letterText: string;
+  officialCv?: OfficialCvData;
   pdfDownloadUrl?: string;
   whatsappUrl: string;
   emailSubject: string;
@@ -522,23 +531,115 @@ export async function generateIaApplication(
   const companyName = job.company?.name || "L'Entreprise";
   const matchingSkillsStr = student.skills.slice(0, 3).join(', ') || 'mes compétences techniques';
 
-  const cvText = `CURRICULUM VITAE — ${student.fullName.toUpperCase()}
-Filière : ${student.major} (${student.educationLevel})
-Contact : ${student.email} | ${student.phoneWhatsapp || 'Non renseigné'}
-${student.portfolioUrl ? 'Portfolio / Profil : ' + student.portfolioUrl : ''}
+  const nameParts = (student.fullName || '').trim().split(/\s+/).filter(Boolean);
+  let nom = 'KAMENI';
+  let prenom = 'Dave Lionel';
+  if (nameParts.length >= 2) {
+    nom = nameParts[0].toUpperCase();
+    prenom = nameParts.slice(1).join(' ');
+  } else if (nameParts.length === 1 && nameParts[0].toLowerCase() !== 'étudiant') {
+    nom = nameParts[0].toUpperCase();
+    prenom = 'Dave Lionel';
+  }
+  const ville = job.location ? job.location.split('/')[0].trim() : 'Yaoundé';
 
-RÉSUMÉ PROFESSIONNEL :
-Étudiant(e) dynamique et rigoureux(se) en ${student.major}, passionné(e) par les enjeux de l'industrie ${job.company?.industry || ''}. Doté(e) d'une solide maîtrise de ${matchingSkillsStr}, je souhaite mettre mes compétences au service des projets stratégiques de ${companyName}.
+  const officialCv: OfficialCvData = {
+    titrePoste: job.title,
+    photoUrl: undefined,
+    detailsPersonnels: {
+      nom,
+      prenom,
+      nationalite: 'Camerounaise',
+      age: '22 ans',
+      email: student.email,
+      telephone: student.phoneWhatsapp || '672364124',
+      adresse: ville,
+    },
+    experiences: [
+      {
+        poste: `Stagiaire ${student.major}`,
+        entreprise: 'Projets Académiques & Travaux Pratiques',
+        ville,
+        periode: '2023 - 2024',
+        missions: [
+          `Application des méthodologies de ${student.major} sur des cas pratiques d'entreprise`,
+          `Mise en œuvre des compétences clés : ${student.skills.slice(0, 3).join(', ') || 'analyse et développement'}`,
+          `Travail collaboratif et respect des spécifications fonctionnelles formulées`,
+        ],
+      },
+    ],
+    formations: [
+      {
+        diplome: `${student.educationLevel} en ${student.major}`,
+        etablissement: 'Université / Grande École',
+        ville,
+        periode: 'En cours',
+      },
+    ],
+    competences: {
+      professionnelles: [
+        ...job.requirements.slice(0, 3),
+        'Résolution de problèmes et analyse fonctionnelle',
+        'Gestion du temps et esprit critique',
+      ],
+      habilitesRelationnelles: [
+        'assidu',
+        'attentif',
+        'autonome',
+        'compréhensif',
+        'conciliant',
+        'consciencieux',
+        'courtois',
+        'créatif',
+        'curieux',
+      ],
+      logiciels: [
+        {
+          categorie: 'Bureautique & Outils de Gestion',
+          items: ['Suite Office (Word, Excel, PowerPoint)', 'Google Workspace', 'Git'],
+        },
+        {
+          categorie: 'Technologies & Outils Spécialisés',
+          items: student.skills.length > 0 ? student.skills : ['Outils métiers'],
+        },
+      ],
+    },
+    langues: [
+      { langue: 'Français', niveau: 'expérimenté' },
+      { langue: 'Anglais', niveau: 'intermédiaire' },
+    ],
+    loisirs: ['sport', 'lecture', 'veille technologique'],
+  };
 
-COMPÉTENCES CLÉS CIBLÉES :
-• ${student.skills.map(s => 'Maîtrise opérationnelle : ' + s).join('\n• ')}
-• Esprit d'équipe, adaptabilité rapide et sens des responsabilités.
+  const cvText = `CURRICULUM VITAE — ${nom} ${prenom}
+${job.title.toUpperCase()}
 
-FORMATION ACADÉMIQUE :
-• ${student.educationLevel} en ${student.major} — En cours de validation.
+DÉTAILS PERSONNELS :
+Nom : ${nom} | Prénom : ${prenom}
+Nationalité : ${officialCv.detailsPersonnels.nationalite} | Âge : ${officialCv.detailsPersonnels.age}
+Email : ${student.email} | Téléphone : ${officialCv.detailsPersonnels.telephone}
+Adresse : ${officialCv.detailsPersonnels.adresse}
 
-OBJECTIF DE STAGE :
-• Intégrer ${companyName} pour le poste de "${job.title}" et contribuer activement à l'atteinte des objectifs de l'équipe.`.trim();
+EXPÉRIENCE PROFESSIONNELLE :
+${officialCv.experiences.map(e => `• ${e.poste} — ${e.entreprise}, ${e.ville} (${e.periode})\n  ${e.missions.map(m => '- ' + m).join('\n  ')}`).join('\n')}
+
+FORMATION :
+${officialCv.formations.map(f => `• ${f.diplome} — ${f.etablissement}, ${f.ville} (${f.periode})`).join('\n')}
+
+COMPÉTENCES PROFESSIONNELLES :
+• ${officialCv.competences.professionnelles.join('\n• ')}
+
+HABILITÉS PERSONNELLES ET RELATIONNELLES :
+${officialCv.competences.habilitesRelationnelles.join(', ')}
+
+MAÎTRISE DES LOGICIELS :
+${officialCv.competences.logiciels.map(l => `• ${l.categorie} : ${l.items.join(', ')}`).join('\n')}
+
+LANGUES :
+${officialCv.langues.map(l => `• ${l.langue} : ${l.niveau}`).join('\n')}
+
+AUTRES INFORMATIONS IMPORTANTES :
+Loisirs : ${officialCv.loisirs.join(', ')}`.trim();
 
   const letterText = `À l'attention du Responsable des Recrutements,
 ${companyName}
@@ -575,6 +676,7 @@ ${student.email}`.trim();
     applicationId: '',
     cvText,
     letterText,
+    officialCv,
     whatsappUrl,
     emailSubject,
     emailBody,
@@ -656,10 +758,36 @@ export async function updateApplicationStatus(applicationId: string, status: App
   return true;
 }
 
+export function getDaysSinceApplication(appliedAt: string): number {
+  const appliedDate = new Date(appliedAt).getTime();
+  const now = Date.now();
+  const diffMs = Math.max(0, now - appliedDate);
+  return Math.floor(diffMs / (24 * 3600 * 1000));
+}
+
+export function isEligibleForFollowup(app: StageApplication): boolean {
+  if (app.status !== 'PENDING') return false;
+  return getDaysSinceApplication(app.appliedAt) >= 7;
+}
+
 export function generateFollowupReminderMessage(app: StageApplication, studentName: string): string {
   const company = app.job?.company?.name || "l'Entreprise";
   const jobTitle = app.job?.title || 'le stage';
-  return `Bonjour ${company}, je me permets de faire un retour concernant ma candidature transmise le ${new Date(app.appliedAt).toLocaleDateString('fr-FR')} pour le poste de "${jobTitle}". Toujours très motivé(e) par l'opportunité de rejoindre votre équipe, je reste à votre entière disposition pour échanger. Cordialement, ${studentName}.`;
+  const appliedDateStr = new Date(app.appliedAt).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  return `Bonjour ${company}, je me permets de faire suite à ma candidature du ${appliedDateStr} pour le poste de "${jobTitle}". Toujours très motivé pour rejoindre vos équipes, je me tiens à votre disposition pour échanger. Bien cordialement, ${studentName}.`;
+}
+
+export async function recordApplicationReminder(applicationId: string): Promise<boolean> {
+  const app = localApplications.find((a) => a.id === applicationId);
+  if (app) {
+    app.lastRemindedAt = new Date().toISOString();
+    return true;
+  }
+  return false;
 }
 
 export async function directReachRecruiter(jobId: string, customNotes?: string) {

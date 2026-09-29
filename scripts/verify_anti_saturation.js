@@ -56,9 +56,9 @@ async function runAntiSaturationVerification() {
     } catch (e) {}
   });
 
-  console.log('Navigating to http://127.0.0.1:8081 ...');
-  await page.goto('http://127.0.0.1:8081', { waitUntil: 'commit', timeout: 30000 });
-  console.log('Committed navigation. Waiting for app to render...');
+  console.log('Navigating to http://localhost:8081 ...');
+  await page.goto('http://localhost:8081', { waitUntil: 'domcontentloaded', timeout: 45000 });
+  console.log('DOM content loaded. Waiting for app to render...');
   await page.waitForTimeout(6000);
 
   // Bypass onboarding if shown
@@ -98,7 +98,11 @@ async function runAntiSaturationVerification() {
     await expressSaveBtn.click({ force: true });
   }
 
-  await page.waitForTimeout(4000); // Allow generation to complete
+  // Wait for preview tab to appear (generation complete)
+  console.log('Waiting for generation to complete and preview tabs to appear...');
+  const letterTab = page.locator('[data-testid="tab-letter"]').first();
+  await letterTab.waitFor({ state: 'visible', timeout: 15000 }).catch(() => console.warn('tab-letter wait timeout'));
+  await page.waitForTimeout(1000);
 
   // 4. Capture AI Apply Modal (Letter tab)
   const modalLetterPath = path.join(screenshotsDir, 'apply_modal_letter_tab.png');
@@ -152,28 +156,27 @@ async function runAntiSaturationVerification() {
   }
   await page.waitForTimeout(1500);
 
-  // 7. Navigate to Suivi / Applications via Profile
-  console.log('Verifying or Navigating to Timeline screen...');
+  // 7. Navigate to Profile screen and capture it
+  console.log('Navigating to Profile tab...');
+  const profileNavBtn = page.locator('[data-testid="nav-account"]').first();
+  await profileNavBtn.click({ force: true, timeout: 5000 });
+  await page.waitForTimeout(2000);
+
+  const profilePath = path.join(screenshotsDir, 'profile_anti_saturation.png');
+  await page.screenshot({ path: profilePath, fullPage: false });
+  console.log(`Saved Profile screen to ${profilePath}`);
+
+  // 8. Open Applications Timeline from Profile
+  console.log('Opening Applications Timeline from Profile...');
   const timelinePath = path.join(screenshotsDir, 'timeline_anti_saturation.png');
-  if (await page.getByText(/Suivi des Candidatures/i).isVisible({ timeout: 2000 }).catch(() => false)) {
+  const timelineMenuBtn = page.locator('[data-testid="menu-applications"]').or(page.locator('[data-testid="stat-applications"]')).first();
+  if (await timelineMenuBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await timelineMenuBtn.click({ force: true });
+    await page.waitForTimeout(2500);
     await page.screenshot({ path: timelinePath, fullPage: false });
     console.log(`Saved Timeline screen to ${timelinePath}`);
   } else {
-    console.log('Navigating to Profile tab...');
-    const profileNavBtn = page.locator('[data-testid="nav-account"]').first();
-    await profileNavBtn.click({ force: true, timeout: 5000 });
-    await page.waitForTimeout(2000);
-
-    console.log('Opening Applications Timeline from Profile...');
-    const timelineMenuBtn = page.locator('[data-testid="menu-stats"]').first();
-    if (await timelineMenuBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await timelineMenuBtn.click({ force: true });
-      await page.waitForTimeout(2500);
-      await page.screenshot({ path: timelinePath, fullPage: false });
-      console.log(`Saved Timeline screen to ${timelinePath}`);
-    } else {
-      console.warn('timelineMenuBtn was not visible');
-    }
+    console.warn('timelineMenuBtn was not visible');
   }
 
   await browser.close();

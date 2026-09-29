@@ -13,7 +13,6 @@ import {
   TextInput,
 } from 'react-native';
 import {
-  Sparkles,
   CheckCircle2,
   Mail,
   X,
@@ -25,15 +24,13 @@ import {
   Check,
   Copy,
   Download,
-  Coins,
-  ChevronRight,
 } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import type { StageJob } from '../../types';
+import type { StageJob, OfficialCvData } from '../../types';
 import { generateIaApplication, submitStageApplication, type GeneratedApplicationResult } from './stagesApi';
 import { analyzeJobMatch, type MatchAnalysis } from './aiMatchEngine';
 import { exportApplicationPdf, buildWhatsAppPitch } from './pdfExportService';
 import { StudentProfileExpressModal } from './StudentProfileExpressModal';
+import { PaymentModal } from '../wallet/PaymentModal';
 import { stitchColors, fontFamilies, stitchRadius } from '../../theme/stitch';
 
 interface AiApplyModalProps {
@@ -43,6 +40,7 @@ interface AiApplyModalProps {
     fullName: string;
     email: string;
     phoneWhatsapp?: string;
+    university?: string;
     major: string;
     educationLevel: string;
     skills: string[];
@@ -54,6 +52,122 @@ interface AiApplyModalProps {
   onRecharge?: () => void;
 }
 
+function OfficialCvCardPreview({ cv }: { cv: OfficialCvData }) {
+  const nom = cv.detailsPersonnels.nom.toUpperCase();
+  const prenom = cv.detailsPersonnels.prenom;
+
+  return (
+    <View style={styles.officialCvBox}>
+      {/* En-tête avec nom et photo */}
+      <View style={styles.officialCvHeaderRow}>
+        <View style={{ flex: 1, paddingRight: 10 }}>
+          <Text style={styles.officialCvFullName}>{nom} {prenom}</Text>
+          <Text style={styles.officialCvJobTitle}>{cv.titrePoste}</Text>
+        </View>
+        <View style={styles.officialCvPhotoFrame}>
+          <Text style={styles.officialCvPhotoInitials}>
+            {nom.slice(0, 1)}{prenom.slice(0, 1)}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.officialCvBlueDivider} />
+
+      {/* 1. Détails personnels */}
+      <Text style={styles.officialCvSectionHeader}>Détails personnels</Text>
+      <View style={styles.officialCvTwoCols}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.officialCvField}>
+            <Text style={styles.officialCvLabel}>Nom : </Text>{cv.detailsPersonnels.nom}
+          </Text>
+          <Text style={styles.officialCvField}>
+            <Text style={styles.officialCvLabel}>Prénom : </Text>{cv.detailsPersonnels.prenom}
+          </Text>
+          <Text style={styles.officialCvField}>
+            <Text style={styles.officialCvLabel}>Nationalité : </Text>{cv.detailsPersonnels.nationalite}
+          </Text>
+          <Text style={styles.officialCvField}>
+            <Text style={styles.officialCvLabel}>Âge : </Text>{cv.detailsPersonnels.age}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.officialCvField} numberOfLines={1}>
+            <Text style={styles.officialCvLabel}>Email : </Text>{cv.detailsPersonnels.email}
+          </Text>
+          <Text style={styles.officialCvField}>
+            <Text style={styles.officialCvLabel}>Tél : </Text>{cv.detailsPersonnels.telephone}
+          </Text>
+          <Text style={styles.officialCvField}>
+            <Text style={styles.officialCvLabel}>Adresse : </Text>{cv.detailsPersonnels.adresse}
+          </Text>
+        </View>
+      </View>
+
+      {/* 2. Expérience professionnelle */}
+      <Text style={styles.officialCvSectionHeader}>Expérience professionnelle</Text>
+      {cv.experiences.map((exp, idx) => (
+        <View key={idx} style={styles.officialCvBlock}>
+          <Text style={styles.officialCvItemTitle}>{exp.poste}</Text>
+          <View style={styles.officialCvRowBetween}>
+            <Text style={styles.officialCvItemSubtitle}>{exp.entreprise}, {exp.ville}</Text>
+            <Text style={styles.officialCvItemDate}>{exp.periode}</Text>
+          </View>
+          {exp.missions.map((m, mIdx) => (
+            <Text key={mIdx} style={styles.officialCvBullet}>• {m}</Text>
+          ))}
+        </View>
+      ))}
+
+      {/* 3. Formation */}
+      <Text style={styles.officialCvSectionHeader}>Formation</Text>
+      {cv.formations.map((form, idx) => (
+        <View key={idx} style={styles.officialCvBlock}>
+          <View style={styles.officialCvRowBetween}>
+            <Text style={styles.officialCvItemTitle}>{form.diplome}</Text>
+            <Text style={styles.officialCvItemDate}>{form.periode}</Text>
+          </View>
+          <Text style={styles.officialCvItemSubtitle}>{form.etablissement}, {form.ville}</Text>
+        </View>
+      ))}
+
+      {/* 4. Compétences */}
+      <Text style={styles.officialCvSectionHeader}>Compétences</Text>
+      <Text style={styles.officialCvSubheading}>Compétences professionnelles</Text>
+      {cv.competences.professionnelles.map((comp, idx) => (
+        <Text key={idx} style={styles.officialCvBullet}>• {comp}</Text>
+      ))}
+
+      <Text style={styles.officialCvSubheading}>Habilités personnelles et relationnelles :</Text>
+      <Text style={styles.officialCvInlineText}>
+        {cv.competences.habilitesRelationnelles.join(', ')}
+      </Text>
+
+      <Text style={styles.officialCvSubheading}>Maîtrise des logiciels</Text>
+      {cv.competences.logiciels.map((log, idx) => (
+        <Text key={idx} style={styles.officialCvBullet}>
+          • {log.categorie ? `${log.categorie} : ` : ''}{log.items.join(', ')}
+        </Text>
+      ))}
+
+      {/* 5. Langues */}
+      <Text style={styles.officialCvSectionHeader}>Langues</Text>
+      {cv.langues.map((l, idx) => (
+        <Text key={idx} style={styles.officialCvInlineText}>
+          {l.langue}: {l.niveau}
+        </Text>
+      ))}
+
+      {/* 6. Autres informations importantes */}
+      <Text style={styles.officialCvSectionHeader}>Autres informations importantes</Text>
+      <Text style={styles.officialCvInlineText}>
+        Loisirs : {cv.loisirs.join(', ')}
+      </Text>
+
+      <Text style={styles.officialCvPageNumber}>1</Text>
+    </View>
+  );
+}
+
 export function AiApplyModal({
   visible,
   job,
@@ -63,7 +177,7 @@ export function AiApplyModal({
   onRecharge,
 }: AiApplyModalProps) {
   const [step, setStep] = useState<'generating' | 'preview' | 'sent'>('generating');
-  const [progressMsg, setProgressMsg] = useState("Agent Matcher : Analyse de l'offre et de vos compétences...");
+  const [progressMsg, setProgressMsg] = useState("Analyse de l'offre et correspondance des compétences...");
   const [result, setResult] = useState<GeneratedApplicationResult | null>(null);
   const [activePreviewTab, setActivePreviewTab] = useState<'letter' | 'cv' | 'match'>('letter');
   const [isEditing, setIsEditing] = useState(false);
@@ -76,6 +190,7 @@ export function AiApplyModal({
   // Dynamic state for student profile if completed via express modal
   const [currentProfile, setCurrentProfile] = useState(studentProfile);
   const [showExpressModal, setShowExpressModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
     setCurrentProfile(studentProfile);
@@ -117,17 +232,23 @@ export function AiApplyModal({
         return;
       }
 
+      // If student has 0 tokens, prompt Mobile Money payment modal
+      if (currentProfile.tokens !== undefined && currentProfile.tokens <= 0) {
+        setShowPaymentModal(true);
+        return;
+      }
+
       setStep('generating');
       setResult(null);
       setIsEditing(false);
       setCopiedPitch(false);
 
       const t1 = setTimeout(() => {
-        setProgressMsg('Agent Rédacteur : Conception du CV et de la lettre de motivation...');
+        setProgressMsg('Rédaction du CV et de la lettre personnalisée...');
       }, 700);
 
       const t2 = setTimeout(() => {
-        setProgressMsg('Formatage haute fidélité & alignement mots-clés RH...');
+        setProgressMsg('Mise en page et alignement avec les critères du poste...');
       }, 1400);
 
       generateIaApplication(job, currentProfile)
@@ -152,6 +273,8 @@ export function AiApplyModal({
   if (!visible || !job) return null;
 
   const handleExpressProfileSaved = (data: {
+    fullName: string;
+    phoneWhatsapp: string;
     university: string;
     major: string;
     level: string;
@@ -160,6 +283,9 @@ export function AiApplyModal({
     setShowExpressModal(false);
     setCurrentProfile((prev) => ({
       ...prev,
+      fullName: data.fullName || prev.fullName,
+      phoneWhatsapp: data.phoneWhatsapp || prev.phoneWhatsapp,
+      university: data.university,
       major: data.major,
       educationLevel: data.level,
       skills: data.skills,
@@ -223,6 +349,7 @@ export function AiApplyModal({
         companyName: job.company?.name || "L'Entreprise",
         letterText: editableLetter,
         cvText: editableCv,
+        officialCv: result?.officialCv,
       });
     } finally {
       setDownloadingPdf(false);
@@ -284,6 +411,14 @@ export function AiApplyModal({
                     <Text style={styles.matchBadgeTopText}>{matchAnalysis.score}% de correspondance</Text>
                   </View>
                 )}
+
+                <Pressable
+                  onPress={() => setShowPaymentModal(true)}
+                  style={styles.rechargeHeaderBtn}
+                  testID="btn-open-payment"
+                >
+                  <Text style={styles.rechargeHeaderBtnText}>Recharge MoMo</Text>
+                </Pressable>
 
                 <Pressable
                   onPress={onClose}
@@ -459,6 +594,8 @@ export function AiApplyModal({
                         <Text style={styles.strategicText}>{matchAnalysis.strategicAdvice}</Text>
                       </View>
                     </View>
+                  ) : activePreviewTab === 'cv' && !isEditing && result?.officialCv ? (
+                    <OfficialCvCardPreview cv={result.officialCv} />
                   ) : isEditing ? (
                     <TextInput
                       style={styles.editorTextInput}
@@ -584,7 +721,9 @@ export function AiApplyModal({
       {/* Modal Express si profil incomplet */}
       <StudentProfileExpressModal
         visible={showExpressModal}
-        initialUniversity="Université de Yaoundé I"
+        initialFullName={currentProfile.fullName}
+        initialPhoneWhatsapp={currentProfile.phoneWhatsapp}
+        initialUniversity={currentProfile.university || "Université de Yaoundé I"}
         initialMajor={currentProfile.major}
         initialLevel={currentProfile.educationLevel}
         initialSkills={currentProfile.skills}
@@ -593,6 +732,27 @@ export function AiApplyModal({
           onClose();
         }}
         onSaveAndContinue={handleExpressProfileSaved}
+      />
+
+      {/* Modal Paiement Mobile Money si solde épuisé */}
+      <PaymentModal
+        visible={showPaymentModal}
+        defaultPhone={currentProfile.phoneWhatsapp || ''}
+        reasonMessage="Votre quota gratuit est atteint. Choisissez votre formule Mobile Money pour continuer."
+        onClose={() => {
+          setShowPaymentModal(false);
+          if (currentProfile.tokens !== undefined && currentProfile.tokens <= 0) {
+            onClose();
+          }
+        }}
+        onPaymentSuccess={(pack) => {
+          setShowPaymentModal(false);
+          const newTokens = (currentProfile.tokens ?? 0) + pack.tokensReward;
+          setCurrentProfile((prev) => ({
+            ...prev,
+            tokens: newTokens,
+          }));
+        }}
       />
     </>
   );
@@ -661,6 +821,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     color: '#CBD5E1',
+  },
+  rechargeHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    borderColor: 'rgba(139, 92, 246, 0.35)',
+  },
+  rechargeHeaderBtnText: {
+    fontFamily: fontFamilies.outfit,
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#C4B5FD',
   },
   closeBtn: {
     width: 30,
@@ -1087,5 +1263,132 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: '#FFFFFF',
+  },
+
+  // Official CV Card Preview styles (Gabarit 2 Colonnes)
+  officialCvBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 16,
+    marginBottom: 12,
+  },
+  officialCvHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  officialCvFullName: {
+    fontFamily: fontFamilies.outfit,
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: -0.2,
+  },
+  officialCvJobTitle: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#4B5563',
+    marginTop: 2,
+  },
+  officialCvPhotoFrame: {
+    width: 48,
+    height: 58,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 3,
+  },
+  officialCvPhotoInitials: {
+    fontFamily: fontFamilies.outfit,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#94A3B8',
+  },
+  officialCvBlueDivider: {
+    height: 2,
+    backgroundColor: '#005691',
+    marginVertical: 10,
+  },
+  officialCvSectionHeader: {
+    fontFamily: fontFamilies.outfit,
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#005691',
+    borderBottomWidth: 1,
+    borderBottomColor: '#005691',
+    paddingBottom: 2,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  officialCvTwoCols: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  officialCvField: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 10,
+    color: '#1F2937',
+    marginBottom: 3,
+  },
+  officialCvLabel: {
+    fontWeight: '700',
+    color: '#111827',
+  },
+  officialCvBlock: {
+    marginBottom: 6,
+  },
+  officialCvRowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+  },
+  officialCvItemTitle: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  officialCvItemSubtitle: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 10,
+    fontStyle: 'italic',
+    color: '#4B5563',
+  },
+  officialCvItemDate: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 9.5,
+    color: '#6B7280',
+  },
+  officialCvBullet: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 9.5,
+    color: '#374151',
+    marginLeft: 4,
+    marginBottom: 2,
+  },
+  officialCvSubheading: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#111827',
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  officialCvInlineText: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 9.5,
+    color: '#374151',
+    marginBottom: 4,
+  },
+  officialCvPageNumber: {
+    textAlign: 'center',
+    fontSize: 9.5,
+    color: '#94A3B8',
+    marginTop: 12,
   },
 });

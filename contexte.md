@@ -1,400 +1,255 @@
-# Contexte & Spécifications Globales : Campus 360
+# Cadrage Stratégique, Produit & Technique : Campus 360 (MVP Launch)
 
-Ce document unifié sert de référence absolue pour comprendre à la fois la vision produit, les parcours utilisateurs et l'architecture technique intégrale du monorepo **Campus 360**. Il permet à tout développeur ou agent IA de travailler avec un contexte complet et sans ambiguïté.
-
----
-
-## 1. La Vision & La Cible Prioritaire (Validation Brainstorming)
-
-- **Le Problème Résolu :** En Licence (L2/L3, BTS, DUT), l'étudiant a l'obligation académique absolue de trouver un stage sous peine de redoubler ou de ne pas valider son diplôme. Il n'a presque aucune expérience préalable et 90% de ses candidatures restent sans réponse car ses CVs et lettres sont des copier-coller génériques trouvés sur internet.
-- **La Promesse (One-Liner) :** *« L'Agent IA qui trouve le stage où tu as 95% de chances d'être pris et rédige ta candidature sur-mesure en 30 secondes. »*
-- **Le Client Cible Idéal :** L'étudiant en Licence / BTS / DUT en Afrique Francophone (Cameroun, Côte d'Ivoire, Sénégal, Bénin, etc.) sous pression du calendrier universitaire, équipé d'un smartphone et d'un compte Mobile Money.
+> **Document de Référence Unifié (Single Source of Truth)**
+> Mis à jour le 28 septembre 2026 suite au cadrage produit CPO & CTO.
 
 ---
 
-## 2. Fonctionnalités Retenues pour le Lancement (V1 - MVP Ultra-Lean)
+## 1. Vision & Fondamentaux Business
 
-### 🟢 Cœur Nucléaire : Le Duo Agent Matcher + Agent Rédacteur
-
-1. **Profilage Express en 30 Secondes (Zéro upload fastidieux) :**
-   - Saisie rapide sur smartphone : Filière, Université, Niveau d'études, 3 à 5 compétences clés et 1 projet ou expérience académique marquante.
-   - Pas d'obligation d'uploader un vieux PDF de CV souvent introuvable ou mal formaté sur mobile.
-
-2. **Agent Matcher (Le Chasseur & Scorer) :**
-   - Calcul dynamique du score d'adéquation (ex: `🔥 95% Match`).
-   - Affichage de **2 points forts concrets** (*"Pourquoi tu as toutes tes chances"* : ex: *"Ta formation en Finance correspond pile au profil recherché"*).
-   - Affichage d'**1 conseil stratégique** (*"Mets en avant ton projet académique de L2"*).
-
-3. **Agent Rédacteur (CV & Lettre Chirurgicale 1-Clic) :**
-   - Génération en moins de 15 secondes d'une lettre de motivation ultra-personnalisée et d'un CV synthétique aligné sur les mots-clés de l'offre.
-   - Mode aperçu immédiat avec possibilité d'édition rapide in-app par l'étudiant.
-   - **Double action de sortie** :
-     - `[ 📋 Copier pour WhatsApp / Mail ]` : Texte d'accroche professionnel pré-formaté prêt à coller dans WhatsApp au recruteur.
-     - `[ 📥 Télécharger le PDF ]` : Fichier propre généré au standard RH.
-
-4. **Timeline des Candidatures & Rappel Relance J+7 :**
-   - Enregistrement immédiat dans l'historique de l'étudiant avec badge de statut (`Envoyé`, `En revue`, `Entretien`).
-   - Notification et rappel pour relancer le recruteur à J+7 sur WhatsApp.
+- **Le Problème Résolu & Douleur Aiguë :** En Licence (L2/L3, BTS, DUT, Ingénieur), l'étudiant a l'obligation académique absolue de trouver un stage sous peine de redoubler ou de ne pas valider son diplôme. N'ayant presque aucune expérience préalable, 90% de ses candidatures restent sans réponse car ses CVs et lettres sont des copier-coller génériques.
+- **La Promesse Unique (One-Liner) :** *« L'Agent IA qui trouve les stages adaptés à ta filière, évalue ta correspondance à 95% et génère ta candidature sur-mesure au format officiel en 30 secondes. »*
+- **L'Avatar Cible Idéal (ICP) :** L'étudiant en Licence / BTS / DUT / Ingénieur en Afrique Francophone (Cameroun, Côte d'Ivoire, Sénégal, Bénin, Togo, etc.), équipé d'un smartphone et d'un compte Mobile Money.
+- **Le Fossé Concurrentiel (Unfair Advantage) :** 
+  1. **Template CV Officiel RH Afrique** ultra-structuré à 2 colonnes (dates alignées à droite, compétences découpées en 3 sous-blocs).
+  2. **Envoi 1-Clic via WhatsApp RH natif** avec texte d'accroche personnalisé, garantissant un taux de réponse 8x supérieur aux emails anonymes.
+  3. **Ingestion automatisée des offres par Agent n8n** avec OCR Vision sur flyers Facebook/LinkedIn.
 
 ---
 
-## 3. Fonctionnalités Écartées pour le Lancement (V2 - Zéro Slop)
+## 2. Découpage Fonctionnel & Priorisation (Scope MVP Ultra-Lean)
 
-- 🔴 **Parsing / Upload obligatoire de CV PDF existant** : Écarté en V1 pour éliminer toute friction sur mobile et éviter les bugs de lecture de fichiers hétérogènes.
-- 🔴 **Envoi automatique d'e-mails par nos serveurs (SMTP sortant robot)** : Écarté car les recruteurs en Afrique ignorent ou filtrent en spam les candidatures automatisées non authentiques. L'envoi direct depuis le WhatsApp / Mail de l'étudiant a un taux de réponse 8x supérieur.
-- 🔴 **Messagerie de chat interne temps réel recruteur-étudiant** : Écartée car le canal WhatsApp règne sans partage pour la prise de rendez-vous.
+```mermaid
+flowchart TD
+    subgraph MVP ["🟢 SCOPE MVP (Lancement Flash)"]
+        A["1. Profilage Express 30s\n(Nom, Filière, Univ, 3-5 compétences)"]
+        B["2. Feed Stages + Matching IA\n(Calcul % match, 2 points forts, 1 conseil)"]
+        C["3. Générateur CV & Lettre 1-Clic\n(Basé sur le Template CV Officiel)"]
+        D["4. Postulation WhatsApp / Email / PDF\n(Accroche pré-rédigée + PDF CV)"]
+        E["5. Suivi Candidatures & Relance J+7\n(Notification push + relance 1-clic)"]
+        F["6. Monétisation Mobile Money\n(500 FCFA les 5 candidatures / Pass 2000 FCFA)"]
+    end
 
----
+    A --> B --> C --> D --> E
+    C --> F
+```
 
-## 4. Modèle Économique, Déclencheur d'Achat & Tarification
+### 🟢 V1 - Scope du MVP (Immédiat)
 
-- **Le Déclencheur d'Achat (Aha! Moment) :** 
-  - La **1ère candidature IA est 100% offerte** (gratuite). L'étudiant voit instantanément l'IA produire une lettre et un CV 10 fois meilleurs que ce qu'il aurait pu écrire en 3 heures.
-- **Le Modèle à l'Acte (Jetons IA & Mobile Money) :**
-  - Consommation de **Jetons IA** par postulation (ou 500 à 1 000 FCFA à l'acte).
-  - Recharges instantanées via **MTN MoMo, Orange Money, Wave** à partir de **500 FCFA** (50 jetons).
-  - Pass mensuel optionnel pour candidatures illimitées.
-| Offre | Prix mensuel | Candidatures IA | Rédactions Atelier | PDF Catalogue | Chat IA | Exports Atelier |
-|---|---:|:---:|:---:|:---:|:---:|:---:|
-| **Gratuit** | 0 FCFA | 1 offerte | Aperçu seul | Lecture limitée | Non | Aperçu avec filigrane |
-| **Basique** | 2 000 FCFA | 5 / mois | 3 rédactions | Illimité en ligne | 500 msgs | PDF filigrané |
-| **Pro** | 3 500 FCFA | 10 / mois | 5 rédactions | Illimité + Hors-ligne | 1 000 msgs | PDF sans filigrane |
-| **Elite** | 5 000 FCFA | 20 / mois | 10 rédactions | Illimité + Mode Boost | 2 000 msgs | PDF & Word sans filigrane |
+1. **Profilage Express (30 secondes) :**
+   - Saisie rapide sur smartphone : Nom, WhatsApp, Université, Filière/Spécialité, Niveau d'études, et puces de compétences cliquables. Zéro upload obligatoire de fichier lourd.
 
----
+2. **Feed Stages & Agent Matcher :**
+   - Calcul dynamique du score (`🔥 95% Match`).
+   - 2 points forts concrets (*"Pourquoi tu as toutes tes chances"*) et 1 conseil stratégique.
+   - Alimentation automatisée via le pipeline **n8n Automation API**.
 
-## 5. Le Portail Recruteur B2B & Système KYB
+3. **Générateur de Candidature (CV Template Officiel + Lettre RH) :**
+   - **Template CV Officiel :** Structure stricte à 2 colonnes (Détails personnels, Expériences avec dates à droite, Formation, Compétences découpées en *Professionnelles*, *Habilités relationnelles*, *Logiciels*, Langues, Loisirs).
+   - **Lettre de Motivation RH :** Méthode *VOUS - MOI - NOUS* avec réécriture rapide du ton (*Plus formel*, *Plus concis*, *Compétences clés*).
 
-* **Vérification Anti-Fraude (KYB)** :
-  * Grandes Entreprises : vérification automatique e-mail de domaine et site web.
-  * Startups / Micro-entreprises : vérification RCCM / ID fiscal ou réseau social d'entreprise actif (> 6 mois) + validation obligatoire par OTP WhatsApp.
-  * Score KYB de 0 à 100 ; verrouillage des contacts WhatsApp d'étudiants sous un certain seuil.
-* **Publication & Boost d'Offres** :
-  * Formulaire rapide avec canaux de réponse ciblés (WhatsApp / Email).
-  * Boost quotidien d'offres financé par Mobile Money.
-* **CVthèque Dynamique** : Accès aux profils qualifiés, compétences et vidéos de présentation.
+4. **Canal d'Envoi Direct 1-Clic :**
+   - `[ 💬 WhatsApp RH ]` : Ouvre WhatsApp sur le numéro du recruteur avec l'accroche pré-rédigée.
+   - `[ ✉️ Email RH ]` : Ouvre la messagerie électronique avec objet et corps pré-remplis.
+   - `[ 📥 Télécharger PDF ]` : Génération du PDF propre du CV selon le Template Officiel.
 
----
+5. **Suivi des Candidatures & Rappel Relance J+7 :**
+   - Historique des candidatures transmises avec statut (`Envoyé`, `En revue`, `Entretien`).
+   - Notification de relance automatique au bout de 7 jours avec message pré-rédigé pour WhatsApp.
 
-## 6. Architecture & Contexte Technique Global
-
-### 6.1 Stack & Commandes
-
-#### A. Application Mobile Client (`campus-360` - Racine)
-- **Technologies** : Expo SDK 54.0.36, React Native 0.81.5, React 19.1.0, TypeScript 5.9.2, Lucide Icons, Expo Linear Gradient, SecureStore, Notifications.
-- **Authentification** : Better Auth Client (`@better-auth/expo` ^1.6.19) avec auto-détection LAN IP pour tests sur mobile physique.
-- **Design System** : Thème Stitch éditorial (`theme/stitch.ts`) fondé sur `ink` (#0F172A), `paper` (#F6F1E7), `sienna` (#B7410E) et `emerald` (#047857).
-- **Scripts Réels** :
-  - Lancement Bundler Expo : `npm run start` (ou `npx expo start --clear`)
-  - Mode Web : `npm run web` (ou `expo start --web`)
-  - Émulateur Android : `npm run android`
-  - Simulateur iOS : `npm run ios`
-  - Contrôle Typage : `npm run typecheck` (`node --stack_size=8192 node_modules/typescript/bin/tsc --noEmit`)
-
-#### B. API Métier Mobile (`mobile-api/`)
-- **Technologies** : Next.js 15.5.7 (App Router, Node.js runtime, Port 3002), PostgreSQL (driver direct `pg` ^8.21.0), Zod 4.3.6, Puppeteer 25.1.0, Resend 4.0.0, Better Auth 1.3.34.
-- **Scripts Réels** :
-  - Serveur de Développement : `npm run dev` (`next dev -p 3002`)
-  - Compilation Production : `npm run build` (`next build`)
-  - Démarrage Production : `npm run start` (`next start -p 3002`)
-  - Contrôle Typage : `npm run typecheck` (`tsc --noEmit`)
-  - Tests d'Intégration HTTP : `npm test` (`node --test tests/*.test.mjs`)
-
-#### C. Portail Recruteur & Admin Web (`recruiter-web/`)
-- **Technologies** : Next.js 15.5.7 (App Router, Port 3001), Prisma ORM (`prisma/schema.prisma`), Tailwind CSS 4.3.1, Tiptap React 3.27.1, Recharts 3.9.0, Puppeteer, docx 9.7.1, pdf-lib, pdfjs-dist.
-- **Rôle de Passerelle** : Proxifie `/api/mobile/:path*` vers `mobile-api` (Port 3002) via les rewrites `next.config.ts`.
-- **Scripts Réels** :
-  - Développement : `npm run dev` (`next dev -p 3001`)
-  - Pré-build CSS : `npm run predev` / `npm run css:build` (`node scripts/prebuild-css.mjs`)
-  - Compilation : `npm run build` (`npm run css:build && next build`)
-  - Contrôle Typage : `npm run typecheck` (`tsc --noEmit`)
-  - Migrations de données : `npm run mvp:migrate`, `npm run mobile:setup`, `npm run auth:migrate`
-
-#### D. Site Vitrine & Landing Page (`landing-site/`)
-- **Technologies** : Next.js 15.5.19, React 19.1.0, Tailwind CSS v4, Lucide React, Better Auth.
-- **Scripts Réels** :
-  - Développement : `npm run dev` (`next dev --turbopack`)
-  - Compilation : `npm run build` (`next build`)
-  - Démarrage : `npm run start` (`next start`)
-  - Linter : `npm run lint` (`next lint`)
-
-#### E. Moteur IA & Automatisation (`scripts/`)
-- **Technologies** : Python 3, Google Gemini 2.0 Flash / 3.7 Flash API (OCR Multimodal & Rédaction ciblée), API MTN Mobile Money (USSD Push direct).
+6. **Monétisation Mobile Money Instantanée :**
+   - **1ère candidature 100% OFFERTE**.
+   - **Pack Découverte :** 500 FCFA pour 5 candidatures IA.
+   - **Pass Mensuel :** 2 000 FCFA / mois illimité.
+   - Paiement via **Notch Pay / CinetPay** (MTN MoMo, Orange Money, Wave).
 
 ---
 
-### 6.2 Arborescence Nette du Projet
+### 🟡 V1.5 - Évolutions Prochaines (Après validation du flux)
 
-```text
-campus-360/
-├── App.tsx                             # Point d'entrée Expo (délègue à src/AppShell.tsx)
-├── index.ts                            # Enregistrement racine Expo
-├── app.json                            # Configuration Expo SDK 54 & EAS
-├── tsconfig.json                       # Config TypeScript Mobile (extends expo/tsconfig.base)
-├── package.json                        # Dépendances Mobile Expo
-├── CLAUDE.md                           # Documentation technique interne
-├── contexte.md                         # Référence globale produit & architecture unifiée
-├── contexte_code.md                    # Cache architectural & dictionnaire des composants
-│
-├── src/                                # CODE SOURCE APPLICATION MOBILE
-│   ├── AppShell.tsx                    # Composant maître : navigation (5 onglets), wallet, sessions
-│   ├── types.ts                        # Types partagés (StageJob, StageApplication, CampusDocument...)
-│   ├── theme/
-│   │   └── stitch.ts                   # Design system éditorial (couleurs, rayons, typos, presets)
-│   ├── config/
-│   │   └── env.ts                      # Configuration des variables d'environnement publiques
-│   ├── ui/
-│   │   ├── GlassComponents.tsx         # Composants UI (BottomNav, TopBar, GradientButton, Card, Pill)
-│   │   ├── Toast.tsx                   # Système in-app de notifications Toast
-│   │   └── screens/                    # Écrans fonctionnels
-│   │       ├── HomeScreen.tsx          # Tableau de bord étudiant & prochaine action dynamique
-│   │       ├── StagesScreen.tsx        # Feed des stages, recherche, filtres secteurs & matching %
-│   │       ├── ApplicationsTimelineScreen.tsx # Suivi des candidatures & relances J+7
-│   │       ├── ResourcesScreen.tsx     # Hub académique unifié (catalogue PDF, bibliothèque)
-│   │       ├── DocumentsScreen.tsx     # Liste et accès à la rédaction de documents
-│   │       ├── ProfileScreen.tsx       # Gestion profil, wallet, abonnements et paramètres
-│   │       ├── AuthScreen.tsx          # Authentification étudiant (email/mdp, Google)
-│   │       ├── OnboardingScreen.tsx    # Questionnaire de profilage obligatoire
-│   │       ├── ExploreScreen.tsx       # Découverte approfondie de documents
-│   │       ├── LibraryScreen.tsx       # Bibliothèque personnelle de documents débloqués
-│   │       ├── ScrapedReportsView.tsx  # Consultation des rapports de stage scrapés
-│   │       ├── DefenseCoachModal.tsx   # Coach IA pour préparation à la soutenance
-│   │       └── WritingWorkshopModal.tsx# Atelier interactif de rédaction
-│   └── features/
-│       ├── auth/
-│       │   └── betterAuth.ts           # Client Better Auth, stockage SecureStore, auto-IP LAN dev
-│       ├── stages/
-│       │   ├── stagesApi.ts            # Client API stages, calcul de score de match, mock data
-│       │   └── AiApplyModal.tsx        # Modal de génération IA 1-clic de candidature (CV + Lettre)
-│       ├── documents/
-│       │   ├── DocumentsScreen.tsx     # Gestionnaire de documents atelier
-│       │   ├── DocumentEditorScreen.tsx# Éditeur hybride natif / WebView
-│       │   ├── DocGenChat.tsx          # Assistant conversationnel de génération de document
-│       │   ├── EditorAiChat.tsx        # Assistant d'édition de section IA
-│       │   ├── DocumentImagesModal.tsx # Insertion et gestion des images
-│       │   └── DocumentSourcesModal.tsx# Gestion des sources et références
-│       ├── pdf/
-│       │   ├── pdfApi.ts               # Requêtes catalogue PDF et achats de packs
-│       │   ├── pdfAssistant.ts         # Chat contextuel IA sur PDF
-│       │   ├── PdfStudentSection.tsx   # Composant complet catalogue & lecteur
-│       │   └── SimplePdfReaderModal.tsx# Lecteur PDF sécurisé in-app
-│       ├── onboarding/
-│       │   ├── FreePdfSelector.tsx     # Choix du PDF gratuit à l'inscription
-│       │   └── OnboardingScreen.tsx    # Slides d'accueil
-│       └── subscriptions/
-│           └── plans.ts                # Définition des plans tarifaires (Gratuit, Basique, Pro, Elite)
-│
-├── mobile-api/                         # BACKEND DÉDIÉ CLIENT MOBILE (Port 3002)
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── auth/[...all]/route.ts  # Instance Better Auth serveur (catch-all)
-│   │   │   ├── health/route.ts         # Healthcheck serveur
-│   │   │   ├── ai/pdf-chat/route.ts    # Chat IA sur PDF académiques
-│   │   │   └── mobile/
-│   │   │       ├── account/route.ts    # Profil, portefeuille, abonnements et achats
-│   │   │       ├── stages/             # Endpoints Stages
-│   │   │       │   ├── route.ts        # Liste et recherche d'offres actives
-│   │   │       │   ├── apply/route.ts  # Soumission d'une candidature générée par IA
-│   │   │       │   ├── applications/route.ts # Historique et statut des candidatures
-│   │   │       │   └── direct-reach/route.ts # Prise de contact directe étudiant -> entreprise
-│   │   │       ├── documents/          # CRUD et exports de documents d'atelier
-│   │   │       │   ├── route.ts, [id]/route.ts
-│   │   │       │   ├── [id]/sections/  # Gestion des sections (chapitres)
-│   │   │       │   ├── [id]/export/pdf/# Export PDF haute fidélité (Puppeteer)
-│   │   │       │   ├── [id]/export/docx/# Export Word docx
-│   │   │       │   └── ai/, generate/  # Génération IA de contenu et plans
-│   │   │       ├── wallet/             # Recharges Mobile Money & Webhook
-│   │   │       ├── purchase/           # Achats atomiques de documents et de packs
-│   │   │       └── subscription/       # Souscription aux abonnements mensuels
-│   ├── lib/
-│   │   ├── database.ts                 # Pool de connexion PostgreSQL Supabase (pg) avec Proxy défensif
-│   │   ├── auth.ts                     # Configuration Better Auth serveur et plugins
-│   │   ├── stages-db.ts                # Requêtes SQL directes pour stages, entreprises, candidatures
-│   │   ├── documents-db.ts             # Accès aux tables app_documents et app_document_sections
-│   │   ├── mobile-access.ts            # Middleware de validation session et rate-limiting
-│   │   └── mailer.ts                   # Envoi d'emails transactionnels (Resend)
-│   └── tests/
-│       └── documents.test.mjs          # Tests d'intégration HTTP
-│
-├── recruiter-web/                      # PORTAIL RECRUTEUR B2B & ADMIN (Port 3001)
-│   ├── app/
-│   │   ├── page.tsx                    # Page d'accueil portail / téléchargement APK
-│   │   ├── recruteur/
-│   │   │   └── page.tsx                # Espace Recruteur B2B (Offres, Boosts, CVthèque, KYB)
-│   │   ├── admin/                      # Dashboard Supervision Admin (PDFs, packs, users, stats)
-│   │   ├── documents/[id]/page.tsx     # Éditeur web riche Tiptap
-│   │   └── api/                        # Routes internes et passerelle proxy vers mobile-api
-│   ├── prisma/
-│   │   └── schema.prisma               # Modèles Student, Company, Job, Application
-│   └── lib/
-│       ├── access.ts                   # Contrôle d'accès et guards admin
-│       ├── stages-db.ts                # Requêtes d'accès aux stages côté web
-│       └── supabase-pdf.ts             # Gestionnaire du catalogue PDF
-│
-├── landing-site/                       # SITE VITRINE PUBLIC & MARKETING
-│   └── app/                            # Pages publiques Next.js App Router (tarifs, téléchargement...)
-│
-├── scripts/                            # PIPELINES AUTONOMES & SCRAPING
-│   ├── scrape_flyers_ocr.py            # OCR multimodal Gemini 2.0 pour extraction d'offres depuis flyers
-│   ├── mtn_momo_payment.py             # Script de test et gestion des paiements directs MTN MoMo
-│   ├── migrate-stages-supabase.mjs     # Script d'application du schéma SQL stages dans Supabase
-│   └── test-all-agents-suite.mjs       # Suite de tests d'automatisation
-│
-└── docs/                               # SPÉCIFICATIONS ET SCRIPTS SQL
-    ├── STAGES_SUPABASE.sql             # Définition des tables stage_*
-    └── context.md                      # Historique du cadrage produit
+- 🟡 **Canevas Académiques de Rédaction de Mémoires / Rapports par Université :**
+  - Sélecteur d'établissement (Université de Yaoundé I, Douala, INPHB Abidjan, UCAD Dakar...) appliquant le plan de chapitres officiel de l'université.
+
+---
+
+### 🔴 V2 - Hors Scope MVP (Différé)
+
+- 🔴 **Coach Vocal IA d'Entretien Oral** (Simulateur d'entretien vocal).
+- 🔴 **Portail Recruteur B2B Pay-per-Contact** (Monétisation côté PME/Entreprises).
+- 🔴 **Messagerie de chat interne temps réel** (WhatsApp reste le canal souverain).
+
+---
+
+## 3. Architecture Technique & Ingestion n8n
+
+```mermaid
+flowchart LR
+    subgraph INPUT ["1. Ingestion Offres n8n"]
+        N1["Workflow n8n / OCR Vision"] -->|POST /api/mobile/stages| N2["JSON Schema Formaté"]
+    end
+
+    subgraph BACKEND ["2. Backend Vercel + Supabase"]
+        N2 --> S1["Mobile-API (Next.js/Node)"]
+        S1 --> S2["PostgreSQL / Supabase Storage"]
+    end
+
+    subgraph APP ["3. Mobile Client"]
+        S2 --> A1["Campus 360 App (Expo/RN)"]
+        A1 --> A2["Template CV Officiel PDF"]
+        A1 --> A3["Redirection Natif WhatsApp RH"]
+    end
+```
+
+### JSON Schema d'Ingestion n8n $\rightarrow$ Campus 360 API
+
+```json
+{
+  "title": "Stagiaire Développeur Frontend React",
+  "companyName": "TechNovation Labs",
+  "industry": "Ingénierie & Informatique",
+  "location": "Abidjan, Cocody",
+  "duration": "3 à 6 mois",
+  "contractType": "Stage PFE",
+  "stipend": "80 000 FCFA/mois",
+  "applyMethod": "WHATSAPP",
+  "contactWhatsapp": "+2250708091011",
+  "contactEmail": "recrutement@technovation.ci",
+  "requirements": ["React", "TypeScript", "Git"],
+  "flyerUrl": "https://cdn.campus360.app/flyers/flyer-102.jpg",
+  "source": "SCRAPED"
+}
 ```
 
 ---
 
-### 6.3 Règles de Typage & Conventions Impératives
+## 4. Spécification Détaillée du Template CV Officiel
 
-1. **Typage TypeScript Strict** :
-   - Aucun `any` implicite autorisé.
-   - Types partagés du mobile centralisés dans [`src/types.ts`](file:///F:/mes%20projets/campus%20360/src/types.ts).
-   - Validation systématique des entrées API avec **Zod** (`mobile-api/` et `recruiter-web/`).
-2. **Gestion des Données & Base de Données** :
-   - Accès PostgreSQL direct via driver `pg` sécurisé (`databasePool`).
-   - Transactions SQL explicites (`BEGIN`, `COMMIT`, `ROLLBACK`) et verrouillage `FOR UPDATE` sur les opérations de portefeuille et de débits pour éviter tout double-débit ou race condition.
-   - Les modèles `stage_*` utilisent des UUID générés via `gen_random_uuid()` avec clés étrangères en cascade (`on delete cascade`).
-3. **Sécurité et Authentification** :
-   - Même secret partagé `BETTER_AUTH_SECRET` et même URL de base de données `DATABASE_URL` entre `mobile-api` et `recruiter-web`.
-   - Les sessions Better Auth utilisent un cookie sécurisé en production et un en-tête `Authorization: Bearer <token>` sur le mobile.
-   - Détection automatique de l'adresse IP de développement local dans `src/features/auth/betterAuth.ts` via `Constants.expoConfig?.hostUri`.
-4. **Gestion des Erreurs Normalisée** :
-   - Les endpoints API encapsulent les erreurs dans `try/catch` et renvoient `mobileErrorResponse(error)`.
-   - Classes d'erreurs typées : `MobileApiError` (avec code de statut HTTP dédié) et `RateLimitError` (HTTP 429).
-5. **Design System Mobile** :
-   - Utilisation exclusive des tokens de `src/theme/stitch.ts`.
-   - Interdiction formelle du style "glassmorphism" dépassé, des ombres lourdes ou des dégradés saturés hors du gradient signature de marque (`brandGradient`).
-   - Typographie éditoriale : Serif pour les affichages littéraires, Outfit pour les titres modernes, Inter pour le corps de texte.
+Le moteur de génération PDF (`pdfExportService.ts` / `expo-print`) respectera rigoureusement la maquette visuelle suivante :
 
----
+```
+===================================================================
+NOM Prénom (ex: KAMENI Dave Lionel)                [ PHOTO ]
+Intitulé du poste (ex: Développeur Web Stagiaire)
+-------------------------------------------------------------------
+Détails personnels
+-------------------------------------------------------------------
+Nom : KAMENI                     Adresse e-mail : kamenidave@gmail.com
+Prénom : Dave Lionel             Numéro de téléphone : 672364124
+Nationalité : Camerounaise       Adresse : Biyem-Assi, Yaoundé
+Âge : 22 ans
 
-## 7. Journal d'Exécution & Refonte UI (APEX)
+Expérience professionnelle
+-------------------------------------------------------------------
+Stagiaire
+CDA Data Systems, Yaoundé                   Mai 2019 - Septembre 2022
+• Analyser les difficultés rencontrées par les utilisateurs...
+• Programmer l'interface en conformité avec les spécificités...
 
-### 7.1 Refonte Épurée de la Page d'Accueil (`HomeScreen.tsx`)
-- **Objectif** : Éliminer la surcharge cognitive, recentrer l'expérience sur **une seule offre en vedette** ("Ton meilleur match du jour") et rendre la candidature assistée par IA accessible dès le premier écran sans friction.
-- **Modifications appliquées** :
-  - **En-tête minimaliste** : Salutation dynamique, avatar avec initiales, filière universitaire de l'étudiant, et indicateur de jetons IA disponibles.
-  - **Carte héroïque "Meilleur Match"** : Titre du poste, entreprise certifiée, localisation, durée, indemnité mensuelle, score de match (`% Match ✨`) calculé selon le profil, et badges de compétences clés.
-  - **CTA IA 1-Clic (`AiApplyModal`)** : Bouton d'action signature `[ ⚡ Postuler avec l'IA (1-Clic) ]` câblé directement sur l'offre affichée. Ouvre la modal de génération instantanée de CV et de lettre de motivation adaptés à l'offre.
-  - **Statut de candidature en cours** : Bannière sobre alertant l'étudiant de l'état de sa dernière candidature si active.
-  - **Accès secondaire épuré** : Liens discrets vers le catalogue complet des stages, l'Atelier de Rédaction et le Hub Académique.
-  - **Éléments supprimés** : Suppression complète de la fausse carte bancaire violette, de la grille 2x2 redondante avec la barre de navigation, et de la liste de relevés de transactions.
-- **Passage de props (`src/AppShell.tsx`)** : Injection du profil complet de l'étudiant (`studentProfile`) dans `HomeScreen` pour alimenter le matching et l'IA.
+Formation
+-------------------------------------------------------------------
+Ingénieur en Génie Informatique                         2014 - 2016
+École Nationale Supérieure Polytechnique, Yaoundé
 
-### 7.3 Refonte Glassmorphic du Dashboard & Profil (Maquette Complète)
-- **Objectif** : Aligner à 100% l'expérience visuelle sur la nouvelle maquette de référence mobile (Dashboard 2x2 et Écran Profil).
-- **Modifications appliquées** :
-  - **Composant `DashboardGrid` & `DashboardHubCard` (`src/ui/GlassComponents.tsx`)** :
-    - 4 grandes cartes blanches arrondies avec icônes 3D (`Postuler IA`, `Mes Candidatures`, `Atelier Rédaction`, `Stages & Favoris`), titres serif, sous-titres descriptifs et boutons flèches `→`.
-    - Intégré directement dans `HomeScreen.tsx` et disponible en vue dédiée `DashboardScreen.tsx`.
-  - **Barre de Navigation Flottante `BottomNav` (`src/ui/GlassComponents.tsx`)** :
-    - Pilule frosted glass flottante avec ombre douce.
-    - L'onglet actif se transforme en capsule noire/anthracite (`#111827`) avec icône et libellé blancs (`[ 🏠 Accueil ]` / `[ 👤 Profil ]`).
-  - **Harmonisation Charte Graphique Violette (Home, Profil, Dashboard & BottomNav)** :
-    - **Accueil (`src/ui/screens/HomeScreen.tsx`)** : Retrait des 4 tuiles blanches intrusives. L'accueil retrouve son flux dark violet fluide et captivant (En-tête de localisation ➔ Barre de recherche arrondie ➔ Hero banner ➔ Filières populaires en tuiles douces ➔ Offres recommandées ➔ Réassurance).
-    - **Écran Profil Violet Obsidienne (`src/ui/screens/ProfileScreen.tsx`)** : 100% aligné sur la charte graphique violette : fond sombre `#090714`, halo concentrique violet lumineux `#8B5CF6`, carte en verre obsidienne `#131024`, badge `👑 Premium` ambre/violet, 3 pilules statistiques en verre sombre, bannière de recharge en dégradé royal violet et menu aux chevrons lavande.
-    - **Dashboard Hub (`src/ui/screens/DashboardScreen.tsx` & `DashboardHubCard`)** : Conversion des 4 tuiles 2x2 et des en-têtes vers le thème dark violet avec bordures douces et typographies blanches.
-    - **Barre de Navigation Flottante (`BottomNav`)** : Fond verre sombre `rgba(13, 10, 28, 0.94)`, bordure violette subtile, capsule active en violet royal électrique `#7C3AED` avec icône et libellé blancs, et icônes inactives discrètes en `#94A3B8`.
+Compétences
+-------------------------------------------------------------------
+Compétences professionnelles :
+• Tests logiciels et débogage
+• Resolution de problèmes / Esprit critique
 
----
+Habilités personnelles et relationnelles :
+assidu, attentif, autonome, compréhensif, conciliant, consciencieux
 
-## 8. Preuves de Validation Mécanique & Visuelle (/test-and-verify)
+Maîtrise des logiciels :
+• Suite Office (Word, Excel, PowerPoint), Oracle, Python, Java, SQL
 
-- **Compilation TypeScript Strict** :
-  - Commande : `node --stack_size=8192 node_modules/typescript/bin/tsc --noEmit`
-  - Résultat : **0 erreur** (Code retour 0).
-- **Serveurs de Développement** :
-  - Expo Web : Actif sur `http://localhost:8081` (Background Task `task-418`).
-  - Next.js Mobile API : Actif sur `http://localhost:3002` (Background Task `task-416`).
-- **Preuves Visuelles Réelles (Playwright)** :
-  - Script : `scripts/verify_dashboard_profile.js`
-  - Capture 1 : [`.agent/screenshots/home_verified.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/home_verified.png) — Accueil épuré sans éléments blancs, flux continu dark violet et BottomNav en pilule active violette.
-  - Capture 2 : [`.agent/screenshots/profile_verified.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/profile_verified.png) — Écran Profil complet avec halo violet lumineux, 3 stats pills sombres, bannière royal violet et menu chevrons.
-- **Verdict de conformité** : **VERIFIED** (100% conforme à la charte graphique violette Campus 360).
+Langues
+-------------------------------------------------------------------
+Français : expérimenté
+Anglais : élémentaire
 
-### Certification : Duo Agents IA (Matcher & Rédacteur) — Trouver un Stage 100% Opérationnel
-- **Date & Heure :** 12 Septembre 2026
-- **Verdict :** 🟢 **`VERIFIED`**
-- **Preuve CLI :** Compilation stricte TypeScript (`tsc --noEmit`) validée avec **code retour 0** (0 erreur sur l'ensemble du projet).
-- **Parcours Testé de Bout en Bout (Playwright) :**
-  1. Affichage du flux Stages avec scores de match dynamiques et filtres (`stages_feed_verified.png`).
-  2. Micro-modal de profilage express sans friction pour étudiants Licence (`stage_express_profile.png`).
-  3. Moteur d'analyse Agent Matcher (score 88%, points de concordance, conseil stratégique) (`stage_ai_diag_tab.png`).
-  4. Agent Rédacteur générant la lettre ciblée mot pour mot et le CV optimisé (`stage_ai_flow_verified.png`, `stage_ai_cv_tab.png`).
-  5. Exportation immédiate : Copie WhatsApp, Impression/Export PDF.
-  6. Transmission multi-canale (`In-App Direct`, `WhatsApp RH`, `Email RH`) avec confirmation et transition de statut (`stage_ai_sent_step.png`).
-  7. Enregistrement automatique dans la Timeline avec coupon perforé et bouton de relance poli J+7 (`stage_timeline_verified.png`).
-- **Preuves Visuelles Réelles (Screenshots Browser) :**
-  - Flux d'offres : [`.agent/screenshots/stages_feed_verified.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/stages_feed_verified.png)
-  - Profilage Express : [`.agent/screenshots/stage_express_profile.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/stage_express_profile.png)
-  - Lettre Ciblée IA : [`.agent/screenshots/stage_ai_flow_verified.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/stage_ai_flow_verified.png)
-  - Diagnostic Matcher IA : [`.agent/screenshots/stage_ai_diag_tab.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/stage_ai_diag_tab.png)
-  - CV Synthétique IA : [`.agent/screenshots/stage_ai_cv_tab.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/stage_ai_cv_tab.png)
-  - Candidature Confirmée : [`.agent/screenshots/stage_ai_sent_step.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/stage_ai_sent_step.png)
-  - Timeline & Relance J+7 : [`.agent/screenshots/stage_timeline_verified.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/stage_timeline_verified.png)
-- **Vérification UI :** Rendu confirmé sans erreur console par l'agent Playwright sur viewport mobile (414x896). Charte violet obsidienne `#090714` et `#131024` respectée à 100%.
-
-### Certification : Refonte Anti-Saturation IA (Direction Artistique Sobre & Crédible)
-- **Date & Heure :** 18 Septembre 2026
-- **Verdict :** 🟢 **`VERIFIED`**
-- **Preuve CLI :** Compilation stricte TypeScript (`tsc --noEmit`) validée avec **0 erreur** (Code retour 0).
-- **Règles Anti-Saturation Contrôlées & Validées :**
-  1. **Couleur & Contraste :** Accent unique violet `#7C3AED`, 1 seul CTA principal par écran, fonds neutres obsidienne `#090714` / `#120E22`, bordures ultra-fines de 0.5px (`rgba(255,255,255,0.08)`), suppression totale des dégradés saturés et des ombres lourdes.
-  2. **Badges & Icônes :** Suppression de tous les sparkles décoratifs, 1 seul badge fonctionnel par carte (`Stage PFE`, `Premier Emploi` ou `Urgent`), vert réservé exclusivement au statut "Rémunéré" et orange/rouge à l'urgence réelle.
-  3. **Score de Correspondance :** Conversion des pastilles néon en discrète mention textuelle de métadonnées (`"{ville} · {durée} · {score}% de correspondance"`).
-  4. **Typographie & Composants :** Deux graisses max (regular et medium), suppression des faux ratings (`4.9 (38)`), tags de compétences en contour simple fin (0.5px) sans fond plein, CTA direct "Postuler".
-  5. **Dossier de Candidature :** Modale apaisée avec onglets sobres (`Lettre`, `CV`, `Correspondance`), reformulation sans artifice (`Plus formel`, `Plus concis`, `Compétences clés`), et canaux d'envoi limpides (`In-App`, `WhatsApp RH`, `Email RH`).
-  6. **Suivi & Relance :** Ticket timeline épuré sans émoticônes superflus, bouton sobre `[ 💬 Relancer (J+7) ]`.
-- **Preuves Visuelles Réelles (Screenshots Playwright) :**
-  - Accueil Sobre : [`.agent/screenshots/home_anti_saturation.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/home_anti_saturation.png)
-  - Flux d'Offres Épuré : [`.agent/screenshots/stages_anti_saturation.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/stages_anti_saturation.png)
-  - Dossier IA (Lettre) : [`.agent/screenshots/apply_modal_letter_tab.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/apply_modal_letter_tab.png)
-  - Diagnostic Matcher Sobre : [`.agent/screenshots/apply_modal_match_tab.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/apply_modal_match_tab.png)
-  - CV Structuré : [`.agent/screenshots/apply_modal_cv_tab.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/apply_modal_cv_tab.png)
-  - Confirmation d'Envoi : [`.agent/screenshots/apply_modal_sent.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/apply_modal_sent.png)
-  - Suivi des Candidatures & Relance J+7 : [`.agent/screenshots/timeline_anti_saturation.png`](file:///f:/mes%20projets/campus%20360/.agent/screenshots/timeline_anti_saturation.png)
+Autres informations importantes
+-------------------------------------------------------------------
+Loisirs : sport, lecture
+===================================================================
+```
 
 ---
 
-## 10. Historique des Déploiements & Releases (/deploy-and-push)
+## 5. Matrice des Risques & Mitigations
 
-### Release — 18 Septembre 2026 — `d5aadc4` : fix(recruiter-web): set dynamic = 'force-dynamic' on admin pages to skip prerender in CI
-- **Commit Git :** `d5aadc4` — `fix(recruiter-web): set dynamic = 'force-dynamic' on admin pages to skip prerender in CI`
-- **Commits associés poussés :**
-  - `3bfb352` — `build(css): compile tailwind styles for production deployment`
-  - `6f2aec0` — `fix(recruiter-web): add postcss dependency and disable eslint prompt in build`
-- **Statut Local Validé (Pre-Flight Checks) :**
-  - Expo Root Mobile App : `tsc --noEmit` -> 0 erreur TypeScript.
-  - `mobile-api` : `npm run typecheck` (0 erreur), `npm test` (10/10 tests unitaires passés avec succès), `npm run build` réussi.
-  - `recruiter-web` : `npm run css:build` + `next build` -> 34/34 pages compilées avec succès (0 erreur).
-- **Workflow GitHub Actions :**
-  - Workflow : `Deploy Backend to Vercel` (`.github/workflows/vercel-backend.yml`)
-  - Run ID : `35402083759` (Job ID : `105783961611`)
-  - Résultat : 🟢 `success` (12/12 steps terminées avec succès : Set up, Checkout, Setup Node.js 20, Install dependencies, Verify types and build, Install Vercel CLI, Pull Vercel Environment, Build Vercel App, Deploy to Vercel, Post hooks).
-- **Secrets GitHub Synchronisés :**
-  - Mise à niveau sécurisée des secrets du dépôt via GitHub API (`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `VERCEL_MOBILE_API_PROJECT_ID`, `VERCEL_LANDING_PROJECT_ID`).
-- **Déploiements Vercel Production :**
-  - **Recruiter Web / Admin (`campus-360-hi97`) :**
-    - Project ID : `prj_lCGtzfBeYp0nU7sRe8LczQsIQb6b`
-    - Déploiement UID : `dpl_77kXtVAUyc2mtvhCUwVnHvDqpBbB`
-    - Statut : 🟢 `READY` (Promoted)
-    - URL de production : `https://admin.campus360b.site`
-    - URL Vercel : `https://campus-360-hi97-jzyc5617c-bimai-s-projects.vercel.app`
-  - **Mobile API (`mobile-api`) :**
-    - Project ID : `prj_eSpHoUyIyiOy8tWyE4IruJS5TyWs`
-    - Déploiement UID : `dpl_82t2d8GgCg41WzTqQ96j7u8e4Kwh`
-    - Statut : 🟢 `READY` (Promoted)
-    - URL de production : `https://api.campus360b.site`
-    - URL Vercel : `https://mobile-api-iota-three.vercel.app`
-  - **Web App / Root (`campus-360`) :**
-    - Project ID : `prj_XBhaiwqCIBnTAlntOGKkSkhpESFS`
-    - Déploiement UID : `dpl_9AKMd9i2jY8GK6ZaJGyb6XnW416Z`
-    - Statut : 🟢 `READY` (Promoted)
-    - URL de production : `https://campus-360-two.vercel.app`
-- **Validation Live (Healthchecks HTTP 200) :**
-  - `https://admin.campus360b.site/api/health` -> HTTP 200 OK (`{"status":"ok","timestamp":"2026-09-18T22:49:32.229Z"}`)
-  - `https://api.campus360b.site/api/health` -> HTTP 200 OK (`{"status":"ok","timestamp":"2026-09-18T22:49:47.642Z"}`)
-  - `https://mobile-api-iota-three.vercel.app/api/health` -> HTTP 200 OK (`{"status":"ok"}`)
+| Risque | Niveau | Mitigation |
+| :--- | :--- | :--- |
+| **Bannissement WhatsApp** | 🔴 Élevé si automatisé | 🟢 **Mitigation :** Aucun bot auto. L'étudiant envoie lui-même le message via son propre WhatsApp natif en 1 clic. |
+| **Paiement Mobile Money échoué** | 🟡 Moyen | 🟢 **Mitigation :** Intégration CinetPay / Notch Pay avec fallback SMS et vérification automatique du statut par Webhook. |
+| **Manque d'offres dans une filière** | 🟡 Moyen | 🟢 **Mitigation :** Pipeline n8n scannant quotidiennement les groupes Facebook et LinkedIn emploi Afrique. |
+
+---
+
+## 6. Prochaine Étape Opérationnelle
+
+Ce cadrage est **100% validé et verrouillé**. Le fichier `contexte.md` sert de boussole définitive.
+
+Les prochaines commandes disponibles pour poursuivre sont :
+- `/plan-task` : Découpage séquentiel des tâches atomiques de développement.
+- `/execute` : Mise en œuvre technique du code.
+
+---
+
+## 7. Journal d'Implémentation & Statut Réel
+
+- **[Tâche 8.1 à 8.4 Validées — Template CV Officiel]** : `src/types.ts`, `src/features/stages/pdfExportService.ts`, `src/features/stages/AiApplyModal.tsx` — Validation CLI : `npm run typecheck` (Code 0), `node scripts/test-cv-template.mjs` (Code 0) — Preuve Browser : `.agent/screenshots/official_cv_template_verified.png`.
+- **[Tâche 9.1 à 9.3 Validées — Pipeline d'Ingestion n8n]** : `mobile-api/app/api/mobile/stages/ingest/route.ts`, `mobile-api/lib/stages-db.ts`, `scripts/n8n/stages_ocr_ingestion_workflow.json`, `docs/N8N_PIPELINE.md` — Validation CLI : `tsc --noEmit` backend (Code 0), `node scripts/test-stage-ingest.mjs` (Code 0) — Sécurité : Clé d'API `X-N8N-API-KEY` obligatoire & sanitization Zod stricte.
+- **[Tâche 10.1 à 10.3 Validées — Monétisation Mobile Money]** : `mobile-api/app/api/mobile/payments/initiate/route.ts`, `mobile-api/app/api/mobile/payments/webhook/route.ts`, `mobile-api/lib/payments.ts`, `src/features/wallet/PaymentModal.tsx`, `src/features/wallet/walletApi.ts` — Validation CLI : `npm run typecheck` (Code 0), `node scripts/test-payments-flow.mjs` (Code 0) — Preuve Browser : `.agent/screenshots/payment_modal_verified.png`.
+- **[Tâche 11.1 Validée — Onboarding Express 30s]** : `src/features/stages/StudentProfileExpressModal.tsx`, `src/ui/screens/OnboardingScreen.tsx`, `src/AppShell.tsx` — Validation CLI : `node scripts/test-modules-11-12.mjs` (Code 0) — Preuve Browser : `.agent/screenshots/04_onboarding_express_verified.png`.
+- **[Tâche 12.1 Validée — Suivi & Relance J+7]** : `src/features/stages/stagesApi.ts`, `src/ui/screens/ApplicationsTimelineScreen.tsx` — Validation CLI : `node scripts/test-modules-11-12.mjs` (Code 0) — Preuve Browser : `.agent/screenshots/03_timeline_j7_relance_verified.png`.
+- **[Tâche 13.1 & 13.2 Validées — Certification E2E Playwright & DevSecOps]** : `scripts/verify_mvp_complete_flow.js` — Validation E2E complète (Code 0) — TypeScript strict sans erreur sur app mobile & backend (0 erreur).
+
+---
+
+## 8. Certifications, Cybersécurité & Vérifications Visuelles (Agent Browser)
+
+### Certification : Template CV Officiel (Module 8)
+- **Date & Heure :** 2026-09-29T01:45:00+02:00
+- **Verdict :** 🟢 `VERIFIED`
+- **Preuve CLI :** Tests unitaires & CyberSec validés avec code 0 (`npm run typecheck` + `scripts/test-cv-template.mjs`).
+- **Preuve Visuelle (Browser) :** `![Template CV Officiel Vérifié](.agent/screenshots/official_cv_template_verified.png)`
+- **Vérification UI :** Rendu confirmé sans erreur console par l'agent browser E2E Playwright. Disposition stricte en 2 colonnes avec filet bleu officiel `#005691`, cadre photo initiale, dates alignées à droite et 3 sous-blocs de compétences fidèles au gabarit KAMENI Dave Lionel.
+
+### Certification : Pipeline n8n & Ingestion d'Offres (Module 9)
+- **Date & Heure :** 2026-09-29T02:00:00+02:00
+- **Verdict :** 🟢 `VERIFIED`
+- **Preuve CLI :** `node scripts/test-stage-ingest.mjs` (6/6 tests réussis), compilation backend Next.js `mobile-api` sans erreur.
+- **Sécurité DevSecOps :** Rejet systématique des annonces sans contact WhatsApp/Email (`HTTP 400`), authentification stricte via en-tête `X-N8N-API-KEY` (`HTTP 401`).
+- **Dédoublonnage :** Transaction SQL PostgreSQL atomique évitant toute duplication d'offre ou d'entreprise.
+
+### Certification : Monétisation Mobile Money Direct (Module 10)
+- **Date & Heure :** 2026-09-29T02:10:00+02:00
+- **Verdict :** 🟢 `VERIFIED`
+- **Preuve CLI :** `node scripts/test-payments-flow.mjs` (4/4 tests réussis), validation signature HMAC SHA-256 avec `timingSafeEqual`.
+- **Preuve Visuelle (Browser) :** `![Modal Recharge Mobile Money](.agent/screenshots/payment_modal_verified.png)`
+- **Vérification UI :** Modal haute fidélité avec Pack Découverte (500 FCFA), Pass Mensuel (2 000 FCFA), sélecteur d'opérateurs MTN MoMo / Orange Money / Wave, et instruction de validation USSD.
+
+### Certification : Onboarding Express 30s (Module 11)
+- **Date & Heure :** 2026-09-29T14:34:00+02:00
+- **Verdict :** 🟢 `VERIFIED`
+- **Preuve CLI :** `node scripts/test-modules-11-12.mjs` (Code 0), `npm run typecheck` (Code 0).
+- **Preuve Visuelle (Browser) :** `![Onboarding Express 30s](.agent/screenshots/04_onboarding_express_verified.png)`
+- **Vérification UI :** Formulaire express en 6 champs (Nom, WhatsApp, Université, Filière, Niveau Licence/Master, Compétences clés en 1-tap) alimentant directement le profil étudiant et le gabarit CV officiel.
+
+### Certification : Suivi des Candidatures & Déclencheur Relance J+7 (Module 12)
+- **Date & Heure :** 2026-09-29T14:34:00+02:00
+- **Verdict :** 🟢 `VERIFIED`
+- **Preuve CLI :** `node scripts/test-modules-11-12.mjs` (Code 0) certifiant la règle métier (`isEligibleForFollowup` pour statut `PENDING` $\ge$ 7j) et la génération de message poli WhatsApp.
+- **Preuve Visuelle (Browser) :** `![Suivi et Relance J+7](.agent/screenshots/03_timeline_j7_relance_verified.png)`
+- **Vérification UI :** Badge urgent `Relance J+7 recommandée (8j sans réponse)`, horodatage de la dernière relance et bouton `💬 Relancer sur WhatsApp (J+7)`.
+
+### Certification : Parcours E2E MVP & Intégration Finale (Module 13)
+- **Date & Heure :** 2026-09-29T14:34:30+02:00
+- **Verdict :** 🟢 `VERIFIED`
+- **Preuve CLI :** `node scripts/verify_mvp_complete_flow.js` (Code 0), `npm run typecheck` sur app mobile (Code 0) et `mobile-api` (Code 0).
+- **Preuves Visuelles (4 Screenshots Certifiés) :**
+  1. `01_stages_feed_verified.png` : Feed avec scores de match et filtres.
+  2. `04_onboarding_express_verified.png` : Saisie profil express 6 champs.
+  3. `02_official_cv_and_letter_verified.png` : Rendu du gabarit officiel CV Dave Lionel Kameni et lettre RH.
+  4. `03_timeline_j7_relance_verified.png` : Suivi timeline avec relance J+7 WhatsApp.
+

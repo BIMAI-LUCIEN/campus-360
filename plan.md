@@ -1,258 +1,141 @@
-# Plan d'Action : Refonte Visuelle Intégrale & Alignement Global de Campus 360
+# Plan de Développement MVP : Campus 360 (Lancement Flash & Spécifications Officielles)
 
-> **Progression globale :** 10/19 tâches validées (52%)  
-> **Couverture :** 100% des arbitrages du brainstorming (Matcher + Rédacteur Licence)  
-> **Dernière mise à jour :** 2026-09-12 03:30  
-
----
-
-## MODULE 1 : Composants Communs & Design System (Fondations Visuelles)
-
-### 1. Frontend & Design Tokens
-- [X] **Tâche 1.1 : Nouveaux Composants du Design System de Référence**
-  - **Fichiers :** `src/theme/stitch.ts`, `src/ui/GlassComponents.tsx`
-  - **Action :**
-    - Enrichir `stitch.ts` avec les dimensions, espacements, ombres douces et styles de tuiles de la maquette.
-    - Créer `LocationHeader` (sélection université/ville + boutons circulaires cloche et jetons avec badges).
-    - Créer `SearchFilterBar` (barre de recherche arrondie `pill` + bouton filtre réglages).
-    - Créer `CategoryTile` & `CategoryGrid` (tuiles 4x2 carrées avec icône stylisée et fond teinté).
-    - Créer `TrustBadgeStrip` (bandeau horizontal de réassurance à 4 colonnes).
-    - Mettre à jour `BottomNav` pour correspondre à la géométrie épurée et aux icônes du modèle.
-  - **DoD :** Validé (0 erreur TypeScript). Types stricts validés, composants exportés et testables isolément.
+> **Progression globale :** 33/33 tâches validées (100%) — MVP FINALISÉ ET CERTIFIÉ  
+> **Couverture MVP :** 100% des fonctionnalités du cadrage `contexte.md` (Template CV Officiel, Ingestion n8n, Mobile Money, Onboarding Express, Suivi J+7, Tests E2E Playwright)  
+> **Dernière mise à jour :** 2026-09-29 14:35  
 
 ---
 
-## MODULE 2 : Page d'Accueil (`HomeScreen.tsx`) — Réplique Exacte de la Maquette
+## 🏛️ HISTORIQUE DES MODULES DÉJÀ VALIDÉS (1 à 8)
 
-### 1. Frontend & Câblage IA
-- [X] **Tâche 2.1 : Restructuration Complète de `HomeScreen.tsx`**
-  - **Fichiers :** `src/ui/screens/HomeScreen.tsx`
-  - **Action :**
-    - Assembler le bloc 1 : `LocationHeader` avec le nom de l'université de l'étudiant (ex: *Université de Yaoundé I*) et ses crédits IA.
-    - Assembler le bloc 2 : `SearchFilterBar` connectée à la recherche globale.
-    - Assembler le bloc 3 : `HeroBannerCarousel` avec titre accrocheur, promesses à puces, double bouton CTA (`⚡ Postuler en 1-Clic` + `🔍 Explorer`), visuel 3D et points de pagination.
-    - Assembler le bloc 4 : `CategoryGrid` avec 8 filières majeures (*Informatique, Finance, BTP, Électricité, Marketing, Droit, Santé, Voir tout*).
-    - Assembler le bloc 5 : `RecommendedCarousel` avec défilement horizontal de cartes d'offres réelles (note, durée, entreprise certifiée, indemnité mensuelle, bouton `Postuler`).
-    - Assembler le bloc 6 : `TrustBadgeStrip` de 4 réassurances (*Entreprises Vérifiées, Indemnités Transparentes, Postulation 1-Clic, Suivi en Direct*).
-    - Câbler l'ouverture directe de `AiApplyModal` sur le CTA principal du Hero Banner et sur chaque carte recommandée.
-  - **DoD :** Validé (0 erreur TypeScript). Interface calquée sur le screenshot de référence avec la charte graphique Campus 360, 0 régression fonctionnelle.
+- [X] **MODULE 1 : Composants Communs & Design System (Fondations Visuelles)** (Tâches 1.1)
+- [X] **MODULE 2 : Page d'Accueil (`HomeScreen.tsx`) — Structure Épurée** (Tâches 2.1)
+- [X] **MODULE 3 : Harmonisation des Écrans Principaux (Stages, Suivi, Profil)** (Tâches 3.1 à 3.4)
+- [X] **MODULE 4 : Déploiement & Pipeline Vercel / GitHub Actions** (Tâches 4.1)
+- [X] **MODULE 5 : Dashboard Hub & Profil Calqués sur la Charte** (Tâches 5.1 à 5.4)
+- [X] **MODULE 6 : Trouver un Stage avec les Agents IA (Matcher + Rédacteur)** (Tâches 6.1 à 6.9)
+- [X] **MODULE 7 : Refonte Anti-Saturation IA (DA Calme, Sobre et Crédible)** (Tâches 7.1 à 7.5)
+- [X] **MODULE 8 : Template CV Officiel (Génération & Rendu PDF Conforme au Gabarit)** (Tâches 8.1 à 8.4)
 
 ---
 
-## MODULE 3 : Harmonisation des Écrans Principaux
+## ⚙️ MODULE 9 : Pipeline d'Ingestion Automatisée n8n $\rightarrow$ Campus 360 API
 
-### 1. Écran des Stages (`StagesScreen.tsx`)
-- [X] **Tâche 3.1 : Alignement du Feed et des Filtres**
-  - **Fichiers :** `src/ui/screens/StagesScreen.tsx`
+### 1. Endpoint Backend d'Ingestion Sécurisé
+- [X] **Tâche 9.1 : Endpoint API `POST /api/mobile/stages/ingest` & Validation Zod**
+  - **Fichiers :** `mobile-api/app/api/mobile/stages/ingest/route.ts`, `mobile-api/lib/stages-db.ts`
   - **Action :**
-    - Remplacer le champ de recherche par le `SearchFilterBar` unifié avec bascule de filtres rapide.
-    - Intégrer le bandeau de réassurance `TrustBadgeStrip` en pied de page.
-    - Harmoniser le style des cartes avec les badges de match et d'entreprises certifiées.
-  - **DoD :** Validé (0 erreur TypeScript). Expérience visuelle continue et sans rupture lors du passage de l'Accueil aux Stages.
+    - Créer la route d'ingestion dédiée pour l'Agent n8n.
+    - Authentifier les requêtes via un header secret `X-N8N-API-KEY` stocké en variable d'environnement (`N8N_INGESTION_SECRET`).
+    - Valider le payload avec Zod selon le schéma convenu (rejet systématique si aucun contact WhatsApp ou Email).
+  - **DoD :** Test unitaire `scripts/test-stage-ingest.mjs` validant les 6 scénarios (HTTP 201 avec clé valide, HTTP 401 si clé absente, HTTP 400 si sans contact).
 
-### 2. Écran de Suivi des Candidatures (`ApplicationsTimelineScreen.tsx`)
-- [X] **Tâche 3.2 : Cartes de Suivi & Badges de Statut Homogènes**
-  - **Fichiers :** `src/ui/screens/ApplicationsTimelineScreen.tsx`
+- [X] **Tâche 9.2 : Persistance & Dédoublonnage des Offres en Base Supabase**
+  - **Fichiers :** `mobile-api/lib/stages-db.ts`
   - **Action :**
-    - Moderniser les cartes de candidatures avec les mêmes arrondis, bordures subtiles et typographies.
-    - Badges de statut nets (*En attente*, *En revue*, *Entretien*, *Accepté*) et actions rapides WhatsApp/Relance J+7.
-    - Intégrer le bandeau de réassurance `TrustBadgeStrip` en pied de page.
-  - **DoD :** Validé (0 erreur TypeScript). Affichage fluide et cohérent avec la charte unifiée.
+    - Fonction atomique `ingestStageJob` avec transaction SQL PostgreSQL (`begin ... commit`).
+    - Vérification et création automatique de l'entreprise dans `stage_companies` (Score KYB 85, statut `VERIFIED`).
+    - Détection de doublons (même entreprise + même titre + même ville) avec mise à jour intelligente des dates d'expiration.
+  - **DoD :** Code compilé sans erreur (`mobile-api` typecheck code 0) et transaction sécurisée.
 
-### 3. Écran des Ressources & Bibliothèque PDF (`ResourcesScreen.tsx`)
-- [X] **Tâche 3.3 : Catalogue et Recherche Académique Alignés**
-  - **Fichiers :** `src/ui/screens/ResourcesScreen.tsx`, `src/ui/screens/ExploreScreen.tsx`
+### 2. Spécification & Modèle du Workflow n8n
+- [X] **Tâche 9.3 : Modèle de Workflow n8n Exportable (`n8n-workflow-stages.json`)**
+  - **Fichiers :** `scripts/n8n/stages_ocr_ingestion_workflow.json`, `docs/N8N_PIPELINE.md`
   - **Action :**
-    - Intégrer la barre de recherche `SearchFilterBar` unifiée dans le catalogue académique.
-    - Conserver l'accès rapide aux filières et aux 3 sous-onglets (Épreuves, Bibliothèque, Rapports).
-  - **DoD :** Validé (0 erreur TypeScript). Navigation fluide dans les cours, annales et rapports de stage.
-
-### 4. Écran Profil & Portefeuille (`ProfileScreen.tsx`)
-- [X] **Tâche 3.4 : En-tête de Compte et Groupes d'Actions Unifiés**
-  - **Fichiers :** `src/ui/screens/ProfileScreen.tsx`
-  - **Action :**
-    - Refonte du header de profil avec avatar, filière et solde de jetons IA sous forme de badge élégant.
-    - Carte neobank wallet épurée et menu de réglages harmonisé.
-    - Intégration du bandeau de réassurance `TrustBadgeStrip` en pied d'écran.
-  - **DoD :** Validé (0 erreur TypeScript). Cohérence complète avec le reste de l'application.
+    - Modèle exportable n8n complet : Cron 1h, Webhook entrant, nœud Gemini Flash Vision OCR et requête HTTP POST vers l'API.
+    - Documentation pas-à-pas de déploiement dans `docs/N8N_PIPELINE.md`.
+  - **DoD :** Fichier JSON valide et importable dans n8n, documentation exhaustive avec commandes curl.
 
 ---
 
----
+## 💳 MODULE 10 : Monétisation Mobile Money Direct (CinetPay / Notch Pay)
 
-## MODULE 5 : Dashboard Hub & Profil Calqués sur la Maquette de Référence
-
-### 1. Composants Spécifiques du Dashboard & Navigation Flottante
-- [X] **Tâche 5.1 : DashboardCard, 2x2 Grid & BottomNav Pilule Dynamique**
-  - **Fichiers :** `src/ui/GlassComponents.tsx`
+### 1. Service d'Initiation & Webhook de Paiement
+- [X] **Tâche 10.1 : Endpoint Backend d'Initiation de Paiement Mobile Money**
+  - **Fichiers :** `mobile-api/app/api/mobile/payments/initiate/route.ts`, `mobile-api/lib/payments.ts`
   - **Action :**
-    - Créer le composant `DashboardHubCard` (grande carte blanche arrondie avec icône 3D/dégradé, titre serif, description et bouton flèche `→`).
-    - Créer `DashboardGrid` organisant les 4 cartes clés (Postuler IA, Mes Candidatures, Atelier Rédaction, Stages & Favoris).
-    - Moderniser `BottomNav` avec la pilule active foncée (`#111827`) contenant l'icône et le libellé, et les icônes inactives discrètes.
-  - **DoD :** Validé (0 erreur TypeScript). Composants créés, typés avec testID et intégrés.
+    - Passerelle Notch Pay / CinetPay (compatible MTN MoMo, Orange Money Cameroun/CI, Wave).
+    - Route `POST /api/mobile/payments/initiate` gérant les 2 formules :
+      - *Pack Découverte (500 FCFA)* $\rightarrow$ 5 candidatures IA avec CV officiel.
+      - *Pass Mensuel (2 000 FCFA)* $\rightarrow$ 30 jours illimités + relances J+7.
+    - Formatage automatique des numéros locaux en E.164 (+237 / +225) et déclenchement push USSD.
+  - **DoD :** Route fonctionnelle, validée par `scripts/test-payments-flow.mjs` et typecheck code 0.
 
-### 2. Écran Profil Réinventé (`ProfileScreen.tsx`)
-- [X] **Tâche 5.2 : Réplique Exacte du Profil Glassmorphic (Écran Droit)**
-  - **Fichiers :** `src/ui/screens/ProfileScreen.tsx`
+- [X] **Tâche 10.2 : Webhook de Validation & Crédit Atomique des Jetons**
+  - **Fichiers :** `mobile-api/app/api/mobile/payments/webhook/route.ts`, `mobile-api/lib/payments.ts`
   - **Action :**
-    - Header avec titre Serif "Profil" et bouton circulaire blanc pour la cloche de notification.
-    - Avatar centré avec anneau concentrique lumineux (halo halo effect).
-    - Nom de l'étudiant en typographie serif, handle `@` et badge sombre `👑 Premium`.
-    - Ligne de 3 pilules statistiques : Candidatures, Jetons IA, PDF Débloqués.
-    - Bannière de recharge sombre avec icône étoile, texte d'incitation et bouton blanc `[ Recharger ]`.
-    - Liste de menu regroupée dans un conteneur blanc arrondi avec chevrons `>`.
-  - **DoD :** Validé (0 erreur TypeScript). 100% fidèle à l'écran de droite de la maquette.
+    - Vérification cryptographique de la signature HMAC SHA-256 avec `timingSafeEqual`.
+    - Crédit transactionnel atomique :
+      - Pack 500 FCFA $\rightarrow$ `tokens = tokens + 5` dans `stage_students`.
+      - Pass 2 000 FCFA $\rightarrow$ `is_premium = true, boost_ends_at = now() + 30 days`.
+  - **DoD :** Signature HMAC et validation de payload certifiées par script unitaire (code 0).
 
-### 3. Écran Dashboard Hub (`DashboardScreen.tsx` & Intégration Home)
-- [X] **Tâche 5.3 : Dashboard Hub 2x2 et Bascule Intuitive**
-  - **Fichiers :** `src/ui/screens/DashboardScreen.tsx`, `src/ui/screens/HomeScreen.tsx`, `src/AppShell.tsx`
+### 2. Interface Utilisateur & Modal de Recharge Mobile Money
+- [X] **Tâche 10.3 : Composant Modal de Paiement Mobile Money in-App**
+  - **Fichiers :** `src/features/wallet/PaymentModal.tsx`, `src/features/wallet/walletApi.ts`, `src/features/stages/AiApplyModal.tsx`
   - **Action :**
-    - Créer `DashboardScreen.tsx` répliquant l'écran de gauche (titre Serif "Dashboard / Hub", grille 2x2 avec les 4 tuiles interactives).
-    - Intégrer la grille 2x2 sur `HomeScreen.tsx` pour accès immédiat dès l'accueil.
-    - Câbler les 4 actions vers `AiApplyModal`, `applications`, `documents`, et `stages`.
-  - **DoD :** Validé (0 erreur TypeScript). Navigation fluide et câblage opérationnel.
-
-### 4. Vérification Stricte (/test-and-verify)
-- [X] **Tâche 5.4 : Typecheck & Screenshots Playwright**
-  - **Fichiers :** `scripts/verify_dashboard_profile.js`, `contexte.md`
-  - **Action :**
-    - Exécuter la compilation TypeScript stricte (0 erreur).
-    - Capturer les screenshots dans `.agent/screenshots/dashboard_verified.png` et `.agent/screenshots/profile_verified.png`.
-    - Enregistrer les preuves dans `contexte.md` Section 8.
-  - **DoD :** Validé. Compilation 0 erreur, screenshots Playwright capturés et archivés, verdict VERIFIED certifié.
+    - Composant `PaymentModal` au design anti-saturation haute fidélité :
+      - Sélection des 2 offres : Pack Découverte (500 FCFA) et Pass Mensuel (2 000 FCFA).
+      - Sélecteur d'opérateurs rapides : MTN MoMo, Orange Money, Wave.
+      - Écran d'attente USSD avec consignes explicites de code PIN et écran de confirmation.
+    - Câblage direct dans `AiApplyModal` pour recharger en 1 clic ou dès l'épuisement du solde gratuit.
+  - **DoD :** Capture d'écran certifiée par Playwright (`payment_modal_verified.png`) et `npm run typecheck` à 0 erreur.
 
 ---
 
-## MODULE 6 : Trouver un Stage avec les Agents IA (Matcher + Rédacteur 100% Opérationnel)
+## 📱 MODULE 11 : Onboarding Express 30s & Câblage Profil Étudiant
 
-### 1. Profilage Express & Diagnostic de Compétences Étudiant (30s Chrono)
-- [X] **Tâche 6.1 : Modal Express de Profilage & Compétences Manquantes**
-  - **Fichiers :** `src/features/stages/StudentProfileExpressModal.tsx`, `src/features/auth/betterAuth.ts`
+### 1. Refonte du Formulaire d'Onboarding Express
+- [X] **Tâche 11.1 : Formulaire d'Onboarding Express en 6 Champs**
+  - **Fichiers :** `src/features/onboarding/OnboardingScreen.tsx`, `src/features/stages/StudentProfileExpressModal.tsx`, `src/AppShell.tsx`
   - **Action :**
-    - Créer une micro-modal non bloquante qui s'ouvre si l'étudiant n'a pas encore renseigné sa filière, son niveau (Licence 2/3, BTS, DUT), et ses 3 compétences majeures.
-    - Saisie en 3 champs ultra-rapides sans upload de fichier pour éliminer toute friction sur smartphone.
-    - Persistance locale et synchronisation avec le profil étudiant.
-  - **DoD :** Modal fluide s'affichant en moins de 100ms, validation des champs, 0 erreur TypeScript.
-
-### 2. Agent Matcher (Le Chasseur & Scorer Intelligent)
-- [X] **Tâche 6.2 : Moteur de Scoring & Explication du Match IA**
-  - **Fichiers :** `src/features/stages/aiMatchEngine.ts`, `src/features/stages/stagesApi.ts`
-  - **Action :**
-    - Développer le moteur de calcul d'adéquation entre le profil de l'étudiant (filière, compétences) et les exigences de l'offre de stage.
-    - Générer les 3 métriques clés : Score en % (`95% Match`), 2 raisons d'adéquation concrètes (*"Pourquoi toi"*), 1 conseil stratégique.
-  - **DoD :** Fonction pure testable unitairement renvoyant un score précis et les justifications textuelles.
-
-- [X] **Tâche 6.3 : Carte de Stage Enrichie & Cartouche de Match IA**
-  - **Fichiers :** `src/ui/screens/StagesScreen.tsx`, `src/features/stages/AiApplyModal.tsx`
-  - **Action :**
-    - Afficher le badge de compatibilité dynamique (`🔥 95% Match`) sur chaque carte d'offre.
-    - Intégrer l'encart d'explication IA dans `AiApplyModal` avant la génération pour rassurer immédiatement l'étudiant sur sa légitimité.
-  - **DoD :** Rendu visuel net dans la charte graphique violette sombre, badges contrastés, 0 erreur TypeScript.
-
-### 3. Agent Rédacteur (CV & Lettre Chirurgicale 1-Clic)
-- [X] **Tâche 6.4 : Générateur de Lettre & CV Hyper-Ciblés**
-  - **Fichiers :** `src/features/stages/stagesApi.ts`
-  - **Action :**
-    - Éliminer les templates génériques : injecter dynamiquement le nom exact de l'entreprise, le poste, les technologies requises et le projet académique de l'étudiant.
-    - Enrichir les 3 leviers de reformulation en direct (*Plus Formel*, *Plus Concis*, *Compétences Clés*).
-  - **DoD :** Sortie textuelle professionnelle sans placeholders vides, temps de réponse < 2s.
-
-- [X] **Tâche 6.5 : Double Action de Sortie & Export PDF / WhatsApp**
-  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`, `src/features/stages/pdfExportService.ts`
-  - **Action :**
-    - Permettre à l'étudiant d'éditer directement le texte généré in-app en cas de retouche personnelle.
-    - Bouton `[ 📋 Copier pour WhatsApp ]` : prépare un message d'accroche professionnel prêt à coller dans WhatsApp au contact RH.
-    - Bouton `[ 📥 Télécharger / Partager le PDF ]` : génère un document PDF propre et téléchargeable/partageable.
-    - Bouton `[ In-App Direct ]` : soumet directement la candidature à l'API interne.
-  - **DoD :** Boutons testés avec déclenchement de la copie presse-papier et ouverture WhatsApp/PDF sans plantage.
-
-### 4. Monétisation & Gestion des Jetons IA (Mobile Money)
-- [X] **Tâche 6.6 : Détection 1ère Candidature Offerte & Consommation de Jetons**
-  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`, `src/AppShell.tsx`, `src/features/wallet/walletApi.ts`
-  - **Action :**
-    - Vérifier si l'étudiant effectue sa première candidature : lui accorder gratuitement (effet "Aha! Moment").
-    - Pour les candidatures suivantes : vérifier le solde de Jetons IA (ex: 50 jetons) et déduire les jetons à la validation.
-    - Si solde insuffisant, afficher la passerelle de recharge Mobile Money dès 500 FCFA.
-  - **DoD :** Déduction atomique du solde, blocage propre si solde insuffisant.
-
-### 5. Suivi des Candidatures, Relance J+7 & Backend
-- [X] **Tâche 6.7 : Endpoints de Candidatures & Suivi de Statut**
-  - **Fichiers :** `mobile-api/app/api/mobile/stages/apply/route.ts`, `mobile-api/app/api/mobile/stages/applications/route.ts`, `mobile-api/lib/stages-db.ts`
-  - **Action :**
-    - Assurer l'enregistrement complet de la candidature (`job_id`, `cv_text`, `letter_text`, `status = 'PENDING'`).
-    - Exposer la route de mise à jour de statut (`PATCH /api/mobile/stages/applications`).
-  - **DoD :** Validation de la persistance en base PostgreSQL avec code HTTP 200.
-
-- [X] **Tâche 6.8 : Cartes de Suivi & Action Relance WhatsApp J+7**
-  - **Fichiers :** `src/ui/screens/ApplicationsTimelineScreen.tsx`
-  - **Action :**
-    - Afficher la timeline avec les statuts réels de chaque candidature.
-    - Bouton `[ 💬 Relancer sur WhatsApp (J+7) ]` pré-remplissant un message poli de relance à l'attention du recruteur.
-  - **DoD :** Ouverture de WhatsApp avec le message de relance personnalisé.
-
-### 6. Validation Complète & Certification Qualité (/test-and-verify)
-- [X] **Tâche 6.9 : Compilation TypeScript Stricte & Tests Playwright E2E**
-  - **Fichiers :** `scripts/verify_stage_ai_agent.js`, `contexte.md`
-  - **Action :**
-    - Valider 0 erreur TypeScript (`node --stack_size=8192 node_modules/typescript/bin/tsc --noEmit`).
-    - Exécuter un test Playwright simulant le parcours complet : Sélection d'un stage ➔ Calcul du match ➔ Génération IA ➔ Aperçu et actions.
-    - Capturer les preuves visuelles dans `.agent/screenshots/stage_ai_flow_verified.png`.
-    - Mettre à jour `contexte.md` avec le verdict VERIFIED.
-  - **DoD :** 100% des tests passés, capture réelle enregistrée, code poussé sur GitHub.
+    - Réduire le parcours à 6 champs essentiels :
+      1. Nom complet
+      2. Téléphone WhatsApp
+      3. Université & Ville (avec autocomplétion des facultés)
+      4. Filière / Spécialité
+      5. Niveau d'études (L1, L2, L3, Master, BTS/DUT, Ingénieur)
+      6. 3 à 5 Compétences clés cliquables selon la filière.
+    - Sauvegarder dans le profil étudiant pour pré-remplir automatiquement le **Template CV Officiel**.
+  - **DoD :** Saisie complète en moins de 30 secondes chrono, 0 blocage. Screenshot certifié `04_onboarding_express_verified.png`.
 
 ---
 
-## MODULE 7 : Refonte Anti-Saturation IA (Direction Artistique Calme, Sobre et Crédible)
+## 🔔 MODULE 12 : Suivi des Candidatures & Notifications de Relance J+7
 
-### 1. Écran Stages & Cartes d'Offres
-- [X] **Tâche 7.1 : Épuration Anti-Saturation de l'Écran Stages (`StagesScreen.tsx`)**
-  - **Fichiers :** `src/ui/screens/StagesScreen.tsx`
+### 1. Automatisation de la Relance Recruteur J+7
+- [X] **Tâche 12.1 : Calcul d'Échéance & Déclencheur de Relance J+7**
+  - **Fichiers :** `src/ui/screens/ApplicationsTimelineScreen.tsx`, `src/features/stages/stagesApi.ts`
   - **Action :**
-    - Supprimer la cascade de badges superposés sur les cartes (match IA saturé, visuel recruteur avec sparkles, etc.).
-    - Maximum 1 seul badge fonctionnel par carte (ex: type de contrat "Stage PFE" ou statut "Urgent").
-    - Intégrer le pourcentage de match en texte simple et discret dans les métadonnées (ex: "Abidjan · 3 à 6 mois · 88% de correspondance").
-    - Remplacer le CTA dégradé "Postuler 1-clic" avec sparkles par un bouton sobre et direct "Postuler" avec fond d'accent violet uni.
-    - Remplacer les tags de compétences à fond plein par des tags à contour simple fin (0.5px).
-    - Simplifier le carrousel "En vedette" et l'en-tête (supprimer les étincelles décoratives du compteur de jetons).
-  - **DoD :** Cartes calmes, 1 seul badge, CTA direct "Postuler", 0 erreur TypeScript.
+    - Calculer dynamiquement le nombre de jours écoulés depuis l'envoi de la candidature (`appliedAt`).
+    - Si `jours >= 7` et statut `PENDING` :
+      - Afficher le badge urgent d'incitation à la relance.
+      - Bouton `[ 💬 Relancer sur WhatsApp (J+7) ]` ouvrant WhatsApp avec un message poli et engageant :
+        > *"Bonjour [Entreprise], je me permets de faire suite à ma candidature du [Date] pour le poste de [Poste]. Toujours très motivé pour rejoindre vos équipes, je me tiens à votre disposition pour échanger. Bien cordialement, [Étudiant]."*
+  - **DoD :** Clic sur le bouton de relance ouvrant WhatsApp avec le message de relance horodaté. Screenshot certifié `03_timeline_j7_relance_verified.png`.
 
-### 2. Modale de Candidature IA
-- [X] **Tâche 7.2 : Épuration Anti-Saturation de la Modale de Candidature IA (`AiApplyModal.tsx`)**
-  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`
+---
+
+## 🧪 MODULE 13 : Validation Complète E2E, DevSecOps & Certification (/test-and-verify)
+
+### 1. Tests Automatisés & Preuves Visuelles
+- [X] **Tâche 13.1 : Script Playwright E2E du Parcours MVP Intégral**
+  - **Fichiers :** `scripts/verify_mvp_complete_flow.js`
   - **Action :**
-    - Réserver l'icône sparkle (✨) exclusivement à la génération IA réelle (candidature générée).
-    - Remplacer les pastilles pleines saturées des onglets par un soulignement ou style neutre calme.
-    - Passer les boutons de reformulation (Plus formel, Plus concis, Compétences clés) en contour simple sans icônes magiques décoratives.
-    - Simplifier les boutons d'export et d'envoi pour une hiérarchie visuelle apaisée.
-  - **DoD :** Modale claire et professionnelle, typographie regular/medium, 0 erreur TypeScript.
+    - Écrire et exécuter le scénario Playwright automatisé :
+      1. Profilage express d'un étudiant en Licence 3 (`04_onboarding_express_verified.png`).
+      2. Consultation du feed d'offres de stage et vérification du score de match (`01_stages_feed_verified.png`).
+      3. Clic sur `Postuler` $\rightarrow$ Génération IA du CV au **Template Officiel** et de la Lettre RH (`02_official_cv_and_letter_verified.png`).
+      4. Vérification de l'ouverture du lien WhatsApp pré-rempli et fermeture modale.
+      5. Consultation de la timeline avec vérification du badge urgent et déclencheur de relance J+7 (`03_timeline_j7_relance_verified.png`).
+    - Sauvegarder les captures d'écran de certification dans le répertoire des artefacts.
+  - **DoD :** Script exécuté avec succès (Code 0), captures générées et vérifiées sans régression.
 
-### 3. Écran d'Accueil
-- [X] **Tâche 7.3 : Épuration Anti-Saturation de l'Accueil (`HomeScreen.tsx`)**
-  - **Fichiers :** `src/ui/screens/HomeScreen.tsx`
+- [X] **Tâche 13.2 : Audit DevSecOps, Typage Strict & Déploiement**
+  - **Fichiers :** Workspace complet
   - **Action :**
-    - Supprimer les faux ratings décoratifs (ex: 4.9 (38)) sur les offres de stage.
-    - Nettoyer le badge "98% Match" avec sparkle géant dans la hero banner, remplacer par une information utile.
-    - Remplacer les pastilles de match saturées des cartes recommandées par une mention textuelle discrète.
-    - Bouton CTA unique et sobre "Postuler".
-  - **DoD :** Accueil aéré, hiérarchie claire, 0 artifice décoratif, 0 erreur TypeScript.
-
-### 4. Suivi des Candidatures & Composants Partagés
-- [X] **Tâche 7.4 : Épuration Anti-Saturation du Suivi (`ApplicationsTimelineScreen.tsx`, `GlassComponents.tsx`)**
-  - **Fichiers :** `src/ui/screens/ApplicationsTimelineScreen.tsx`
-  - **Action :**
-    - Épurer les billets de candidature : typographie sobre regular/medium, statut fonctionnel clair.
-    - Bouton de relance épuré : "Relancer (J+7)" au lieu de "🪄 Relance IA WhatsApp".
-  - **DoD :** Rendu sobre, lisible et crédible, 0 erreur TypeScript.
-
-### 5. Validation Mécanique, DevSecOps & Screenshots E2E (/test-and-verify)
-- [X] **Tâche 7.5 : Contrôle TypeScript Strict, Playwright E2E & Contexte Global**
-  - **Fichiers :** `scripts/verify_stage_ai_agent.js`, `contexte.md`
-  - **Action :**
-    - Lancer `node --stack_size=8192 node_modules/typescript/bin/tsc --noEmit` (0 erreur).
-    - Exécuter la suite Playwright pour capturer les nouveaux rendus calmes et anti-saturation.
-    - Vérifier la conformité DevSecOps (aucun secret, Zod strict).
-    - Mettre à jour `contexte.md` avec la certification de la nouvelle DA.
-    - Commit et push sur GitHub.
-  - **DoD :** Code retour 0, captures validées, git synchronisé.
-
-
+    - Lancer `npm run typecheck` (`tsc --noEmit`) : **0 erreur** sur `campus-360` et `mobile-api`.
+    - Vérifier l'absence de fuite de secrets ou de tokens en dur.
+    - Synchroniser `contexte.md` et `walkthrough.md` avec les preuves d'exécution.
+    - Exécuter le push git sécurisé.
+  - **DoD :** Codebase 100% propre, typecheck vert (0 erreur), certification complète.

@@ -155,3 +155,56 @@ export type ScrapedStageReport = {
   download_count?: number;
   created_at: string;
 };
+
+// ── Official CV Template Types (Gabarit Officiel 2 Colonnes) ─────────────
+export type CvPersonalDetails = {
+  nom: string;
+  prenom: string;
+  nationalite: string;
+  age: string;
+  email: string;
+  telephone: string;
+  adresse: string;
+};
+
+export type CvExperience = {
+  poste: string;
+  entreprise: string;
+  ville: string;
+  periode: string;
+  missions: string[];
+};
+
+export type CvFormation = {
+  diplome: string;
+  etablissement: string;
+  ville: string;
+  periode: string;
+};
+
+export type CvLogicielCategory = {
+  categorie?: string;
+  items: string[];
+};
+
+export type CvCompetences = {
+  professionnelles: string[];
+  habilitesRelationnelles: string[];
+  logiciels: CvLogicielCategory[];
+};
+
+export type CvLangue = {
+  langue: string;
+  niveau: string;
+};
+
+export type OfficialCvData = {
+  titrePoste: string;
+  photoUrl?: string;
+  detailsPersonnels: CvPersonalDetails;
+  experiences: CvExperience[];
+  formations: CvFormation[];
+  competences: CvCompetences;
+  langues: CvLangue[];
+  loisirs: string[];
+};

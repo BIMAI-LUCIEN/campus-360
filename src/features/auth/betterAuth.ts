@@ -14,6 +14,12 @@ export type StudentSession = {
     email?: string;
     name?: string;
     role?: string;
+    phone?: string;
+    whatsappPhone?: string;
+    university?: string;
+    faculty?: string;
+    level?: string;
+    skills?: string[];
   };
 };
 

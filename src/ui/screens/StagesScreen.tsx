@@ -14,32 +14,20 @@ import {
   Platform,
 } from 'react-native';
 import {
-  Search,
-  Sparkles,
   MapPin,
   Clock,
   Coins,
   Building2,
   CheckCircle2,
-  ChevronRight,
-  Flame,
-  Filter,
-  Share2,
-  Play,
-  Trophy,
-  Video,
   X,
   Briefcase,
-  Layers,
-  ArrowUpRight,
-  Check,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { StageJob } from '../../types';
 import { fetchStageJobs } from '../../features/stages/stagesApi';
 import { AiApplyModal } from '../../features/stages/AiApplyModal';
 import { analyzeJobMatch } from '../../features/stages/aiMatchEngine';
-import { SearchFilterBar, TrustBadgeStrip } from '../GlassComponents';
+import { SearchFilterBar } from '../GlassComponents';
 
 interface StagesScreenProps {
   studentProfile: {
@@ -163,23 +151,15 @@ export function StagesScreen({
 
   return (
     <View style={styles.container}>
-      {/* Background ambient glow */}
-      <View style={styles.glowTop} />
-      <View style={styles.glowBottom} />
-
       {/* ── Search & Header Bar ──────────────────────────────────── */}
       <View style={styles.header}>
         <View style={styles.greetingRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.greetingTitle}>Stages &amp; Emplois</Text>
             <Text style={styles.greetingSubtitle} numberOfLines={1}>
-              Matching intelligent pour :{' '}
-              <Text style={styles.majorHighlight}>{studentProfile.major || 'Étudiant'}</Text>
+              Opportunités adaptées à votre profil ({studentProfile.major || 'Étudiant'})
             </Text>
           </View>
-          <Pressable style={styles.tokensPill} onPress={onOpenWallet}>
-            <Text style={styles.tokensText}>{studentProfile.tokens ?? 1} Jetons</Text>
-          </Pressable>
         </View>
 
         {/* Search Input */}
@@ -270,63 +250,7 @@ export function StagesScreen({
           <Text style={styles.resultsCountText}>
             {displayedJobs.length} opportunité{displayedJobs.length > 1 ? 's' : ''} disponible{displayedJobs.length > 1 ? 's' : ''}
           </Text>
-          <View style={styles.verifiedBadge}>
-            <CheckCircle2 size={12} color="#34D399" />
-            <Text style={styles.verifiedBadgeText}>Entreprises Vérifiées KYB</Text>
-          </View>
         </View>
-
-        {/* ── Featured Popular Carousel (Inspired by Image 1) ────────────────── */}
-        {!loading && jobs.length > 0 && !searchQuery && activeSector === 'Tous' && (
-          <View style={styles.featuredSection}>
-            <View style={styles.featuredHeaderRow}>
-              <Text style={styles.featuredSectionTitle}>En vedette &amp; Populaires</Text>
-              <Pressable onPress={() => setShowTopThreeOnly(!showTopThreeOnly)}>
-                <Text style={styles.seeAllText}>{showTopThreeOnly ? 'Voir tout' : 'Top Matches'}</Text>
-              </Pressable>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.featuredScrollContent}
-            >
-              {enrichedJobs.slice(0, 5).map((featuredJob) => {
-                const bannerUri =
-                  featuredJob.flyerUrl ||
-                  DEFAULT_BANNERS[featuredJob.company?.industry || 'default'] ||
-                  DEFAULT_BANNERS.default;
-                return (
-                  <Pressable
-                    key={`featured-${featuredJob.id}`}
-                    style={styles.featuredCard}
-                    onPress={() => setSelectedDetailJob(featuredJob)}
-                  >
-                    <Image source={{ uri: bannerUri }} style={styles.featuredCardImg} resizeMode="cover" />
-                    <LinearGradient
-                      colors={['transparent', 'rgba(9, 7, 20, 0.75)', '#090714']}
-                      style={styles.featuredGradient}
-                    >
-                      <View style={styles.featuredBadge}>
-                        <Text style={styles.featuredBadgeText}>
-                          {featuredJob.contractType || 'Stage'}
-                        </Text>
-                      </View>
-                      <Text style={styles.featuredJobTitle} numberOfLines={1}>
-                        {featuredJob.title}
-                      </Text>
-                      <Text style={styles.featuredCompanyText} numberOfLines={1}>
-                        {featuredJob.company?.name} · {featuredJob.location || 'Abidjan'} · {featuredJob.matchScore || 92}% de correspondance
-                      </Text>
-                      <Text style={styles.featuredStipendText}>
-                        {featuredJob.stipend ? featuredJob.stipend.replace(/\(.*\)/, '').trim() : 'Gratification'}
-                      </Text>
-                    </LinearGradient>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
 
         {loading ? (
           <View style={styles.loadingBox}>
@@ -459,9 +383,12 @@ export function StagesScreen({
                     </View>
 
                     <Pressable
+                      testID={`btn-postuler-${job.id}`}
                       style={styles.applyBtn}
                       onPress={(e) => {
-                        e.stopPropagation();
+                        if (e && typeof e.stopPropagation === 'function') {
+                          e.stopPropagation();
+                        }
                         setApplyingJob(job);
                       }}
                     >
@@ -473,7 +400,6 @@ export function StagesScreen({
             );
           })
         )}
-        <TrustBadgeStrip style={{ marginTop: 16, marginBottom: 32 }} />
       </ScrollView>
 
       {/* ── Full Job Detail Modal ─────────────────────────────────── */}

@@ -23,6 +23,8 @@ import {
   Plus,
   Compass,
   Target,
+  User,
+  Phone,
 } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
@@ -209,7 +211,10 @@ export const GENERAL_SKILLS = [
 
 export interface OnboardingScreenProps {
   initialName?: string;
+  initialPhone?: string;
   onCompleteOnboarding: (data: {
+    fullName?: string;
+    phoneWhatsapp?: string;
     university: string;
     major: string;
     level: string;
@@ -220,12 +225,15 @@ export interface OnboardingScreenProps {
 
 export function OnboardingScreen({
   initialName = 'Étudiant',
+  initialPhone = '',
   onCompleteOnboarding,
   onSkip,
 }: OnboardingScreenProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
-  // Form states
+  // Form states (6 champs essentiels)
+  const [fullName, setFullName] = useState(initialName === 'Étudiant' ? '' : initialName);
+  const [phoneWhatsapp, setPhoneWhatsapp] = useState(initialPhone);
   const [university, setUniversity] = useState('');
   const [selectedDomainId, setSelectedDomainId] = useState<string>('ai-data');
   const [customMajor, setCustomMajor] = useState('');
@@ -273,6 +281,8 @@ export function OnboardingScreen({
     } else if (step === 3) {
       const finalMajor = customMajor.trim() || activeDomain.title;
       onCompleteOnboarding({
+        fullName: fullName.trim() || initialName,
+        phoneWhatsapp: phoneWhatsapp.trim(),
         university: university.trim(),
         major: finalMajor,
         level,
@@ -341,8 +351,31 @@ export function OnboardingScreen({
               </View>
             </View>
 
+            {/* Full Name input */}
+            <Text style={styles.fieldLabel}>1. Ton Nom & Prénom</Text>
+            <TextInput
+              testID="onboarding-input-fullname"
+              style={styles.textInput}
+              placeholder="ex: Dave Lionel Kameni"
+              placeholderTextColor="#64748B"
+              value={fullName}
+              onChangeText={setFullName}
+            />
+
+            {/* WhatsApp input */}
+            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>2. Ton Numéro WhatsApp (Recruteurs & Alertes)</Text>
+            <TextInput
+              testID="onboarding-input-whatsapp"
+              style={styles.textInput}
+              placeholder="ex: +237 690 00 00 00"
+              placeholderTextColor="#64748B"
+              value={phoneWhatsapp}
+              onChangeText={setPhoneWhatsapp}
+              keyboardType="phone-pad"
+            />
+
             {/* University input */}
-            <Text style={styles.fieldLabel}>Ton Université ou Établissement</Text>
+            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>3. Ton Université ou Établissement</Text>
             <TextInput
               style={styles.textInput}
               placeholder="ex: INP-HB, Université Félix Houphouët-Boigny..."

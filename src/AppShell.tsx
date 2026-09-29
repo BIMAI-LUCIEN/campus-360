@@ -337,7 +337,7 @@ export function AppShell() {
   const [notifAlerts, setNotifAlerts] = React.useState(true);
   const [supportModalVisible, setSupportModalVisible] = React.useState(false);
   const [balance, setBalance] = React.useState(0);
-  const [iaCredits, setIaCredits] = React.useState(0);
+  const [iaCredits, setIaCredits] = React.useState(5);
   const [subscriptionTier, setSubscriptionTier] = React.useState<SubscriptionTier>('free');
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] = React.useState<string | null>(null);
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
@@ -502,6 +502,22 @@ export function AppShell() {
         if (storedSession) {
           if (mounted) {
             setStudentSession(storedSession);
+            setStudentProfile({
+              id: storedSession.user.id,
+              name: storedSession.user.name || 'Étudiant',
+              role: storedSession.user.role || 'STUDENT',
+              email: storedSession.user.email,
+              phone: storedSession.user.phone,
+              whatsappPhone: storedSession.user.whatsappPhone,
+              university: storedSession.user.university,
+              faculty: storedSession.user.faculty,
+              level: storedSession.user.level,
+              skills: storedSession.user.skills,
+            });
+            if (storedSession.user.skills && storedSession.user.skills.length > 0) {
+              setIsOnboardingCompleted(true);
+              setOnboardingVisible(false);
+            }
             setHasSeenOnboarding(true);
           }
           await syncStudentAccount(storedSession);
@@ -655,6 +671,8 @@ export function AppShell() {
           date: new Date(row.created_at).toLocaleDateString('fr-CM', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
         })),
       );
+    } catch (err) {
+      console.warn('[AppShell] syncStudentAccount offline fallback:', err);
     } finally { setSyncingAccount(false); }
   };
 
@@ -1110,6 +1128,9 @@ export function AppShell() {
                   phone: '',
                   whatsappPhone: '',
                 }),
+                name: onboardingData.fullName || studentProfile?.name || studentSession.user.name || 'Étudiant',
+                phone: onboardingData.phoneWhatsapp || studentProfile?.phone || '',
+                whatsappPhone: onboardingData.phoneWhatsapp || studentProfile?.whatsappPhone || '',
                 university: onboardingData.university,
                 faculty: onboardingData.major,
                 level: onboardingData.level,
@@ -1163,10 +1184,10 @@ export function AppShell() {
                     fullName: studentProfile?.name || 'Étudiant',
                     email: studentProfile?.email || 'etudiant@campus360.app',
                     phoneWhatsapp: studentProfile?.whatsappPhone || studentProfile?.phone,
-                    major: studentProfile?.faculty || studentProfile?.university || 'Informatique & Télécoms',
+                    major: studentProfile?.faculty || '',
                     educationLevel: studentProfile?.level || 'Licence 3',
-                    skills: (studentProfile?.skills && studentProfile.skills.length > 0) ? studentProfile.skills : ['React', 'TypeScript', 'Node.js'],
-                    tokens: iaCredits > 0 ? iaCredits : 2,
+                    skills: studentProfile?.skills ?? [],
+                    tokens: iaCredits,
                   }}
                   onOpenWallet={() => openSection('account')}
                 />

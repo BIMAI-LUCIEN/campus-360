@@ -19,23 +19,16 @@ import {
   MessageSquare,
   RefreshCw,
   Shield,
-  Sparkles,
-  Star,
   TrendingUp,
   type LucideIcon,
 } from 'lucide-react-native';
-import {
-  GlassCard,
-  TransactionRow,
-  TrustBadgeStrip,
-} from '../GlassComponents';
+import { TransactionRow } from '../GlassComponents';
 import type { StudentProfile } from '../../features/auth/betterAuth';
 import type { Transaction } from '../../types';
 import { getSubscriptionPlan, type SubscriptionTier } from '../../features/subscriptions/plans';
 import {
   fontFamilies,
   stitchColors,
-  stitchRadius,
   stitchSpacing,
 } from '../../theme/stitch';
 
@@ -82,42 +75,45 @@ interface MenuRow {
   danger?: boolean;
 }
 
-function ProfileMenuList({ rows }: { rows: MenuRow[] }) {
+function MenuCardGroup({ title, rows }: { title: string; rows: MenuRow[] }) {
   return (
-    <View style={styles.menuCard}>
-      {rows.map((row, i) => (
-        <Pressable
-          key={row.key}
-          testID={`menu-${row.key}`}
-          onPress={row.onPress}
-          style={({ pressed }) => [
-            styles.menuItem,
-            i > 0 && styles.menuItemDivider,
-            pressed && { backgroundColor: 'rgba(139, 92, 246, 0.12)' },
-          ]}
-        >
-          <View
-            style={[
-              styles.menuIconCircle,
-              { backgroundColor: row.danger ? 'rgba(239, 68, 68, 0.14)' : row.iconBg },
+    <View style={styles.menuGroup}>
+      <Text style={styles.menuGroupTitle}>{title}</Text>
+      <View style={styles.menuCard}>
+        {rows.map((row, i) => (
+          <Pressable
+            key={row.key}
+            testID={`menu-${row.key}`}
+            onPress={row.onPress}
+            style={({ pressed }) => [
+              styles.menuItem,
+              i > 0 && styles.menuItemDivider,
+              pressed && { backgroundColor: 'rgba(124, 58, 237, 0.08)' },
             ]}
           >
-            <row.Icon
-              size={17}
-              color={row.danger ? '#EF4444' : row.iconColor}
-              strokeWidth={1.9}
+            <View
+              style={[
+                styles.menuIconCircle,
+                { backgroundColor: row.danger ? 'rgba(239, 68, 68, 0.12)' : row.iconBg },
+              ]}
+            >
+              <row.Icon
+                size={16}
+                color={row.danger ? '#EF4444' : row.iconColor}
+                strokeWidth={1.9}
+              />
+            </View>
+            <Text style={[styles.menuItemText, row.danger && { color: '#EF4444' }]}>
+              {row.label}
+            </Text>
+            <ChevronRight
+              size={16}
+              color={row.danger ? '#EF4444' : '#64748B'}
+              strokeWidth={1.8}
             />
-          </View>
-          <Text style={[styles.menuItemText, row.danger && { color: '#EF4444' }]}>
-            {row.label}
-          </Text>
-          <ChevronRight
-            size={17}
-            color={row.danger ? '#EF4444' : '#A78BFA'}
-            strokeWidth={1.8}
-          />
-        </Pressable>
-      ))}
+          </Pressable>
+        ))}
+      </View>
     </View>
   );
 }
@@ -125,7 +121,6 @@ function ProfileMenuList({ rows }: { rows: MenuRow[] }) {
 export function ProfileScreen({
   studentProfile,
   balance,
-  iaCredits,
   subscriptionTier,
   transactions,
   purchasedDocumentsCount,
@@ -134,7 +129,6 @@ export function ProfileScreen({
   onOpenSecuritySettings,
   onOpenSupport,
   onSync,
-  onRecharge,
   onPremium,
   onLibrary,
   onDocuments,
@@ -151,77 +145,82 @@ export function ProfileScreen({
     : '@campus360';
   const subline = studentProfile?.university || 'Université de Yaoundé I';
 
-  // Count candidatures (either from transactions or mock baseline)
   const applicationsCount =
     transactions.filter((t) => t.type === 'stage_token').length || 4;
 
-  const menuRows: MenuRow[] = [
+  const activityRows: MenuRow[] = [
     {
-      key: 'documents',
-      label: 'Mes Documents & CV',
-      Icon: FileText,
-      iconBg: 'rgba(139, 92, 246, 0.12)',
-      iconColor: '#7C3AED',
-      onPress: onDocuments,
-    },
-    {
-      key: 'subscription',
-      label: 'Abonnement & Jetons',
-      Icon: Star,
-      iconBg: 'rgba(245, 158, 11, 0.12)',
-      iconColor: '#D97706',
-      onPress: onPremium,
-    },
-    {
-      key: 'stats',
-      label: 'Statistiques & Candidatures',
+      key: 'applications',
+      label: 'Mes candidatures & relances',
       Icon: TrendingUp,
-      iconBg: 'rgba(16, 185, 129, 0.12)',
-      iconColor: '#059669',
+      iconBg: 'rgba(124, 58, 237, 0.12)',
+      iconColor: '#A78BFA',
       onPress: onApplications || onSync,
     },
     {
-      key: 'library',
-      label: 'Ma Bibliothèque PDF',
-      Icon: BookOpen,
+      key: 'documents',
+      label: 'Mes documents & CV',
+      Icon: FileText,
       iconBg: 'rgba(59, 130, 246, 0.12)',
-      iconColor: '#2563EB',
-      onPress: onLibrary,
+      iconColor: '#60A5FA',
+      onPress: onDocuments,
     },
     {
+      key: 'library',
+      label: 'Ma bibliothèque de cours PDF',
+      Icon: BookOpen,
+      iconBg: 'rgba(16, 185, 129, 0.12)',
+      iconColor: '#34D399',
+      onPress: onLibrary,
+    },
+  ];
+
+  const settingsRows: MenuRow[] = [
+    {
       key: 'security',
-      label: 'Paramètres & Sécurité',
+      label: 'Sécurité & mot de passe',
       Icon: Shield,
       iconBg: 'rgba(100, 116, 139, 0.12)',
-      iconColor: '#475569',
+      iconColor: '#94A3B8',
       onPress: onOpenSecuritySettings,
     },
     {
+      key: 'notifications',
+      label: 'Notifications',
+      Icon: Bell,
+      iconBg: 'rgba(100, 116, 139, 0.12)',
+      iconColor: '#94A3B8',
+      onPress: onOpenNotificationsSettings,
+    },
+  ];
+
+  const accountRows: MenuRow[] = [
+    {
       key: 'support',
-      label: 'Contacter le support WhatsApp',
+      label: 'Support WhatsApp',
       Icon: MessageSquare,
       iconBg: 'rgba(16, 185, 129, 0.12)',
-      iconColor: '#059669',
+      iconColor: '#34D399',
       onPress: onOpenSupport,
     },
     ...(onSignInPress && !studentProfile?.email
       ? [
           {
             key: 'signin',
-            label: 'Se connecter à un compte existant',
+            label: 'Se connecter à un compte',
             Icon: LogIn,
-            iconBg: 'rgba(139, 92, 246, 0.12)',
-            iconColor: '#7C3AED',
+            iconBg: 'rgba(124, 58, 237, 0.12)',
+            iconColor: '#A78BFA',
             onPress: onSignInPress,
           },
         ]
       : []),
     {
       key: 'sync',
-      label: syncingAccount ? 'Synchronisation en cours…' : 'Synchroniser le compte',
+      label: syncingAccount ? 'Synchronisation…' : 'Synchroniser le compte',
       Icon: RefreshCw,
       iconBg: 'rgba(100, 116, 139, 0.12)',
-      iconColor: '#475569',
+      iconColor: '#94A3B8',
       onPress: onSync,
     },
     {
@@ -241,9 +240,9 @@ export function ProfileScreen({
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* ── 1. Top Header: Serif Title + Bell Button ─────────────────── */}
+      {/* ── 1. En-tête Mon Profil ───────────────────────────────────── */}
       <View style={styles.headerRow}>
-        <Text style={styles.headerTitle}>Profil</Text>
+        <Text style={styles.headerTitle}>Mon Profil</Text>
         <Pressable
           onPress={onOpenNotificationsSettings}
           style={({ pressed }) => [styles.bellBtn, pressed && { opacity: 0.8 }]}
@@ -252,48 +251,42 @@ export function ProfileScreen({
         </Pressable>
       </View>
 
-      {/* ── 2. Centered Avatar with Glowing Halo Ring ────────────────── */}
-      <View style={styles.avatarHaloWrapper}>
-        <View style={styles.avatarHaloOuter}>
+      {/* ── 2. Carte d'Identité Étudiant ────────────────────────────── */}
+      <View style={styles.profileCard}>
+        <View style={styles.profileHeaderRow}>
           <Image
             source={{ uri: (studentProfile as any)?.avatarUrl || DEFAULT_AVATAR }}
             style={styles.avatarImage}
             resizeMode="cover"
           />
-        </View>
-      </View>
-
-      {/* ── 3. Profile Info Card (Exact Replica of Right Screen) ──────── */}
-      <View style={styles.profileCard}>
-        {/* Top: Name, Handle & Premium Badge */}
-        <View style={styles.cardHeaderRow}>
-          <View style={{ flex: 1, paddingRight: 10 }}>
-            <Text style={styles.studentName} numberOfLines={1}>
-              {studentProfile?.name || 'Lucien Miguel'}
-            </Text>
+          <View style={{ flex: 1, paddingLeft: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={styles.studentName} numberOfLines={1}>
+                {studentProfile?.name || 'Lucien Miguel'}
+              </Text>
+              <Pressable
+                onPress={onPremium}
+                style={({ pressed }) => [styles.premiumBadge, pressed && { opacity: 0.85 }]}
+              >
+                <Crown size={11} color="#FBBF24" />
+                <Text style={styles.premiumBadgeText}>
+                  {isPremium ? tierLabel : 'Standard'}
+                </Text>
+              </Pressable>
+            </View>
             <Text style={styles.studentHandle} numberOfLines={1}>
-              {handle} • {subline}
+              {handle}
+            </Text>
+            <Text style={styles.studentSubline} numberOfLines={1}>
+              {subline}
             </Text>
           </View>
-
-          {/* Dark Premium Pill Badge */}
-          <Pressable
-            onPress={onPremium}
-            style={({ pressed }) => [
-              styles.premiumBadge,
-              pressed && { opacity: 0.85 },
-            ]}
-          >
-            <Crown size={12} color="#FDE047" strokeWidth={2.4} />
-            <Text style={styles.premiumBadgeText}>
-              {isPremium ? tierLabel : 'Premium'}
-            </Text>
-          </Pressable>
         </View>
 
-        {/* Middle: 3 Stats Pills Row (Candidatures, Jetons IA, PDF Débloqués) */}
+        {/* ── 3 Indicateurs Métier (Pas de jetons IA criards) ────────── */}
         <View style={styles.statsRow}>
           <Pressable
+            testID="stat-applications"
             style={({ pressed }) => [styles.statPill, pressed && { opacity: 0.8 }]}
             onPress={onApplications}
           >
@@ -303,10 +296,10 @@ export function ProfileScreen({
 
           <Pressable
             style={({ pressed }) => [styles.statPill, pressed && { opacity: 0.8 }]}
-            onPress={onRecharge}
+            onPress={onDocuments}
           >
-            <Text style={styles.statNumber}>{iaCredits}</Text>
-            <Text style={styles.statLabel}>Jetons IA</Text>
+            <Text style={styles.statNumber}>1</Text>
+            <Text style={styles.statLabel}>Documents & CV</Text>
           </Pressable>
 
           <Pressable
@@ -317,40 +310,17 @@ export function ProfileScreen({
             <Text style={styles.statLabel}>PDF Débloqués</Text>
           </Pressable>
         </View>
-
-        {/* Bottom: Dark Token Replenish Banner */}
-        <View style={styles.replenishBanner}>
-          <View style={styles.replenishLeft}>
-            <View style={styles.starCircle}>
-              <Star size={13} color="#FDE047" fill="#FDE047" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.replenishTitle}>Besoin de jetons ?</Text>
-              <Text style={styles.replenishSub} numberOfLines={1}>
-                Recharge pour postuler en illimité.
-              </Text>
-            </View>
-          </View>
-
-          <Pressable
-            onPress={onRecharge}
-            style={({ pressed }) => [
-              styles.replenishBtn,
-              pressed && { opacity: 0.85 },
-            ]}
-          >
-            <Text style={styles.replenishBtnText}>Recharger</Text>
-          </Pressable>
-        </View>
       </View>
 
-      {/* ── 4. Menu List Group Card with Chevrons ────────────────────── */}
-      <ProfileMenuList rows={menuRows} />
+      {/* ── 3. Groupes de Menu Structurés ────────────────────────────── */}
+      <MenuCardGroup title="ACTIVITÉ & OUTILS" rows={activityRows} />
+      <MenuCardGroup title="PARAMÈTRES & SÉCURITÉ" rows={settingsRows} />
+      <MenuCardGroup title="COMPTE & ASSISTANCE" rows={accountRows} />
 
-      {/* ── 5. Solde & Historique Récent (Optionnel si transactions) ── */}
+      {/* ── 4. Transactions Récentes (si existantes) ─────────────────── */}
       {transactions.length > 0 && (
         <View style={styles.txSection}>
-          <Text style={styles.sectionTitle}>Transactions Récentes</Text>
+          <Text style={styles.menuGroupTitle}>TRANSACTIONS RÉCENTES</Text>
           <View style={styles.txCard}>
             {transactions.slice(0, 3).map((tx) => (
               <TransactionRow
@@ -366,8 +336,7 @@ export function ProfileScreen({
         </View>
       )}
 
-      {/* ── 6. Bandeau de Réassurance & Safe Padding ────────────────── */}
-      <TrustBadgeStrip style={{ marginHorizontal: 0, marginTop: 22, marginBottom: 12 }} />
+      {/* Espace bas pour laisser respirer au-dessus de la BottomNav */}
       <View style={{ height: 90 }} />
     </ScrollView>
   );
@@ -376,12 +345,12 @@ export function ProfileScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: stitchColors.background,
+    backgroundColor: '#090714',
   },
   scrollContent: {
     paddingHorizontal: stitchSpacing.containerMargin,
     paddingTop: Platform.OS === 'ios' ? 20 : 16,
-    paddingBottom: 160,
+    paddingBottom: 40,
   },
 
   // 1. Header
@@ -389,259 +358,172 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   headerTitle: {
     fontFamily: fontFamilies.serif,
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
   bellBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: stitchColors.surfaceContainerHigh,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#120E22',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.22)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 3,
   },
 
-  // 2. Avatar with glowing halo ring
-  avatarHaloWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
-    marginBottom: -22,
-    zIndex: 10,
-  },
-  avatarHaloOuter: {
-    width: 98,
-    height: 98,
-    borderRadius: 49,
-    borderWidth: 3,
-    borderColor: 'rgba(167, 139, 250, 0.65)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(124, 58, 237, 0.22)',
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 18,
-    elevation: 8,
-  },
-  avatarImage: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: '#1E1642',
-  },
-
-  // 3. Profile Card
+  // 2. Profile Card
   profileCard: {
-    backgroundColor: stitchColors.surface,
-    borderRadius: 28,
-    paddingTop: 34,
-    paddingBottom: 16,
-    paddingHorizontal: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.18)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 6,
+    backgroundColor: '#120E22',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 20,
   },
-  cardHeaderRow: {
+  profileHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 16,
   },
+  avatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
   studentName: {
-    fontFamily: fontFamilies.serif,
-    fontSize: 22,
+    fontFamily: fontFamilies.outfit,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   studentHandle: {
     fontFamily: fontFamilies.inter,
     fontSize: 12,
-    color: '#A78BFA',
+    color: '#94A3B8',
     marginTop: 2,
+  },
+  studentSubline: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 11.5,
+    color: '#64748B',
+    marginTop: 1,
   },
   premiumBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(124, 58, 237, 0.25)',
-    borderWidth: 1,
-    borderColor: 'rgba(167, 139, 250, 0.35)',
-    borderRadius: 9999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    gap: 4,
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderRadius: 6,
+    paddingVertical: 2,
+    paddingHorizontal: 7,
   },
   premiumBadgeText: {
     fontFamily: fontFamilies.outfit,
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FDE047',
-    letterSpacing: 0.4,
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#FBBF24',
   },
 
-  // Stats Pills Row
+  // 3 Stats Pills Row
   statsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
+    gap: 8,
+    paddingTop: 14,
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
   },
   statPill: {
     flex: 1,
-    backgroundColor: stitchColors.surfaceContainerHigh,
-    borderRadius: 18,
-    paddingVertical: 12,
+    backgroundColor: '#0D0B18',
+    borderRadius: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.16)',
   },
   statNumber: {
-    fontFamily: fontFamilies.serif,
-    fontSize: 20,
+    fontFamily: fontFamilies.outfit,
+    fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: -0.3,
   },
   statLabel: {
     fontFamily: fontFamilies.inter,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '500',
-    color: '#A78BFA',
+    color: '#94A3B8',
     marginTop: 2,
   },
 
-  // Dark Replenish Banner
-  replenishBanner: {
-    backgroundColor: '#1E143E',
-    borderRadius: 18,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
+  // Menu Groups
+  menuGroup: {
+    marginBottom: 16,
   },
-  replenishLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
-  starCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(253, 224, 71, 0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  replenishTitle: {
+  menuGroupTitle: {
     fontFamily: fontFamilies.outfit,
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  replenishSub: {
-    fontFamily: fontFamilies.inter,
     fontSize: 10.5,
-    color: '#C4B5FD',
-    marginTop: 1,
-  },
-  replenishBtn: {
-    backgroundColor: '#7C3AED',
-    borderRadius: 9999,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: 'rgba(167, 139, 250, 0.5)',
-  },
-  replenishBtnText: {
-    fontFamily: fontFamilies.outfit,
-    fontSize: 11.5,
     fontWeight: '700',
-    color: '#FFFFFF',
+    letterSpacing: 0.8,
+    color: '#64748B',
+    marginBottom: 8,
+    paddingLeft: 4,
   },
-
-  // 4. Menu Card
   menuCard: {
-    backgroundColor: stitchColors.surface,
-    borderRadius: 24,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.18)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 18,
-    elevation: 3,
+    backgroundColor: '#120E22',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
     overflow: 'hidden',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
   menuItemDivider: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(139, 92, 246, 0.1)',
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
   },
   menuIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
   menuItemText: {
     flex: 1,
     fontFamily: fontFamilies.inter,
     fontSize: 13.5,
-    fontWeight: '600',
-    color: '#F8FAFC',
+    fontWeight: '500',
+    color: '#E2E8F0',
   },
 
-  // 5. Recent Transactions
+  // Transactions Section
   txSection: {
-    marginTop: 20,
-  },
-  sectionTitle: {
-    fontFamily: fontFamilies.outfit,
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 10,
+    marginBottom: 16,
   },
   txCard: {
-    backgroundColor: stitchColors.surface,
-    borderRadius: 20,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.18)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
+    backgroundColor: '#120E22',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
   },
 });

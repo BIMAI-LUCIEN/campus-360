@@ -1,0 +1,171 @@
+{
+  "name": "Campus 360 - Ingestion Automatisée des Stages & OCR Flyers",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "e4587c12-32a1-4bc9-93e1-70bf892cd41a",
+      "name": "Cron Recurrent (Toutes les 1h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ingest-flyer",
+        "options": {}
+      },
+      "id": "a901bd88-6622-491c-8b27-4bf782c5a210",
+      "name": "Webhook Entrant Scraper Instantané",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        500
+      ],
+      "webhookId": "campus-360-flyer-webhook"
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-flash",
+        "prompt": "Tu es l'agent IA d'extraction RH de Campus 360. Analyse cette annonce de stage ou flyer d'emploi en Afrique subsaharienne. Extrais STRICTEMENT un JSON valide au format suivant :\n{\n  \"title\": \"Intitulé précis du poste (ex: Stagiaire Développeur Flutter)\",\n  \"companyName\": \"Nom de l'entreprise\",\n  \"industry\": \"Secteur d'activité (Informatique, Finance, Télécoms, etc.)\",\n  \"location\": \"Ville / Pays (ex: Abidjan, Douala, Yaoundé)\",\n  \"duration\": \"Durée estimée (ex: 3 à 6 mois)\",\n  \"contractType\": \"Stage Académique | Stage PFE | Premier Emploi\",\n  \"stipend\": \"Rémunéré / Indemnité de transport / Non précisé\",\n  \"requirements\": [\"Compétence 1\", \"Compétence 2\", \"Diplôme requis\"],\n  \"contactWhatsapp\": \"Numéro WhatsApp nettoyé avec indicatif (+237..., +225...)\",\n  \"contactEmail\": \"email de candidature RH\",\n  \"description\": \"Résumé concis de la mission et des responsabilités\"\n}\nRÈGLE : Si aucun numéro WhatsApp ni email n'est détecté, renvoie null pour abandonner l'annonce non qualifiée.",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "c1388e44-5511-4bc1-90fa-8c9038ba9801",
+      "name": "Gemini Flash OCR & Structuration IA",
+      "type": "@n8n/n8n-nodes-langchain.googleGeminiChat",
+      "typeVersion": 1,
+      "position": [
+        520,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "filter-contact",
+              "leftValue": "={{ $json.contactWhatsapp || $json.contactEmail }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "d8210344-9981-422a-8d19-491bb448ac02",
+      "name": "Filtre Anti-Saturation (Contact Valide Obligatoire)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        780,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.campus360b.site/api/mobile/stages/ingest",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "={{ $env.N8N_INGESTION_SECRET || 'campus360_n8n_secret_prod_key' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  title: $json.title,\n  companyName: $json.companyName,\n  industry: $json.industry,\n  location: $json.location,\n  duration: $json.duration,\n  contractType: $json.contractType,\n  stipend: $json.stipend,\n  requirements: $json.requirements,\n  flyerUrl: $json.flyerUrl || '',\n  contactWhatsapp: $json.contactWhatsapp,\n  contactEmail: $json.contactEmail,\n  description: $json.description,\n  source: 'SCRAPED'\n}) }}",
+        "options": {}
+      },
+      "id": "b3488219-5432-4ac8-bd88-510098fa8911",
+      "name": "POST Ingest vers Campus 360 API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        380
+      ]
+    }
+  ],
+  "connections": {
+    "Cron Recurrent (Toutes les 1h)": {
+      "main": [
+        [
+          {
+            "node": "Gemini Flash OCR & Structuration IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Entrant Scraper Instantané": {
+      "main": [
+        [
+          {
+            "node": "Gemini Flash OCR & Structuration IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Flash OCR & Structuration IA": {
+      "main": [
+        [
+          {
+            "node": "Filtre Anti-Saturation (Contact Valide Obligatoire)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtre Anti-Saturation (Contact Valide Obligatoire)": {
+      "main": [
+        [
+          {
+            "node": "POST Ingest vers Campus 360 API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

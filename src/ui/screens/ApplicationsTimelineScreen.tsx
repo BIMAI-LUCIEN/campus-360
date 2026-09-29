@@ -31,8 +31,10 @@ import {
   fetchStudentApplications,
   updateApplicationStatus,
   generateFollowupReminderMessage,
+  getDaysSinceApplication,
+  isEligibleForFollowup,
+  recordApplicationReminder,
 } from '../../features/stages/stagesApi';
-import { TrustBadgeStrip } from '../GlassComponents';
 
 interface ApplicationsTimelineProps {
   studentName: string;
@@ -79,18 +81,26 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
     loadData();
   };
 
-  const handleSendReminder = (app: StageApplication) => {
+  const handleSendReminder = async (app: StageApplication) => {
     const reminderMsg = generateFollowupReminderMessage(app, studentName || 'Étudiant');
-    const rawPhone = (app.job?.company?.contactWhatsapp || '').replace(/[^0-9]/g, '') || '2250708091011';
+    const rawPhone = (app.job?.company?.contactWhatsapp || '').replace(/[^0-9]/g, '') || '237670009988';
     const waUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(reminderMsg)}`;
+
+    await recordApplicationReminder(app.id);
+    setApplications((prev) =>
+      prev.map((a) =>
+        a.id === app.id ? { ...a, lastRemindedAt: new Date().toISOString() } : a
+      )
+    );
+
     if (Platform.OS === 'web') {
       window.open(waUrl, '_blank');
     } else {
       Alert.alert(
-        'Message de relance',
+        'Message de relance J+7 préparé',
         reminderMsg,
         [
-          { text: 'Envoyer via WhatsApp', onPress: () => Linking.openURL(waUrl) },
+          { text: 'Envoyer sur WhatsApp', onPress: () => Linking.openURL(waUrl) },
           { text: 'Annuler', style: 'cancel' },
         ]
       );
@@ -99,9 +109,6 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
   return (
     <View style={styles.container}>
-      {/* Background ambient glow */}
-      <View style={styles.glowTop} />
-
       {/* ── Modern Header ────────────────────────────────────────── */}
       <View style={styles.header}>
         {onBack && (
@@ -152,7 +159,9 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
           applications.map((app) => {
             const conf = STATUS_CONFIG[app.status] || STATUS_CONFIG.PENDING;
             const StatusIcon = conf.icon;
-            const isPendingLong = app.status === 'PENDING';
+            const daysElapsed = getDaysSinceApplication(app.appliedAt);
+            const isPending = app.status === 'PENDING';
+            const isEligibleReminder = isEligibleForFollowup(app);
             const refCode = `CAMPUS-${app.id.slice(0, 5).toUpperCase()}`;
 
             return (
@@ -184,6 +193,24 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
                     </>
                   )}
                 </View>
+
+                {/* Urgent Followup J+7 Badge */}
+                {isEligibleReminder && (
+                  <View style={styles.urgentBanner} testID={`urgent-banner-${app.id}`}>
+                    <Clock size={12} color="#F59E0B" />
+                    <Text style={styles.urgentBannerText}>
+                      Relance J+7 recommandée ({daysElapsed}j sans réponse)
+                    </Text>
+                  </View>
+                )}
+                {app.lastRemindedAt && (
+                  <View style={styles.lastRemindedPill}>
+                    <CheckCircle2 size={11} color="#A78BFA" />
+                    <Text style={styles.lastRemindedText}>
+                      Dernière relance envoyée le {new Date(app.lastRemindedAt).toLocaleDateString('fr-FR')}
+                    </Text>
+                  </View>
+                )}
 
                 {/* Perforated / Cutout Ticket Separator */}
                 <View style={styles.ticketSeparator}>
@@ -232,21 +259,26 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
                     <Text style={styles.changeStatusPillText}>Modifier le statut</Text>
                   </Pressable>
 
-                  {isPendingLong && (
+                  {isEligibleReminder ? (
                     <Pressable
+                      testID={`btn-relance-j7-${app.id}`}
                       style={styles.reminderBtn}
                       onPress={() => handleSendReminder(app)}
                     >
                       <MessageSquare size={13} color="#FFFFFF" />
-                      <Text style={styles.reminderBtnText}>Relancer (J+7)</Text>
+                      <Text style={styles.reminderBtnText}>💬 Relancer sur WhatsApp (J+7)</Text>
                     </Pressable>
-                  )}
+                  ) : isPending ? (
+                    <View style={styles.waitingBadge}>
+                      <Clock size={11} color="#94A3B8" />
+                      <Text style={styles.waitingBadgeText}>Dépôt il y a {daysElapsed}j (relance à J+7)</Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
             );
           })
         )}
-        <TrustBadgeStrip style={{ marginTop: 16, marginBottom: 32 }} />
       </ScrollView>
     </View>
   );
@@ -556,5 +588,46 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '500',
     color: '#FFFFFF',
+  },
+  urgentBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 8,
+  },
+  urgentBannerText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FBBF24',
+  },
+  lastRemindedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 6,
+  },
+  lastRemindedText: {
+    fontSize: 10.5,
+    color: '#A78BFA',
+    fontStyle: 'italic',
+  },
+  waitingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  waitingBadgeText: {
+    fontSize: 11,
+    color: '#94A3B8',
   },
 });
