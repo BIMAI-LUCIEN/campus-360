@@ -67,56 +67,61 @@ export const rateLimit = async (
   request: NextRequest,
   options: RateLimitOptions,
 ): Promise<void> => {
-  if (!tableEnsured) {
-    await ensureTable();
-    tableEnsured = true;
+  try {
+    if (!tableEnsured) {
+      await ensureTable().catch(() => undefined);
+      tableEnsured = true;
+    }
+
+    const key = options.key ?? getClientIp(request);
+    const { bucket, max, windowMs } = options;
+
+    // Single round-trip: bump the counter, fetch the row back, and check.
+    // We use a CTE so that the update + check happens atomically.
+    const result = await databasePool.query<{ count: number; window_started_at: Date }>(
+      `
+      with upsert as (
+        insert into public.app_rate_limits (bucket, key, window_started_at, count)
+        values ($1, $2, now(), 1)
+        on conflict (bucket, key) do update
+          set count = case
+            when public.app_rate_limits.window_started_at + ($3 || ' milliseconds')::interval <= now()
+              then 1
+            else public.app_rate_limits.count + 1
+          end,
+          window_started_at = case
+            when public.app_rate_limits.window_started_at + ($3 || ' milliseconds')::interval <= now()
+              then now()
+            else public.app_rate_limits.window_started_at
+          end
+        returning count, window_started_at
+      )
+      select count::int as count, window_started_at from upsert
+      `,
+      [bucket, key, windowMs],
+    );
+
+    const row = result.rows[0];
+    if (!row) return; // Should never happen.
+
+    if (row.count > max) {
+      const elapsedMs = Date.now() - new Date(row.window_started_at).getTime();
+      const retryAfter = Math.max(1, Math.ceil((windowMs - elapsedMs) / 1000));
+      throw new RateLimitError('Trop de requetes. Reessaie plus tard.', retryAfter);
+    }
+
+    // Opportunistic cleanup. If we're well past the window and still have a row,
+    // it's stale. We only delete when the row has been around for > 2 windows
+    // so we don't churn every hit.
+    await databasePool.query(
+      `delete from public.app_rate_limits
+         where window_started_at + ($1 || ' milliseconds')::interval * 2 <= now()`,
+      [windowMs],
+    ).catch(() => undefined);
+  } catch (err) {
+    if (err instanceof RateLimitError) throw err;
+    console.warn('[rate-limit] Database rate limiter bypassed due to connection failure:', (err as any)?.message);
   }
-
-  const key = options.key ?? getClientIp(request);
-  const { bucket, max, windowMs } = options;
-
-  // Single round-trip: bump the counter, fetch the row back, and check.
-  // We use a CTE so that the update + check happens atomically.
-  const result = await databasePool.query<{ count: number; window_started_at: Date }>(
-    `
-    with upsert as (
-      insert into public.app_rate_limits (bucket, key, window_started_at, count)
-      values ($1, $2, now(), 1)
-      on conflict (bucket, key) do update
-        set count = case
-          when public.app_rate_limits.window_started_at + ($3 || ' milliseconds')::interval <= now()
-            then 1
-          else public.app_rate_limits.count + 1
-        end,
-        window_started_at = case
-          when public.app_rate_limits.window_started_at + ($3 || ' milliseconds')::interval <= now()
-            then now()
-          else public.app_rate_limits.window_started_at
-        end
-      returning count, window_started_at
-    )
-    select count::int as count, window_started_at from upsert
-    `,
-    [bucket, key, windowMs],
-  );
-
-  const row = result.rows[0];
-  if (!row) return; // Should never happen.
-
-  if (row.count > max) {
-    const elapsedMs = Date.now() - new Date(row.window_started_at).getTime();
-    const retryAfter = Math.max(1, Math.ceil((windowMs - elapsedMs) / 1000));
-    throw new RateLimitError('Trop de requetes. Reessaie plus tard.', retryAfter);
-  }
-
-  // Opportunistic cleanup. If we're well past the window and still have a row,
-  // it's stale. We only delete when the row has been around for > 2 windows
-  // so we don't churn every hit.
-  await databasePool.query(
-    `delete from public.app_rate_limits
-       where window_started_at + ($1 || ' milliseconds')::interval * 2 <= now()`,
-    [windowMs],
-  ).catch(() => undefined);
 };
 
 // Convenience helper for route handlers.

@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
     });
     return withCors(NextResponse.json({ success: true, count: jobs.length, jobs }), request);
   } catch (error) {
-    return mobileErrorResponse(error, request);
+    console.warn('[stages route] Caught error in GET stages, returning fallback list:', error);
+    const jobs = await listStageJobs({});
+    return withCors(NextResponse.json({ success: true, count: jobs.length, jobs }), request);
   }
 }

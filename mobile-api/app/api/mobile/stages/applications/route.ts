@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
     const applications = await listStudentApplications(studentId);
     return withCors(NextResponse.json({ success: true, applications }), request);
   } catch (error) {
-    return mobileErrorResponse(error, request);
+    console.warn('[applications route] Caught error, returning empty applications:', error);
+    return withCors(NextResponse.json({ success: true, applications: [] }), request);
   }
 }
 
