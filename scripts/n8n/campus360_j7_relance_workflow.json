@@ -1,0 +1,242 @@
+{
+  "name": "Campus 360 - Moteur de Relance Automatisée J+7 (WhatsApp RH & Candidat)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "node-cron-j7",
+      "name": "Cron Jours Ouvrés 09h00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "campus360-trigger-relances",
+        "options": {}
+      },
+      "id": "node-webhook-j7",
+      "name": "Webhook Déclencheur Manuel Relances",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        180,
+        500
+      ],
+      "webhookId": "campus-360-j7-manual-trigger"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.CAMPUS360_API_URL || 'https://api.campus360b.site' }}/api/mobile/stages/followups",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "={{ $env.N8N_API_KEY || 'campus360_n8n_secret_prod_key' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-fetch-pending",
+      "name": "Récupérer Candidatures Éligibles J+7",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $json.applications || [items[0]?.json || {}];\nconst out = [];\n\nfor (const app of (Array.isArray(items) ? items : [items])) {\n  if (!app || !app.id) continue;\n  const studentName = app.studentName || 'Étudiant';\n  const studentPhone = app.studentPhone || '';\n  const companyName = app.job?.company?.name || 'l\\'Entreprise';\n  const companyPhone = (app.job?.company?.contactWhatsapp || '').replace(/[^0-9]/g, '');\n  const jobTitle = app.job?.title || 'le stage';\n  const appliedDate = app.appliedAt ? new Date(app.appliedAt).toLocaleDateString('fr-FR') : 'il y a 7 jours';\n  \n  const rhMessage = `Bonjour ${companyName},\n\nJe suis ${studentName}, candidat au poste de *${jobTitle}* (candidature déposée le ${appliedDate}).\n\nToujours très motivé par votre vision et vos projets, je me permets de revenir vers vous pour savoir si vous aviez pu examiner mon dossier complet (CV officiel et lettre).\n\nJe reste à votre disposition pour tout échange ou entretien.\n\nBien cordialement,\n*${studentName}* (via Campus 360)`;\n\n  out.push({\n    json: {\n      applicationId: app.id,\n      studentName,\n      studentPhone,\n      companyName,\n      companyPhone: companyPhone || '237670009988',\n      jobTitle,\n      rhMessage,\n      candidateNotification: `ℹ️ Campus 360 : Une relance polie J+7 a été transmise à ${companyName} pour votre candidature au poste de \"${jobTitle}\".`\n    }\n  });\n}\n\nreturn out.length ? out : [{ json: { message: 'Aucune relance éligible aujourd\\'hui' } }];"
+      },
+      "id": "node-prepare-messages",
+      "name": "Formater Messages Relance WhatsApp",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-has-app",
+              "leftValue": "={{ $json.applicationId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "node-check-has-relance",
+      "name": "Y a-t-il des relances ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        940,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL || 'https://evolution.blackcompany.site' }}/message/sendText/{{ $env.EVOLUTION_INSTANCE || 'org_default' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.EVOLUTION_API_KEY || 'evolution_key_douala_2026' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: $json.companyPhone,\n  text: $json.rhMessage\n}) }}",
+        "options": {}
+      },
+      "id": "node-send-wa-rh",
+      "name": "Expédier Relance WhatsApp RH",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.CAMPUS360_API_URL || 'https://api.campus360b.site' }}/api/mobile/stages/applications",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "={{ $env.N8N_API_KEY || 'campus360_n8n_secret_prod_key' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  applicationId: $('Formater Messages Relance WhatsApp').item.json.applicationId,\n  lastRemindedAt: new Date().toISOString()\n}) }}",
+        "options": {}
+      },
+      "id": "node-update-status",
+      "name": "Enregistrer Relance dans Campus 360",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1460,
+        320
+      ]
+    }
+  ],
+  "connections": {
+    "Cron Jours Ouvrés 09h00": {
+      "main": [
+        [
+          {
+            "node": "Récupérer Candidatures Éligibles J+7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Déclencheur Manuel Relances": {
+      "main": [
+        [
+          {
+            "node": "Récupérer Candidatures Éligibles J+7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Récupérer Candidatures Éligibles J+7": {
+      "main": [
+        [
+          {
+            "node": "Formater Messages Relance WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formater Messages Relance WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Y a-t-il des relances ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Y a-t-il des relances ?": {
+      "main": [
+        [
+          {
+            "node": "Expédier Relance WhatsApp RH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expédier Relance WhatsApp RH": {
+      "main": [
+        [
+          {
+            "node": "Enregistrer Relance dans Campus 360",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

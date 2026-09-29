@@ -1,0 +1,306 @@
+{
+  "name": "Campus 360 - Pipeline Treg (OCR, Enrichissement RH WhatsApp & Ingestion In-App)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "trigger-cron-hourly",
+      "name": "Cron Recurrent (Scan 1h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ingest-flyer-treg",
+        "options": {}
+      },
+      "id": "trigger-webhook-flyer",
+      "name": "Webhook Entrant Flyer / Job URL",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        180,
+        500
+      ],
+      "webhookId": "campus-360-treg-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.treg.ai/v1/tools/execute",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ={{ $env.TREG_API_KEY || 'treg_live_key_campus360' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  tool: 'treg/ocr-vision-structurer',\n  payload: {\n    imageUrl: $json.flyerUrl || $json.body?.flyerUrl,\n    rawText: $json.text || $json.body?.text,\n    targetRegion: 'Afrique-Subsaharienne',\n    schema: {\n      title: 'string',\n      companyName: 'string',\n      industry: 'string',\n      location: 'string',\n      duration: 'string',\n      contractType: 'string',\n      stipend: 'string',\n      requirements: 'array',\n      contactWhatsapp: 'string',\n      contactEmail: 'string',\n      description: 'string'\n    }\n  }\n}) }}",
+        "options": {}
+      },
+      "id": "treg-ocr-extraction",
+      "name": "Treg API - OCR Vision & Structuration",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-has-contact",
+              "leftValue": "={{ $json.data?.contactWhatsapp || $json.data?.contactEmail }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-contact-rh",
+      "name": "Contact RH Présent ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        700,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.treg.ai/v1/tools/execute",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ={{ $env.TREG_API_KEY || 'treg_live_key_campus360' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  tool: 'treg/b2b-contact-enrichment',\n  payload: {\n    companyName: $node['treg-ocr-extraction'].json.data?.companyName,\n    location: $node['treg-ocr-extraction'].json.data?.location,\n    targetRoles: ['RH', 'Recruteur', 'Directeur Technique', 'CEO', 'Manager'],\n    preferredChannel: 'WhatsApp'\n  }\n}) }}",
+        "options": {}
+      },
+      "id": "treg-rh-enrichment",
+      "name": "Treg B2B - Recherche N° WhatsApp RH Direct",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.treg.ai/v1/tools/execute",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ={{ $env.TREG_API_KEY || 'treg_live_key_campus360' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  tool: 'treg/company-news-serp',\n  payload: {\n    companyName: $node['treg-ocr-extraction'].json.data?.companyName,\n    query: 'actualite recents projets ' + $node['treg-ocr-extraction'].json.data?.companyName\n  }\n}) }}",
+        "options": {}
+      },
+      "id": "treg-company-news",
+      "name": "Treg SERP - Actus Entreprise (Pitch VOUS-MOI-NOUS)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1180,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const baseData = $node['treg-ocr-extraction'].json.data || {};\nconst rhData = $node['treg-rh-enrichment'] ? $node['treg-rh-enrichment'].json.data : {};\nconst newsData = $node['treg-company-news'] ? $node['treg-company-news'].json.data : {};\n\nconst finalWhatsapp = baseData.contactWhatsapp || rhData.whatsappNumber || null;\nconst finalEmail = baseData.contactEmail || rhData.email || null;\n\nreturn [{\n  json: {\n    title: baseData.title || 'Stagiaire Academique',\n    companyName: baseData.companyName || 'Entreprise Partenaire',\n    industry: baseData.industry || 'Informatique / Services',\n    location: baseData.location || 'Douala / Yaounde',\n    duration: baseData.duration || '3 mois',\n    contractType: baseData.contractType || 'Stage Academique',\n    stipend: baseData.stipend || 'Indemnite transport',\n    requirements: baseData.requirements || [],\n    contactWhatsapp: finalWhatsapp,\n    contactEmail: finalEmail,\n    description: baseData.description || 'Mission de stage pratique',\n    companyNewsSnippet: newsData.topSnippet || '',\n    enrichmentSource: 'TREG_PAY_PER_CALL_PROXIES',\n    scrapedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "format-payload",
+      "name": "Formatage & Fusion Payload Campus 360",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1420,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.campus360b.site/api/mobile/stages/ingest",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "={{ $env.N8N_INGESTION_SECRET || 'campus360_n8n_secret_prod_key' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "ingest-campus360-backend",
+      "name": "POST Ingest vers Campus 360 Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1660,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Cron Recurrent (Scan 1h)": {
+      "main": [
+        [
+          {
+            "node": "Treg API - OCR Vision & Structuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Entrant Flyer / Job URL": {
+      "main": [
+        [
+          {
+            "node": "Treg API - OCR Vision & Structuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Treg API - OCR Vision & Structuration": {
+      "main": [
+        [
+          {
+            "node": "Contact RH Présent ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact RH Présent ?": {
+      "main": [
+        [
+          {
+            "node": "Treg SERP - Actus Entreprise (Pitch VOUS-MOI-NOUS)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Treg B2B - Recherche N° WhatsApp RH Direct",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Treg B2B - Recherche N° WhatsApp RH Direct": {
+      "main": [
+        [
+          {
+            "node": "Treg SERP - Actus Entreprise (Pitch VOUS-MOI-NOUS)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Treg SERP - Actus Entreprise (Pitch VOUS-MOI-NOUS)": {
+      "main": [
+        [
+          {
+            "node": "Formatage & Fusion Payload Campus 360",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatage & Fusion Payload Campus 360": {
+      "main": [
+        [
+          {
+            "node": "POST Ingest vers Campus 360 Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,229 @@
+{
+  "name": "Campus 360 - Passerelle Webhook Paiements Mobile Money (Orange Money, MTN MoMo, Wave)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "campus360-payment-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-wh-payment",
+      "name": "Webhook Notification Paiement Mobile Money",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        180,
+        400
+      ],
+      "webhookId": "campus-360-momo-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\n\n// Détection du statut et des données de paiement\nconst status = (body.status || body.transactionStatus || 'SUCCESS').toUpperCase();\nconst amount = Number(body.amount || body.montant || 1000);\nconst currency = body.currency || 'XAF';\nconst payerPhone = (body.phone || body.customer_phone || body.sender || '').replace(/[^0-9]/g, '');\nconst studentEmail = body.email || body.studentEmail || 'etudiant@campus360.app';\nconst studentId = body.studentId || body.userId || 'student-current';\nconst transactionId = body.transactionId || body.tx_ref || `tx-${Date.now()}`;\nconst operator = body.operator || body.paymentMethod || 'Mobile Money';\n\n// Calcul du pack de jetons selon le montant\nlet tokensToAdd = 5;\nlet planName = 'Pack Découverte (5 candidatures IA)';\n\nif (amount >= 5000) {\n  tokensToAdd = 100;\n  planName = 'Pass Illimité 30 Jours';\n} else if (amount >= 2500) {\n  tokensToAdd = 15;\n  planName = 'Pack Pro Accélérateur (15 candidatures IA)';\n}\n\nconst isValid = status === 'SUCCESS' || status === 'COMPLETED' || status === 'ACCEPTED';\n\nreturn [{\n  json: {\n    isValid,\n    status,\n    amount,\n    currency,\n    payerPhone: payerPhone || '237690123456',\n    studentEmail,\n    studentId,\n    transactionId,\n    operator,\n    tokensToAdd,\n    planName,\n    confirmedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-parse-payment",
+      "name": "Valider Paiement & Calculer Jetons IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-payment-valid",
+              "leftValue": "={{ $json.isValid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "node-check-valid",
+      "name": "Paiement Validé ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        700,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CAMPUS360_API_URL || 'https://api.campus360b.site' }}/api/mobile/auth/credit-tokens",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "={{ $env.N8N_API_KEY || 'campus360_n8n_secret_prod_key' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  studentId: $json.studentId,\n  email: $json.studentEmail,\n  tokens: $json.tokensToAdd,\n  amount: $json.amount,\n  currency: $json.currency,\n  transactionId: $json.transactionId,\n  operator: $json.operator\n}) }}",
+        "options": {}
+      },
+      "id": "node-credit-api",
+      "name": "Créditer Jetons dans Campus 360",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL || 'https://evolution.blackcompany.site' }}/message/sendText/{{ $env.EVOLUTION_INSTANCE || 'org_default' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.EVOLUTION_API_KEY || 'evolution_key_douala_2026' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: $('Valider Paiement & Calculer Jetons IA').item.json.payerPhone,\n  text: `🎉 *Reçu de Recharge Campus 360*\n\nVotre paiement de *${$('Valider Paiement & Calculer Jetons IA').item.json.amount} ${$('Valider Paiement & Calculer Jetons IA').item.json.currency}* via ${$('Valider Paiement & Calculer Jetons IA').item.json.operator} a été validé avec succès !\n\n📦 *Formule activée :* ${$('Valider Paiement & Calculer Jetons IA').item.json.planName}\n⚡ *Jetons ajoutés :* +${$('Valider Paiement & Calculer Jetons IA').item.json.tokensToAdd} candidatures IA\n🆔 *Référence :* ${$('Valider Paiement & Calculer Jetons IA').item.json.transactionId}\n\nVous pouvez dès maintenant postuler et générer vos CV officiels et lettres de motivation sur Campus 360.`\n}) }}",
+        "options": {}
+      },
+      "id": "node-notify-student",
+      "name": "Expédier Reçu WhatsApp Étudiant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1220,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  success: true,\n  message: 'Paiement traité et jetons crédités avec succès',\n  transactionId: $('Valider Paiement & Calculer Jetons IA').item.json.transactionId,\n  tokensCredited: $('Valider Paiement & Calculer Jetons IA').item.json.tokensToAdd\n}) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node-respond-ok",
+      "name": "Réponse 200 OK Agrégateur",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1480,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  success: false,\n  error: 'Paiement invalide ou non abouti'\n}) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "node-respond-fail",
+      "name": "Réponse 400 Rejet",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        520
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Notification Paiement Mobile Money": {
+      "main": [
+        [
+          {
+            "node": "Valider Paiement & Calculer Jetons IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valider Paiement & Calculer Jetons IA": {
+      "main": [
+        [
+          {
+            "node": "Paiement Validé ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paiement Validé ?": {
+      "main": [
+        [
+          {
+            "node": "Créditer Jetons dans Campus 360",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Réponse 400 Rejet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créditer Jetons dans Campus 360": {
+      "main": [
+        [
+          {
+            "node": "Expédier Reçu WhatsApp Étudiant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expédier Reçu WhatsApp Étudiant": {
+      "main": [
+        [
+          {
+            "node": "Réponse 200 OK Agrégateur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

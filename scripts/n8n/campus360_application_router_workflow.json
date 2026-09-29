@@ -1,0 +1,163 @@
+{
+  "name": "Campus 360 - Routeur de Candidatures & Transmission Recruteur Instantanée",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "campus360-new-application",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-wh-application",
+      "name": "Webhook Nouvelle Candidature Déposée",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        180,
+        400
+      ],
+      "webhookId": "campus-360-application-router-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\n\nconst studentName = body.studentName || 'Dave Lionel KAMENI';\nconst studentPhone = (body.studentPhone || '237672364124').replace(/[^0-9]/g, '');\nconst studentEmail = body.studentEmail || 'etudiant@campus360.app';\nconst jobTitle = body.jobTitle || 'Stagiaire Développeur';\nconst companyName = body.companyName || 'Entreprise Partenaire';\nconst recruiterPhone = (body.recruiterPhone || body.companyPhone || '237670009988').replace(/[^0-9]/g, '');\nconst recruiterEmail = body.recruiterEmail || 'rh@entreprise.com';\nconst matchScore = body.matchScore || 94;\nconst matchingSkills = Array.isArray(body.matchingSkills) ? body.matchingSkills.join(', ') : (body.matchingSkills || 'Compétences clés validées');\nconst refCode = body.applicationId ? `CAMPUS-${body.applicationId.slice(0, 6).toUpperCase()}` : `CAMPUS-${Date.now().toString().slice(-6)}`;\n\nconst recruiterPitch = `📢 *Nouvelle Candidature Reçue — Campus 360*\n\nBonjour *${companyName}*,\n\nUn nouveau profil qualifié vient de postuler à votre offre de stage : *${jobTitle}*.\n\n👤 *Candidat :* ${studentName}\n🎯 *Score d'adéquation IA :* ${matchScore}%\n💡 *Points forts :* ${matchingSkills}\n🆔 *Référence dossier :* ${refCode}\n\n📄 Le CV officiel 2 colonnes et la lettre de motivation personnalisée sont prêts pour examen.\n\nPour contacter directement le candidat :\n📞 WhatsApp : https://wa.me/${studentPhone}\n✉️ Email : ${studentEmail}`;\n\nconst studentReceipt = `✅ *Candidature Transmise avec Succès — Campus 360*\n\nBonjour *${studentName}*,\n\nVotre dossier pour le stage de *${jobTitle}* chez *${companyName}* a été transmis directement au recruteur avec succès.\n\n🆔 *Référence Dossier :* ${refCode}\n📅 *Délai de réponse moyen :* 3 à 5 jours ouvrés.\n💡 *Conseil :* Si vous n'avez pas de retour d'ici 7 jours, une relance polie automatique sera préparée dans votre espace Suivi.`;\n\nreturn [{\n  json: {\n    refCode,\n    studentName,\n    studentPhone,\n    studentEmail,\n    jobTitle,\n    companyName,\n    recruiterPhone,\n    recruiterEmail,\n    recruiterPitch,\n    studentReceipt,\n    submittedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-format-router",
+      "name": "Formater Notifications RH & Candidat",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL || 'https://evolution.blackcompany.site' }}/message/sendText/{{ $env.EVOLUTION_INSTANCE || 'org_default' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.EVOLUTION_API_KEY || 'evolution_key_douala_2026' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: $json.recruiterPhone,\n  text: $json.recruiterPitch\n}) }}",
+        "options": {}
+      },
+      "id": "node-notify-recruiter-wa",
+      "name": "Alerter Recruteur WhatsApp Direct",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL || 'https://evolution.blackcompany.site' }}/message/sendText/{{ $env.EVOLUTION_INSTANCE || 'org_default' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.EVOLUTION_API_KEY || 'evolution_key_douala_2026' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: $('Formater Notifications RH & Candidat').item.json.studentPhone,\n  text: $('Formater Notifications RH & Candidat').item.json.studentReceipt\n}) }}",
+        "options": {}
+      },
+      "id": "node-notify-candidate-wa",
+      "name": "Confirmer Dépôt WhatsApp Candidat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        980,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  success: true,\n  message: 'Candidature routée avec succès vers le recruteur et le candidat',\n  reference: $('Formater Notifications RH & Candidat').item.json.refCode,\n  deliveredToRecruiter: true,\n  deliveredToCandidate: true\n}) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node-router-respond-ok",
+      "name": "Réponse 200 OK Routeur",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1240,
+        320
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Nouvelle Candidature Déposée": {
+      "main": [
+        [
+          {
+            "node": "Formater Notifications RH & Candidat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formater Notifications RH & Candidat": {
+      "main": [
+        [
+          {
+            "node": "Alerter Recruteur WhatsApp Direct",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alerter Recruteur WhatsApp Direct": {
+      "main": [
+        [
+          {
+            "node": "Confirmer Dépôt WhatsApp Candidat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmer Dépôt WhatsApp Candidat": {
+      "main": [
+        [
+          {
+            "node": "Réponse 200 OK Routeur",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
