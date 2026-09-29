@@ -216,7 +216,7 @@ export function AiApplyModal({
     if (!result || !job) throw new Error('Candidature non générée.');
     setSubmitting(true);
     try {
-      const applicationId = await submitStageApplication(job.id, editableCv, editableLetter);
+      const applicationId = await submitStageApplication(job.id, editableCv, editableLetter, result.officialCv);
       setResult((current) => (current ? { ...current, applicationId } : current));
       return applicationId;
     } finally {

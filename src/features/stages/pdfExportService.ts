@@ -540,3 +540,9 @@ Bien cordialement,
 *${data.studentName}*`;
 }
 
+/**
+ * Alias export for backward compatibility
+ */
+export const exportOfficialCvToPdf = exportOfficialCvPdf;
+
+

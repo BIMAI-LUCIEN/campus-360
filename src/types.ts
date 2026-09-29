@@ -60,6 +60,7 @@ export type StageApplication = {
   lastRemindedAt?: string;
   job?: StageJob;
   notes?: string;
+  officialCv?: OfficialCvData;
 };
 
 export type StudentProfileData = {

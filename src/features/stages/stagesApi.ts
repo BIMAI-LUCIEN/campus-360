@@ -373,6 +373,162 @@ export function getTopThreeMatches(jobs: StageJob[]): StageJob[] {
     .slice(0, 3);
 }
 
+const SEED_OFFICIAL_CV_1: OfficialCvData = {
+  titrePoste: 'Développeur Frontend React Native & Web Junior',
+  photoUrl: undefined,
+  detailsPersonnels: {
+    nom: 'KAMENI',
+    prenom: 'Dave Lionel',
+    nationalite: 'Camerounaise',
+    age: '22 ans',
+    email: 'dave.kameni@polytechnique.cm',
+    telephone: '672364124',
+    adresse: 'Yaoundé, Melen',
+  },
+  experiences: [
+    {
+      poste: 'Développeur Web & Mobile Stagiaire',
+      entreprise: 'Laboratoire d’Informatique Appliquée',
+      ville: 'Yaoundé',
+      periode: '2023 - 2024',
+      missions: [
+        'Conception d’écrans d’authentification et de formulaires dynamiques avec TypeScript & React Native.',
+        'Intégration d’API RESTful et gestion du cache d’état hors-ligne.',
+        'Mise en place de tests unitaires et vérification de la compatibilité multi-plateformes.',
+      ],
+    },
+  ],
+  formations: [
+    {
+      diplome: 'Licence 3 / Master 1 en Génie Logiciel',
+      etablissement: 'École Nationale Supérieure Polytechnique de Yaoundé',
+      ville: 'Yaoundé',
+      periode: '2022 - 2025',
+    },
+  ],
+  competences: {
+    professionnelles: [
+      'React Native, Expo, React.js & TypeScript',
+      'Intégration d’APIs REST & WebSocket',
+      'Conception UI moderne et responsive',
+      'Architecture logicielle propre et composants réutilisables',
+      'Git, GitHub Actions & tests automatisés',
+    ],
+    habilitesRelationnelles: [
+      'assidu',
+      'attentif',
+      'autonome',
+      'compréhensif',
+      'conciliant',
+      'consciencieux',
+      'courtois',
+      'créatif',
+      'curieux',
+    ],
+    logiciels: [
+      {
+        categorie: 'Langages & Frameworks',
+        items: ['TypeScript', 'JavaScript ES6+', 'React Native', 'React', 'Node.js', 'TailwindCSS'],
+      },
+      {
+        categorie: 'Outils & Environnements',
+        items: ['VS Code', 'Git/GitHub', 'Postman', 'Figma', 'Expo CLI'],
+      },
+    ],
+  },
+  langues: [
+    { langue: 'Français', niveau: 'langue maternelle' },
+    { langue: 'Anglais', niveau: 'courant (B2/C1)' },
+  ],
+  loisirs: ['hackathons', 'développement open-source', 'football', 'veille technologique'],
+};
+
+const SEED_OFFICIAL_CV_2: OfficialCvData = {
+  titrePoste: 'Assistant Designer UI/UX & Brand Content',
+  photoUrl: undefined,
+  detailsPersonnels: {
+    nom: 'KAMENI',
+    prenom: 'Dave Lionel',
+    nationalite: 'Camerounaise',
+    age: '22 ans',
+    email: 'dave.kameni@polytechnique.cm',
+    telephone: '672364124',
+    adresse: 'Yaoundé, Melen',
+  },
+  experiences: [
+    {
+      poste: 'Designer Graphique & Prototype Junior',
+      entreprise: 'Studio Créatif Digital',
+      ville: 'Douala',
+      periode: '2023',
+      missions: [
+        'Création de wireframes et prototypes interactifs Figma haute fidélité.',
+        'Élaboration de chartes graphiques et guidelines de composants design system.',
+        'Réalisation de visuels promotionnels réseaux sociaux sous Figma et Illustrator.',
+      ],
+    },
+  ],
+  formations: [
+    {
+      diplome: 'Licence en Informatique & Multimédia',
+      etablissement: 'Université de Yaoundé I',
+      ville: 'Yaoundé',
+      periode: '2022 - 2024',
+    },
+  ],
+  competences: {
+    professionnelles: [
+      'Figma (Design System, Autolayout, Tokens)',
+      'Adobe XD, Illustrator & Photoshop',
+      'Recherche utilisateur et tests d’ergonomie',
+      'Storytelling visuel & Brand Content',
+    ],
+    habilitesRelationnelles: [
+      'créatif',
+      'sens de l’écoute',
+      'empathique',
+      'méthodique',
+      'force de proposition',
+    ],
+    logiciels: [
+      {
+        categorie: 'Design & Prototypage',
+        items: ['Figma', 'Adobe Creative Cloud', 'Canva Pro', 'Principle'],
+      },
+    ],
+  },
+  langues: [
+    { langue: 'Français', niveau: 'langue maternelle' },
+    { langue: 'Anglais', niveau: 'professionnel' },
+  ],
+  loisirs: ['photographie', 'arts visuels', 'cinéma'],
+};
+
+const SEED_LETTER_1 = `Madame, Monsieur le Responsable du Recrutement,
+
+Actuellement étudiant en Génie Logiciel à l’École Nationale Supérieure Polytechnique de Yaoundé, je vous soumets avec enthousiasme ma candidature pour le poste de "Développeur Frontend React Native & Web Junior" chez TechNovation Labs.
+
+Fort de mes projets académiques et personnels en TypeScript et React Native, j’ai développé une solide rigueur dans la conception d'interfaces fluides, accessibles et connectées à des APIs performantes. Votre vision de l'innovation technologique en Afrique correspond exactement à mes aspirations professionnelles.
+
+Intégrer vos équipes représente pour moi une opportunité unique d'apporter ma réactivité et mes compétences tout en contribuant activement à vos déploiements de pointe.
+
+Je me tiens à votre entière disposition pour tout entretien d'évaluation.
+
+Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.
+
+Dave Lionel KAMENI`;
+
+const SEED_LETTER_2 = `Madame, Monsieur le Responsable des Talents,
+
+Passionné par le design d’interaction et la création d’identités visuelles percutantes, je vous présente ma candidature pour le stage d’"Assistant Designer UI/UX & Brand Content" au sein d'AfriDigital Agency & Studios.
+
+Ma maîtrise de Figma et ma sensibilité pour l'expérience utilisateur mobile me permettent de concevoir des parcours utilisateurs intuitifs adaptés aux réalités du marché africain. Rejoindre votre agence me permettrait de valoriser ma créativité au service de marques d’envergure.
+
+Restant à votre disposition pour vous présenter mon portfolio interactif lors d'un prochain échange.
+
+Cordialement,
+Dave Lionel KAMENI`;
+
 let localApplications: StageApplication[] = [
   {
     id: 'app-seed-1',
@@ -383,7 +539,23 @@ let localApplications: StageApplication[] = [
     cvFileUrl: 'https://campus360.app/storage/cv-sample.pdf',
     letterFileUrl: 'https://campus360.app/storage/letter-sample.pdf',
     job: SEED_JOBS[0],
-    notes: 'Entretien en visio programmé.',
+    officialCv: SEED_OFFICIAL_CV_1,
+    generatedCvText: `CURRICULUM VITAE — DAVE LIONEL KAMENI
+Développeur Frontend React Native & Web Junior
+Yaoundé, Melen | 672364124 | dave.kameni@polytechnique.cm
+
+EXPÉRIENCE :
+Développeur Web & Mobile Stagiaire (Laboratoire d’Informatique Appliquée, 2023 - 2024)
+- Développement d’applications React Native & TypeScript.
+- Intégration d’APIs REST et synchronisation hors-ligne.
+
+FORMATION :
+Licence 3 / Master 1 Génie Logiciel — École Nationale Supérieure Polytechnique de Yaoundé (2022 - 2025)
+
+COMPÉTENCES :
+React Native, Expo, TypeScript, REST API, Git, Figma.`,
+    generatedLetterText: SEED_LETTER_1,
+    notes: 'Entretien visio Google Meet prévu ce jeudi à 15h00 avec le Lead Tech.',
   },
   {
     id: 'app-seed-2',
@@ -393,6 +565,12 @@ let localApplications: StageApplication[] = [
     appliedAt: new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString(),
     lastRemindedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
     job: SEED_JOBS[2],
+    officialCv: SEED_OFFICIAL_CV_2,
+    generatedCvText: `CURRICULUM VITAE — DAVE LIONEL KAMENI
+Assistant Designer UI/UX & Brand Content
+Yaoundé | 672364124 | dave.kameni@polytechnique.cm`,
+    generatedLetterText: SEED_LETTER_2,
+    notes: 'Dossier transmis par WhatsApp au Directeur Artistique.',
   },
   {
     id: 'app-seed-3',
@@ -401,6 +579,10 @@ let localApplications: StageApplication[] = [
     status: 'PENDING',
     appliedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
     job: SEED_JOBS[4],
+    officialCv: SEED_OFFICIAL_CV_1,
+    generatedCvText: `CURRICULUM VITAE — DAVE LIONEL KAMENI
+Stagiaire Analyste FinTech & Data Junior`,
+    generatedLetterText: SEED_LETTER_1,
   },
 ];
 
@@ -689,6 +871,7 @@ export async function submitStageApplication(
   jobId: string,
   cvText: string,
   letterText: string,
+  officialCv?: OfficialCvData,
 ): Promise<string> {
   let appId = '';
   try {
@@ -713,17 +896,48 @@ export async function submitStageApplication(
 
   // Always keep local list updated for instantaneous UI feedback
   const targetJob = SEED_JOBS.find((j) => j.id === jobId) || SEED_JOBS[0];
-  localApplications.unshift({
+  const newApplication: StageApplication = {
     id: appId,
     studentId: 'student-current',
     jobId,
     status: 'PENDING',
     appliedAt: new Date().toISOString(),
     job: targetJob,
+    generatedCvText: cvText,
+    generatedLetterText: letterText,
+    officialCv,
     notes: 'Candidature IA générée & transmise avec succès.',
-  });
+  };
+
+  localApplications = [newApplication, ...localApplications.filter((a) => a.id !== appId)];
+  persistApplicationsLocally(localApplications);
 
   return appId;
+}
+
+const APPLICATIONS_STORAGE_KEY = 'campus360_student_applications';
+
+function getStoredApplications(): StageApplication[] {
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(APPLICATIONS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {}
+  }
+  return [];
+}
+
+function persistApplicationsLocally(apps: StageApplication[]) {
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem(APPLICATIONS_STORAGE_KEY, JSON.stringify(apps));
+    } catch {}
+  }
 }
 
 export async function fetchStudentApplications(): Promise<StageApplication[]> {
@@ -738,6 +952,15 @@ export async function fetchStudentApplications(): Promise<StageApplication[]> {
   } catch (e) {
     console.warn('Fetch applications fallback to local store:', e);
   }
+
+  const stored = getStoredApplications();
+  if (stored.length > 0) {
+    const storedIds = new Set(stored.map((a) => a.id));
+    const merged = [...stored, ...localApplications.filter((a) => !storedIds.has(a.id))];
+    localApplications = merged;
+    return merged;
+  }
+
   return localApplications;
 }
 
@@ -751,10 +974,18 @@ export async function updateApplicationStatus(applicationId: string, status: App
   } catch (e) {
     console.warn('Update status fallback to local store:', e);
   }
-  const app = localApplications.find((a) => a.id === applicationId);
-  if (app) {
-    app.status = status;
-  }
+  localApplications = localApplications.map((a) =>
+    a.id === applicationId ? { ...a, status } : a
+  );
+  persistApplicationsLocally(localApplications);
+  return true;
+}
+
+export async function updateApplicationNotes(applicationId: string, notes: string): Promise<boolean> {
+  localApplications = localApplications.map((a) =>
+    a.id === applicationId ? { ...a, notes } : a
+  );
+  persistApplicationsLocally(localApplications);
   return true;
 }
 

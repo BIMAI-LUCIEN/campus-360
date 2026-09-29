@@ -25,6 +25,7 @@ import {
   Briefcase,
   ChevronRight,
   ArrowLeft,
+  Eye,
 } from 'lucide-react-native';
 import type { StageApplication, AppStatus } from '../../types';
 import {
@@ -35,6 +36,7 @@ import {
   isEligibleForFollowup,
   recordApplicationReminder,
 } from '../../features/stages/stagesApi';
+import { ApplicationDetailModal } from '../../features/stages/ApplicationDetailModal';
 
 interface ApplicationsTimelineProps {
   studentName: string;
@@ -55,6 +57,7 @@ const STATUS_CONFIG: Record<
 export function ApplicationsTimelineScreen({ studentName, onBack }: ApplicationsTimelineProps) {
   const [applications, setApplications] = useState<StageApplication[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedApp, setSelectedApp] = useState<StageApplication | null>(null);
 
   const loadData = async () => {
     const data = await fetchStudentApplications();
@@ -250,6 +253,19 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
                   </View>
                 )}
 
+                {/* Primary Action: View Candidature Dossier (CV Officiel, Lettre RH, Entreprise & Notes) */}
+                <Pressable
+                  style={styles.viewDossierButton}
+                  onPress={() => setSelectedApp(app)}
+                  testID={`btn-view-dossier-${app.id}`}
+                >
+                  <View style={styles.viewDossierButtonLeft}>
+                    <Eye size={15} color="#A78BFA" />
+                    <Text style={styles.viewDossierButtonText}>👁️ Voir ma candidature & CV officiel</Text>
+                  </View>
+                  <ChevronRight size={16} color="#A78BFA" />
+                </Pressable>
+
                 {/* Ticket Actions */}
                 <View style={styles.ticketFooter}>
                   <Pressable
@@ -280,6 +296,30 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
           })
         )}
       </ScrollView>
+
+      {/* Modal Dossier Complet Candidature (CV Officiel, Lettre, Suivi & Notes RH) */}
+      <ApplicationDetailModal
+        visible={!!selectedApp}
+        application={selectedApp}
+        studentName={studentName}
+        onClose={() => setSelectedApp(null)}
+        onStatusUpdated={(appId, newStatus) => {
+          setApplications((prev) =>
+            prev.map((a) => (a.id === appId ? { ...a, status: newStatus } : a))
+          );
+          if (selectedApp && selectedApp.id === appId) {
+            setSelectedApp({ ...selectedApp, status: newStatus });
+          }
+        }}
+        onNotesUpdated={(appId, notes) => {
+          setApplications((prev) =>
+            prev.map((a) => (a.id === appId ? { ...a, notes } : a))
+          );
+          if (selectedApp && selectedApp.id === appId) {
+            setSelectedApp({ ...selectedApp, notes });
+          }
+        }}
+      />
     </View>
   );
 }
@@ -629,5 +669,28 @@ const styles = StyleSheet.create({
   waitingBadgeText: {
     fontSize: 11,
     color: '#94A3B8',
+  },
+  viewDossierButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.35)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  viewDossierButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  viewDossierButtonText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#DDD6FE',
   },
 });
