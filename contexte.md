@@ -334,12 +334,18 @@ Ce cadrage est **100% validé et synchronisé avec le graphe Graphify**. Le fich
 ## 10. Historique des Déploiements & Releases
 
 ### Release : feat(admin): platform dashboard, stages ingestion & auth resilience
-- **Date & Heure :** 2026-09-29T23:45:00+02:00
-- **Branches :** `main` -> `origin/main`
+- **Date & Heure :** 2026-09-30T00:03:00+02:00
+- **Commit :** `cc04169` sur `origin/main`
 - **Statut Pre-Flight Local (4 Barrières) :**
-  - 🟢 **CyberSec & Env :** Aucun secret committé, `.env.example` à jour.
+  - 🟢 **CyberSec & Env :** Aucun secret committé, `.env.example` complet.
   - 🟢 **Typecheck Strict :** 0 erreur sur `recruiter-web`, `mobile-api` et app Expo.
   - 🟢 **Linter & Assets :** Compilation CSS `globals.compiled.css` sans anomalie.
   - 🟢 **Build Local Réel :** `npm run build` exécuté avec succès (Code 0, 39 routes statiques et dynamiques optimisées).
-- **Statut Vercel :** Prêt pour déploiement CI/CD.
-- **Contrôle d'Exécution :** Authentification `POST /api/auth/sign-in/email` vérifiée (HTTP 200), 5 modules admin vérifiés (HTTP 200).
+- **Statut Vercel Production :**
+  - 🟢 **Admin Web :** Déploiement `dpl_5FuGo5m4SfW51Lwvv21G9yVTq39L` `READY` / `PROMOTED`.
+  - 🟢 **Mobile Web :** Déploiement `dpl_FcxRSBnjBQHuJg6AxzBdPvVHfHkx` `READY` / `PROMOTED`.
+- **URLs de Production Vérifiées :**
+  - Admin Dashboard : `https://admin.campus360b.site/admin/login` (HTTP 200)
+  - Admin Health Check : `https://admin.campus360b.site/api/health` (HTTP 200)
+  - Mobile App Backend : `https://campus-360-two.vercel.app` (HTTP 200)
+- **Contrôle d'Exécution :** 0 erreur bloquante en production, résilience hors-ligne / fallback active.
