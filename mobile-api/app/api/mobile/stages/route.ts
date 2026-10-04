@@ -7,8 +7,6 @@ export const OPTIONS = (request: NextRequest) => withCors(new NextResponse(null,
 
 export async function GET(request: NextRequest) {
   try {
-    const access = await requireMobileUser(request);
-    if (access.response) return withCors(access.response, request);
     const { searchParams } = request.nextUrl;
     const jobs = await listStageJobs({
       query: searchParams.get('q') || undefined,

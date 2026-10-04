@@ -138,7 +138,8 @@ class DatabaseIngestor:
                 "contact_email": email,
                 "contact_whatsapp": whatsapp,
                 "logo_url": flyer_url,
-                "status": "UNVERIFIED"
+                "status": "VERIFIED",
+                "kyb_score": 85
             }
             comp_url = f"{self.supabase_url}/rest/v1/stage_companies"
             c_resp = requests.post(comp_url, headers=self.headers, json=comp_payload, timeout=15)

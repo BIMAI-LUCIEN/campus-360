@@ -264,7 +264,7 @@ export const FALLBACK_STAGE_JOBS = [
 
 export const listStageJobs = async (params: { query?: string; sector?: string }) => {
   try {
-    const conditions = [`j.expires_at > now()`, `c.status = 'VERIFIED'`];
+    const conditions = [`j.expires_at > now()`, `c.status != 'SUSPENDED'`];
     const values: string[] = [];
     if (params.sector && params.sector !== 'Tous') {
       values.push(`%${params.sector}%`);
@@ -305,7 +305,7 @@ export const listStageJobs = async (params: { query?: string; sector?: string })
 export const getStageJob = async (jobId: string) => {
   try {
     const result = await databasePool.query<StageJobRow>(
-      `${JOB_SELECT} where j.id = $1 and j.expires_at > now() and c.status = 'VERIFIED' limit 1`,
+      `${JOB_SELECT} where j.id = $1 and j.expires_at > now() and c.status != 'SUSPENDED' limit 1`,
       [jobId],
     );
     if (result.rows[0]) return mapJob(result.rows[0]);

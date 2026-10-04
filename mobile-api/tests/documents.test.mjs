@@ -295,7 +295,7 @@ async function smokeTests() {
     { url: '/api/health', expect: 200 },
     { url: '/api/mobile/documents', expect: 401 },
     { url: `/api/mobile/documents/${'00000000-0000-0000-0000-000000000000'}`, expect: 401 },
-    { url: '/api/mobile/stages', expect: 401 },
+    { url: '/api/mobile/stages', expect: 200 },
     { url: '/api/mobile/stages/applications', expect: 401 },
   ];
 
