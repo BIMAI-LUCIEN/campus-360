@@ -3,7 +3,6 @@ import { betterAuth } from 'better-auth';
 import { createAuthMiddleware } from 'better-auth/api';
 import { admin, bearer } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
-import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -181,6 +180,8 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
     const sqlitePath = path.resolve(process.cwd(), 'campus360-admin.sqlite');
     if (fs.existsSync(sqlitePath) && process.env.AUTH_FORCE_POSTGRES !== 'true') {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { DatabaseSync } = require('node:sqlite');
         return new DatabaseSync(sqlitePath);
       } catch (err) {
         console.warn('[auth] SQLite load failed, falling back to databasePool:', (err as Error).message);

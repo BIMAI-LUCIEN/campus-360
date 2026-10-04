@@ -23,7 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: recruiter-web/package-lock.json
 
@@ -37,7 +37,10 @@ jobs:
         run: npm install -g vercel
 
       - name: Pull Vercel Environment
-        run: cd recruiter-web && vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        run: |
+          cd recruiter-web
+          vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+          node -e "const fs=require('fs');const p='.vercel/project.json';if(fs.existsSync(p)){const d=JSON.parse(fs.readFileSync(p));if(d.settings?.rootDirectory){delete d.settings.rootDirectory;fs.writeFileSync(p,JSON.stringify(d,null,2));console.log('Sanitized rootDirectory from project.json');}}"
 
       - name: Build Vercel App
         run: cd recruiter-web && vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}

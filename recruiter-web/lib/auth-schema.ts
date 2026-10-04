@@ -1,6 +1,8 @@
-import type { DatabaseSync } from 'node:sqlite';
+interface DatabaseSyncLike {
+  exec(sql: string): void;
+}
 
-export const initAuthSchema = (db: DatabaseSync) => {
+export const initAuthSchema = (db: DatabaseSyncLike) => {
   db.exec(`
     create table if not exists user (
       id text primary key not null,
