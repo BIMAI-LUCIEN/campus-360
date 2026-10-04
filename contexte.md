@@ -385,3 +385,26 @@ Ce cadrage est **100% validé et synchronisé avec le graphe Graphify**. Le fich
 - **Crons VPS Automatisés (164.68.109.206) :**
   - 3 Crons quotidiens actifs (08:00, 14:00, 20:00 WAT) ingérant LinkedIn, Facebook, TikTok et sites académiques directement dans la base PostgreSQL live.
 
+### Certification : Curation Base Stages, Flyers/Logos 100% HD & Moteur de Match Probabiliste
+- **Date & Heure :** 2026-10-04T17:15:00+02:00
+- **Verdict :** 🟢 `VERIFIED`
+- **Preuve CLI :**
+  - Supabase PostgreSQL : 42 faux items et profils CV supprimés, 25 offres réelles consolidées, 100% des flyers assignés (0 null), 100% des logos corporatifs assignés (0 null).
+  - TypeScript strict : 0 erreur sur Expo app (`npm run typecheck`), `mobile-api` (`npm run typecheck`) et `recruiter-web` (`npm run typecheck`).
+  - Tests unitaires : 100% réussis (Code 0).
+- **Preuves Visuelles (Captures Réelles Browser) :**
+  1. `stages_feed_verified.png` : Rendu du feed mobile avec bannières tournantes HD, logos corporatifs réels et badges de match continus et réalistes (94%, 90%...).
+  2. `stage_ai_flow_verified.png` : Modal de candidature IA avec calcul de correspondance contextualisé, lettre et CV personnalisés pour l'entreprise ciblée.
+- **Vérification UI :** Rendu mobile web sans aucune anomalie console, élimination totale des répétitions visuelles et score de compatibilité calculé selon l'algorithme probabiliste multi-facteurs (Filière 35%, Skills 35%, Niveau 15%, Localisation 15%).
+
+### Release : feat(stages): clean fake db offers, enrich 100% hd flyers and logos, probabilistic match engine
+- **Date & Heure :** 2026-10-04T17:17:00+02:00
+- **Commit :** `1950c89` sur `origin/main`
+- **Statut EAS OTA Updates :**
+  - 🟢 **Branche Production :** Update Group ID `18e580c8-da3e-4fe8-b9ee-807238748984`
+  - 🟢 **Branche Preview :** Update Group ID `18e580c8-da3e-4fe8-b9ee-807238748984`
+  - 🟢 **Dashboard Expo :** `https://expo.dev/accounts/miguelvinijr237/projects/campus-360/updates/18e580c8-da3e-4fe8-b9ee-807238748984`
+- **Statut API Production :**
+  - Endpoint : `https://api.campus360b.site/api/mobile/stages` -> HTTP 200 OK (25 offres camerounaises vérifiées avec flyers et logos).
+
+
