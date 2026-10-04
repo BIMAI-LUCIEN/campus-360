@@ -5,9 +5,10 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const screenshots = [
-  { src: "/images/app-home.png", alt: "Écran d'accueil de Campus 360", label: "Accueil" },
-  { src: "/images/app-explore.png", alt: "Catalogue de PDF Campus 360", label: "Catalogue" },
-  { src: "/images/app-premium.png", alt: "Offres Campus 360", label: "Abonnements" },
+  { src: "/images/app-home.png", alt: "Matching Stage IA Campus 360", label: "Matching Stage IA" },
+  { src: "/images/app-explore.png", alt: "Générateur CV Officiel RH", label: "Générateur CV Officiel" },
+  { src: "/images/app-premium.png", alt: "Catalogue PDFs Académiques", label: "Catalogue PDFs" },
+  { src: "/images/packs-card.png", alt: "Wallet Mobile Money FCFA", label: "Wallet Mobile Money" },
 ];
 
 export function Screenshots() {
@@ -19,20 +20,20 @@ export function Screenshots() {
     setCurrent((c) => (c === screenshots.length - 1 ? 0 : c + 1));
 
   return (
-    <section className="py-24">
+    <section className="py-24 bg-[var(--color-paper)]">
       <div className="max-w-6xl mx-auto px-6">
         {/* Header */}
         <div className="text-center mb-16">
-          <p className="kicker justify-center flex mb-4">Aperçu</p>
+          <p className="kicker justify-center flex mb-4">Aperçu de l&apos;application</p>
           <h2 className="font-display text-4xl sm:text-5xl font-extrabold tracking-[-0.02em]">
-            L&apos;app en <span className="text-gradient-brand">images</span>.
+            L&apos;application en <span className="text-gradient-brand">images</span>.
           </h2>
         </div>
 
         {/* Carousel */}
         <div className="relative max-w-xs mx-auto">
           {/* Phone frame */}
-          <div className="relative bg-[var(--color-paper-deep)] border border-[var(--color-ink-faint)] rounded-[2rem] p-1.5">
+          <div className="relative bg-[var(--color-paper-deep)] border border-[var(--color-ink-faint)] rounded-[2rem] p-1.5 shadow-2xl">
             {/* Notch */}
             <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-5 bg-[var(--color-paper)] rounded-full z-20" />
 
@@ -59,7 +60,7 @@ export function Screenshots() {
 
           {/* Label */}
           <div
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 text-white text-xs font-mono font-semibold tracking-wide px-3 py-1.5 rounded-full shadow-lg"
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 text-white text-xs font-mono font-semibold tracking-wide px-4 py-1.5 rounded-full shadow-lg text-center whitespace-nowrap"
             style={{ background: "var(--gradient-brand)" }}
           >
             {screenshots[current].label}
@@ -71,14 +72,14 @@ export function Screenshots() {
             className="absolute left-[-1.2rem] top-1/2 -translate-y-1/2 w-10 h-10 bg-[var(--color-paper-deep)] border border-[var(--color-ink-faint)] rounded-full flex items-center justify-center z-20 hover:border-[var(--color-sienna)] hover:text-[var(--color-sienna)] transition-colors cursor-pointer"
             aria-label="Précédent"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-5 h-5 text-[var(--color-ink)]" />
           </button>
           <button
             onClick={next}
             className="absolute right-[-1.2rem] top-1/2 -translate-y-1/2 w-10 h-10 bg-[var(--color-paper-deep)] border border-[var(--color-ink-faint)] rounded-full flex items-center justify-center z-20 hover:border-[var(--color-sienna)] hover:text-[var(--color-sienna)] transition-colors cursor-pointer"
             aria-label="Suivant"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-5 h-5 text-[var(--color-ink)]" />
           </button>
         </div>
 

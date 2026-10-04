@@ -24,7 +24,7 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-sm text-[var(--color-ink-muted)] leading-relaxed">
-              La bibliothèque PDF académique pensée par et pour les étudiants africains.
+              L&apos;intelligence artificielle pour trouver son stage et réussir ses études en Afrique.
             </p>
           </div>
 
@@ -42,6 +42,11 @@ export function Footer() {
                   <Link href="/tarifs" className="hover:text-[var(--color-ink)] transition-colors">
                     Tarifs
                   </Link>
+                </li>
+                <li>
+                  <a href="https://admin.campus360b.site" className="hover:text-[var(--color-ink)] transition-colors">
+                    Espace Recruteur
+                  </a>
                 </li>
                 <li>
                   <Link href="/telecharger" className="hover:text-[var(--color-ink)] transition-colors">

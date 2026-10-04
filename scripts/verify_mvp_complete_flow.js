@@ -4,14 +4,17 @@ const fs = require('fs');
 
 async function runMvpCompleteFlowVerification() {
   const agentScreenshotsDir = path.resolve(__dirname, '..', '.agent', 'screenshots');
-  const brainScreenshotsDir = path.resolve('C:\\Users\\MIGUEL IA\\.gemini\\antigravity\\brain\\710f8cd3-f507-4815-9708-73f32da6fef8');
+  const brainScreenshotsDir = path.resolve('C:\\Users\\DELL\\.gemini\\antigravity\\brain\\2c123a73-4f95-451b-82c4-6f5a2248cde4');
   
   if (!fs.existsSync(agentScreenshotsDir)) {
     fs.mkdirSync(agentScreenshotsDir, { recursive: true });
   }
+  if (!fs.existsSync(brainScreenshotsDir)) {
+    fs.mkdirSync(brainScreenshotsDir, { recursive: true });
+  }
 
   console.log('🚀 [E2E] Démarrage du test d\'intégration complet MVP Campus 360...');
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
 
   const context = await browser.newContext({
     viewport: { width: 414, height: 896 },

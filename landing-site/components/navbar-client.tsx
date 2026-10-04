@@ -8,6 +8,7 @@ import { Button } from "./ui/button";
 const navLinks = [
   { href: "/fonctionnalites", label: "Fonctionnalités" },
   { href: "/tarifs", label: "Tarifs" },
+  { href: "https://admin.campus360b.site", label: "Espace Recruteur" },
   { href: "/a-propos", label: "À propos" },
   { href: "/aide", label: "Aide" },
 ];

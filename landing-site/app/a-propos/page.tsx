@@ -20,22 +20,22 @@ const values = [
   {
     icon: Target,
     title: "Mission",
-    desc: "Égaliser l'accès au savoir pour les étudiants africains. Un PDF ne devrait pas coûter un jour de repas.",
+    desc: "Permettre à chaque étudiant de trouver un stage adapté et d'accéder aux meilleures ressources académiques en quelques clics.",
   },
   {
     icon: Heart,
     title: "Valeurs",
-    desc: "Transparence sur les prix, respect des étudiants, amour du travail bien fait, zéro bullshit.",
+    desc: "Transparence des tarifs, soutien actif aux étudiants, efficacité maximale avec l'IA et zéro perte de temps.",
   },
   {
     icon: Users,
     title: "Équipe",
-    desc: "3 fondateurs Camerounais, tous anciens étudiants. On a vécu les galères qu'on résout aujourd'hui.",
+    desc: "Une équipe d'ingénieurs et d'anciens étudiants passionnés qui construisent les outils qu'ils auraient voulu avoir sur les bancs de l'université.",
   },
   {
     icon: Sparkles,
-    title: "Vision 2030",
-    desc: "Devenir la bibliothèque numérique de référence pour 50 millions d'étudiants africains.",
+    title: "Vision",
+    desc: "L'écosystème de référence pour l'insertion professionnelle et la réussite académique de la jeunesse étudiante en Afrique.",
   },
 ];
 

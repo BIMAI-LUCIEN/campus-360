@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Crown, FileText, GraduationCap } from "lucide-react";
+import { Check, Crown, FileText, GraduationCap, Zap } from "lucide-react";
 import { Button } from "./ui/button";
 
 const APK_URL =
@@ -9,58 +9,69 @@ const APK_URL =
 
 const plans = [
   {
-    name: "Gratuit",
+    name: "Découverte",
     icon: GraduationCap,
-    price: "Gratuit",
-    description: "Pour découvrir Campus 360",
+    price: "0 FCFA",
+    description: "Pour explorer le catalogue et tester l'IA",
+    period: "",
     features: [
-      "Rédaction et aperçu filigrané",
-      "Catalogue et achats à la carte",
-      "Aucun export de document",
+      "Consultation du catalogue de 3 500+ PDFs",
+      "1ère candidature IA 100% offerte",
+      "Calcul du score de match sur les stages",
+      "Lecteur PDF intégré avec mode nuit",
     ],
-    cta: "Télécharger l'app",
+    cta: "Télécharger l'APK",
     ctaVariant: "secondary" as const,
     popular: false,
   },
   {
-    name: "Basique",
+    name: "Pack 5 Candidatures",
+    icon: Zap,
+    price: "500 FCFA",
+    description: "Achat ponctuel sans abonnement",
+    period: "/ pack",
+    features: [
+      "5 candidatures IA sur-mesure",
+      "Template CV Officiel RH (2 colonnes)",
+      "Lettre de motivation personnalisée",
+      "Export PDF propre sans filigrane",
+      "Envoi 1-clic sur WhatsApp RH & Email",
+    ],
+    cta: "Tester le Pack",
+    ctaVariant: "secondary" as const,
+    popular: false,
+  },
+  {
+    name: "Pass Étudiant",
     icon: FileText,
     price: "2 000 FCFA",
-    description: "Pour démarrer chaque mois",
-    period: "/mois",
+    description: "La formule complète pour réussir son semestre",
+    period: "/ mois",
     features: [
-      "5 candidatures IA",
-      "3 rédactions ou corrections",
-      "500 messages IA",
-      "PDF avec filigrane",
+      "Candidatures IA illimitées",
+      "Accès illimité aux 3 500+ PDFs d'universités",
+      "Assistant IA (résumés & fiches de révision)",
+      "Notification & relance automatique à J+7",
+      "Téléchargement & lecture 100% hors-ligne",
     ],
-    cta: "Choisir Basique",
-    ctaVariant: "secondary" as const,
-    popular: false,
-  },
-  {
-    name: "Pro",
-    icon: GraduationCap,
-    price: "3 500 FCFA",
-    description: "Pour produire sans filigrane",
-    features: [
-      "10 candidatures IA",
-      "5 rédactions ou corrections",
-      "1 000 messages IA",
-      "PDF propre et mode hors ligne",
-    ],
-    cta: "Choisir Pro",
+    cta: "Activer le Pass",
     ctaVariant: "primary" as const,
     popular: true,
   },
   {
-    name: "Elite",
+    name: "Pass Pro & Soutenance",
     icon: Crown,
-    price: "5 000 FCFA",
-    description: "Pour disposer de tous les formats",
-    period: "/mois",
-    features: ["20 candidatures IA", "10 rédactions ou corrections", "2 000 messages IA", "PDF et Word sans filigrane"],
-    cta: "Choisir Elite",
+    price: "3 500 FCFA",
+    description: "Pour valider son stage et préparer sa soutenance",
+    period: "/ mois",
+    features: [
+      "Toutes les fonctionnalités du Pass Étudiant",
+      "Générateur de plan de rapport & mémoire",
+      "Coach IA d'entraînement à la soutenance",
+      "Relances WhatsApp RH prioritaires",
+      "Support technique dédié",
+    ],
+    cta: "Découvrir Pro",
     ctaVariant: "secondary" as const,
     popular: false,
   },
@@ -70,20 +81,19 @@ export function Pricing() {
   return (
     <section
       id="pricing"
-      className="py-20 lg:py-32 bg-gradient-to-b from-white to-brand-50"
+      className="py-20 lg:py-32 bg-[var(--color-paper-deep)] border-y border-[var(--color-ink-faint)]"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-50 text-brand-700 text-sm font-semibold rounded-full mb-4">
-            💰 Tarifs transparents
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-sienna-bg)] text-[var(--color-sienna-tone)] text-sm font-semibold rounded-full mb-4">
+            💰 Tarifs transparents en FCFA
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[var(--color-ink)] mb-4">
-            Choisis ton plan
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[var(--color-ink)] mb-4">
+            Des tarifs adaptés aux étudiants.
           </h2>
-          <p className="text-lg text-[var(--color-ink-light)] max-w-2xl mx-auto">
-            Pas d'engagement. Pas de frais cachés. Tu paies uniquement pour ce
-            dont tu as besoin.
+          <p className="text-lg text-[var(--color-ink-muted)] max-w-2xl mx-auto">
+            Sans engagement. Paye par Orange Money ou MTN MoMo en 10 secondes.
           </p>
         </div>
 
@@ -96,12 +106,12 @@ export function Pricing() {
                 key={plan.name}
                 className={`relative rounded-2xl p-6 lg:p-8 flex flex-col transition-all hover:-translate-y-1 ${
                   plan.popular
-                    ? "bg-brand-500 text-white shadow-xl shadow-brand-500/30 scale-[1.02]"
-                    : "bg-white border border-[var(--color-border)] shadow-sm hover:shadow-lg"
+                    ? "bg-[var(--color-paper-soft)] border-2 border-[var(--color-sienna)] shadow-xl shadow-[var(--color-sienna)]/10"
+                    : "bg-[var(--color-paper)] border border-[var(--color-ink-faint)]"
                 }`}
               >
                 {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-xs font-bold px-4 py-1.5 rounded-full shadow-sm">
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-[var(--gradient-brand)] text-white text-xs font-bold rounded-full uppercase tracking-wider shadow-sm">
                     Le plus populaire
                   </div>
                 )}
@@ -110,86 +120,48 @@ export function Pricing() {
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                       plan.popular
-                        ? "bg-white/20 text-white"
-                        : "bg-brand-50 text-brand-600"
+                        ? "bg-[var(--gradient-brand)] text-white"
+                        : "bg-[var(--color-sienna-bg)] text-[var(--color-sienna-tone)]"
                     }`}
                   >
                     <Icon className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3
-                      className={`font-bold text-lg ${
-                        plan.popular ? "text-white" : "text-[var(--color-ink)]"
-                      }`}
-                    >
+                    <h3 className="font-display text-lg font-bold text-[var(--color-ink)]">
                       {plan.name}
                     </h3>
-                    <p
-                      className={`text-sm ${
-                        plan.popular
-                          ? "text-white/80"
-                          : "text-[var(--color-ink-light)]"
-                      }`}
-                    >
-                      {plan.description}
-                    </p>
                   </div>
                 </div>
 
+                <p className="text-xs text-[var(--color-ink-muted)] mb-6 min-h-[36px]">
+                  {plan.description}
+                </p>
+
                 <div className="mb-6">
-                  <span
-                    className={`text-3xl font-extrabold ${
-                      plan.popular ? "text-white" : "text-[var(--color-ink)]"
-                    }`}
-                  >
+                  <span className="font-display text-3xl lg:text-4xl font-extrabold text-[var(--color-ink)]">
                     {plan.price}
                   </span>
                   {plan.period && (
-                    <span
-                      className={`text-sm ${
-                        plan.popular
-                          ? "text-white/70"
-                          : "text-[var(--color-ink-light)]"
-                      }`}
-                    >
-                      {" "}
+                    <span className="text-sm text-[var(--color-ink-muted)] ml-1">
                       {plan.period}
                     </span>
                   )}
                 </div>
 
-                <ul className="flex flex-col gap-3 mb-8 flex-1">
-                  {plan.features.map((feature) => (
-                    <li
-                      key={feature}
-                      className={`flex items-start gap-2.5 text-sm ${
-                        plan.popular
-                          ? "text-white/90"
-                          : "text-[var(--color-ink-light)]"
-                      }`}
-                    >
-                      <Check
-                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                          plan.popular ? "text-white" : "text-brand-500"
-                        }`}
-                      />
-                      {feature}
+                <ul className="space-y-3 mb-8 flex-1">
+                  {plan.features.map((feat) => (
+                    <li key={feat} className="flex items-start gap-2.5 text-xs sm:text-sm text-[var(--color-ink-soft)] leading-snug">
+                      <Check className="w-4 h-4 text-[var(--color-emerald)] flex-shrink-0 mt-0.5" />
+                      <span>{feat}</span>
                     </li>
                   ))}
                 </ul>
 
-                <a
-                  href={APK_URL}
-                  download="campus-360.apk"
-                  className="block"
-                >
+                <a href={APK_URL} download="campus-360.apk" className="w-full">
                   <Button
                     variant={plan.ctaVariant}
-                    className={`w-full ${
-                      plan.popular
-                        ? "bg-white text-brand-600 hover:bg-white/90"
-                        : ""
-                    }`}
+                    size="lg"
+                    className="w-full justify-center"
                   >
                     {plan.cta}
                   </Button>
@@ -198,11 +170,6 @@ export function Pricing() {
             );
           })}
         </div>
-
-        {/* Footer note */}
-        <p className="text-center text-sm text-[var(--color-ink-light)] mt-10">
-          Les achats à la carte restent disponibles sans abonnement depuis l’application.
-        </p>
       </div>
     </section>
   );

@@ -13,6 +13,7 @@ test('1. Social Scraper Agent Architecture & Modules', async (t) => {
     'scripts/agents/cameroon_jobs_agent.py',
     'scripts/agents/linkedin_agent.py',
     'scripts/agents/facebook_agent.py',
+    'scripts/agents/apify_agent.py',
     'scripts/agents/web_academic_agent.py',
     'scripts/agents/ai_analyzer_agent.py',
     'scripts/agents/database_ingestor.py',

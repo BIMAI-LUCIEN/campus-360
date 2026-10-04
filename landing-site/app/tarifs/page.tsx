@@ -1,202 +1,74 @@
 import type { Metadata } from "next";
-import { Check, Crown, FileText, GraduationCap } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Pricing } from "@/components/pricing";
 import { SiteShell } from "@/components/site-shell";
 
-const APK_URL =
-  process.env.NEXT_PUBLIC_APK_DOWNLOAD_URL ??
-  "https://campus360b.site/downloads/campus-360.apk";
-
 export const metadata: Metadata = {
-  title: "Tarifs Campus 360 — Gratuit, Basique, Pro et Elite",
+  title: "Tarifs Campus 360 — Orange Money & MTN MoMo",
   description:
-    "Tarifs transparents : Gratuit, Basique à 2 000 FCFA, Pro à 3 500 FCFA et Elite à 5 000 FCFA par mois.",
+    "Tarifs transparents sans frais cachés : 1ère candidature offerte, Pack 5 candidatures à 500 FCFA, Pass Étudiant à 2 000 FCFA et Pass Pro à 3 500 FCFA.",
   alternates: { canonical: "/tarifs" },
   openGraph: {
     title: "Tarifs Campus 360",
-    description: "Gratuit, Basique, Pro et Elite. Sans engagement.",
+    description: "Des tarifs adaptés aux étudiants d'Afrique francophone. Paiement par Mobile Money.",
     url: "/tarifs",
   },
 };
 
-const plans = [
-  {
-    name: "Gratuit",
-    icon: GraduationCap,
-    price: "Gratuit",
-    description: "Pour découvrir Campus 360",
-    features: [
-      "Rédaction et aperçu filigrané",
-      "Catalogue et achats à la carte",
-      "Aucun export de document",
-    ],
-    cta: "Télécharger l'app",
-    ctaVariant: "secondary" as const,
-    popular: false,
-  },
-  {
-    name: "Basique",
-    icon: FileText,
-    price: "2 000 FCFA",
-    description: "Les essentiels mensuels",
-    period: "/mois",
-    features: [
-      "5 candidatures IA",
-      "3 rédactions ou corrections",
-      "500 messages IA",
-      "PDF avec filigrane",
-    ],
-    cta: "Choisir Basique",
-    ctaVariant: "secondary" as const,
-    popular: false,
-  },
-  {
-    name: "Pro",
-    icon: GraduationCap,
-    price: "3 500 FCFA",
-    description: "Pour produire sans filigrane",
-    features: [
-      "10 candidatures IA",
-      "5 rédactions ou corrections",
-      "1 000 messages IA",
-      "PDF propre et mode hors ligne",
-    ],
-    cta: "Choisir Pro",
-    ctaVariant: "primary" as const,
-    popular: true,
-  },
-  {
-    name: "Elite",
-    icon: Crown,
-    price: "5 000 FCFA",
-    description: "Tous les formats et volumes maximum",
-    period: "/mois",
-    features: ["20 candidatures IA", "10 rédactions ou corrections", "2 000 messages IA", "PDF et Word sans filigrane"],
-    cta: "Choisir Elite",
-    ctaVariant: "secondary" as const,
-    popular: false,
-  },
-];
-
 const faq = [
   {
-    q: "Puis-je annuler à tout moment ?",
-    a: "Oui. Chaque offre est sans engagement et reste active jusqu'à la fin de la période en cours.",
+    q: "Comment fonctionne le paiement par Mobile Money ?",
+    a: "Lorsque tu recharges ou actives un pass, l'application initie une transaction sécurisée vers ton compte Orange Money ou MTN MoMo. Tu valides la transaction sur ton téléphone avec ton code PIN et ton solde est crédité instantanément.",
   },
   {
-    q: "Comment payer ?",
-    a: "Orange Money, MTN Mobile Money, cartes Visa/Mastercard. Le paiement est sécurisé et une facture PDF est générée automatiquement.",
+    q: "Y a-t-il un abonnement avec précompte automatique ?",
+    a: "Non. Aucun abonnement automatique ni prélèvement surprise. Tu recharges ton solde uniquement quand tu en as besoin.",
   },
   {
-    q: "Mes achats restent-ils si j'annule ?",
-    a: "Oui. Tous les PDFs achetés via le wallet restent à toi pour toujours, même sans abonnement actif.",
+    q: "Est-ce que mes PDFs téléchargés restent accessibles ?",
+    a: "Oui. Tous les cours, fiches et annales téléchargés restent enregistrés sur ton téléphone et sont lisibles à tout moment en mode hors-ligne, même sans solde.",
   },
   {
-    q: "Puis-je partager mon abonnement ?",
-    a: "Non. Le compte et les exports sont personnels.",
+    q: "Puis-je tester l'IA gratuitement ?",
+    a: "Absolument. Dès la création de ton profil, la 1ère candidature IA avec CV officiel RH et lettre de motivation te sont offertes à 100%.",
   },
 ];
 
 export default function TarifsPage() {
   return (
     <SiteShell>
-      <section className="py-20 lg:py-28 border-b border-[var(--color-ink-faint)]">
+      <section className="py-20 lg:py-28 border-b border-[var(--color-ink-faint)] bg-[var(--color-paper-deep)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="kicker justify-center flex mb-6">Quatre niveaux, des droits clairs</p>
-          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] mb-6">
-            Des tarifs transparents.
+          <p className="kicker justify-center flex mb-4">Tarification claire & équitable</p>
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] mb-6 leading-[1.05] text-[var(--color-ink)]">
+            Sans engagement, sans frais cachés.
           </h1>
           <p className="text-lg text-[var(--color-ink-muted)] max-w-2xl mx-auto">
-            Pas d&apos;engagement. Pas de frais cachés. Tu paies uniquement
-            pour ce dont tu as besoin.
+            Paye uniquement ce dont tu as besoin avec ton téléphone Orange Money ou MTN MoMo.
           </p>
         </div>
       </section>
 
-      <section className="py-16 lg:py-24">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-px bg-[var(--color-ink)]/10 border border-[var(--color-ink)]/10">
-            {plans.map((plan) => {
-              const Icon = plan.icon;
-              return (
-                <div
-                  key={plan.name}
-                  className={`relative p-6 lg:p-8 flex flex-col ${
-                    plan.popular
-                      ? "bg-[var(--color-ink)] text-[var(--color-paper)]"
-                      : "bg-[var(--color-paper)]"
-                  }`}
-                >
-                  {plan.popular && (
-                    <div className="absolute top-0 right-0 bg-[var(--color-sienna)] text-white text-[0.6875rem] font-mono font-bold tracking-wide uppercase px-3 py-1.5">
-                      Populaire
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 mb-5">
-                    <Icon className={`w-6 h-6 ${plan.popular ? "text-[var(--color-sienna-tone)]" : "text-[var(--color-sienna)]"}`} strokeWidth={1.5} />
-                    <div>
-                      <h3 className="font-display font-bold text-lg">
-                        {plan.name}
-                      </h3>
-                      <p className={`text-sm ${plan.popular ? "text-[var(--color-paper)]/65" : "text-[var(--color-ink-muted)]"}`}>
-                        {plan.description}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mb-7">
-                    <span className="font-display text-3xl font-extrabold tracking-[-0.02em]">{plan.price}</span>
-                    {plan.period && (
-                      <span className={`text-sm ${plan.popular ? "text-[var(--color-paper)]/65" : "text-[var(--color-ink-muted)]"}`}> {plan.period}</span>
-                    )}
-                  </div>
-                  <ul className="flex flex-col gap-3 mb-8 flex-1">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2.5 text-sm">
-                        <Check
-                          className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                            plan.popular ? "text-[var(--color-emerald-tone)]" : "text-[var(--color-emerald)]"
-                          }`}
-                        />
-                        <span className={plan.popular ? "text-[var(--color-paper)]/85" : "text-[var(--color-ink-muted)]"}>
-                          {feature}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <a href={APK_URL} download="campus-360.apk" className="block">
-                    <Button
-                      variant={plan.popular ? "secondary" : "outline"}
-                      className={`w-full ${plan.popular ? "" : ""}`}
-                    >
-                      {plan.cta}
-                    </Button>
-                  </a>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      <Pricing />
 
-      <section className="py-16 lg:py-24 bg-[var(--color-paper-deep)]">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="font-display text-3xl font-extrabold tracking-[-0.02em] mb-8 text-center">
-            Questions fréquentes
+      {/* FAQ Tarifs */}
+      <section className="py-20 lg:py-28 bg-[var(--color-paper)] border-t border-[var(--color-ink-faint)]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="font-display text-3xl font-extrabold text-center mb-12 text-[var(--color-ink)]">
+            Questions fréquentes sur le paiement
           </h2>
-          <div className="space-y-0 border-t border-[var(--color-ink)]/10">
+          <div className="grid md:grid-cols-2 gap-8">
             {faq.map((item) => (
-              <details
+              <div
                 key={item.q}
-                className="py-5 border-b border-[var(--color-ink)]/10 group"
+                className="p-6 rounded-2xl bg-[var(--color-paper-soft)] border border-[var(--color-ink-faint)]"
               >
-                <summary className="cursor-pointer font-display font-semibold text-[var(--color-ink)] flex items-center justify-between list-none">
+                <h3 className="font-display text-lg font-bold text-[var(--color-ink)] mb-2.5">
                   {item.q}
-                  <span className="text-[var(--color-sienna)] text-xl group-open:rotate-45 transition-transform">+</span>
-                </summary>
-                <p className="mt-3 text-sm text-[var(--color-ink-muted)] leading-relaxed">
+                </h3>
+                <p className="text-sm text-[var(--color-ink-muted)] leading-relaxed">
                   {item.a}
                 </p>
-              </details>
+              </div>
             ))}
           </div>
         </div>

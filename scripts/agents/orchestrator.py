@@ -14,6 +14,7 @@ if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 from linkedin_agent import LinkedInScraperAgent
 from facebook_agent import FacebookScraperAgent
+from apify_agent import ApifyScraperAgent
 from web_academic_agent import WebAcademicAgent
 from cameroon_jobs_agent import CameroonJobsAgent
 from ocr_flyer_agent import OCRFlyerAgent
@@ -27,6 +28,7 @@ class ScraperOrchestrator:
     def __init__(self):
         self.linkedin_agent = LinkedInScraperAgent()
         self.facebook_agent = FacebookScraperAgent()
+        self.apify_agent = ApifyScraperAgent()
         self.web_agent = WebAcademicAgent()
         self.cameroon_agent = CameroonJobsAgent()
         self.ocr_agent = OCRFlyerAgent()
@@ -38,7 +40,7 @@ class ScraperOrchestrator:
         Exécute le cycle complet : Collecte -> Analyse IA -> Sauvegarde.
         """
         if not platforms:
-            platforms = ["CAMEROON_JOBS", "LINKEDIN", "FACEBOOK", "ACADEMIC_WEB"]
+            platforms = ["CAMEROON_JOBS", "LINKEDIN", "FACEBOOK", "TIKTOK", "ACADEMIC_WEB"]
 
         logger.info(f"🚀 Lancement de la mission de scraping multi-agents : Mot-clé='{query}', Plateformes={platforms}")
         start_time = time.time()
@@ -58,17 +60,33 @@ class ScraperOrchestrator:
 
         if "LINKEDIN" in platforms:
             try:
-                li_items = self.linkedin_agent.search_linkedin_reports(query=f"rapport de stage {query}", max_results=limit_per_platform)
+                li_items = []
+                if self.apify_agent.is_configured():
+                    li_items = self.apify_agent.scrape_linkedin_posts(query=f"stage {query}", limit=limit_per_platform)
+                if not li_items:
+                    li_items = self.linkedin_agent.search_linkedin_reports(query=f"rapport de stage {query}", max_results=limit_per_platform)
                 collected_items.extend(li_items)
             except Exception as e:
                 logger.error(f"Erreur Agent LinkedIn : {e}")
 
         if "FACEBOOK" in platforms:
             try:
-                fb_items = self.facebook_agent.search_facebook_reports(query=f"rapport de stage {query}", max_results=limit_per_platform)
+                fb_items = []
+                if self.apify_agent.is_configured():
+                    fb_items = self.apify_agent.scrape_facebook_posts(query=f"stage {query}", limit=limit_per_platform)
+                if not fb_items:
+                    fb_items = self.facebook_agent.search_facebook_reports(query=f"rapport de stage {query}", max_results=limit_per_platform)
                 collected_items.extend(fb_items)
             except Exception as e:
                 logger.error(f"Erreur Agent Facebook : {e}")
+
+        if "TIKTOK" in platforms:
+            try:
+                if self.apify_agent.is_configured():
+                    tt_items = self.apify_agent.scrape_tiktok_posts(query=f"stage {query} Cameroun", limit=limit_per_platform)
+                    collected_items.extend(tt_items)
+            except Exception as e:
+                logger.error(f"Erreur Agent TikTok : {e}")
 
         if "ACADEMIC_WEB" in platforms:
             try:

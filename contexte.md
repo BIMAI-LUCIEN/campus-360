@@ -272,6 +272,18 @@ Ce cadrage est **100% validé et synchronisé avec le graphe Graphify**. Le fich
 
 ## 9. Certifications, Cybersécurité & Vérifications Visuelles (Agent Browser)
 
+### Certification : Scraping Multi-Plateformes Apify (LinkedIn, Facebook, TikTok) & Crons Automatiques (Module 15)
+- **Date & Heure :** 2026-10-04T02:20:00+02:00
+- **Verdict :** 🟢 `VERIFIED`
+- **Preuve CLI :** Tests unitaires validés (`node scripts/test-social-scraper-agents.mjs` code 0), strict typecheck validé sur app Expo, `mobile-api` et `recruiter-web` (Code 0).
+- **Preuve BDD Réelle :** Purge des mock data effectuée, 53 offres réelles et 7 rapports académiques ingérés dans PostgreSQL.
+- **Preuves Visuelles (Browser E2E) :**
+  - `![Feed des Stages Réels](.agent/screenshots/01_stages_feed_verified.png)`
+  - `![Profil Express 30s](.agent/screenshots/04_onboarding_express_verified.png)`
+  - `![Template CV Officiel & Lettre IA](.agent/screenshots/02_official_cv_and_letter_verified.png)`
+  - `![Suivi Candidatures & Relance J+7](.agent/screenshots/03_timeline_j7_relance_verified.png)`
+- **Vérification UI :** Rendu mobile complet exécuté sans erreur console par Chrome / Playwright, navigation fluide du feed aux candidatures et relance J+7.
+
 ### Certification : Dashboard Administrateur & Cockpit Unifié (Module 14)
 - **Date & Heure :** 2026-09-29T22:42:00+02:00
 - **Verdict :** 🟢 `VERIFIED`
