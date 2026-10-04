@@ -24,7 +24,7 @@ async function publishBranch(branch) {
     const safeMsg = (message || 'OTA-Update').replace(/["'\n\r]/g, ' ').trim();
     console.log(`📝 Message: "${safeMsg}"`);
 
-    const args = ['eas', 'update', '--branch', branch, `--message="${safeMsg}"`, '--non-interactive'];
+    const args = ['--yes', 'eas-cli', 'update', '--branch', branch, `--message="${safeMsg}"`, '--non-interactive'];
 
     const child = spawn(easCmd, args, {
       env,
