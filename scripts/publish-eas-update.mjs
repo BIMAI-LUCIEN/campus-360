@@ -12,6 +12,8 @@ const env = {
   EXPO_TOKEN,
   EAS_TOKEN: EXPO_TOKEN,
   CI: '1',
+  HTTP_PROXY: process.env.HTTP_PROXY || 'http://127.0.0.1:8888',
+  HTTPS_PROXY: process.env.HTTPS_PROXY || 'http://127.0.0.1:8888',
 };
 
 const requestedBranch = process.argv[2];

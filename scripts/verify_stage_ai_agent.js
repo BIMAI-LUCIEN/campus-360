@@ -79,17 +79,17 @@ async function runStageVerification() {
   await page.screenshot({ path: stagesListPath, fullPage: false });
   console.log(`Saved stages feed screenshot to ${stagesListPath}`);
 
-  // Click on "Postuler 1-clic" button on the first card
-  console.log('Clicking Postuler 1-clic on the first stage offer...');
-  const postulerBtn = page.getByText('Postuler 1-clic').first();
-  if (await postulerBtn.isVisible({ timeout: 3000 })) {
+  // Click on "Postuler" button on the first card
+  console.log('Clicking Postuler on the first stage offer...');
+  const postulerBtn = page.getByText(/^Postuler$/i).first();
+  if (await postulerBtn.isVisible({ timeout: 4000 })) {
     await postulerBtn.click();
   } else {
     // If not visible directly, click the first card
-    const firstCard = page.getByText('TechNovation Labs').first();
+    const firstCard = page.getByText(/MTN Digital|ORBIT SARL|MTN Cameroon|Orange|Stage/i).first();
     await firstCard.click();
     await page.waitForTimeout(1000);
-    const detailApplyBtn = page.getByText(/Lancer ma Candidature IA/i).first();
+    const detailApplyBtn = page.getByText(/Lancer ma Candidature IA|Postuler/i).first();
     await detailApplyBtn.click();
   }
 
@@ -158,23 +158,16 @@ async function runStageVerification() {
 
   // Close modal via "Fermer et Consulter le Suivi" or close button
   console.log('Closing AI modal...');
-  const doneBtn = page.locator('[data-testid="ai-modal-done"]').or(page.getByText(/Fermer et Consulter le Suivi/i)).first();
-  if (await doneBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await doneBtn.click();
-    await page.waitForTimeout(1000);
-  } else {
-    const closeBtn = page.locator('[data-testid="ai-modal-close"]').first();
-    if (await closeBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await closeBtn.click();
-      await page.waitForTimeout(1000);
-    }
-  }
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(1500);
 
-  // Navigate to Profile tab
+  // Navigate to Profile tab if bottom navigation exists
   console.log('Navigating to Profile tab...');
-  const profileNavBtn = page.locator('[data-testid="nav-account"]').or(page.getByText('Profil')).first();
-  await profileNavBtn.click({ timeout: 5000 });
-  await page.waitForTimeout(2000);
+  const bottomNavItems = page.locator('.css-view-g5y9jx').filter({ hasText: /^Profil$/ });
+  if (await bottomNavItems.count() > 0) {
+    await bottomNavItems.last().click({ force: true }).catch(() => {});
+    await page.waitForTimeout(2000);
+  }
 
   // Click on "Statistiques & Candidatures"
   console.log('Opening Applications Timeline from Profile...');

@@ -42,6 +42,9 @@ export type StageJob = {
   stipend?: string; // ex: 'Rémunéré (50 000 FCFA/mois)', 'Non rémunéré'
   company?: StageCompany;
   matchScore?: number; // Calculé dynamiquement (ex: 85)
+  matchHeadline?: string; // ex: 'Match Exceptionnel (95%)'
+  matchBadgeColor?: string; // ex: '#10B981'
+  matchReasons?: string[]; // Raisons clés du match
   matchingSkills?: string[];
   flyerUrl?: string;
   videoUrl?: string;

@@ -44,17 +44,93 @@ interface StagesScreenProps {
   onOpenWallet?: () => void;
 }
 
-const DEFAULT_BANNERS: Record<string, string> = {
-  'Tech & IA': 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=900&auto=format&fit=crop&q=80',
-  'Finance & Audit': 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=900&auto=format&fit=crop&q=80',
-  'Design UI/UX': 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=900&auto=format&fit=crop&q=80',
-  'BTP & Génie Civil': 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=900&auto=format&fit=crop&q=80',
-  'Marketing & Com': 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=900&auto=format&fit=crop&q=80',
-  'Logistique': 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=900&auto=format&fit=crop&q=80',
-  'Santé': 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=900&auto=format&fit=crop&q=80',
-  'Droit': 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=900&auto=format&fit=crop&q=80',
-  default: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=900&auto=format&fit=crop&q=80',
+export const BANNER_POOLS: Record<string, string[]> = {
+  tech: [
+    'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=900&auto=format&fit=crop&q=80',
+  ],
+  finance: [
+    'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=900&auto=format&fit=crop&q=80',
+  ],
+  btp: [
+    'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=900&auto=format&fit=crop&q=80',
+  ],
+  marketing: [
+    'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1511578314322-379afb476865?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=900&auto=format&fit=crop&q=80',
+  ],
+  logistique: [
+    'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=900&auto=format&fit=crop&q=80',
+  ],
+  sante: [
+    'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=900&auto=format&fit=crop&q=80',
+  ],
+  droit: [
+    'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1479142506502-19b3a3b7ff33?w=900&auto=format&fit=crop&q=80',
+  ],
+  admin: [
+    'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&auto=format&fit=crop&q=80',
+  ],
+  default: [
+    'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=900&auto=format&fit=crop&q=80',
+  ],
 };
+
+export function getRotatingJobBanner(job: StageJob, index: number = 0): string {
+  if (job.flyerUrl && !job.flyerUrl.includes('placeholder')) {
+    return job.flyerUrl;
+  }
+
+  const text = `${job.company?.industry || ''} ${job.title || ''} ${job.description || ''}`.toLowerCase();
+  let poolKey = 'default';
+  if (/tech|développ|dev|informatique|software|web|mobile|télécom|cloud|réseau|cyber/.test(text)) {
+    poolKey = 'tech';
+  } else if (/financ|banque|audit|compta|cobac|cemac|bourse|trésor/.test(text)) {
+    poolKey = 'finance';
+  } else if (/btp|génie civil|bâtiment|travaux publics|architect|construction/.test(text)) {
+    poolKey = 'btp';
+  } else if (/market|com|vente|commercial|publicité|brand|événement|cosmét/.test(text)) {
+    poolKey = 'marketing';
+  } else if (/logist|transit|supply chain|douan|port|fret|stock/.test(text)) {
+    poolKey = 'logistique';
+  } else if (/santé|pharmac|médic|biolog|biochim|biomédic|laboratoire/.test(text)) {
+    poolKey = 'sante';
+  } else if (/droit|jurid|contentieux|légal|avocat|ohada/.test(text)) {
+    poolKey = 'droit';
+  } else if (/admin|secrétariat|gestion|organisation|service/.test(text)) {
+    poolKey = 'admin';
+  }
+
+  const pool = BANNER_POOLS[poolKey] || BANNER_POOLS.default;
+  let charSum = 0;
+  for (let i = 0; i < job.id.length; i++) {
+    charSum += job.id.charCodeAt(i) * (i + 1);
+  }
+  const chosenIndex = (charSum + index) % pool.length;
+  return pool[chosenIndex];
+}
 
 const SECTORS = [
   'Tous',
@@ -98,6 +174,7 @@ export function StagesScreen({
         sector: activeSector,
         contractType: activeContractType,
         userSkills: studentProfile.skills,
+        studentProfile,
       });
       setJobs(data);
     } catch (e) {
@@ -279,16 +356,12 @@ export function StagesScreen({
             </Pressable>
           </View>
         ) : (
-          displayedJobs.map((job) => {
+          displayedJobs.map((job, index) => {
             const matchScore = job.matchScore || 75;
-            const isHighMatch = matchScore >= 80;
             const companyInitials = job.company?.name
               ? job.company.name.slice(0, 2).toUpperCase()
               : 'CP';
-            const cardBannerUri =
-              job.flyerUrl ||
-              DEFAULT_BANNERS[job.company?.industry || 'default'] ||
-              DEFAULT_BANNERS.default;
+            const cardBannerUri = getRotatingJobBanner(job, index);
 
             return (
               <Pressable
@@ -304,15 +377,44 @@ export function StagesScreen({
                     style={styles.cardHeroOverlay}
                   />
 
-                  {/* Single functional badge */}
+                  {/* Contract Badge on Left, Match Headline Badge on Right */}
                   <View style={styles.floatingBadgesRow}>
-                    {job.isSponsored ? (
-                      <View style={styles.urgentBadge}>
-                        <Text style={styles.urgentText}>Urgent</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.floatingContractBadge}>
-                        <Text style={styles.floatingContractText}>{job.contractType || 'Stage'}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {job.isSponsored ? (
+                        <View style={styles.urgentBadge}>
+                          <Text style={styles.urgentText}>Urgent</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.floatingContractBadge}>
+                          <Text style={styles.floatingContractText}>{job.contractType || 'Stage'}</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {job.matchHeadline && (
+                      <View
+                        style={[
+                          styles.floatingMatchBadge,
+                          {
+                            borderColor: job.matchBadgeColor || '#10B981',
+                            backgroundColor: 'rgba(9, 7, 20, 0.88)',
+                          },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.floatingMatchDot,
+                            { backgroundColor: job.matchBadgeColor || '#10B981' },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.floatingMatchText,
+                            { color: job.matchBadgeColor || '#10B981' },
+                          ]}
+                        >
+                          {job.matchHeadline}
+                        </Text>
                       </View>
                     )}
                   </View>
@@ -352,7 +454,7 @@ export function StagesScreen({
                   {/* Location & Duration & Match Meta (discreet info line) */}
                   <View style={styles.metaRow}>
                     <Text style={styles.metaText}>
-                      {job.location || 'Abidjan'} · {job.duration || '3 à 6 mois'} · {matchScore}% de correspondance
+                      {job.location || 'Douala'} · {job.duration || '3 à 6 mois'} · {job.matchHeadline || `${matchScore}% de correspondance`}
                     </Text>
                   </View>
 
@@ -471,23 +573,46 @@ export function StagesScreen({
 
                 {/* Analyse de correspondance */}
                 {detailMatch && (
-                  <View style={styles.detailAiMatchBox}>
+                  <View
+                    style={[
+                      styles.detailAiMatchBox,
+                      {
+                        borderColor: `${detailMatch.badgeColor}40`,
+                        backgroundColor: `${detailMatch.badgeColor}0D`,
+                      },
+                    ]}
+                  >
                     <View style={styles.detailAiMatchHeader}>
                       <Text style={styles.detailAiMatchTitle}>Analyse de correspondance</Text>
-                      <Text style={styles.detailAiMatchScoreText}>
-                        {detailMatch.score}% · {detailMatch.headline}
-                      </Text>
+                      <View
+                        style={[
+                          styles.detailAiMatchBadge,
+                          {
+                            borderColor: detailMatch.badgeColor,
+                            backgroundColor: `${detailMatch.badgeColor}22`,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.detailAiMatchBadgeText,
+                            { color: detailMatch.badgeColor },
+                          ]}
+                        >
+                          {detailMatch.headline}
+                        </Text>
+                      </View>
                     </View>
                     <View style={styles.detailMatchPoints}>
                       {detailMatch.matchedPoints.map((pt, idx) => (
                         <View key={idx} style={styles.detailMatchPointRow}>
-                          <Text style={styles.detailBullet}>•</Text>
+                          <Text style={[styles.detailBullet, { color: detailMatch.badgeColor }]}>•</Text>
                           <Text style={styles.detailMatchPointText}>{pt}</Text>
                         </View>
                       ))}
                       <View style={styles.detailAdviceRow}>
                         <Text style={styles.detailAdviceText}>
-                          <Text style={{ fontWeight: '600', color: '#E2E8F0' }}>Conseil : </Text>
+                          <Text style={{ fontWeight: '600', color: '#E2E8F0' }}>Conseil stratégique : </Text>
                           {detailMatch.strategicAdvice}
                         </Text>
                       </View>
@@ -904,7 +1029,7 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
   floatingContractBadge: {
@@ -932,6 +1057,24 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '500',
     color: '#F87171',
+  },
+  floatingMatchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 0.5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  floatingMatchDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  floatingMatchText: {
+    fontSize: 10.5,
+    fontWeight: '700',
   },
   cardBody: {
     padding: 14,

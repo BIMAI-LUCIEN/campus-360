@@ -1,5 +1,6 @@
 import type { StageJob, StageApplication, StageCompany, StudentProfileData, AppStatus, ApplyMethod, OfficialCvData } from '../../types';
 import { authFetch, authFetchRaw, authBaseUrl } from '../auth/betterAuth';
+import { analyzeJobMatch } from './aiMatchEngine';
 
 export const SEED_COMPANIES: StageCompany[] = [
   {
@@ -586,18 +587,56 @@ Stagiaire Analyste FinTech & Data Junior`,
   },
 ];
 
-export function calculateMatchScore(userSkills: string[] = [], jobReqs: string[] = []): { score: number; matchingSkills: string[] } {
-  if (!jobReqs.length) return { score: 75, matchingSkills: [] };
-  if (!userSkills.length) return { score: 60, matchingSkills: [] };
+export function calculateMatchScore(
+  userSkills: string[] = [],
+  jobReqs: string[] = [],
+  context?: {
+    major?: string;
+    educationLevel?: string;
+    location?: string;
+    jobTitle?: string;
+    jobIndustry?: string;
+  }
+): { score: number; matchingSkills: string[]; headline?: string; badgeColor?: string } {
+  const dummyJob: StageJob = {
+    id: 'eval-job',
+    companyId: 'eval-comp',
+    title: context?.jobTitle || 'Stage',
+    description: '',
+    requirements: jobReqs,
+    applyMethod: 'WHATSAPP',
+    isSponsored: false,
+    source: 'INTERNAL',
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date().toISOString(),
+    location: context?.location,
+    company: context?.jobIndustry
+      ? {
+          id: 'eval-comp',
+          name: 'Entreprise',
+          industry: context.jobIndustry,
+          address: context.location || 'Douala',
+          contactEmail: 'contact@eval.cm',
+          kybScore: 90,
+          status: 'VERIFIED',
+          isPremium: false,
+        }
+      : undefined,
+  };
 
-  const normalizedUser = userSkills.map(s => s.toLowerCase().trim());
-  const matching = jobReqs.filter(req => 
-    normalizedUser.some(u => req.toLowerCase().includes(u) || u.includes(req.toLowerCase()))
-  );
+  const match = analyzeJobMatch(dummyJob, {
+    skills: userSkills,
+    major: context?.major,
+    educationLevel: context?.educationLevel,
+    location: context?.location,
+  });
 
-  const ratio = matching.length / jobReqs.length;
-  const score = Math.min(98, Math.max(55, Math.round(50 + (ratio * 48))));
-  return { score, matchingSkills: matching };
+  return {
+    score: match.score,
+    matchingSkills: match.keyStrengths,
+    headline: match.headline,
+    badgeColor: match.badgeColor,
+  };
 }
 
 export async function fetchStageJobs(params?: {
@@ -606,6 +645,13 @@ export async function fetchStageJobs(params?: {
   contractType?: string;
   duration?: string;
   userSkills?: string[];
+  studentProfile?: {
+    major?: string;
+    educationLevel?: string;
+    skills?: string[];
+    location?: string;
+    address?: string;
+  };
 }): Promise<StageJob[]> {
   let jobsList: StageJob[] = [];
 
@@ -673,11 +719,19 @@ export async function fetchStageJobs(params?: {
 
   return jobsList
     .map((job) => {
-      const { score, matchingSkills } = calculateMatchScore(params?.userSkills, job.requirements);
+      const match = analyzeJobMatch(job, {
+        skills: params?.userSkills || params?.studentProfile?.skills || [],
+        major: params?.studentProfile?.major,
+        educationLevel: params?.studentProfile?.educationLevel,
+        location: params?.studentProfile?.location || params?.studentProfile?.address,
+      });
       return {
         ...job,
-        matchScore: score,
-        matchingSkills,
+        matchScore: match.score,
+        matchHeadline: match.headline,
+        matchBadgeColor: match.badgeColor,
+        matchReasons: match.matchedPoints,
+        matchingSkills: match.keyStrengths,
       };
     })
     .sort((a, b) => {
