@@ -361,3 +361,27 @@ Ce cadrage est **100% validé et synchronisé avec le graphe Graphify**. Le fich
   - Admin Health Check : `https://admin.campus360b.site/api/health` (HTTP 200)
   - Mobile App Backend : `https://campus-360-two.vercel.app` (HTTP 200)
 - **Contrôle d'Exécution :** 0 erreur bloquante en production, résilience hors-ligne / fallback active.
+
+### Release : feat(scrapers): apify cloud multi-platform, crons vps, live eas ota & vercel production
+- **Date & Heure :** 2026-10-04T03:15:00+02:00
+- **Commit :** `0543b9c` sur `origin/main`
+- **Statut Pre-Flight Local (4 Barrières) :**
+  - 🟢 **CyberSec & Env :** Aucun secret committé (`.env` et `.env.local` rigoureusement ignorés), jetons sécurisés.
+  - 🟢 **Typecheck Strict :** 0 erreur sur Expo App (`npm run typecheck`), `mobile-api` (`npm run typecheck`) et `recruiter-web` (`npm run typecheck`).
+  - 🟢 **Tests Unitaires :** 100% passés sur `mobile-api` (Code 0).
+  - 🟢 **Build Réel :** `recruiter-web` compilé avec succès (39 routes générées).
+- **Statut GitHub Actions CI/CD :**
+  - 🟢 **Deploy Mobile API to Vercel :** Run `37167284247` `completed success`.
+  - 🟢 **Deploy Backend to Vercel :** Run `37167280661` `completed success`.
+  - 🟢 **Deploy Landing Site to Vercel :** Run `37166496874` `completed success`.
+- **Statut Expo / EAS Updates :**
+  - 🟢 **Branche Production :** Update OTA `87bba6aa-b713-40a8-983f-e7167d3f42e7` (Runtime version 1.1.0, Android & iOS).
+  - 🟢 **Branche Preview :** Update OTA `87bba6aa-b713-40a8-983f-e7167d3f42e7` (Runtime version 1.1.0, Android & iOS).
+  - 🟢 **Dashboard Expo :** `https://expo.dev/accounts/miguelvinijr237/projects/campus-360/updates/87bba6aa-b713-40a8-983f-e7167d3f42e7`
+- **URLs de Production Vérifiées & Opérationnelles :**
+  - Mobile API Health : `https://api.campus360b.site/api/health` -> `{"status":"ok","db":"connected"}` (HTTP 200)
+  - Admin Web Health : `https://admin.campus360b.site/api/health` -> `{"status":"ok","database":"connected"}` (HTTP 200)
+  - Landing Site : `https://campus360b.site` (HTTP 200)
+- **Crons VPS Automatisés (164.68.109.206) :**
+  - 3 Crons quotidiens actifs (08:00, 14:00, 20:00 WAT) ingérant LinkedIn, Facebook, TikTok et sites académiques directement dans la base PostgreSQL live.
+
