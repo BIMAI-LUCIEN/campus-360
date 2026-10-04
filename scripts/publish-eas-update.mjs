@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { spawn } from 'child_process';
 
-const EXPO_TOKEN = process.env.EXPO_TOKEN;
+const EXPO_TOKEN = process.env.EXPO_TOKEN || process.env.EAS_TOKEN;
 
 const easConfig = JSON.parse(fs.readFileSync('./eas.json', 'utf8'));
 const prodEnv = easConfig.build?.production?.env || {};
@@ -10,6 +10,7 @@ const env = {
   ...process.env,
   ...prodEnv,
   EXPO_TOKEN,
+  EAS_TOKEN: EXPO_TOKEN,
   CI: '1',
 };
 
