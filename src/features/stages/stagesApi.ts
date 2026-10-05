@@ -1,6 +1,7 @@
-import type { StageJob, StageApplication, StageCompany, StudentProfileData, AppStatus, ApplyMethod, OfficialCvData } from '../../types';
+import type { StageJob, StageApplication, StageCompany, StudentProfileData, AppStatus, CompanyStatus, ApplyMethod, OfficialCvData } from '../../types';
 import { authFetch, authFetchRaw, authBaseUrl } from '../auth/betterAuth';
 import { analyzeJobMatch } from './aiMatchEngine';
+import { publicEnv } from '../../config/env';
 
 export const SEED_COMPANIES: StageCompany[] = [
   {
@@ -680,7 +681,57 @@ export async function fetchStageJobs(params?: {
     console.warn('[stagesApi] Erreur lors de la récupération des offres distantes:', err);
   }
 
-  // Si l'API retourne vide ou est hors-ligne, repli sur le catalogue Cameroun seed
+  // 3. Fallback direct et infaillible vers Supabase REST (Cloud PostgreSQL)
+  if (!jobsList || jobsList.length === 0) {
+    if (publicEnv.supabaseUrl && publicEnv.supabaseAnonKey) {
+      const supabaseRestUrl = `${publicEnv.supabaseUrl}/rest/v1/stage_jobs?select=*,company:stage_companies(*)&order=created_at.desc&limit=100`;
+      const sbRes = await fetch(supabaseRestUrl, {
+        headers: {
+          apikey: publicEnv.supabaseAnonKey,
+          Authorization: `Bearer ${publicEnv.supabaseAnonKey}`,
+        },
+      }).catch(() => null);
+
+      if (sbRes && sbRes.ok) {
+        const rawRows = (await sbRes.json()) as any[];
+        if (Array.isArray(rawRows) && rawRows.length > 0) {
+          jobsList = rawRows.map((r) => ({
+            id: r.id,
+            companyId: r.company_id,
+            title: r.title,
+            description: r.description || '',
+            requirements: Array.isArray(r.requirements) ? r.requirements : [],
+            applyMethod: (r.apply_method || 'WHATSAPP') as ApplyMethod,
+            isSponsored: Boolean(r.is_sponsored),
+            source: r.source || 'SCRAPED',
+            location: r.location || 'Cameroun',
+            duration: r.duration || '3 à 6 mois',
+            contractType: r.contract_type || 'Stage académique / professionnel',
+            stipend: r.stipend || 'Rémunéré',
+            flyerUrl: r.flyer_url,
+            createdAt: r.created_at,
+            expiresAt: r.expires_at,
+            company: r.company
+              ? {
+                  id: r.company.id,
+                  name: r.company.name,
+                  industry: r.company.industry || 'Entreprise Partenaire',
+                  address: r.company.address || r.location || 'Cameroun',
+                  contactEmail: r.company.contact_email,
+                  contactWhatsapp: r.company.contact_whatsapp,
+                  kybScore: r.company.kyb_score || 90,
+                  status: (r.company.status === 'UNVERIFIED' || r.company.status === 'SUSPENDED' ? r.company.status : 'VERIFIED') as CompanyStatus,
+                  isPremium: Boolean(r.company.is_premium),
+                  logoUrl: r.company.logo_url,
+                }
+              : undefined,
+          }));
+        }
+      }
+    }
+  }
+
+  // 4. Si toujours vide et mode hors-ligne absolu, repli sur le catalogue Cameroun seed
   if (!jobsList || jobsList.length === 0) {
     jobsList = [...SEED_JOBS];
   }
