@@ -23,6 +23,7 @@ def main():
     parser.add_argument("--query", type=str, default="informatique", help="Mot-clé ou filière recherchée")
     parser.add_argument("--platforms", type=str, default="LINKEDIN,FACEBOOK,ACADEMIC_WEB", help="Plateformes séparées par des virgules")
     parser.add_argument("--limit", type=int, default=5, help="Nombre max de résultats par plateforme")
+    parser.add_argument("--city", type=str, default=None, help="Ville ou région ciblée au Cameroun (ex: Bafoussam, Buea, Garoua, Douala, Yaoundé, Kribi)")
 
     args = parser.parse_args()
     selected_platforms = [p.strip().upper() for p in args.platforms.split(",") if p.strip()]
@@ -30,6 +31,8 @@ def main():
     print("================================================================")
     print("🤖 CAMPUS 360 — DÉPLOIEMENT DES AGENTS DE SCRAPING RÉSEAUX")
     print(f"🎯 Filière / Requête : {args.query}")
+    if args.city:
+        print(f"📍 Ville / Région     : {args.city}")
     print(f"🌐 Plateformes cibles : {', '.join(selected_platforms)}")
     print(f"📊 Limite par source : {args.limit}")
     print("================================================================\n")
@@ -37,6 +40,7 @@ def main():
     orchestrator = ScraperOrchestrator()
     summary = orchestrator.run_full_pipeline(
         query=args.query,
+        city=args.city,
         platforms=selected_platforms,
         limit_per_platform=args.limit
     )

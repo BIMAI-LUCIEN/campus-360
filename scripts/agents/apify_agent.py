@@ -21,7 +21,7 @@ class ApifyScraperAgent:
         """Vérifie si le jeton API Apify est renseigné."""
         return bool(self.api_token and self.api_token.strip())
 
-    def scrape_linkedin_posts(self, query: str = "stage informatique Douala Yaounde", limit: int = 10) -> List[Dict[str, Any]]:
+    def scrape_linkedin_posts(self, query: str = "stage Cameroun Douala Yaounde Bafoussam Buea Garoua Kribi", limit: int = 10) -> List[Dict[str, Any]]:
         """
         Exécute l'Actor Apify pour extraire posts et images sur LinkedIn.
         """
@@ -56,7 +56,7 @@ class ApifyScraperAgent:
         logger.info("ℹ️ Aucun résultat Apify direct pour LinkedIn. Passage au scraper de syndication natif.")
         return []
 
-    def scrape_facebook_posts(self, query: str = "recrutement stagiaire Douala Yaounde", limit: int = 10) -> List[Dict[str, Any]]:
+    def scrape_facebook_posts(self, query: str = "recrutement stagiaire Cameroun Douala Yaounde Bafoussam Buea Garoua Kribi", limit: int = 10) -> List[Dict[str, Any]]:
         """
         Exécute l'Actor Apify pour extraire posts, flyers et images sur Facebook.
         """
@@ -87,7 +87,7 @@ class ApifyScraperAgent:
 
         return []
 
-    def scrape_tiktok_posts(self, query: str = "stage Cameroun Douala Yaounde", limit: int = 10) -> List[Dict[str, Any]]:
+    def scrape_tiktok_posts(self, query: str = "stage Cameroun Bafoussam Buea Garoua Douala Yaounde", limit: int = 10) -> List[Dict[str, Any]]:
         """
         Exécute l'Actor Apify TikTok Scraper pour extraire les vidéos, textes et miniatures (flyers/couvertures) sur TikTok.
         """

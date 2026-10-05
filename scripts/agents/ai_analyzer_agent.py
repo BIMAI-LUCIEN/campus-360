@@ -274,6 +274,30 @@ Réponds UNIQUEMENT avec le JSON valide, sans texte explicatif ni balises markdo
         elif any(w in lower_t for w in ["logist", "transit", "supply"]):
             field = "Logistique & Supply Chain"
 
+        # Détection de la ville
+        detected_loc = "Cameroun (National / Hybride)"
+        city_checks = [
+            ("yaound", "Yaoundé, Cameroun"),
+            ("douala", "Douala, Cameroun"),
+            ("buea", "Buea, Cameroun"),
+            ("limbe", "Limbe, Cameroun"),
+            ("bafoussam", "Bafoussam, Cameroun"),
+            ("dschang", "Dschang, Cameroun"),
+            ("bamenda", "Bamenda, Cameroun"),
+            ("garoua", "Garoua, Cameroun"),
+            ("maroua", "Maroua, Cameroun"),
+            ("ngaound", "Ngaoundéré, Cameroun"),
+            ("kribi", "Kribi, Cameroun"),
+            ("edea", "Edéa, Cameroun"),
+            ("edéa", "Edéa, Cameroun"),
+            ("ebolowa", "Ebolowa, Cameroun"),
+            ("bertoua", "Bertoua, Cameroun"),
+        ]
+        for c_needle, c_val in city_checks:
+            if c_needle in lower_t:
+                detected_loc = c_val
+                break
+
         return {
             "is_relevant": is_report or is_job,
             "document_type": doc_type,
@@ -297,7 +321,7 @@ Réponds UNIQUEMENT avec le JSON valide, sans texte explicatif ni balises markdo
             "is_offer": is_job,
             "offer_details": {
                 "requirements": [],
-                "location": "Douala, Cameroun",
+                "location": detected_loc,
                 "duration": "3 à 6 mois",
                 "contact_whatsapp": None,
                 "contact_email": None

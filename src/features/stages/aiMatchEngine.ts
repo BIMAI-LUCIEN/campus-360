@@ -423,63 +423,101 @@ function evaluateLocationProximity(
   const studentLoc = (studentLocation || '').toLowerCase();
   const majorLoc = (studentMajor || '').toLowerCase();
 
-  // 1. Offre en télétravail ou Remote -> 100% (15 points)
-  if (/remote|télétravail|teletravail|en ligne|hybride|partout/.test(jobLoc)) {
+  // 1. Offre en télétravail, Remote, ou mobilité nationale -> 100% (15 points)
+  if (/remote|télétravail|teletravail|en ligne|hybride|partout|national|cameroun \(national/.test(jobLoc)) {
     return 15;
   }
 
-  // 2. Détection de la ville de l'étudiant
-  let detectedStudentCity = '';
-  if (/douala/.test(studentLoc) || /douala/.test(majorLoc)) detectedStudentCity = 'douala';
-  else if (/yaoundé|yaounde/.test(studentLoc) || /yaoundé|yaounde|polytechnique/.test(majorLoc)) detectedStudentCity = 'yaounde';
-  else if (/bafoussam|dschang/.test(studentLoc) || /dschang/.test(majorLoc)) detectedStudentCity = 'bafoussam';
-  else if (/buea|limbe/.test(studentLoc) || /buea|limbe/.test(majorLoc)) detectedStudentCity = 'buea';
-  else if (/garoua|maroua/.test(studentLoc)) detectedStudentCity = 'nord';
+  // 2. Détection de la région / ville de l'étudiant
+  const resolveCityCluster = (text: string): string => {
+    if (/douala/.test(text)) return 'douala';
+    if (/yaoundé|yaounde|polytechnique/.test(text)) return 'yaounde';
+    if (/buea|limbe|tiko|kumba/.test(text)) return 'sud_ouest';
+    if (/bafoussam|dschang|foumban|mbouda|bangangté|bangangte/.test(text)) return 'ouest';
+    if (/bamenda/.test(text)) return 'nord_ouest';
+    if (/garoua|maroua|ngaoundéré|ngaoundere|adamaoua/.test(text)) return 'grand_nord';
+    if (/kribi|ebolowa|sangmélima|sangmelima/.test(text)) return 'sud';
+    if (/edéa|edea/.test(text)) return 'edea';
+    if (/bertoua|batouri/.test(text)) return 'est';
+    return '';
+  };
 
-  // 3. Détection de la ville de l'offre
-  let detectedJobCity = '';
-  if (/douala/.test(jobLoc)) detectedJobCity = 'douala';
-  else if (/yaoundé|yaounde/.test(jobLoc)) detectedJobCity = 'yaounde';
-  else if (/bafoussam|dschang/.test(jobLoc)) detectedJobCity = 'bafoussam';
-  else if (/buea|limbe/.test(jobLoc)) detectedJobCity = 'buea';
-  else if (/garoua|maroua/.test(jobLoc)) detectedJobCity = 'nord';
+  const detectedStudentCity = resolveCityCluster(studentLoc) || resolveCityCluster(majorLoc);
+  const detectedJobCity = resolveCityCluster(jobLoc);
 
-  // Si l'une des villes n'est pas identifiée, attribuer un score de mobilité médian (10/15)
+  // Si l'une des villes n'est pas identifiée, score de mobilité nationale (11/15)
   if (!detectedStudentCity || !detectedJobCity) {
-    return 10;
+    return 11;
   }
 
-  // Même ville exacte
+  // Même ville ou même cluster régional direct
   if (detectedStudentCity === detectedJobCity) {
     return 15;
   }
 
-  // Bassins économiques connectés (ex: Douala <-> Buea/Limbe)
+  // Littoral & Proximité immédiate (Douala <-> Edéa)
   if (
-    (detectedStudentCity === 'douala' && detectedJobCity === 'buea') ||
-    (detectedStudentCity === 'buea' && detectedJobCity === 'douala')
+    (detectedStudentCity === 'douala' && detectedJobCity === 'edea') ||
+    (detectedStudentCity === 'edea' && detectedJobCity === 'douala')
+  ) {
+    return 14;
+  }
+
+  // Corridor Littoral - Sud-Ouest Silicon Mountain (Douala <-> Buea / Limbe)
+  if (
+    (detectedStudentCity === 'douala' && detectedJobCity === 'sud_ouest') ||
+    (detectedStudentCity === 'sud_ouest' && detectedJobCity === 'douala')
+  ) {
+    return 12.5;
+  }
+
+  // Régions limitrophes Grassfields (Ouest Bafoussam/Dschang <-> Nord-Ouest Bamenda)
+  if (
+    (detectedStudentCity === 'ouest' && detectedJobCity === 'nord_ouest') ||
+    (detectedStudentCity === 'nord_ouest' && detectedJobCity === 'ouest')
   ) {
     return 12;
   }
 
-  // Grand axe Yaoundé <-> Bafoussam / Ouest
+  // Hub Grand Nord (Garoua <-> Maroua <-> Ngaoundéré)
+  if (detectedStudentCity === 'grand_nord' && detectedJobCity === 'grand_nord') {
+    return 14;
+  }
+
+  // Corridor Centre / Sud / Littoral Maritime (Kribi, Ebolowa <-> Douala, Yaoundé)
   if (
-    (detectedStudentCity === 'yaounde' && detectedJobCity === 'bafoussam') ||
-    (detectedStudentCity === 'bafoussam' && detectedJobCity === 'yaounde')
+    (detectedStudentCity === 'sud' && (detectedJobCity === 'douala' || detectedJobCity === 'yaounde')) ||
+    ((detectedStudentCity === 'douala' || detectedStudentCity === 'yaounde') && detectedJobCity === 'sud')
+  ) {
+    return 11;
+  }
+
+  // Axe Centre <-> Ouest (Yaoundé <-> Bafoussam)
+  if (
+    (detectedStudentCity === 'yaounde' && detectedJobCity === 'ouest') ||
+    (detectedStudentCity === 'ouest' && detectedJobCity === 'yaounde')
+  ) {
+    return 9.5;
+  }
+
+  // Axe Littoral <-> Ouest (Douala <-> Bafoussam)
+  if (
+    (detectedStudentCity === 'douala' && detectedJobCity === 'ouest') ||
+    (detectedStudentCity === 'ouest' && detectedJobCity === 'douala')
   ) {
     return 9;
   }
 
-  // Deux métropoles majeures Douala <-> Yaoundé (navette fréquente mais logement nécessaire)
+  // Deux métropoles majeures Douala <-> Yaoundé
   if (
     (detectedStudentCity === 'douala' && detectedJobCity === 'yaounde') ||
     (detectedStudentCity === 'yaounde' && detectedJobCity === 'douala')
   ) {
-    return 7.5;
+    return 8;
   }
 
-  // Villes géographiquement distantes
-  return 4.5;
+  // Autres liaisons interrégionales (mobilité étudiante avec stage conventionné)
+  return 5.5;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

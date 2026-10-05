@@ -16,44 +16,74 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("CameroonJobsAgent")
 
 CAMEROON_CITIES = [
+    # Métropoles économiques & administratives
     "Douala",
     "Yaoundé",
+    # Pôles Ouest & Nord-Ouest (Universités & Agro-industrie)
     "Bafoussam",
-    "Garoua",
-    "Maroua",
+    "Dschang",
     "Bamenda",
+    "Foumban",
+    # Pôles Sud-Ouest (Silicon Mountain Tech, Pétrole, Port & Tourisme)
     "Buea",
     "Limbe",
-    "Kribi",
+    "Kumba",
+    "Tiko",
+    # Grand Nord (Agro-industrie, Énergie, Coton, Élevage, Santé)
+    "Garoua",
+    "Maroua",
     "Ngaoundéré",
-    "Bertoua",
+    # Sud & Littoral Industriel (Port en eau profonde, Alu, Bois)
+    "Kribi",
+    "Edéa",
     "Ebolowa",
-    "Dschang"
+    # Est (Mines, Bois, Développement régional)
+    "Bertoua",
+    # Centre Périphérique
+    "Mbalmayo"
 ]
 
 class CameroonJobsAgent:
     def __init__(self):
         self.session = requests.Session()
 
-    def search_cameroon_jobs(self, query: str = "stage", max_results_per_query: int = 8) -> list:
+    def search_cameroon_jobs(self, query: str = "stage", city: str = None, max_results_per_query: int = 8) -> list:
         """
         Recherche des offres de stage et d'emploi spécifiquement localisées au Cameroun
-        sur de multiples portails et réseaux sociaux.
+        sur l'ensemble des 10 régions (Douala, Yaoundé, Bafoussam, Buea, Garoua, Kribi, etc.).
         """
         results = []
-        search_queries = [
-            # Portails camerounais réputés
-            f'site:emploi.cm ("{query}" OR "stage") Cameroun',
-            f'site:minajobs.net ("{query}" OR "stage") Cameroun',
-            f'site:cameroondesk.com ("{query}" OR "recrutement")',
-            f'site:akwajobs.com ("{query}" OR "stage" OR "internship")',
-            # LinkedIn Cameroun
-            f'site:linkedin.com/posts ("offre de stage" OR "recrutement") "{query}" ("Douala" OR "Yaoundé" OR "Cameroun")',
-            # Facebook Cameroun
-            f'site:facebook.com ("offre de stage" OR "recrutement") "{query}" ("Douala" OR "Yaoundé" OR "Bafoussam")',
-            # Dorks généraux avec contacts WhatsApp (très fréquents au Cameroun)
-            f'"{query}" ("Douala" OR "Yaoundé") "Cameroun" ("WhatsApp" OR "envoyer CV") ("stage" OR "emploi")'
-        ]
+
+        if city and city.lower() not in ["all", "toutes", "cameroun"]:
+            # Ciblage d'une ville ou région spécifique
+            search_queries = [
+                f'site:emploi.cm ("{query}" OR "stage") "{city}"',
+                f'site:minajobs.net ("{query}" OR "stage") "{city}"',
+                f'site:akwajobs.com ("{query}" OR "stage" OR "internship") "{city}"',
+                f'site:linkedin.com/posts ("offre de stage" OR "recrutement") "{query}" "{city}"',
+                f'site:facebook.com ("offre de stage" OR "recrutement") "{query}" "{city}"',
+                f'"{query}" ("{city}") "Cameroun" ("WhatsApp" OR "envoyer CV") ("stage" OR "emploi")'
+            ]
+        else:
+            # Couverture nationale équilibrée sur toutes les grandes régions
+            search_queries = [
+                # Portails nationaux
+                f'site:emploi.cm ("{query}" OR "stage") Cameroun',
+                f'site:minajobs.net ("{query}" OR "stage") Cameroun',
+                f'site:akwajobs.com ("{query}" OR "stage" OR "internship") Cameroun',
+                # Métropoles Centre & Littoral (Douala, Yaoundé, Edéa)
+                f'site:linkedin.com/posts ("offre de stage" OR "recrutement") "{query}" ("Douala" OR "Yaoundé" OR "Edéa")',
+                # Silicon Mountain & Sud-Ouest (Buea, Limbe, Kumba)
+                f'site:linkedin.com/posts ("offre de stage" OR "internship" OR "recrutement") "{query}" ("Buea" OR "Limbe" OR "Silicon Mountain")',
+                # Ouest & Nord-Ouest (Bafoussam, Dschang, Bamenda)
+                f'site:facebook.com ("offre de stage" OR "recrutement") "{query}" ("Bafoussam" OR "Dschang" OR "Bamenda")',
+                # Grand Nord (Garoua, Maroua, Ngaoundéré)
+                f'site:facebook.com ("offre de stage" OR "recrutement") "{query}" ("Garoua" OR "Maroua" OR "Ngaoundéré")',
+                # Sud & Est (Kribi, Ebolowa, Bertoua)
+                f'"{query}" ("Kribi" OR "Bertoua" OR "Ebolowa") "Cameroun" ("WhatsApp" OR "envoyer CV") ("stage" OR "recrutement")',
+                # Dorks nationaux généraux
+                f'"{query}" ("stage académique" OR "stage professionnel" OR "stage PFE") "Cameroun" ("WhatsApp" OR "recrutement")'
+            ]
 
         for sq in search_queries:
             found = self._query_syndication(sq, limit=max_results_per_query)
@@ -134,7 +164,10 @@ class CameroonJobsAgent:
         for city in CAMEROON_CITIES:
             if re.search(r"\b" + re.escape(city) + r"\b", text, re.IGNORECASE):
                 return city
-        return "Douala" # Ville économique principale par défaut
+        # Ne plus forcer Douala arbitrairement : conserver le caractère national / hybride
+        if "cameroun" in text.lower():
+            return "Cameroun (National / Hybride)"
+        return "Cameroun"
 
     def _extract_flyer_image_url(self, raw_html: str, text: str) -> str:
         """Extrait l'URL d'un flyer ou d'une image d'offre."""

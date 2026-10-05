@@ -35,14 +35,15 @@ class ScraperOrchestrator:
         self.ai_agent = AIAnalyzerAgent()
         self.db_ingestor = DatabaseIngestor()
 
-    def run_full_pipeline(self, query: str = "informatique", platforms: list = None, limit_per_platform: int = 5) -> dict:
+    def run_full_pipeline(self, query: str = "informatique", platforms: list = None, limit_per_platform: int = 5, city: str = None) -> dict:
         """
         Exécute le cycle complet : Collecte -> Analyse IA -> Sauvegarde.
         """
         if not platforms:
             platforms = ["CAMEROON_JOBS", "LINKEDIN", "FACEBOOK", "TIKTOK", "ACADEMIC_WEB"]
 
-        logger.info(f"🚀 Lancement de la mission de scraping multi-agents : Mot-clé='{query}', Plateformes={platforms}")
+        loc_label = f" (Cible: {city})" if city else " (National / Toutes régions)"
+        logger.info(f"🚀 Lancement mission multi-agents : Mot-clé='{query}', Région={loc_label}, Plateformes={platforms}")
         start_time = time.time()
 
         # 1. Vérification des tables de base
@@ -53,18 +54,21 @@ class ScraperOrchestrator:
         # 2. Phase de Collecte
         if "CAMEROON_JOBS" in platforms:
             try:
-                cam_items = self.cameroon_agent.search_cameroon_jobs(query=query, max_results_per_query=limit_per_platform)
+                cam_items = self.cameroon_agent.search_cameroon_jobs(query=query, city=city, max_results_per_query=limit_per_platform)
                 collected_items.extend(cam_items)
             except Exception as e:
                 logger.error(f"Erreur Agent Cameroun Jobs : {e}")
+
+        # Requête ciblée avec ville si spécifiée
+        city_suffix = f" {city}" if city else ""
 
         if "LINKEDIN" in platforms:
             try:
                 li_items = []
                 if self.apify_agent.is_configured():
-                    li_items = self.apify_agent.scrape_linkedin_posts(query=f"stage {query}", limit=limit_per_platform)
+                    li_items = self.apify_agent.scrape_linkedin_posts(query=f"stage {query}{city_suffix} Cameroun", limit=limit_per_platform)
                 if not li_items:
-                    li_items = self.linkedin_agent.search_linkedin_reports(query=f"rapport de stage {query}", max_results=limit_per_platform)
+                    li_items = self.linkedin_agent.search_linkedin_reports(query=f"rapport de stage {query}{city_suffix}", max_results=limit_per_platform)
                 collected_items.extend(li_items)
             except Exception as e:
                 logger.error(f"Erreur Agent LinkedIn : {e}")
@@ -73,9 +77,9 @@ class ScraperOrchestrator:
             try:
                 fb_items = []
                 if self.apify_agent.is_configured():
-                    fb_items = self.apify_agent.scrape_facebook_posts(query=f"stage {query}", limit=limit_per_platform)
+                    fb_items = self.apify_agent.scrape_facebook_posts(query=f"stage {query}{city_suffix} Cameroun", limit=limit_per_platform)
                 if not fb_items:
-                    fb_items = self.facebook_agent.search_facebook_reports(query=f"rapport de stage {query}", max_results=limit_per_platform)
+                    fb_items = self.facebook_agent.search_facebook_reports(query=f"rapport de stage {query}{city_suffix}", max_results=limit_per_platform)
                 collected_items.extend(fb_items)
             except Exception as e:
                 logger.error(f"Erreur Agent Facebook : {e}")
@@ -83,7 +87,7 @@ class ScraperOrchestrator:
         if "TIKTOK" in platforms:
             try:
                 if self.apify_agent.is_configured():
-                    tt_items = self.apify_agent.scrape_tiktok_posts(query=f"stage {query} Cameroun", limit=limit_per_platform)
+                    tt_items = self.apify_agent.scrape_tiktok_posts(query=f"stage {query}{city_suffix} Cameroun", limit=limit_per_platform)
                     collected_items.extend(tt_items)
             except Exception as e:
                 logger.error(f"Erreur Agent TikTok : {e}")
