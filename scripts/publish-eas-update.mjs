@@ -12,9 +12,9 @@ const env = {
   EXPO_TOKEN,
   EAS_TOKEN: EXPO_TOKEN,
   CI: '1',
-  HTTP_PROXY: process.env.HTTP_PROXY || 'http://127.0.0.1:8888',
-  HTTPS_PROXY: process.env.HTTPS_PROXY || 'http://127.0.0.1:8888',
 };
+if (process.env.HTTP_PROXY) env.HTTP_PROXY = process.env.HTTP_PROXY;
+if (process.env.HTTPS_PROXY) env.HTTPS_PROXY = process.env.HTTPS_PROXY;
 
 const requestedBranch = process.argv[2];
 const message = process.argv.slice(3).join(' ') || 'OTA-Update';
