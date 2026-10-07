@@ -101,8 +101,15 @@ jobs:
           fi
           echo "Polling build $BUILD_ID"
           # eas build:view prints a "- Fetching..." spinner line before the JSON.
-          # We strip any non-JSON line so jq sees a clean payload.
-          jsonify() { grep -E '^\s*[\{\[]' || cat; }
+          # We strip any non-JSON prefix so jq sees the full clean payload.
+          jsonify() {
+            node -e '
+              const fs = require("fs");
+              const s = fs.readFileSync(0, "utf8");
+              const i = s.search(/[\{\[]/);
+              if (i >= 0) process.stdout.write(s.slice(i));
+            '
+          }
           for i in $(seq 1 60); do
             STATUS=$(npx --yes eas-cli@latest build:view "$BUILD_ID" --json 2>/dev/null | jsonify | jq -r 'if type=="array" then .[0].status else .status end // "UNKNOWN"')
             echo "Iteration $i: $STATUS"
