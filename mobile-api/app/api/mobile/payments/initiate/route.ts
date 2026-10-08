@@ -10,8 +10,8 @@ export const OPTIONS = (request: NextRequest) =>
   withCors(new NextResponse(null, { status: 204 }), request);
 
 const initiateSchema = z.object({
-  amount: z.union([z.literal(500), z.literal(2000)]),
-  packType: z.enum(['discovery_500', 'monthly_2000']),
+  amount: z.number().min(500, 'Montant minimum 500 FCFA'),
+  packType: z.string(),
   operator: z.enum(['mtn', 'orange', 'wave']),
   phone: z
     .string()

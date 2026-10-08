@@ -321,15 +321,12 @@ export function ProfileScreen({
                 <Text style={styles.studentName} numberOfLines={1}>
                   {studentProfile?.name || 'Lucien Miguel'}
                 </Text>
-                <Pressable
-                  onPress={onPremium}
-                  style={({ pressed }) => [styles.premiumBadge, pressed && { opacity: 0.85 }]}
-                >
-                  <Crown size={11} color="#D97706" />
-                  <Text style={styles.premiumBadgeText}>
-                    {isPremium ? tierLabel : 'Standard'}
+                <View style={styles.premiumBadge}>
+                  <Shield size={11} color="#7C3AED" />
+                  <Text style={[styles.premiumBadgeText, { color: '#7C3AED' }]}>
+                    Étudiant Vérifié
                   </Text>
-                </Pressable>
+                </View>
               </View>
               <Text style={styles.studentHandle} numberOfLines={1}>
                 {handle}
@@ -390,7 +387,7 @@ export function ProfileScreen({
 
             <View style={styles.neobankBalanceRow}>
               <Text style={styles.neobankBalance}>{formatCoins(balance)}</Text>
-              <Text style={styles.neobankCurrency}> COINS</Text>
+              <Text style={styles.neobankCurrency}> FCFA</Text>
             </View>
 
             <View style={styles.neobankBottomRow}>

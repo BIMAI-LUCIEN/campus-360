@@ -1106,7 +1106,7 @@ export function AiApplyModal({
       <PaymentModal
         visible={showPaymentModal}
         defaultPhone={currentProfile.phoneWhatsapp || ''}
-        reasonMessage="Votre quota gratuit est atteint. Choisissez votre formule Mobile Money pour continuer."
+        reasonMessage="Candidature 1-Clic RH (500 FCFA). Rechargez votre portefeuille Mobile Money pour continuer."
         onClose={() => {
           setShowPaymentModal(false);
           if (currentProfile.tokens !== undefined && currentProfile.tokens <= 0) {

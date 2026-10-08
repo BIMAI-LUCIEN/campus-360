@@ -27,7 +27,7 @@ flowchart TD
         C["3. Générateur CV & Lettre 1-Clic\n(Basé sur le Template CV Officiel)"]
         D["4. Postulation WhatsApp / Email / PDF\n(Accroche pré-rédigée + PDF CV)"]
         E["5. Suivi Candidatures & Relance J+7\n(Notification push + relance 1-clic)"]
-        F["6. Monétisation Mobile Money\n(500 FCFA les 5 candidatures / Pass 2000 FCFA)"]
+        F["6. Monétisation Wallet Prépayé (Pay-per-Action)\n(Recharge dès 500 FCFA : Postuler 500 F, Rapport 2000 F, Mémoire 5000 F, PDF 250 F)"]
     end
 
     A --> B --> C --> D --> E
@@ -227,6 +227,29 @@ Loisirs : sport, lecture
 | **Bannissement WhatsApp** | 🟡 Faible / Contrôlé | 🟢 **Mitigation :** 1. L'envoi se fait depuis la session Multi-Device officielle de l'étudiant via Evolution API. 2. File d'attente N8N avec délai naturel (15-30s). 3. Plafond de sécurité de 10 candidatures/jour. 4. Contenu personnalisé unique généré par l'IA. Fallback natif 1-tap handoff disponible si session non connectée. |
 | **Paiement Mobile Money échoué** | 🟡 Moyen | 🟢 **Mitigation :** Intégration CinetPay / Notch Pay avec fallback SMS et vérification automatique du statut par Webhook. |
 | **Manque d'offres dans une filière** | 🟡 Moyen | 🟢 **Mitigation :** Scrapers multi-agents (Python / Apify) scannant 18 villes camerounaises et syndiquant les offres réseaux sociaux. |
+
+---
+
+## 5.1 Modèle Économique : 100% Wallet Prépayé à l'Usage (Zéro Abonnement)
+
+> **Arbitrage Stratégique Fondateur (CPO & CTO) :**
+> Suppression définitive de tous les plans d'abonnement récurrents (Free, Pro, Elite, Pass mensuels).
+> Remplacement par un modèle **Pay-per-Action par débit direct du Wallet FCFA**, sans engagement, optimisé pour les habitudes Mobile Money (MTN MoMo & Orange Money).
+
+### Grille Tarifaire Unifiée (Débit Instantané en FCFA) :
+1. **Postulation à un Stage (1-Clic WhatsApp RH / Email + CV Officiel + Lettre personnalisée) :**
+   - **500 FCFA** par candidature expédiée.
+   - *Incentive :* 1ère candidature offerte à l'inscription pour délivrer le *Aha Moment*.
+2. **Atelier Rédaction : Génération & Optimisation de Rapport de Stage (25-45 pages) :**
+   - **2 000 FCFA** par rapport complet structuré et exportable (Word / PDF).
+3. **Atelier Rédaction : Génération & Accompagnement Mémoire de Fin d'Études (50-100 pages) :**
+   - **5 000 FCFA** par mémoire complet (incluant problématique, méthodologie, état de l'art, analyse et préparation aux questions du jury).
+4. **Bibliothèque Académique & Documents PDF :**
+   - **Anciens sujets d'examens & Annales publiques :** 🟢 **100% Gratuits** (générateur d'inscriptions et de rétention).
+   - **Documents Premium (Mémoires de référence vérifiés, fiches de synthèse certifiées) :** **250 FCFA** par PDF téléchargé.
+5. **Recharge du Wallet Mobile Money :**
+   - Seuil de recharge accessible dès **500 FCFA** (paliers suggérés : 500 F, 1 000 F, 2 000 F, 5 000 F).
+   - Paiement Juste-à-Temps : si solde insuffisant lors d'une action, ouverture immédiate du tunnel de recharge sans perte du travail en cours.
 
 ## 6. Architecture, Graphe & Contexte Technique Global
 
@@ -462,9 +485,22 @@ Ce cadrage est **100% validé et synchronisé avec le graphe Graphify**. Le fich
   - Suite de tests M3 Adversarial Challenger : 78/78 tests passés (`scripts/test-challenger-m3-adversarial.mjs`).
   - Suite de tests M3 Stage Detail : 52/52 assertions vérifiées (`scripts/test-m3-stages-detail.mjs`).
 - **Preuves Visuelles (Captures Réelles Haute Résolution) :**
-  1. [campus360_home_violet.png](file:///c:/Users/DELL/Desktop/mes%20projet/campus-360/.agent/screenshots/campus360_home_violet.png) : Écran d'accueil avec TopBar bombée violette, sélecteur de localisation, barre de recherche blanche avec filtre, carrousel d'entreprises et filières circulaires.
-  2. [campus360_stages_feed.png](file:///c:/Users/DELL/Desktop/mes%20projet/campus-360/.agent/screenshots/campus360_stages_feed.png) : Feed des offres avec cartes aérées blanches, bannières photos, badges de match IA et compatibilité stylisée.
-  3. [campus360_stages_detail.png](file:///c:/Users/DELL/Desktop/mes%20projet/campus-360/.agent/screenshots/campus360_stages_detail.png) : Écran de détail immersif conforme à l'écran de référence 2 (Hero image pleine largeur avec coins arrondis, strip de photos de locaux d'entreprise `+2 photos`, badges Domaine & Match IA, onglets segmentés `À propos / Entreprise / Conseils IA`, pilules de métadonnées, carte contact recruteur et barre sticky inférieure avec indemnité et bouton CTA `Postuler en 1 Clic`).
-- **Audit de Non-Régression :** Intégrité préservée à 100% sur les sessions Better Auth, l'intégration Evolution API WhatsApp, la génération PDF CV RH 2 colonnes et les endpoints API PostgreSQL.
+### Certification : Suppression Définitive des Abonnements & Modèle 100% Wallet Prépayé (Pay-Per-Action)
+- **Date & Heure :** 2026-10-08T22:38:00+02:00
+- **Verdict :** 🟢 `VERIFIED`
+- **Tâches Validées :** 15.1 à 15.6 (Module 15 complet dans `plan.md`).
+- **Preuves CLI & Validation Stricte :**
+  - Application Mobile Expo : `npm run typecheck` (`node --stack_size=8192 node_modules/typescript/bin/tsc --noEmit`) $\rightarrow$ **0 erreur**.
+  - Mobile API Next.js : `cd mobile-api && npm run typecheck` (`tsc --noEmit`) $\rightarrow$ **0 erreur**.
+  - Audit CyberSec : Zéro secret en dur, validation Zod sur le endpoint `/api/mobile/payments/initiate` avec seuil minimal dès 500 FCFA.
+- **Réalisations Concrètes :**
+  1. Suppression intégrale des abonnements mensuels (`PremiumSection`, cartes Pro/Elite) de l'interface `AppShell.tsx`, `ProfileScreen.tsx` et `LibraryScreen.tsx`.
+  2. Intégration de la grille tarifaire officielle en FCFA réels :
+     - Candidature stage 1-clic : **500 FCFA** (1ère gratuite).
+     - Rapport de stage complet IA : **2 000 FCFA**.
+     - Mémoire de fin d'études complet IA : **5 000 FCFA**.
+     - Bibliothèque PDF : Annales 100% gratuites, mémoires certifiés **250 FCFA**.
+  3. Recharges Mobile Money instantanées : Nouveaux paliers wallet 500 F, 1 000 F, 2 000 F et 5 000 F dans `PaymentModal.tsx` et `mobile-api`.
+  4. Portefeuille néobanque harmonisé en **FCFA** réels sur l'ensemble de l'expérience utilisateur.
 
 

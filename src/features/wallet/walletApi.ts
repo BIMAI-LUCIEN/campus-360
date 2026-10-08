@@ -1,39 +1,66 @@
 import { authFetch } from '../auth/betterAuth';
+import {
+  PRICE_STAGE_APPLY,
+  PRICE_REPORT,
+  PRICE_THESIS,
+  PRICE_PDF,
+  MIN_WALLET_RECHARGE,
+} from '../../types';
+
+export { PRICE_STAGE_APPLY, PRICE_REPORT, PRICE_THESIS, PRICE_PDF, MIN_WALLET_RECHARGE };
+
+export type WalletRechargePackId = 'recharge_500' | 'recharge_1000' | 'recharge_2000' | 'recharge_5000';
 
 export type PaymentPack = {
-  id: 'discovery_500' | 'monthly_2000';
+  id: WalletRechargePackId;
   title: string;
   badge: string;
   priceFcfa: number;
-  tokensReward: number;
+  tokensReward: number; // Montant crédité en FCFA
   description: string;
   highlight?: boolean;
 };
 
 export const PAYMENT_PACKS: PaymentPack[] = [
   {
-    id: 'discovery_500',
-    title: 'Pack Découverte',
-    badge: '5 Candidatures IA',
+    id: 'recharge_500',
+    title: 'Recharge 500 FCFA',
+    badge: '1 Candidature ou 2 PDF',
     priceFcfa: 500,
-    tokensReward: 5,
-    description: 'Idéal pour postuler aux premières offres avec CV officiel et lettre sur-mesure.',
+    tokensReward: 500,
+    description: 'Postulez à 1 offre en 1 clic RH avec CV officiel, ou téléchargez 2 documents.',
   },
   {
-    id: 'monthly_2000',
-    title: 'Pass Mensuel Illimité',
-    badge: 'Accès VIP 30 Jours',
+    id: 'recharge_1000',
+    title: 'Recharge 1 000 FCFA',
+    badge: '2 Candidatures RH',
+    priceFcfa: 1000,
+    tokensReward: 1000,
+    description: 'Crédit flexible pour postuler à vos stages cibles et débloquer des documents.',
+  },
+  {
+    id: 'recharge_2000',
+    title: 'Recharge 2 000 FCFA',
+    badge: 'Rapport de stage IA',
     priceFcfa: 2000,
-    tokensReward: 999,
-    description: 'Candidatures illimitées pendant 30 jours, priorité recruteur et relances J+7.',
+    tokensReward: 2000,
+    description: 'Idéal pour générer 1 rapport de stage complet (25-45 pages) ou 4 candidatures RH.',
     highlight: true,
+  },
+  {
+    id: 'recharge_5000',
+    title: 'Recharge 5 000 FCFA',
+    badge: 'Mémoire IA Complet',
+    priceFcfa: 5000,
+    tokensReward: 5000,
+    description: 'Génération intégrale d’un mémoire académique (50-100 pages) ou pack candidatures.',
   },
 ];
 
 export type MobileMoneyOperator = 'mtn' | 'orange' | 'wave';
 
 export interface InitiatePaymentRequest {
-  packType: 'discovery_500' | 'monthly_2000';
+  packType: WalletRechargePackId | string;
   amount: number;
   operator: MobileMoneyOperator;
   phone: string;

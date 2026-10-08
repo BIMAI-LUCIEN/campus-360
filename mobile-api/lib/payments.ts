@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { databasePool } from './database';
 
-export type PaymentPackType = 'discovery_500' | 'monthly_2000';
+export type PaymentPackType = 'recharge_500' | 'recharge_1000' | 'recharge_2000' | 'recharge_5000' | 'discovery_500' | 'monthly_2000' | string;
 export type PaymentOperator = 'mtn' | 'orange' | 'wave';
 
 export interface InitiatePaymentParams {
@@ -51,12 +51,7 @@ export async function initiateMobileMoneyPayment(
   const formattedPhone = formatPhoneForOperator(params.phone);
   const currency = params.currency || 'XAF';
 
-  const packLabels: Record<PaymentPackType, string> = {
-    discovery_500: 'Pack Découverte (5 candidatures IA)',
-    monthly_2000: 'Pass Mensuel Illimité (30 jours)',
-  };
-
-  const description = `Campus 360 - ${packLabels[params.packType]}`;
+  const description = `Campus 360 - Recharge Portefeuille (${params.amount} FCFA)`;
 
   let reference = `c360_${params.packType}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   let paymentUrl: string | undefined;

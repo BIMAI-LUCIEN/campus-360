@@ -213,3 +213,70 @@
     - Vérifier la conformité de sécurité (pas de secrets exposés dans le client mobile, proxy systématique par `mobile-api`).
   - **DoD :** Typecheck 100% au vert sur les deux projets, script de test validé (Code 0).
 
+---
+
+## MODULE 15 : SUPPRESSION DÉFINITIVE DES ABONNEMENTS & PAIEMENT À L'ACTE PAR WALLET (PAY-PER-ACTION)
+
+### 1. Types & Constantes Tarifaires Officielles
+- [X] **Tâche 15.1 : Définition des Constantes Tarifaires et Nettoyage des Types d'Abonnement**
+  - **Fichiers :** `src/types.ts`, `src/features/wallet/walletApi.ts`
+  - **Action :**
+    - Définir les constantes officielles de prix en FCFA :
+      - `PRICE_STAGE_APPLY = 500` (1ère gratuite)
+      - `PRICE_REPORT = 2000` (Rapport de stage)
+      - `PRICE_THESIS = 5000` (Mémoire de fin d'études)
+      - `PRICE_PDF = 250` (Documents payants, annales gratuites)
+      - `MIN_WALLET_RECHARGE = 500`
+    - Nettoyer et déprécier les types `subscriptionTier` et `PaidSubscriptionTier`.
+    - Harmoniser le solde (`balance`) en FCFA réels au lieu de jetons abstraits.
+  - **DoD :** Types stricts, constantes exportées et documentées, 0 ambiguïté.
+
+### 2. Nettoyage de l'AppShell & Écrans Centraux
+- [X] **Tâche 15.2 : Suppression de la Section Abonnement dans AppShell et Navigation**
+  - **Fichiers :** `src/AppShell.tsx`
+  - **Action :**
+    - Retirer le composant `PremiumSection` et tout modal/bannière vantant un abonnement mensuel ou annuel.
+    - Remplacer l'affichage dans la barre latérale / modal par l'état du Wallet : "Solde : X FCFA" avec action rapide `[ Recharger ]`.
+    - Supprimer tout lien ou écran orphelin orienté abonnement.
+  - **DoD :** Plus aucune mention d'abonnement dans `AppShell.tsx`, affichage direct du solde en FCFA.
+
+### 3. Refonte du Profil & Modal de Rechargement Mobile Money
+- [X] **Tâche 15.3 : Simplification de ProfileScreen et Recharge dès 500 FCFA dans PaymentModal**
+  - **Fichiers :** `src/ui/screens/ProfileScreen.tsx`, `src/features/wallet/PaymentModal.tsx`
+  - **Action :**
+    - Dans `ProfileScreen.tsx` : Supprimer les badges et cartes de souscription ("Plan Gratuit", "Pass Pro", etc.). Mettre en avant la carte néobanque du portefeuille prépayé avec le solde exact en FCFA, l'historique des débits par action et le bouton `[ + Recharger ]`.
+    - Dans `PaymentModal.tsx` : Retirer l'onglet/mode d'abonnement récurrent. Proposer des paliers de recharge adaptés : 500 FCFA, 1 000 FCFA, 2 000 FCFA, 5 000 FCFA. Intégrer le déclencheur instantané si le modal est ouvert suite à un solde insuffisant.
+  - **DoD :** Interface Wallet propre et limpide, paliers clairs dès 500 FCFA, zéro mention d'abonnement.
+
+### 4. Intégration du Débit à l'Acte dans la Candidature Stage (500 FCFA)
+- [X] **Tâche 15.4 : Débit Transparent et Première Candidature Gratuite dans `AiApplyModal.tsx`**
+  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`, `src/features/stages/StagesScreen.tsx`
+  - **Action :**
+    - Afficher clairement le coût sur le bouton d'action : `Postuler (500 FCFA)` ou `1ère Candidature Offerte (Gratuit)` si première postulation.
+    - Avant soumission, vérifier le solde du wallet. Si le solde < 500 FCFA, ouvrir directement `PaymentModal` avec montant pré-rempli à 500 FCFA.
+    - Enregistrer la transaction de débit de 500 FCFA lors de la validation.
+  - **DoD :** Expérience utilisateur fluide, transparence totale sur le coût, gestion automatique du solde insuffisant.
+
+### 5. Intégration Tarifaire dans la Rédaction & Bibliothèque de Documents
+- [X] **Tâche 15.5 : Tarification Rapport (2 000 F), Mémoire (5 000 F) et PDF (Gratuit / 250 F)**
+  - **Fichiers :** `src/features/documents/DocumentsScreen.tsx`, `src/ui/screens/LibraryScreen.tsx`
+  - **Action :**
+    - Dans l'Atelier de Rédaction :
+      - Afficher le tarif transparent : Rapport de stage `2 000 FCFA` (25-45 pages structurées avec IA).
+      - Mémoire de fin d'études `5 000 FCFA` (50-100 pages académiques).
+      - Débit du wallet ou modal de recharge si solde insuffisant.
+    - Dans la Bibliothèque :
+      - Annales et épreuves : Badge `GRATUIT` explicite (téléchargement libre).
+      - Documents/mémoires certifiés : Badge `250 FCFA` avec déblocage instantané via wallet.
+  - **DoD :** Badges tarifaires visibles et uniformes, débits atomiques conformes.
+
+### 6. Nettoyage Backend API & Typecheck Global
+- [X] **Tâche 15.6 : Dépréciation des Routes d'Abonnement et Validation Compilation**
+  - **Fichiers :** `mobile-api/app/api/mobile/`, `src/`
+  - **Action :**
+    - Désactiver/déprécier les endpoints d'abonnements mensuels au profit des endpoints de transaction wallet (`/api/mobile/wallet/topup` et `/api/mobile/wallet/spend`).
+    - Lancer `npm run typecheck` sur l'app mobile et sur `mobile-api/`.
+    - Résoudre toute anomalie ou référence orpheline.
+  - **DoD :** `npm run typecheck` passe avec 0 erreur sur le client et l'API.
+
+

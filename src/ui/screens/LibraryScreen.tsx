@@ -41,7 +41,7 @@ export function LibraryScreen({
         <EmptyState
           icon={<BookOpen size={26} color={stitchColors.inkSubtle} strokeWidth={1.5} />}
           title="Bibliothèque vide"
-          body="Achète des PDF ou souscris à un abonnement pour les retrouver ici."
+          body="Télécharge des annales gratuites ou débloque des PDF certifiés pour les retrouver ici."
           ctaLabel={onExplore ? 'Explorer le catalogue' : undefined}
           onCta={onExplore}
         />

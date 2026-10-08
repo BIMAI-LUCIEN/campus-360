@@ -28,12 +28,11 @@ const getDocBadgeTheme = (type: string) => {
   }
 };
 
-// ─── Document-type tiles (reference "upload options" grid layout) ─────────────
 const TYPE_TILES = [
-  { key: 'cv', label: 'CV', Icon: FileText, color: '#60A5FA', tint: 'rgba(96,165,250,0.14)', hasAi: true },
-  { key: 'lettre_motivation', label: 'Lettre', Icon: Mail, color: '#F472B6', tint: 'rgba(244,114,182,0.14)', hasAi: true },
-  { key: 'stage', label: 'Rapport de stage', Icon: Briefcase, color: '#FBBF24', tint: 'rgba(251,191,36,0.14)', hasAi: false },
-  { key: 'memoire', label: 'Mémoire', Icon: GraduationCap, color: '#A855F7', tint: 'rgba(168,85,247,0.14)', hasAi: false },
+  { key: 'cv', label: 'CV RH Officiel', Icon: FileText, color: '#60A5FA', tint: 'rgba(96,165,250,0.14)', hasAi: true, priceLabel: 'Inclus' },
+  { key: 'lettre_motivation', label: 'Lettre IA', Icon: Mail, color: '#F472B6', tint: 'rgba(244,114,182,0.14)', hasAi: true, priceLabel: 'Inclus' },
+  { key: 'stage', label: 'Rapport de stage', Icon: Briefcase, color: '#FBBF24', tint: 'rgba(251,191,36,0.14)', hasAi: true, priceLabel: '2 000 FCFA' },
+  { key: 'memoire', label: 'Mémoire Complet', Icon: GraduationCap, color: '#A855F7', tint: 'rgba(168,85,247,0.14)', hasAi: true, priceLabel: '5 000 FCFA' },
 ] as const;
 
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia, serif' }) as string;
@@ -70,41 +69,41 @@ const DOCUMENT_TYPES = [
     key: 'cv',
     label: 'CV',
     kicker: 'Pour postuler',
-    desc: 'Une page. Des faits. Pas de place pour le doute.',
+    desc: 'Une page. Des faits. Format 2 colonnes officiel RH.',
     voice: 'sans' as const,
     voiceStyle: { fontFamily: SANS, fontWeight: '700' as const, letterSpacing: -0.5 },
-    badge: 'IA',
+    badge: 'OFFERT',
     hasAi: true,
   },
   {
     key: 'lettre_motivation',
     label: 'Lettre de motivation',
     kicker: 'Pour convaincre',
-    desc: 'Une voix, une histoire, une raison d’être retenu.',
+    desc: 'Une voix, une histoire, personnalisée selon l’entreprise.',
     voice: 'script' as const,
     voiceStyle: { fontFamily: SERIF, fontStyle: 'italic' as const, fontWeight: '500' as const },
-    badge: 'IA',
+    badge: 'OFFERT',
     hasAi: true,
   },
   {
     key: 'stage',
     label: 'Rapport de stage',
-    kicker: 'Pour documenter',
-    desc: 'Qu’as-tu fait, comment, et qu’en as-tu appris ?',
+    kicker: 'Atelier complet 25-45 pages',
+    desc: 'Rédaction assistée, plan académique structuré, remerciements et annexes.',
     voice: 'mono' as const,
     voiceStyle: { fontFamily: MONO, fontWeight: '500' as const, letterSpacing: 0.5 },
-    badge: null,
-    hasAi: false,
+    badge: '2 000 FCFA',
+    hasAi: true,
   },
   {
     key: 'memoire',
     label: 'Mémoire',
-    kicker: 'Pour démontrer',
-    desc: 'Une thèse, des preuves, un travail de recherche.',
+    kicker: 'Thèse académique 50-100 pages',
+    desc: 'Problématique, cadre théorique, méthodologie et bibliographie aux normes.',
     voice: 'display' as const,
     voiceStyle: { fontFamily: SERIF, fontWeight: '900' as const, letterSpacing: -1.5 },
-    badge: null,
-    hasAi: false,
+    badge: '5 000 FCFA',
+    hasAi: true,
   },
 ] as const;
 

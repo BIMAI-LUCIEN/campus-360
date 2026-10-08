@@ -132,12 +132,10 @@ export function PaymentModal({
               </View>
               <Text style={styles.successTitle}>Paiement Confirmé !</Text>
               <Text style={styles.successText}>
-                {selectedPack.id === 'discovery_500'
-                  ? '5 candidatures IA avec CV officiel viennent d’être créditées sur votre compte.'
-                  : 'Votre Pass Mensuel Illimité de 30 jours est désormais activé !'}
+                {`Votre portefeuille Campus 360 a été rechargé de ${selectedPack.priceFcfa.toLocaleString()} FCFA avec succès.`}
               </Text>
               <Pressable style={styles.actionBtn} onPress={handleSuccessContinue}>
-                <Text style={styles.actionBtnText}>Continuer mes candidatures</Text>
+                <Text style={styles.actionBtnText}>Continuer</Text>
               </Pressable>
             </View>
           ) : waitingUssd ? (
