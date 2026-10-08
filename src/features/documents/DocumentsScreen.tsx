@@ -1,14 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   StyleSheet, View, Text, Pressable, ScrollView,
   ActivityIndicator, Alert, Modal, TextInput, Linking, KeyboardAvoidingView, Platform
 } from 'react-native';
 
-import { FileText, Mail, Briefcase, GraduationCap, Sparkles, Edit3, Download, Trash2 } from 'lucide-react-native';
+import { FileText, Mail, Briefcase, GraduationCap, Sparkles, Edit3, Download, Trash2, Eye, X } from 'lucide-react-native';
 import { authBaseUrl, authFetch, authClient, type StudentProfile } from '../auth/betterAuth';
-import { stitchColors } from '../../theme/stitch';
+import { stitchColors, stitchShadows, stitchRadius } from '../../theme/stitch';
 import { GradientText } from '../../ui/GlassComponents';
 import { DocGenChat } from './DocGenChat';
+import { OfficialCvView } from '../stages/OfficialCvView';
+import { exportOfficialCvPdf } from '../stages/pdfExportService';
+import type { OfficialCvData } from '../../types';
 
 const getDocBadgeTheme = (type: string) => {
   switch (type) {
@@ -152,6 +155,61 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   // Guided "one conversation -> full document" flow (stage / mémoire / vierge).
   const [genChatVisible, setGenChatVisible] = useState(false);
   const [generatingFull, setGeneratingFull] = useState(false);
+  const [cvPreviewVisible, setCvPreviewVisible] = useState(false);
+
+  const officialCvData: OfficialCvData = useMemo(() => {
+    const nameParts = (studentProfile?.name || 'KAMENI Dave Lionel').trim().split(' ');
+    const nom = nameParts[0] || 'KAMENI';
+    const prenom = nameParts.slice(1).join(' ') || 'Dave Lionel';
+    return {
+      titrePoste: studentProfile?.faculty ? `Étudiant en ${studentProfile.faculty}` : 'Développeur Junior',
+      photoUrl: undefined,
+      detailsPersonnels: {
+        nom,
+        prenom,
+        nationalite: 'Camerounaise',
+        age: '22 ans',
+        email: studentProfile?.email || 'etudiant@campus360.org',
+        telephone: studentProfile?.whatsappPhone || studentProfile?.phone || '690123456',
+        adresse: studentProfile?.university || 'Yaoundé, Cameroun',
+      },
+      experiences: [
+        {
+          poste: 'Stagiaire Académique',
+          entreprise: 'Campus 360 & Projets Étudiants',
+          ville: 'Yaoundé',
+          periode: '2023 - 2024',
+          missions: [
+            'Conception et réalisation de projets d’application pratique.',
+            'Travail collaboratif et respect des spécifications de stage.',
+          ],
+        },
+      ],
+      formations: [
+        {
+          diplome: studentProfile?.level || 'Licence 3',
+          etablissement: studentProfile?.university || 'Université de Yaoundé I',
+          ville: 'Yaoundé',
+          periode: 'En cours',
+        },
+      ],
+      competences: {
+        professionnelles: studentProfile?.skills?.length ? studentProfile.skills : ['Organisation', 'Informatique', 'Communication'],
+        habilitesRelationnelles: ['Autonome', 'Rigoureux', 'Esprit d’équipe', 'Ponctuel'],
+        logiciels: [
+          {
+            categorie: 'Outils Bureautiques & Collaboration',
+            items: ['Suite Office', 'Google Workspace', 'Git'],
+          },
+        ],
+      },
+      langues: [
+        { langue: 'Français', niveau: 'Langue maternelle / Courant' },
+        { langue: 'Anglais', niveau: 'Professionnel' },
+      ],
+      loisirs: ['Veille technologique', 'Lecture scientifique', 'Sports collectifs'],
+    };
+  }, [studentProfile]);
 
   // ─── Fetch ────────────────────────────────────────────────────────────────────
   const fetchDocuments = async () => {
@@ -478,6 +536,30 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         </View>
       </View>
 
+      {/* ── Vitrine CV Officiel RH 2 Colonnes ─────────────────────────── */}
+      <View style={styles.cvShowcaseCard}>
+        <View style={styles.cvShowcaseHeader}>
+          <View style={styles.cvShowcaseBadge}>
+            <Sparkles size={11} color="#7C3AED" />
+            <Text style={styles.cvShowcaseBadgeText}>Gabarit Officiel RH</Text>
+          </View>
+          <Text style={styles.cvShowcaseFormat}>Format 2 Colonnes</Text>
+        </View>
+        <Text style={styles.cvShowcaseTitle}>Curriculum Vitae Certifié Campus 360</Text>
+        <Text style={styles.cvShowcaseDesc}>
+          Gabarit officiel adapté aux normes des recruteurs au Cameroun et en zone CEMAC.
+        </Text>
+        <View style={styles.cvShowcaseActions}>
+          <Pressable
+            style={({ pressed }) => [styles.cvPreviewBtn, pressed && { opacity: 0.88 }]}
+            onPress={() => setCvPreviewVisible(true)}
+          >
+            <Eye size={15} color="#FFFFFF" strokeWidth={2.2} style={{ marginRight: 6 }} />
+            <Text style={styles.cvPreviewBtnText}>Aperçu du CV Officiel RH</Text>
+          </Pressable>
+        </View>
+      </View>
+
       <Text style={styles.sectionLabel}>Mes documents récents</Text>
 
       {error ? (
@@ -774,18 +856,68 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
           level: studentProfile.level ?? '',
         } : undefined}
       />
+
+      {/* ── Modale Aperçu CV Officiel RH 2 Colonnes ─────────────────── */}
+      <Modal
+        visible={cvPreviewVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setCvPreviewVisible(false)}
+      >
+        <View style={styles.officialCvModalOverlay}>
+          <View style={styles.officialCvModalSheet}>
+            <View style={styles.officialCvModalHeader}>
+              <View>
+                <Text style={styles.officialCvModalTitle}>CV Officiel RH</Text>
+                <Text style={styles.officialCvModalSub}>Gabarit 2 Colonnes Homologué</Text>
+              </View>
+              <Pressable
+                style={({ pressed }) => [styles.officialCvCloseBtn, pressed && { opacity: 0.8 }]}
+                onPress={() => setCvPreviewVisible(false)}
+              >
+                <X size={18} color="#0F172A" />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              style={styles.officialCvScroll}
+              contentContainerStyle={styles.officialCvScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <OfficialCvView cv={officialCvData} />
+            </ScrollView>
+
+            <View style={styles.officialCvFooter}>
+              <Pressable
+                style={({ pressed }) => [styles.officialCvDownloadBtn, pressed && { opacity: 0.88 }]}
+                onPress={async () => {
+                  try {
+                    await exportOfficialCvPdf(officialCvData);
+                    Alert.alert('Succès', 'Le CV officiel a été exporté en PDF.');
+                  } catch {
+                    Alert.alert('Erreur', 'Impossible d’exporter le CV.');
+                  }
+                }}
+              >
+                <Download size={15} color="#FFFFFF" strokeWidth={2.2} />
+                <Text style={styles.officialCvDownloadBtnText}>Télécharger le PDF Officiel</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: stitchColors.paper, padding: 16 },
+  container: { flex: 1, backgroundColor: stitchColors.background, padding: 16 },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: stitchColors.paper,
+    backgroundColor: stitchColors.background,
     gap: 16,
   },
   loadingText: {
@@ -829,18 +961,19 @@ const styles = StyleSheet.create({
 
   // Options de rédaction — tile grid
   optionsCard: {
-    backgroundColor: '#111622',
+    backgroundColor: '#FFFFFF',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#F1F5F9',
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 16,
+    ...stitchShadows.card,
   },
   optionsTitle: {
     fontFamily: SANS,
     fontSize: 15,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     marginBottom: 14,
   },
   tileGrid: {
@@ -850,17 +983,17 @@ const styles = StyleSheet.create({
   },
   tile: {
     width: '48%',
-    backgroundColor: '#131927',
+    backgroundColor: '#F8FAFC',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#E2E8F0',
     paddingVertical: 14,
     paddingHorizontal: 14,
     gap: 10,
   },
   tilePressed: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderColor: 'rgba(255, 255, 255, 0.16)',
+    backgroundColor: '#F1F5F9',
+    borderColor: '#CBD5E1',
   },
   tileIcon: {
     width: 40,
@@ -873,7 +1006,7 @@ const styles = StyleSheet.create({
     fontFamily: SANS,
     fontSize: 13.5,
     fontWeight: '600',
-    color: '#F8FAFC',
+    color: stitchColors.ink,
   },
   tileBadge: {
     position: 'absolute',
@@ -883,17 +1016,89 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 0.8,
-    color: '#818CF8',
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    color: '#7C3AED',
+    backgroundColor: 'rgba(124, 58, 237, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
+    borderColor: 'rgba(124, 58, 237, 0.25)',
     borderRadius: 999,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
 
+  // Vitrine CV Officiel RH
+  cvShowcaseCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    padding: 16,
+    marginBottom: 24,
+    ...stitchShadows.card,
+  },
+  cvShowcaseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  cvShowcaseBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(124, 58, 237, 0.25)',
+    borderRadius: 12,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+  },
+  cvShowcaseBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#7C3AED',
+  },
+  cvShowcaseFormat: {
+    fontFamily: MONO,
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: stitchColors.inkMuted,
+  },
+  cvShowcaseTitle: {
+    fontFamily: SANS,
+    fontSize: 15.5,
+    fontWeight: '700',
+    color: stitchColors.ink,
+    marginBottom: 4,
+  },
+  cvShowcaseDesc: {
+    fontFamily: SANS,
+    fontSize: 12.5,
+    color: stitchColors.inkMuted,
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  cvShowcaseActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  cvPreviewBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: stitchColors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cvPreviewBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: SANS,
+  },
+
   sectionLabel: {
-    color: '#94A3B8',
+    color: stitchColors.inkMuted,
     fontSize: 12,
     fontWeight: '700',
     fontFamily: MONO,
@@ -904,11 +1109,12 @@ const styles = StyleSheet.create({
   listContainer: { gap: 12, paddingBottom: 40 },
 
   documentCard: {
-    backgroundColor: '#111622',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 18,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#F1F5F9',
     borderWidth: 1,
+    ...stitchShadows.card,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   templateBadge: {
@@ -925,14 +1131,14 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   cardDate: {
-    color: '#94A3B8',
+    color: stitchColors.inkMuted,
     fontFamily: MONO,
     fontSize: 11,
     fontWeight: '500',
     letterSpacing: 0.5,
   },
   cardTitle: {
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 16,
     fontWeight: '700',
     fontFamily: SANS,
@@ -941,7 +1147,7 @@ const styles = StyleSheet.create({
   },
   cardActions: { flexDirection: 'row', gap: 10 },
   actionButton: { height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
-  editButton: { flex: 1, backgroundColor: '#4F46E5' },
+  editButton: { flex: 1, backgroundColor: stitchColors.primary },
   editButtonText: {
     color: '#FFFFFF',
     fontSize: 13,
@@ -955,7 +1161,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   pdfButtonText: {
-    color: '#38BDF8',
+    color: '#0284C7',
     fontSize: 12,
     fontWeight: '700',
     fontFamily: MONO,
@@ -963,35 +1169,106 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     width: 38,
-    backgroundColor: 'rgba(248, 113, 113, 0.1)',
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(248, 113, 113, 0.25)',
+    borderColor: 'rgba(239, 68, 68, 0.2)',
   },
-  deleteButtonText: { color: '#F87171', fontSize: 13, fontWeight: 'bold' },
+  deleteButtonText: { color: '#DC2626', fontSize: 13, fontWeight: 'bold' },
 
   emptyBox: {
     paddingVertical: 36,
     alignItems: 'center',
     paddingHorizontal: 24,
-    backgroundColor: '#111622',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#F1F5F9',
+    ...stitchShadows.card,
   },
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontFamily: SANS,
     marginBottom: 6,
   },
   emptyText: {
     fontSize: 13,
-    color: '#94A3B8',
+    color: stitchColors.inkMuted,
     textAlign: 'center',
     lineHeight: 19,
     fontFamily: SANS,
     maxWidth: 280,
+  },
+
+  // Modale CV Officiel RH
+  officialCvModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'flex-end',
+  },
+  officialCvModalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '92%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+  },
+  officialCvModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  officialCvModalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: stitchColors.ink,
+  },
+  officialCvModalSub: {
+    fontSize: 11.5,
+    color: stitchColors.inkMuted,
+    marginTop: 2,
+  },
+  officialCvCloseBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  officialCvScroll: {
+    flexGrow: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  officialCvScrollContent: {
+    paddingBottom: 20,
+  },
+  officialCvFooter: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  officialCvDownloadBtn: {
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: stitchColors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  officialCvDownloadBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   errorBox: { padding: 30, alignItems: 'center' },
   errorText: {

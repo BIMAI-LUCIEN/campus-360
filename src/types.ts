@@ -10,7 +10,15 @@ export type Transaction = {
 export type CompanyStatus = 'UNVERIFIED' | 'VERIFIED' | 'SUSPENDED';
 export type ApplyMethod = 'WHATSAPP' | 'EMAIL' | 'PHYSICAL';
 export type JobSource = 'INTERNAL' | 'SCRAPED';
-export type AppStatus = 'PENDING' | 'REVIEWING' | 'INTERVIEW' | 'ACCEPTED' | 'REJECTED';
+export type AppStatus =
+  | 'PENDING'
+  | 'SENT_PENDING'
+  | 'DELIVERED'
+  | 'FAILED'
+  | 'REVIEWING'
+  | 'INTERVIEW'
+  | 'ACCEPTED'
+  | 'REJECTED';
 
 export type StageCompany = {
   id: string;
@@ -48,6 +56,7 @@ export type StageJob = {
   matchingSkills?: string[];
   flyerUrl?: string;
   videoUrl?: string;
+  workspacePhotos?: string[];
 };
 
 export type StageApplication = {

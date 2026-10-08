@@ -13,6 +13,7 @@ import { LibraryScreen } from './LibraryScreen';
 import { ScrapedReportsView } from './ScrapedReportsView';
 import type { CampusDocument, CampusPdfPack } from '../../types';
 import { WritingWorkshopModal } from './WritingWorkshopModal';
+import { stitchColors } from '../../theme/stitch';
 
 interface ResourcesScreenProps {
   documents: CampusDocument[];
@@ -188,7 +189,7 @@ export function ResourcesScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090714', // Deep obsidian violet
+    backgroundColor: stitchColors.background,
   },
   glowTop: {
     position: 'absolute',
@@ -197,15 +198,15 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: 'rgba(124, 58, 237, 0.12)',
+    backgroundColor: 'rgba(124, 58, 237, 0.05)',
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 52 : 40,
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: 'rgba(9, 7, 20, 0.95)',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(139, 92, 246, 0.14)',
+    borderBottomColor: '#F1F5F9',
   },
   titleRow: {
     flexDirection: 'row',
@@ -221,12 +222,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: stitchColors.inkMuted,
     marginTop: 3,
     lineHeight: 16,
   },
@@ -239,43 +240,43 @@ const styles = StyleSheet.create({
   writingBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(124, 58, 237, 0.18)',
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
     gap: 5,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
+    borderColor: 'rgba(124, 58, 237, 0.2)',
   },
   writingBtnText: {
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#DDD6FE',
+    color: '#7C3AED',
   },
   assistantBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(52, 211, 153, 0.14)',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
     paddingHorizontal: 9,
     paddingVertical: 6,
     borderRadius: 12,
     gap: 4,
     borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.3)',
+    borderColor: 'rgba(16, 185, 129, 0.25)',
   },
   assistantBtnText: {
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#34D399',
+    color: '#059669',
   },
   subTabBar: {
     flexDirection: 'row',
-    backgroundColor: '#131024',
+    backgroundColor: '#F1F5F9',
     borderRadius: 14,
     padding: 3,
     gap: 4,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.16)',
+    borderColor: '#E2E8F0',
   },
   subTab: {
     flex: 1,
@@ -287,16 +288,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   subTabActive: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
     shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
     elevation: 3,
   },
   subTabText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: stitchColors.inkMuted,
     fontWeight: '600',
   },
   subTabTextActive: {

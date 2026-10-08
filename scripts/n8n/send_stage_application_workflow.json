@@ -1,0 +1,318 @@
+{
+  "name": "Campus 360 - Expédition Automatisée des Candidatures (WhatsApp Evolution API & Email SMTP)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-stage-application",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-wh-dispatch",
+      "name": "Webhook Envoi Candidature",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        180,
+        400
+      ],
+      "webhookId": "campus360-send-stage-application"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\n\n// 1. Identifiant unique de la candidature\nconst applicationId = body.applicationId || `app-${Date.now()}`;\n\n// 2. Canal de diffusion cible ('whatsapp' | 'email')\nconst rawChannel = (body.channel || 'whatsapp').toLowerCase().trim();\nconst channel = rawChannel === 'email' ? 'email' : 'whatsapp';\n\n// 3. Extraction & normalisation des données étudiant\nconst student = body.student || {};\nconst studentFullName = student.fullName || student.name || 'Dave Lionel KAMENI';\nconst studentEmail = student.email || 'etudiant@campus360.app';\nconst rawStudentPhone = (student.phoneWhatsapp || student.phone || '237672364124').replace(/[^0-9]/g, '');\nconst studentPhone = rawStudentPhone.startsWith('6') && rawStudentPhone.length === 9 ? `237${rawStudentPhone}` : rawStudentPhone;\nconst instanceName = student.instanceName || `student-${studentPhone}`;\nconst studentMajor = student.major || 'Génie Logiciel / Informatique';\nconst studentUniversity = student.university || 'Université / École Partenaire';\n\n// 4. Extraction & normalisation des données recruteur / offre\nconst job = body.job || {};\nconst jobTitle = job.title || 'Stagiaire Développeur';\nconst companyName = job.companyName || job.company || 'Entreprise Partenaire';\nconst jobLocation = job.location || 'Douala / Yaoundé';\nconst rawRecruiterPhone = (job.recruiterWhatsapp || job.phone || '237670009988').replace(/[^0-9]/g, '');\nconst recruiterPhone = rawRecruiterPhone.startsWith('6') && rawRecruiterPhone.length === 9 ? `237${rawRecruiterPhone}` : rawRecruiterPhone;\nconst recruiterEmail = job.recruiterEmail || job.email || 'recrutement@entreprise.com';\n\n// 5. Extraction du dossier de candidature\nconst dossier = body.dossier || {};\nconst cvPdfUrl = dossier.cvPdfUrl || body.cvPdfUrl || 'https://zlzwoqqnkvxndmtnzdsm.supabase.co/storage/v1/object/public/cvs/cv-sample.pdf';\nconst letterText = dossier.letterText || body.letterText || 'Madame, Monsieur,\\n\\nVivement intéressé par votre entreprise, je vous soumets ma candidature pour ce stage.';\n\n// Construction du pitch WhatsApp officiel\nconst defaultPitch = `📢 *Nouvelle Candidature — Campus 360*\\n\\nBonjour *${companyName}*,\\n\\nJe suis *${studentFullName}*, étudiant en *${studentMajor}* (${studentUniversity}).\\n\\nJ\\'ai l\\'honneur de postuler à votre offre de stage : *${jobTitle}* à *${jobLocation}*.\\n\\n📄 Mon CV officiel 2 colonnes est joint directement à ce message (document PDF ci-dessus).\\n\\n💬 *Présentation du profil :*\\n${letterText.slice(0, 320)}${letterText.length > 320 ? '...' : ''}\\n\\n📞 *WhatsApp Direct :* https://wa.me/${studentPhone}\\n✉️ *Email Candidat :* ${studentEmail}\\n🆔 *Réf. Candidature :* ${applicationId}\\n\\nBien cordialement,\\n*${studentFullName}* (Postulé via Campus 360)`;\nconst whatsappPitch = dossier.whatsappPitch || body.whatsappPitch || defaultPitch;\n\n// 6. Calcul du Jitter Anti-Ban aléatoire (15 à 30 secondes pour envois groupés)\nconst jitterSeconds = Math.floor(Math.random() * 16) + 15;\n\n// 7. Formatage de l'email SMTP professionnel HTML\nconst emailSubject = `Candidature Stage : ${jobTitle} — ${studentFullName}`;\nconst emailHtml = `<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Candidature Campus 360</title>\n  <style>\n    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 24px; line-height: 1.6; }\n    .wrapper { max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }\n    .header { background: #0f172a; color: #ffffff; padding: 28px 24px; text-align: center; }\n    .badge { display: inline-block; background: #2563eb; color: #ffffff; padding: 4px 14px; border-radius: 9999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }\n    .title { margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; }\n    .subtitle { margin: 6px 0 0 0; font-size: 14px; color: #94a3b8; }\n    .content { padding: 28px 24px; }\n    .info-card { background: #f1f5f9; border-radius: 8px; padding: 18px; margin: 18px 0; border-left: 4px solid #2563eb; }\n    .info-card p { margin: 6px 0; font-size: 14px; }\n    .motivation-box { background: #f8fafc; border-radius: 8px; padding: 16px; border: 1px dashed #cbd5e1; font-style: italic; color: #334155; margin: 16px 0; white-space: pre-line; }\n    .cta-container { text-align: center; margin: 28px 0; }\n    .cta-btn { display: inline-block; background: #2563eb; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; }\n    .footer { padding: 20px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; line-height: 1.5; }\n  </style>\n</head>\n<body>\n  <div class=\"wrapper\">\n    <div class=\"header\">\n      <div class=\"badge\">Campus 360 • Candidature Certifiée</div>\n      <h1 class=\"title\">Nouvelle Candidature Reçue</h1>\n      <p class=\"subtitle\">${jobTitle} chez ${companyName}</p>\n    </div>\n    <div class=\"content\">\n      <p>Bonjour l'équipe Recrutement de <strong>${companyName}</strong>,</p>\n      <p>Un candidat qualifié de la plateforme <strong>Campus 360</strong> vient de postuler à votre offre de stage.</p>\n      <div class=\"info-card\">\n        <p><strong>👤 Candidat :</strong> ${studentFullName}</p>\n        <p><strong>🎓 Formation :</strong> ${studentMajor} (${studentUniversity})</p>\n        <p><strong>📞 WhatsApp :</strong> +${studentPhone}</p>\n        <p><strong>✉️ Email :</strong> ${studentEmail}</p>\n        <p><strong>📍 Localisation :</strong> ${jobLocation}</p>\n      </div>\n      <h3 style=\"margin-top: 24px; font-size: 15px; color: #0f172a;\">Lettre de motivation & accroche :</h3>\n      <div class=\"motivation-box\">${letterText}</div>\n      <div class=\"cta-container\">\n        <a href=\"${cvPdfUrl}\" class=\"cta-btn\" target=\"_blank\">📄 Consulter le CV Officiel (PDF)</a>\n      </div>\n      <p style=\"font-size: 13px; color: #64748b; margin-top: 20px;\">\n        💡 <strong>Réponse directe :</strong> Vous pouvez répondre directement à cet email. L\\'en-tête <em>Reply-To</em> est configuré pour joindre <strong>${studentEmail}</strong>.\n      </p>\n    </div>\n    <div class=\"footer\">\n      Campus 360 — Plateforme d\\'insertion professionnelle étudiante en Afrique.<br>\n      Identifiant dossier : <code>${applicationId}</code>\n    </div>\n  </div>\n</body>\n</html>`;\n\nreturn [{\n  json: {\n    applicationId,\n    channel,\n    jitterSeconds,\n    student: {\n      fullName: studentFullName,\n      phoneWhatsapp: studentPhone,\n      email: studentEmail,\n      major: studentMajor,\n      university: studentUniversity,\n      instanceName\n    },\n    job: {\n      title: jobTitle,\n      companyName,\n      location: jobLocation,\n      recruiterWhatsapp: recruiterPhone,\n      recruiterEmail\n    },\n    dossier: {\n      cvPdfUrl,\n      letterText,\n      whatsappPitch\n    },\n    emailSubject,\n    emailHtml,\n    dispatchedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-code-validation",
+      "name": "Validation Payload & Jitter Anti-Ban",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.jitterSeconds }}",
+        "unit": "seconds"
+      },
+      "id": "node-wait-jitter",
+      "name": "Temporisation Anti-Ban (15-30s Jitter)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        400
+      ],
+      "webhookId": "wait-jitter-anti-ban"
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "cond-channel-whatsapp",
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "whatsapp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "cond-channel-email",
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        }
+      },
+      "id": "node-switch-channel",
+      "name": "Aiguillage Canal (WhatsApp vs Email)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        900,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.EVOLUTION_API_URL || 'https://wa.blackcompany.site') + '/message/sendMedia/' + $json.student.instanceName }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.EVOLUTION_API_KEY || 'evolution_key_douala_2026' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: $json.job.recruiterWhatsapp,\n  mediatype: 'document',\n  mimetype: 'application/pdf',\n  media: $json.dossier.cvPdfUrl,\n  fileName: 'CV_Officiel.pdf',\n  caption: $json.dossier.whatsappPitch\n}) }}",
+        "options": {}
+      },
+      "id": "node-wa-send-media",
+      "name": "Evolution API - Envoi Media PDF & Pitch WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1180,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM_EMAIL || 'candidatures@campus360.app' }}",
+        "toEmail": "={{ $json.job.recruiterEmail }}",
+        "subject": "={{ $json.emailSubject }}",
+        "html": "={{ $json.emailHtml }}",
+        "options": {
+          "replyTo": "={{ $json.student.email }}",
+          "attachments": "={{ $json.dossier.cvPdfUrl }}"
+        }
+      },
+      "id": "node-smtp-send-email",
+      "name": "Envoi Email Candidature (SMTP)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1180,
+        520
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "campus360-smtp-creds",
+          "name": "SMTP Campus 360"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ ($env.SUPABASE_URL || 'https://zlzwoqqnkvxndmtnzdsm.supabase.co') + '/rest/v1/stage_applications?id=eq.' + $('Validation Payload & Jitter Anti-Ban').item.json.applicationId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  status: 'DELIVERED',\n  dispatch_status: 'DELIVERED',\n  delivered_at: new Date().toISOString()\n}) }}",
+        "options": {}
+      },
+      "id": "node-supabase-update-delivered",
+      "name": "Mise à jour Supabase (Statut DELIVERED)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1460,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  success: true,\n  message: 'Candidature expédiée avec succès au recruteur',\n  applicationId: $('Validation Payload & Jitter Anti-Ban').item.json.applicationId,\n  channel: $('Validation Payload & Jitter Anti-Ban').item.json.channel,\n  status: 'DELIVERED',\n  recruiterTarget: $('Validation Payload & Jitter Anti-Ban').item.json.channel === 'whatsapp' ? $('Validation Payload & Jitter Anti-Ban').item.json.job.recruiterWhatsapp : $('Validation Payload & Jitter Anti-Ban').item.json.job.recruiterEmail,\n  deliveredAt: new Date().toISOString()\n}) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node-respond-200-ok",
+      "name": "Réponse 200 OK Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1720,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Envoi Candidature": {
+      "main": [
+        [
+          {
+            "node": "Validation Payload & Jitter Anti-Ban",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validation Payload & Jitter Anti-Ban": {
+      "main": [
+        [
+          {
+            "node": "Temporisation Anti-Ban (15-30s Jitter)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Temporisation Anti-Ban (15-30s Jitter)": {
+      "main": [
+        [
+          {
+            "node": "Aiguillage Canal (WhatsApp vs Email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aiguillage Canal (WhatsApp vs Email)": {
+      "main": [
+        [
+          {
+            "node": "Evolution API - Envoi Media PDF & Pitch WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Envoi Email Candidature (SMTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evolution API - Envoi Media PDF & Pitch WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Mise à jour Supabase (Statut DELIVERED)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoi Email Candidature (SMTP)": {
+      "main": [
+        [
+          {
+            "node": "Mise à jour Supabase (Statut DELIVERED)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mise à jour Supabase (Statut DELIVERED)": {
+      "main": [
+        [
+          {
+            "node": "Réponse 200 OK Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b47c9082-ef3d-4c8e-a2b1-678901234abc",
+  "id": "campus360-send-stage-application-wf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "campus360-n8n-blackcompany"
+  }
+}

@@ -1157,8 +1157,18 @@ export function AppShell() {
                 appName="Campus 360"
                 onBellPress={() => setNotificationsVisible(true)}
                 hasUnread={notifications.length > 0}
+                unreadCount={notifications.length}
                 onAvatarPress={() => openSection('account')}
                 avatarInitials={initials}
+                locationName={
+                  studentProfile?.university
+                    ? `${studentProfile.university} • ${studentProfile.faculty || 'Cameroun'}`
+                    : 'Yaoundé • Univ. Ydé I'
+                }
+                onLocationPress={() => openSection('account')}
+                iaCredits={iaCredits}
+                onWalletPress={() => openSection('account')}
+                onSearchPress={() => openSection('stages')}
               />
             )}
 

@@ -2,115 +2,115 @@ import { Platform, StyleSheet, Dimensions } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
-// ── Dark palette — "AI Analyzer" (gradient violet→pink→blue on near-black) ────
-// Token NAMES are preserved for compatibility, but the semantics are dark now:
-//  · `ink*`   = the foreground/text ramp (light on dark)
-//  · `paper*` = the background/surface ramp (dark)
-//  · `sienna` = the brand accent (repurposed to violet/pink for solid accents)
+// ── Clean White & Royal Violet Design System Foundation ──────────────────────────
+// High-contrast, PropTech & neo-workspace inspired design tokens:
+//  · `ink*`   = Foreground ramp (Deep Slate Black #0F172A on white)
+//  · `paper*` = Background & Surface ramp (Clean White #FFFFFF & Slate 50 #F8FAFC)
+//  · `sienna` = Brand accent (Royal Violet #7C3AED & Electric Violet #8B5CF6)
 export const stitchColors = {
-  // Foreground ramp (text) — crisp light on dark
-  ink: '#F8FAFC',
-  inkSoft: '#E2E8F0',
-  inkMuted: '#94A3B8',
-  inkSubtle: '#64748B',
-  inkFaint: '#334155',
+  // Foreground ramp (text) — crisp deep slate black on white
+  ink: '#0F172A',
+  inkSoft: '#334155',
+  inkMuted: '#64748B',
+  inkSubtle: '#94A3B8',
+  inkFaint: '#94A3B8',
 
-  // Background / surface ramp — Deep Obsidian Violet (inspiré fintech reference)
-  paper: '#090714',
-  paperDeep: '#0D0A1C',
-  paperSoft: '#15112B',
+  // Background / surface ramp — Clean White & Subtle Slate 50
+  paper: '#FFFFFF',
+  paperDeep: '#F8FAFC',
+  paperSoft: '#F1F5F9',
 
-  // Brand accent (solid) — Violet électrique & Royal Purple
-  sienna: '#8B5CF6',
-  siennaDeep: '#7C3AED',
-  siennaTone: '#A78BFA',
-  siennaBg: 'rgba(124, 58, 237, 0.14)',
-  siennaSoft: 'rgba(124, 58, 237, 0.22)',
+  // Brand accent (solid) — Royal Violet & Electric Purple
+  sienna: '#7C3AED',
+  siennaDeep: '#6D28D9',
+  siennaTone: '#8B5CF6',
+  siennaBg: 'rgba(124, 58, 237, 0.08)',
+  siennaSoft: 'rgba(124, 58, 237, 0.14)',
 
-  // Emerald (success / owned / IA) — bright on dark
-  emerald: '#34D399',
-  emeraldDeep: '#10B981',
-  emeraldTone: '#6EE7B7',
-  emeraldBg: 'rgba(52, 211, 153, 0.14)',
-  emeraldSoft: 'rgba(52, 211, 153, 0.24)',
+  // Emerald (success / stipends / verified) — accessible on light white
+  emerald: '#10B981',
+  emeraldDeep: '#059669',
+  emeraldTone: '#059669',
+  emeraldBg: 'rgba(16, 185, 129, 0.08)',
+  emeraldSoft: 'rgba(16, 185, 129, 0.16)',
 
   // Pure
   white: '#FFFFFF',
 
   // Semantic
-  error: '#F87171',
-  errorBg: 'rgba(248, 113, 113, 0.14)',
-  warning: '#FBBF24',
-  warningDeep: '#F59E0B',
-  warningBg: 'rgba(251, 191, 36, 0.14)',
-  warningTone: '#FCD34D',
+  error: '#EF4444',
+  errorBg: 'rgba(239, 68, 68, 0.08)',
+  warning: '#D97706',
+  warningDeep: '#B45309',
+  warningBg: 'rgba(245, 158, 11, 0.08)',
+  warningTone: '#F59E0B',
 
-  // Modern UI Primary & Secondary — Royal Violet & Sapphire
+  // Modern UI Primary & Secondary — Royal Violet & Electric Violet
   primary: '#7C3AED',
   onPrimary: '#FFFFFF',
-  primaryContainer: 'rgba(124, 58, 237, 0.16)',
-  onPrimaryContainer: '#DDD6FE',
-  primaryFixed: 'rgba(124, 58, 237, 0.16)',
-  onPrimaryFixed: '#DDD6FE',
-  primaryFixedDim: 'rgba(124, 58, 237, 0.24)',
-  onPrimaryFixedVariant: '#DDD6FE',
-  inversePrimary: '#A78BFA',
+  primaryContainer: 'rgba(124, 58, 237, 0.08)',
+  onPrimaryContainer: '#7C3AED',
+  primaryFixed: 'rgba(124, 58, 237, 0.08)',
+  onPrimaryFixed: '#7C3AED',
+  primaryFixedDim: 'rgba(124, 58, 237, 0.14)',
+  onPrimaryFixedVariant: '#6D28D9',
+  inversePrimary: '#8B5CF6',
 
-  secondary: '#6366F1',
+  secondary: '#8B5CF6',
   onSecondary: '#FFFFFF',
-  secondaryContainer: 'rgba(99, 102, 241, 0.14)',
-  onSecondaryContainer: '#C7D2FE',
-  secondaryFixed: 'rgba(99, 102, 241, 0.14)',
-  onSecondaryFixed: '#C7D2FE',
-  secondaryFixedDim: 'rgba(99, 102, 241, 0.22)',
-  onSecondaryFixedVariant: '#C7D2FE',
+  secondaryContainer: 'rgba(139, 92, 246, 0.08)',
+  onSecondaryContainer: '#6D28D9',
+  secondaryFixed: 'rgba(139, 92, 246, 0.08)',
+  onSecondaryFixed: '#6D28D9',
+  secondaryFixedDim: 'rgba(139, 92, 246, 0.14)',
+  onSecondaryFixedVariant: '#6D28D9',
 
-  tertiary: '#38BDF8',
+  tertiary: '#0284C7',
   onTertiary: '#FFFFFF',
 
-  background: '#090714',
-  onBackground: '#F8FAFC',
-  surface: '#131024',
-  onSurface: '#F8FAFC',
-  surfaceVariant: '#1A1435',
-  onSurfaceVariant: '#A78BFA',
+  background: '#F8FAFC',
+  onBackground: '#0F172A',
+  surface: '#FFFFFF',
+  onSurface: '#0F172A',
+  surfaceVariant: '#F1F5F9',
+  onSurfaceVariant: '#64748B',
 
-  surfaceContainerLowest: '#0A0816',
-  surfaceContainerLow: '#0E0B1F',
-  surfaceContainer: '#131024',
-  surfaceContainerHigh: '#191433',
-  surfaceContainerHighest: '#221B45',
+  surfaceContainerLowest: '#FFFFFF',
+  surfaceContainerLow: '#F8FAFC',
+  surfaceContainer: '#F8FAFC',
+  surfaceContainerHigh: '#F1F5F9',
+  surfaceContainerHighest: '#CBD5E1',
 
-  inverseSurface: '#F8FAFC',
-  inverseOnSurface: '#090714',
+  inverseSurface: '#0F172A',
+  inverseOnSurface: '#FFFFFF',
 
-  outline: 'rgba(139, 92, 246, 0.14)',
-  outlineVariant: 'rgba(139, 92, 246, 0.08)',
-  success: '#34D399',
-  successContainer: 'rgba(52, 211, 153, 0.14)',
+  outline: '#CBD5E1',
+  outlineVariant: '#F1F5F9',
+  success: '#10B981',
+  successContainer: 'rgba(16, 185, 129, 0.08)',
   onError: '#FFFFFF',
-  errorContainer: 'rgba(248, 113, 113, 0.14)',
-  onErrorContainer: '#FCA5A5',
+  errorContainer: 'rgba(239, 68, 68, 0.08)',
+  onErrorContainer: '#B91C1C',
 
-  // Glass tokens
-  glassSurface: '#131024',
-  glassBorder: 'rgba(139, 92, 246, 0.14)',
-  glassBorderLight: 'rgba(139, 92, 246, 0.22)',
-  glassOverlay: 'rgba(9, 7, 20, 0.65)',
-  glassCardBg: '#131024',
-  glassCardBorder: 'rgba(139, 92, 246, 0.14)',
-  glassSurfaceDark: '#090714',
-  glassBorderDark: 'rgba(139, 92, 246, 0.10)',
+  // Clean White Surface & Card tokens
+  glassSurface: '#FFFFFF',
+  glassBorder: '#E2E8F0',
+  glassBorderLight: 'rgba(124, 58, 237, 0.08)',
+  glassOverlay: 'rgba(15, 23, 42, 0.45)',
+  glassCardBg: '#FFFFFF',
+  glassCardBorder: '#E2E8F0',
+  glassSurfaceDark: '#0F172A',
+  glassBorderDark: 'rgba(15, 23, 42, 0.10)',
 };
 
-// ── Brand gradient — Royal Electric Violet gradient (inspiré carte neobank mockup 2) ─────────
+// ── Brand gradient — Luminous Royal Violet to Electric Violet ──────────────
 export const brandGradient = {
-  colors: ['#8B5CF6', '#6D28D9', '#4C1D95'] as const, // electric violet → deep purple
+  colors: ['#7C3AED', '#8B5CF6', '#A78BFA'] as const,
   horizontal: { start: { x: 0, y: 0 }, end: { x: 1, y: 0 } },
   diagonal: { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } },
 };
 export const brandGradientTwo = {
-  colors: ['#4F46E5', '#2563EB'] as const, // indigo → deep blue
+  colors: ['#7C3AED', '#6D28D9'] as const,
   start: { x: 0, y: 0 },
   end: { x: 1, y: 0 },
 };
@@ -125,13 +125,13 @@ export const stitchSpacing = {
 };
 
 export const stitchRadius = {
-  DEFAULT: 8,
-  sm: 10,
-  md: 14,
-  lg: 16,
-  xl: 20,
-  card: 18,
-  button: 14,
+  DEFAULT: 10,
+  sm: 12,
+  md: 16,
+  lg: 20,
+  xl: 24,
+  card: 20,
+  button: 16,
   full: 9999,
 };
 
@@ -316,37 +316,61 @@ export const stitchTypography = StyleSheet.create({
   },
 });
 
-// ── Shadows — almost zero. Editorial design uses whitespace, not depth ──────
+// ── Shadows — Ultra-soft elevation shadows (0F172A at 4-6% opacity) ─────────
 export const stitchShadows = StyleSheet.create({
   none: {},
   sm: {
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 2,
+    shadowRadius: 3,
     elevation: 1,
   },
   md: {
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  lg: {
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
   },
-  primary: {},
-  secondary: {},
+  lg: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  card: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  floating: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.07,
+    shadowRadius: 22,
+    elevation: 8,
+  },
+  primary: {
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  secondary: {
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 3,
+  },
 });
 
-// ── Surface presets — solid, no shadow by default ────────────────────────────
-
-/** Sticky chrome (nav bars, wallet card, large containers) */
+// ── Surface presets ──────────────────────────────────────────────────────────
 export const glassPanel = StyleSheet.create({
   light: {
     backgroundColor: stitchColors.surface,
@@ -354,33 +378,36 @@ export const glassPanel = StyleSheet.create({
   dark: {
     backgroundColor: stitchColors.inverseSurface,
   },
-  /** Bottom nav: solid, floating, no shadow — just a clean top rule */
   bottomNav: {
-    backgroundColor: stitchColors.surface,
-    borderTopLeftRadius: stitchRadius.lg,
-    borderTopRightRadius: stitchRadius.lg,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: 'rgba(124, 58, 237, 0.08)',
   },
-  /** Top bar: solid, no border, no shadow */
   topBar: {
-    backgroundColor: stitchColors.paper,
+    backgroundColor: stitchColors.primary,
   },
 });
 
-/** Content cards: solid paper-soft, no border, no shadow */
 export const glassCard = StyleSheet.create({
   light: {
     backgroundColor: stitchColors.surface,
+    borderColor: stitchColors.glassBorder,
+    borderWidth: 1,
+    borderRadius: stitchRadius.card,
   },
   dark: {
     backgroundColor: stitchColors.inverseSurface,
   },
-  /** Pill chip: paper-soft subtle bg */
   pill: {
-    backgroundColor: stitchColors.paperSoft,
+    backgroundColor: stitchColors.surfaceContainerLow,
+    borderRadius: stitchRadius.full,
   },
-  /** Solid card with paper bg */
   solid: {
-    backgroundColor: stitchColors.paper,
+    backgroundColor: stitchColors.surface,
+    borderColor: stitchColors.glassBorder,
+    borderWidth: 1,
+    borderRadius: stitchRadius.card,
   },
 });
 
@@ -389,8 +416,8 @@ export const glassCard = StyleSheet.create({
 export const stitchComponents = StyleSheet.create({
   // Buttons
   btnPrimary: {
-    backgroundColor: stitchColors.ink,
-    borderRadius: stitchRadius.sm,
+    backgroundColor: stitchColors.primary,
+    borderRadius: stitchRadius.button,
     paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: 'center' as const,
@@ -402,11 +429,11 @@ export const stitchComponents = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: 0.5,
     fontWeight: '700',
-    color: stitchColors.paper,
+    color: '#FFFFFF',
   },
   btnSienna: {
-    backgroundColor: stitchColors.sienna,
-    borderRadius: stitchRadius.sm,
+    backgroundColor: stitchColors.primary,
+    borderRadius: stitchRadius.button,
     paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: 'center' as const,
@@ -418,10 +445,13 @@ export const stitchComponents = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: 0.5,
     fontWeight: '700',
-    color: stitchColors.paper,
+    color: '#FFFFFF',
   },
   btnSecondary: {
-    backgroundColor: 'transparent',
+    backgroundColor: stitchColors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    borderRadius: stitchRadius.button,
     paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: 'center' as const,
@@ -449,13 +479,15 @@ export const stitchComponents = StyleSheet.create({
     color: stitchColors.ink,
   },
   btnPillActive: {
-    backgroundColor: stitchColors.ink,
+    backgroundColor: stitchColors.primary,
     borderRadius: stitchRadius.full,
     paddingVertical: 8,
     paddingHorizontal: 18,
   },
   btnPillInactive: {
-    backgroundColor: 'transparent',
+    backgroundColor: stitchColors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
     borderRadius: stitchRadius.full,
     paddingVertical: 8,
     paddingHorizontal: 18,
@@ -470,14 +502,14 @@ export const stitchComponents = StyleSheet.create({
   // Inputs
   inputWrapper: {
     backgroundColor: stitchColors.surface,
-    borderColor: stitchColors.inkFaint,
+    borderColor: stitchColors.glassBorder,
     borderWidth: 1,
-    borderRadius: stitchRadius.sm,
+    borderRadius: stitchRadius.md,
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
   inputFocused: {
-    borderColor: stitchColors.ink,
+    borderColor: stitchColors.primary,
     borderWidth: 1,
   },
   inputText: {
@@ -494,7 +526,7 @@ export const stitchComponents = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
     fontWeight: '700',
-    color: stitchColors.ink,
+    color: stitchColors.inkMuted,
     letterSpacing: 1.5,
     textTransform: 'uppercase' as const,
     marginBottom: 8,
@@ -507,10 +539,10 @@ export const stitchComponents = StyleSheet.create({
     paddingHorizontal: 8,
   },
   chipTagPrimary: {
-    backgroundColor: stitchColors.siennaSoft,
+    backgroundColor: stitchColors.siennaBg,
   },
   chipTagSecondary: {
-    backgroundColor: stitchColors.inkSoft,
+    backgroundColor: stitchColors.surfaceContainerLow,
   },
   chipTagError: {
     backgroundColor: stitchColors.errorBg,
@@ -522,10 +554,10 @@ export const stitchComponents = StyleSheet.create({
     letterSpacing: 1,
   },
   chipTagTextPrimary: {
-    color: stitchColors.siennaDeep,
+    color: stitchColors.primary,
   },
   chipTagTextSecondary: {
-    color: stitchColors.paper,
+    color: stitchColors.inkMuted,
   },
   chipTagTextError: {
     color: stitchColors.error,
@@ -550,13 +582,13 @@ export const stitchComponents = StyleSheet.create({
   // Bottom sheet / modal overlay
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
     justifyContent: 'flex-end' as const,
   },
   modalSheet: {
-    backgroundColor: stitchColors.paper,
-    borderTopLeftRadius: stitchRadius.lg,
-    borderTopRightRadius: stitchRadius.lg,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: stitchRadius.xl,
+    borderTopRightRadius: stitchRadius.xl,
     paddingHorizontal: stitchSpacing.containerMargin,
     paddingTop: 16,
     paddingBottom: 32,

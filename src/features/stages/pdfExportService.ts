@@ -545,4 +545,37 @@ Bien cordialement,
  */
 export const exportOfficialCvToPdf = exportOfficialCvPdf;
 
+/**
+ * Génère le fichier PDF en chaîne Base64 pour l'upload Supabase et le dispatch N8N
+ */
+export async function generateCvPdfBase64(
+  data: DocumentExportData | OfficialCvData
+): Promise<string | undefined> {
+  try {
+    let htmlContent = '';
+    if ('detailsPersonnels' in data) {
+      htmlContent = generateOfficialCvHtml(data as OfficialCvData);
+    } else {
+      const docData = data as DocumentExportData;
+      htmlContent = docData.officialCv
+        ? generateOfficialCvHtml(docData.officialCv)
+        : buildApplicationHtml(docData);
+    }
+
+    if (Platform.OS !== 'web') {
+      const result = await Print.printToFileAsync({ html: htmlContent, base64: true });
+      if (result?.base64) {
+        return result.base64;
+      }
+    } else {
+      // Minimal valid base64 PDF fallback for web development/environment
+      return 'JVBERi0xLjQKJcTl8uXrp/Og0MTGCjEgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBSCj4+CmVuZG9iamoyIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwovS2lkcyBbMyAwIFJdCi9Db3VudCAxCj4+CmVuZG9iamozIDAgb2JqCjw8Ci9UeXBlIC9QYWdlCi9QYXJlbnQgMiAwIFIKL01lZGlhQm94IFswIDAgNTk1IDg0Ml0KL1Jlc291cmNlcyA8PAo+Pgo+PgplbmRvYmoKeHJlZgowIDQKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE4IDAwMDAwIG4gCjAwMDAwMDAwNjkgMDAwMDAgbiAKMDAwMDAwMDEyNSAwMDAwMCBuIAp0cmFpbGVyCjw8Ci9TaXplIDQKL1Jvb3QgMSAwIFIKPj4Kc3RhcnR4cmVmCjIxNAolJUVPRg==';
+    }
+  } catch (err) {
+    console.warn('[pdfExportService] Erreur lors de la génération du PDF Base64:', err);
+  }
+  return undefined;
+}
+
+
 

@@ -27,6 +27,8 @@ import {
   Phone,
 } from 'lucide-react-native';
 
+import { stitchColors } from '../../theme/stitch';
+
 const { width } = Dimensions.get('window');
 
 // ─── DOMAINES D'ÉTUDES CAPTIVANTS & MODERNES ─────────────────────────────────
@@ -626,7 +628,7 @@ export function OnboardingScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090714', // Deep obsidian-violet
+    backgroundColor: '#FFFFFF',
   },
   glowTop: {
     position: 'absolute',
@@ -635,7 +637,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: 'rgba(124, 58, 237, 0.18)',
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
   },
   glowBottom: {
     position: 'absolute',
@@ -644,7 +646,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: 'rgba(99, 102, 241, 0.14)',
+    backgroundColor: 'rgba(99, 102, 241, 0.06)',
   },
 
   // Header
@@ -653,8 +655,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(139, 92, 246, 0.12)',
-    backgroundColor: 'rgba(9, 7, 20, 0.85)',
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -666,15 +668,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(124, 58, 237, 0.18)',
+    backgroundColor: 'rgba(124, 58, 237, 0.1)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
+    borderColor: 'rgba(139, 92, 246, 0.25)',
   },
   brandBadgeText: {
-    color: '#DDD6FE',
+    color: '#7C3AED',
     fontSize: 10.5,
     fontWeight: '800',
     letterSpacing: 0.8,
@@ -685,7 +687,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   skipButtonText: {
-    color: '#A78BFA',
+    color: '#7C3AED',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -694,7 +696,7 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#E2E8F0',
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -708,12 +710,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   stepIndicatorText: {
-    color: '#DDD6FE',
+    color: '#7C3AED',
     fontSize: 12,
     fontWeight: '700',
   },
   stepNameText: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '500',
   },
@@ -724,11 +726,16 @@ const styles = StyleSheet.create({
     paddingBottom: 110,
   },
   stepCard: {
-    backgroundColor: '#131024',
+    backgroundColor: '#FFFFFF',
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.16)',
+    borderColor: '#E2E8F0',
     padding: 20,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
   },
   stepHeaderRow: {
     flexDirection: 'row',
@@ -740,21 +747,21 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: 'rgba(124, 58, 237, 0.2)',
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.35)',
+    borderColor: 'rgba(139, 92, 246, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: '#0F172A',
     letterSpacing: -0.3,
   },
   stepSubtitle: {
     fontSize: 12.5,
-    color: '#94A3B8',
+    color: '#64748B',
     lineHeight: 18,
     marginTop: 2,
   },
@@ -763,30 +770,30 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13.5,
     fontWeight: '700',
-    color: '#E2E8F0',
+    color: '#0F172A',
     marginBottom: 8,
   },
   fieldHint: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#64748B',
     marginBottom: 12,
     lineHeight: 16,
   },
   subFieldLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#A78BFA',
+    color: '#7C3AED',
     marginBottom: 8,
     marginTop: 10,
   },
   textInput: {
-    backgroundColor: '#0E0B1F',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.22)',
+    borderColor: '#E2E8F0',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: '#F8FAFC',
+    color: '#0F172A',
     fontSize: 14,
     marginBottom: 6,
   },
@@ -796,19 +803,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor: '#1A1435',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.18)',
+    borderColor: '#E2E8F0',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 12,
   },
   chipSelected: {
     backgroundColor: '#7C3AED',
-    borderColor: '#A78BFA',
+    borderColor: '#8B5CF6',
   },
   chipText: {
-    color: '#CBD5E1',
+    color: '#475569',
     fontSize: 11.5,
     fontWeight: '500',
   },
@@ -822,9 +829,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   domainCard: {
-    backgroundColor: '#0E0B1F',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.16)',
+    borderColor: '#E2E8F0',
     borderRadius: 16,
     padding: 14,
     flexDirection: 'row',
@@ -833,7 +840,7 @@ const styles = StyleSheet.create({
   },
   domainCardSelected: {
     borderColor: '#8B5CF6',
-    backgroundColor: 'rgba(124, 58, 237, 0.14)',
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
   },
   domainEmoji: {
     fontSize: 24,
@@ -844,21 +851,21 @@ const styles = StyleSheet.create({
   domainTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   domainTitleSelected: {
-    color: '#DDD6FE',
+    color: '#7C3AED',
   },
   domainBadge: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
   },
   domainCheckCircle: {
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#1A1435',
+    backgroundColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -871,9 +878,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   levelCard: {
-    backgroundColor: '#0E0B1F',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.16)',
+    borderColor: '#E2E8F0',
     borderRadius: 14,
     padding: 12,
     flexDirection: 'row',
@@ -882,7 +889,7 @@ const styles = StyleSheet.create({
   },
   levelCardSelected: {
     borderColor: '#8B5CF6',
-    backgroundColor: 'rgba(124, 58, 237, 0.16)',
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
   },
   levelEmoji: {
     fontSize: 20,
@@ -890,14 +897,14 @@ const styles = StyleSheet.create({
   levelName: {
     fontSize: 13.5,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   levelNameSelected: {
-    color: '#DDD6FE',
+    color: '#7C3AED',
   },
   levelCycle: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 1,
   },
 
@@ -906,9 +913,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   objectiveCard: {
-    backgroundColor: '#0E0B1F',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.16)',
+    borderColor: '#E2E8F0',
     borderRadius: 14,
     padding: 12,
     flexDirection: 'row',
@@ -917,7 +924,7 @@ const styles = StyleSheet.create({
   },
   objectiveCardSelected: {
     borderColor: '#8B5CF6',
-    backgroundColor: 'rgba(124, 58, 237, 0.16)',
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
   },
   objectiveEmoji: {
     fontSize: 20,
@@ -926,10 +933,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
-    color: '#F8FAFC',
+    color: '#0F172A',
   },
   objectiveLabelSelected: {
-    color: '#DDD6FE',
+    color: '#7C3AED',
     fontWeight: '700',
   },
 
@@ -945,7 +952,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   skillsCountText: {
-    color: '#34D399',
+    color: '#059669',
     fontSize: 11.5,
     fontWeight: '700',
   },
@@ -957,19 +964,19 @@ const styles = StyleSheet.create({
   skillPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0E0B1F',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.18)',
+    borderColor: '#E2E8F0',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
   },
   skillPillSelected: {
     backgroundColor: '#7C3AED',
-    borderColor: '#A78BFA',
+    borderColor: '#8B5CF6',
   },
   skillPillText: {
-    color: '#CBD5E1',
+    color: '#475569',
     fontSize: 12,
     fontWeight: '500',
   },
@@ -984,14 +991,19 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#0D0A1C',
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(139, 92, 246, 0.16)',
+    borderTopColor: '#E2E8F0',
     paddingHorizontal: 20,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 4,
   },
   backButton: {
     flexDirection: 'row',
@@ -1001,7 +1013,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   backButtonText: {
-    color: '#C4B5FD',
+    color: '#7C3AED',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1015,9 +1027,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   continueButtonDisabled: {
     opacity: 0.45,

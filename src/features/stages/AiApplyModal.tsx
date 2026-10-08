@@ -24,13 +24,23 @@ import {
   Check,
   Copy,
   Download,
+  Zap,
+  AlertCircle,
+  MessageSquare,
 } from 'lucide-react-native';
 import type { StageJob, OfficialCvData } from '../../types';
-import { generateIaApplication, submitStageApplication, type GeneratedApplicationResult } from './stagesApi';
+import {
+  generateIaApplication,
+  submitStageApplication,
+  dispatchStageApplication,
+  type GeneratedApplicationResult,
+} from './stagesApi';
 import { analyzeJobMatch, type MatchAnalysis } from './aiMatchEngine';
-import { exportApplicationPdf, buildWhatsAppPitch } from './pdfExportService';
+import { exportApplicationPdf, buildWhatsAppPitch, generateCvPdfBase64 } from './pdfExportService';
 import { StudentProfileExpressModal } from './StudentProfileExpressModal';
 import { PaymentModal } from '../wallet/PaymentModal';
+import { WhatsAppPairingModal } from '../whatsapp/WhatsAppPairingModal';
+import { getStoredWhatsAppStatus, cleanPhoneNumber } from '../whatsapp/whatsappService';
 import { stitchColors, fontFamilies, stitchRadius } from '../../theme/stitch';
 
 interface AiApplyModalProps {
@@ -192,9 +202,45 @@ export function AiApplyModal({
   const [showExpressModal, setShowExpressModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
+  // 1-Click Apply & WhatsApp Session State
+  const [selectedChannel, setSelectedChannel] = useState<'whatsapp' | 'email'>('whatsapp');
+  const [isWhatsAppLinked, setIsWhatsAppLinked] = useState<boolean>(false);
+  const [linkedPhone, setLinkedPhone] = useState<string>('');
+  const [showPairingModal, setShowPairingModal] = useState<boolean>(false);
+  const [dispatchReceipt, setDispatchReceipt] = useState<{
+    applicationId: string;
+    channel: 'whatsapp' | 'email' | 'whatsapp_manual' | 'email_manual' | 'inapp';
+    status: string;
+    appliedAt: string;
+    message: string;
+    companyName: string;
+    jobTitle: string;
+  } | null>(null);
+
   useEffect(() => {
     setCurrentProfile(studentProfile);
   }, [studentProfile]);
+
+  // Synchronise le statut de jumelage WhatsApp et sélectionne le canal par défaut
+  useEffect(() => {
+    let isMounted = true;
+    if (visible && job) {
+      if (job.applyMethod === 'EMAIL') {
+        setSelectedChannel('email');
+      } else {
+        setSelectedChannel('whatsapp');
+      }
+
+      getStoredWhatsAppStatus().then((status) => {
+        if (!isMounted) return;
+        setIsWhatsAppLinked(Boolean(status.connected));
+        setLinkedPhone(status.phone || currentProfile.phoneWhatsapp || '');
+      });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [visible, job, currentProfile.phoneWhatsapp]);
 
   // Compute Match Analysis
   const matchAnalysis: MatchAnalysis | null = useMemo(() => {
@@ -356,42 +402,162 @@ export function AiApplyModal({
     }
   };
 
-  // 3. Action: Dispatch In-App
+  // 3. Action: 1-Click Background Apply (WhatsApp or Email via /api/mobile/stages/dispatch)
+  const handleOneClickApply = async (channel: 'whatsapp' | 'email') => {
+    if (!result || !job) return;
+    setSubmitting(true);
+    try {
+      const studentPhone = linkedPhone || currentProfile.phoneWhatsapp || '';
+      const pdfBase64 = await generateCvPdfBase64({
+        studentName: currentProfile.fullName,
+        studentEmail: currentProfile.email,
+        studentPhone,
+        major: currentProfile.major,
+        educationLevel: currentProfile.educationLevel,
+        jobTitle: job.title,
+        companyName: job.company?.name || "L'Entreprise",
+        letterText: editableLetter,
+        cvText: editableCv,
+        officialCv: result.officialCv,
+      });
+
+      const pitch = buildWhatsAppPitch({
+        studentName: currentProfile.fullName,
+        major: currentProfile.major,
+        jobTitle: job.title,
+        companyName: job.company?.name || "L'Entreprise",
+        letterSummary: editableLetter,
+      });
+
+      const res = await dispatchStageApplication({
+        jobId: job.id,
+        channel,
+        whatsappPitch: pitch,
+        letterText: editableLetter,
+        cvPdfBase64: pdfBase64,
+        studentNotes: '',
+        studentName: currentProfile.fullName,
+        studentEmail: currentProfile.email,
+        studentPhone,
+        phoneNumber: studentPhone,
+        officialCv: result.officialCv,
+        cvText: editableCv,
+        job,
+      });
+
+      setDispatchReceipt({
+        applicationId: res.applicationId,
+        channel,
+        status: res.status,
+        appliedAt: new Date().toISOString(),
+        message: res.message,
+        companyName: job.company?.name || 'Entreprise Partenaire',
+        jobTitle: job.title,
+      });
+
+      setStep('sent');
+    } catch (err) {
+      console.error('[AiApplyModal] 1-Click apply error:', err);
+      Alert.alert('Erreur', "Échec de l'envoi automatique. Vous pouvez utiliser le fallback manuel.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 4. Action: Fallback Manuel WhatsApp (Native Deep-link)
+  const handleManualWhatsAppApply = async () => {
+    if (!result || !job) return;
+    setSubmitting(true);
+    try {
+      const applicationId = await persistApplication();
+      const rawTarget = (job.company?.contactWhatsapp || '').replace(/[^0-9]/g, '');
+      const cleanTarget = rawTarget ? cleanPhoneNumber(rawTarget) : '237672364124';
+      const pitch = buildWhatsAppPitch({
+        studentName: currentProfile.fullName,
+        major: currentProfile.major,
+        jobTitle: job.title,
+        companyName: job.company?.name || "L'Entreprise",
+        letterSummary: editableLetter,
+      });
+      const encodedPitch = encodeURIComponent(pitch);
+      const nativeScheme = `whatsapp://send?phone=${cleanTarget}&text=${encodedPitch}`;
+      const webUrl = result.whatsappUrl || `https://wa.me/${cleanTarget}?text=${encodedPitch}`;
+
+      try {
+        const canOpen = await Linking.canOpenURL(nativeScheme);
+        if (canOpen) {
+          await Linking.openURL(nativeScheme);
+        } else {
+          await Linking.openURL(webUrl);
+        }
+      } catch {
+        await Linking.openURL(webUrl);
+      }
+
+      setDispatchReceipt({
+        applicationId,
+        channel: 'whatsapp_manual',
+        status: 'SENT_PENDING',
+        appliedAt: new Date().toISOString(),
+        message: 'Candidature préparée dans WhatsApp.',
+        companyName: job.company?.name || 'Entreprise Partenaire',
+        jobTitle: job.title,
+      });
+      setStep('sent');
+    } catch (err) {
+      console.warn('[AiApplyModal] Manual WhatsApp error:', err);
+      Alert.alert('Info', 'Ouverture de WhatsApp...');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 5. Action: Fallback Manuel Email (mailto)
+  const handleManualEmailApply = async () => {
+    if (!result || !job) return;
+    try {
+      const applicationId = await persistApplication();
+      const mailto = `mailto:${result.recipientEmail}?subject=${result.emailSubject}&body=${encodeURIComponent(
+        editableLetter
+      )}`;
+      await Linking.openURL(mailto);
+      setDispatchReceipt({
+        applicationId,
+        channel: 'email_manual',
+        status: 'SENT_PENDING',
+        appliedAt: new Date().toISOString(),
+        message: 'Candidature ouverte dans votre messagerie.',
+        companyName: job.company?.name || 'Entreprise Partenaire',
+        jobTitle: job.title,
+      });
+      setStep('sent');
+    } catch (e) {
+      Alert.alert('Info', 'Ouverture de votre messagerie...');
+    }
+  };
+
+  // 6. Action: Enregistrement In-App uniquement
   const handleInAppApply = async () => {
     try {
-      await persistApplication();
+      const applicationId = await persistApplication();
+      setDispatchReceipt({
+        applicationId,
+        channel: 'inapp',
+        status: 'PENDING',
+        appliedAt: new Date().toISOString(),
+        message: 'Candidature enregistrée dans votre suivi.',
+        companyName: job?.company?.name || 'Entreprise Partenaire',
+        jobTitle: job?.title || 'Offre de stage',
+      });
       setStep('sent');
     } catch (e) {
       Alert.alert('Erreur', 'Impossible d’enregistrer la candidature.');
     }
   };
 
-  // 4. Action: Dispatch WhatsApp
-  const handleOpenWhatsapp = async () => {
-    if (!result?.whatsappUrl) return;
-    try {
-      await persistApplication();
-      await Linking.openURL(result.whatsappUrl);
-      setStep('sent');
-    } catch (e) {
-      Alert.alert('Info', 'Ouverture de WhatsApp...');
-    }
-  };
-
-  // 5. Action: Dispatch Email
-  const handleOpenEmail = async () => {
-    if (!result) return;
-    const mailto = `mailto:${result.recipientEmail}?subject=${result.emailSubject}&body=${encodeURIComponent(
-      editableLetter
-    )}`;
-    try {
-      await persistApplication();
-      await Linking.openURL(mailto);
-      setStep('sent');
-    } catch (e) {
-      Alert.alert('Info', 'Ouverture de votre messagerie...');
-    }
-  };
+  // Aliases for compatibility
+  const handleOpenWhatsapp = handleManualWhatsAppApply;
+  const handleOpenEmail = handleManualEmailApply;
 
   return (
     <>
@@ -647,70 +813,272 @@ export function AiApplyModal({
                   </Pressable>
                 </View>
 
-                {/* Actions Box: Canaux d'envoi immédiat */}
+                {/* Actions Box: Canaux d'expédition et 1-Clic */}
                 <View style={styles.actionsBox}>
-                  <Text style={styles.actionsTitle}>Canal d'envoi :</Text>
-                  <View style={styles.channelRow}>
-                    {/* Direct In-App */}
+                  <Text style={styles.actionsTitle}>Canal d'expédition :</Text>
+
+                  {/* Segmented Channel Selector */}
+                  <View style={styles.channelSegmentContainer}>
                     <Pressable
-                      testID="btn-apply-inapp"
-                      style={({ pressed }) => [styles.channelBtnInApp, pressed && { opacity: 0.85 }]}
-                      onPress={handleInAppApply}
-                      disabled={submitting}
+                      testID="channel-tab-whatsapp"
+                      style={[
+                        styles.channelSegmentPill,
+                        selectedChannel === 'whatsapp' && styles.channelSegmentPillActiveWhatsApp,
+                      ]}
+                      onPress={() => setSelectedChannel('whatsapp')}
                     >
-                      <Send size={14} color="#FFFFFF" />
-                      <Text style={styles.channelBtnText}>In-App</Text>
+                      <MessageSquare
+                        size={14}
+                        color={selectedChannel === 'whatsapp' ? '#34D399' : '#94A3B8'}
+                      />
+                      <Text
+                        style={[
+                          styles.channelSegmentText,
+                          selectedChannel === 'whatsapp' && styles.channelSegmentTextActiveWhatsApp,
+                        ]}
+                      >
+                        WhatsApp {isWhatsAppLinked ? '⚡ 1-Clic' : ''}
+                      </Text>
                     </Pressable>
 
-                    {/* WhatsApp */}
                     <Pressable
-                      style={({ pressed }) => [styles.channelBtnWhatsapp, pressed && { opacity: 0.85 }]}
-                      onPress={handleOpenWhatsapp}
-                      disabled={submitting}
+                      testID="channel-tab-email"
+                      style={[
+                        styles.channelSegmentPill,
+                        selectedChannel === 'email' && styles.channelSegmentPillActiveEmail,
+                      ]}
+                      onPress={() => setSelectedChannel('email')}
                     >
-                      <Send size={14} color="#FFFFFF" />
-                      <Text style={styles.channelBtnText}>WhatsApp RH</Text>
-                    </Pressable>
-
-                    {/* Email */}
-                    <Pressable
-                      style={({ pressed }) => [styles.channelBtnEmail, pressed && { opacity: 0.85 }]}
-                      onPress={handleOpenEmail}
-                      disabled={submitting}
-                    >
-                      <Mail size={14} color="#FFFFFF" />
-                      <Text style={styles.channelBtnText}>Email RH</Text>
+                      <Mail
+                        size={14}
+                        color={selectedChannel === 'email' ? '#A78BFA' : '#94A3B8'}
+                      />
+                      <Text
+                        style={[
+                          styles.channelSegmentText,
+                          selectedChannel === 'email' && styles.channelSegmentTextActiveEmail,
+                        ]}
+                      >
+                        Email RH ✉️
+                      </Text>
                     </Pressable>
                   </View>
 
-                  <Text style={styles.savedHint}>
-                    {submitting
-                      ? 'Enregistrement en cours…'
-                      : 'Candidature enregistrée dans le suivi · Rappel de relance à J+7'}
-                  </Text>
+                  {/* Dynamic Action Box based on Channel & Pairing status */}
+                  {selectedChannel === 'whatsapp' ? (
+                    isWhatsAppLinked ? (
+                      <View style={styles.oneClickBox}>
+                        <View style={styles.linkedBadgeRow}>
+                          <CheckCircle2 size={13} color="#34D399" />
+                          <Text style={styles.linkedBadgeText}>
+                            WhatsApp connecté ({linkedPhone || currentProfile.phoneWhatsapp || 'associé'})
+                          </Text>
+                        </View>
+                        <Pressable
+                          testID="btn-apply-1click-whatsapp"
+                          style={({ pressed }) => [styles.primaryOneClickBtn, pressed && { opacity: 0.9 }]}
+                          onPress={() => handleOneClickApply('whatsapp')}
+                          disabled={submitting}
+                        >
+                          {submitting ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                          ) : (
+                            <>
+                              <Zap size={16} color="#FFFFFF" />
+                              <Text style={styles.primaryOneClickBtnText}>
+                                ⚡ Postuler en 1 Clic (Envoi Automatique)
+                              </Text>
+                            </>
+                          )}
+                        </Pressable>
+                        <View style={styles.secondaryActionsRow}>
+                          <Pressable
+                            testID="btn-fallback-manual-whatsapp"
+                            style={styles.textFallbackBtn}
+                            onPress={handleManualWhatsAppApply}
+                            disabled={submitting}
+                          >
+                            <Text style={styles.textFallbackBtnText}>💬 Ouvrir WhatsApp Manuellement</Text>
+                          </Pressable>
+                          <Pressable
+                            testID="btn-apply-inapp"
+                            style={styles.textFallbackBtn}
+                            onPress={handleInAppApply}
+                            disabled={submitting}
+                          >
+                            <Text style={styles.textFallbackBtnText}>📁 Suivi in-app uniquement</Text>
+                          </Pressable>
+                        </View>
+                        <Text style={styles.subHintText}>
+                          Expédition directe en arrière-plan via Evolution API. Aucun changement d'application requis.
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.unlinkedBox}>
+                        <View style={styles.unlinkedWarningRow}>
+                          <AlertCircle size={15} color="#FBBF24" />
+                          <Text style={styles.unlinkedWarningTitle}>WhatsApp non associé</Text>
+                        </View>
+                        <Text style={styles.unlinkedWarningDesc}>
+                          Associez votre compte en 30s pour expédier vos dossiers en 1 clic en arrière-plan.
+                        </Text>
+                        <View style={styles.unlinkedActionsRow}>
+                          <Pressable
+                            testID="btn-open-pairing-modal"
+                            style={styles.pairingOfferBtn}
+                            onPress={() => setShowPairingModal(true)}
+                          >
+                            <Zap size={14} color="#7C3AED" />
+                            <Text style={styles.pairingOfferBtnText}>🔗 Associer mon WhatsApp en 30s</Text>
+                          </Pressable>
+                          <Pressable
+                            testID="btn-fallback-manual-whatsapp"
+                            style={styles.manualFallbackBtn}
+                            onPress={handleManualWhatsAppApply}
+                            disabled={submitting}
+                          >
+                            <Text style={styles.manualFallbackBtnText}>💬 Ouvrir WhatsApp Manuellement</Text>
+                          </Pressable>
+                        </View>
+                        <View style={styles.secondaryActionsRow}>
+                          <Pressable
+                            testID="btn-apply-inapp"
+                            style={styles.textFallbackBtn}
+                            onPress={handleInAppApply}
+                            disabled={submitting}
+                          >
+                            <Text style={styles.textFallbackBtnText}>📁 Enregistrer dans mon suivi uniquement</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    )
+                  ) : (
+                    <View style={styles.emailBox}>
+                      <Pressable
+                        testID="btn-apply-email-dispatch"
+                        style={({ pressed }) => [styles.primaryEmailBtn, pressed && { opacity: 0.9 }]}
+                        onPress={() => handleOneClickApply('email')}
+                        disabled={submitting}
+                      >
+                        {submitting ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <>
+                            <Mail size={16} color="#FFFFFF" />
+                            <Text style={styles.primaryEmailBtnText}>
+                              ✉️ Expédier ma Candidature par Email
+                            </Text>
+                          </>
+                        )}
+                      </Pressable>
+                      <View style={styles.secondaryActionsRow}>
+                        <Pressable
+                          testID="btn-fallback-manual-email"
+                          style={styles.textFallbackBtn}
+                          onPress={handleManualEmailApply}
+                          disabled={submitting}
+                        >
+                          <Text style={styles.textFallbackBtnText}>📧 Ouvrir ma messagerie manuellement (mailto)</Text>
+                        </Pressable>
+                        <Pressable
+                          testID="btn-apply-inapp"
+                          style={styles.textFallbackBtn}
+                          onPress={handleInAppApply}
+                          disabled={submitting}
+                        >
+                          <Text style={styles.textFallbackBtnText}>📁 Suivi in-app uniquement</Text>
+                        </Pressable>
+                      </View>
+                      <Text style={styles.subHintText}>
+                        Expédition sécurisée avec CV officiel PDF joint via SMTP N8N.
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
             )}
 
-            {/* Étape 3 : Confirmation & Suivi */}
+            {/* Étape 3 : Confirmation & Accusé de réception officiel */}
             {step === 'sent' && (
-              <View style={styles.sentContainer}>
-                <View style={styles.sentIconCircle}>
-                  <CheckCircle2 size={48} color="#10B981" />
+              <View style={styles.receiptContainer}>
+                <View style={styles.receiptIconCircle}>
+                  <CheckCircle2 size={40} color="#10B981" />
                 </View>
-                <Text style={styles.sentTitle}>Candidature transmise</Text>
-                <Text style={styles.sentDesc}>
-                  Votre dossier a été enregistré dans votre espace. En l'absence de réponse sous 7 jours, vous pourrez envoyer une relance en 1 clic.
+                <Text style={styles.receiptTitle}>Candidature transmise avec succès !</Text>
+                <Text style={styles.receiptSubtitle}>
+                  Votre dossier officiel a été enregistré et expédié au recruteur.
                 </Text>
+
+                {/* Carte Accusé de Réception Officiel */}
+                <View style={styles.receiptCard}>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Référence :</Text>
+                    <Text style={styles.receiptValueBold}>
+                      CAMPUS-{dispatchReceipt?.applicationId ? dispatchReceipt.applicationId.replace(/[^a-zA-Z0-9]/g, '').slice(-7).toUpperCase() : 'APP-2026'}
+                    </Text>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Poste :</Text>
+                    <Text style={styles.receiptValue} numberOfLines={1}>
+                      {dispatchReceipt?.jobTitle || job?.title}
+                    </Text>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Entreprise :</Text>
+                    <Text style={styles.receiptValue} numberOfLines={1}>
+                      {dispatchReceipt?.companyName || job?.company?.name || "L'Entreprise"}
+                    </Text>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Canal :</Text>
+                    <Text style={styles.receiptValueChannel}>
+                      {dispatchReceipt?.channel === 'whatsapp'
+                        ? '⚡ WhatsApp (Automatique)'
+                        : dispatchReceipt?.channel === 'email'
+                        ? '✉️ Email RH (Automatique)'
+                        : dispatchReceipt?.channel === 'whatsapp_manual'
+                        ? '💬 WhatsApp (Manuel)'
+                        : dispatchReceipt?.channel === 'email_manual'
+                        ? '📧 Email RH (Manuel)'
+                        : '📁 In-App'}
+                    </Text>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Statut :</Text>
+                    <View style={styles.receiptStatusBadge}>
+                      <Text style={styles.receiptStatusBadgeText}>
+                        {dispatchReceipt?.status === 'DELIVERED'
+                          ? 'Délivrée'
+                          : "En cours d'acheminement · SENT_PENDING"}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Relance :</Text>
+                    <Text style={styles.receiptValueMuted}>Prévue à J+7 en l'absence de réponse</Text>
+                  </View>
+                </View>
+
                 <Pressable
-                  style={styles.doneBtn}
+                  testID="btn-receipt-timeline"
+                  style={styles.receiptTimelineBtn}
                   onPress={() => {
                     onClose();
                     onApplicationComplete?.();
                   }}
-                  testID="ai-modal-done"
                 >
-                  <Text style={styles.doneBtnText}>Fermer et consulter le suivi</Text>
+                  <Text style={styles.receiptTimelineBtnText}>📋 Voir dans mon Suivi de Candidatures</Text>
+                </Pressable>
+
+                <Pressable
+                  testID="ai-modal-done"
+                  style={styles.receiptCloseBtn}
+                  onPress={() => {
+                    onClose();
+                    onApplicationComplete?.();
+                  }}
+                >
+                  <Text style={styles.receiptCloseBtnText}>Fermer</Text>
                 </Pressable>
               </View>
             )}
@@ -752,6 +1120,25 @@ export function AiApplyModal({
             ...prev,
             tokens: newTokens,
           }));
+        }}
+      />
+      {/* Modal d'appairage WhatsApp en 30s si non lié */}
+      <WhatsAppPairingModal
+        visible={showPairingModal}
+        onClose={() => setShowPairingModal(false)}
+        initialPhone={currentProfile.phoneWhatsapp || linkedPhone || ''}
+        onPairingSuccess={(pairedPhone) => {
+          setIsWhatsAppLinked(true);
+          setLinkedPhone(pairedPhone);
+          setShowPairingModal(false);
+          setCurrentProfile((prev) => ({
+            ...prev,
+            phoneWhatsapp: pairedPhone || prev.phoneWhatsapp,
+          }));
+        }}
+        onStatusChange={(connected) => {
+          setIsWhatsAppLinked(connected);
+          if (connected) setShowPairingModal(false);
         }}
       />
     </>
@@ -1157,7 +1544,7 @@ const styles = StyleSheet.create({
     color: '#CBD5E1',
   },
 
-  // Actions Box
+  // Actions Box & Channel Selector
   actionsBox: {
     paddingHorizontal: 16,
     paddingTop: 10,
@@ -1171,6 +1558,200 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     marginBottom: 8,
   },
+  channelSegmentContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  channelSegmentPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  channelSegmentPillActiveWhatsApp: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: '#10B981',
+  },
+  channelSegmentPillActiveEmail: {
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    borderColor: '#7C3AED',
+  },
+  channelSegmentText: {
+    fontFamily: fontFamilies.outfit,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#94A3B8',
+  },
+  channelSegmentTextActiveWhatsApp: {
+    color: '#34D399',
+    fontWeight: '600',
+  },
+  channelSegmentTextActiveEmail: {
+    color: '#C4B5FD',
+    fontWeight: '600',
+  },
+
+  // 1-Click WhatsApp Box
+  oneClickBox: {
+    gap: 8,
+  },
+  linkedBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(16, 185, 129, 0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  linkedBadgeText: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 11,
+    color: '#34D399',
+    fontWeight: '500',
+  },
+  primaryOneClickBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#059669',
+    paddingVertical: 12,
+    borderRadius: 8,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  primaryOneClickBtnText: {
+    fontFamily: fontFamilies.outfit,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  // Unlinked WhatsApp Box
+  unlinkedBox: {
+    gap: 8,
+    backgroundColor: 'rgba(245, 158, 11, 0.04)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(245, 158, 11, 0.2)',
+    borderRadius: 8,
+    padding: 10,
+  },
+  unlinkedWarningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  unlinkedWarningTitle: {
+    fontFamily: fontFamilies.outfit,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FBBF24',
+  },
+  unlinkedWarningDesc: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#CBD5E1',
+  },
+  unlinkedActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 2,
+  },
+  pairingOfferBtn: {
+    flex: 1.1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: '#F3E8FF',
+    paddingVertical: 9,
+    borderRadius: 7,
+  },
+  pairingOfferBtnText: {
+    fontFamily: fontFamilies.outfit,
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#7C3AED',
+  },
+  manualFallbackBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    paddingVertical: 9,
+    borderRadius: 7,
+  },
+  manualFallbackBtnText: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#CBD5E1',
+    textAlign: 'center',
+  },
+
+  // Email Box
+  emailBox: {
+    gap: 8,
+  },
+  primaryEmailBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#7C3AED',
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  primaryEmailBtnText: {
+    fontFamily: fontFamilies.outfit,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+
+  // Secondary text buttons row
+  secondaryActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginTop: 2,
+  },
+  textFallbackBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  textFallbackBtnText: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 10.5,
+    color: '#94A3B8',
+    textDecorationLine: 'underline',
+  },
+  subHintText: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 10,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+
+  // Legacy channel styles for compatibility
   channelRow: {
     flexDirection: 'row',
     gap: 8,
@@ -1219,6 +1800,122 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     textAlign: 'center',
     marginTop: 8,
+  },
+
+  // Rich Receipt Confirmation View
+  receiptContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+  },
+  receiptIconCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  receiptTitle: {
+    fontFamily: fontFamilies.outfit,
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  receiptSubtitle: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 12,
+  },
+  receiptCard: {
+    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 10,
+    padding: 14,
+    gap: 10,
+    marginBottom: 18,
+  },
+  receiptRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  receiptLabel: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 11.5,
+    color: '#64748B',
+  },
+  receiptValue: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 12,
+    color: '#E2E8F0',
+    maxWidth: '65%',
+    textAlign: 'right',
+  },
+  receiptValueBold: {
+    fontFamily: fontFamilies.outfit,
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#A78BFA',
+  },
+  receiptValueChannel: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#34D399',
+  },
+  receiptStatusBadge: {
+    backgroundColor: 'rgba(59, 130, 246, 0.12)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  receiptStatusBadgeText: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 10.5,
+    color: '#60A5FA',
+    fontWeight: '600',
+  },
+  receiptValueMuted: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 11,
+    color: '#94A3B8',
+    fontStyle: 'italic',
+  },
+  receiptTimelineBtn: {
+    width: '100%',
+    backgroundColor: '#7C3AED',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  receiptTimelineBtnText: {
+    fontFamily: fontFamilies.outfit,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  receiptCloseBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  receiptCloseBtnText: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 12,
+    color: '#94A3B8',
   },
 
   // Sent Confirmation

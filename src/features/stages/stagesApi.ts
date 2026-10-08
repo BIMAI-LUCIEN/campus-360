@@ -1,5 +1,7 @@
 import type { StageJob, StageApplication, StageCompany, StudentProfileData, AppStatus, CompanyStatus, ApplyMethod, OfficialCvData } from '../../types';
 import { authFetch, authFetchRaw, authBaseUrl } from '../auth/betterAuth';
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { analyzeJobMatch } from './aiMatchEngine';
 import { publicEnv } from '../../config/env';
 
@@ -1029,7 +1031,193 @@ export async function submitStageApplication(
   return appId;
 }
 
+export interface DispatchStageApplicationParams {
+  jobId: string;
+  channel: 'whatsapp' | 'email';
+  whatsappPitch?: string;
+  letterText?: string;
+  cvPdfBase64?: string;
+  cvPdfUrl?: string;
+  studentNotes?: string;
+  studentName?: string;
+  studentEmail?: string;
+  studentPhone?: string;
+  phoneNumber?: string;
+  officialCv?: OfficialCvData;
+  cvText?: string;
+  job?: StageJob;
+}
+
+export interface DispatchStageApplicationResult {
+  success: boolean;
+  applicationId: string;
+  status: AppStatus;
+  cvUrl?: string;
+  message: string;
+  offline?: boolean;
+}
+
+/**
+ * Expédie la candidature en 1-Clic via l'API backend /api/mobile/stages/dispatch (Evolution API & N8N SMTP)
+ * et persiste le dossier localement et sur le serveur.
+ */
+export async function dispatchStageApplication(
+  params: DispatchStageApplicationParams
+): Promise<DispatchStageApplicationResult> {
+  let appId = '';
+  let status: AppStatus = 'SENT_PENDING';
+  let cvUrl = params.cvPdfUrl;
+  let message =
+    params.channel === 'whatsapp'
+      ? 'Candidature expédiée avec succès via WhatsApp.'
+      : 'Candidature expédiée avec succès par Email.';
+  let isOffline = false;
+
+  const phone = params.studentPhone || params.phoneNumber || '';
+
+  try {
+    const response = await authFetchRaw('/api/mobile/stages/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobId: params.jobId,
+        channel: params.channel,
+        whatsappPitch: params.whatsappPitch || '',
+        letterText: params.letterText || '',
+        cvPdfBase64: params.cvPdfBase64 || '',
+        cvPdfUrl: params.cvPdfUrl?.trim() || undefined,
+        studentNotes: params.studentNotes?.trim() || undefined,
+        studentName: params.studentName?.trim() || undefined,
+        studentEmail: params.studentEmail?.trim() || undefined,
+        studentPhone: phone?.trim() || undefined,
+        phoneNumber: phone?.trim() || undefined,
+      }),
+    });
+
+    if (response.ok) {
+      const payload = (await response.json()) as {
+        success?: boolean;
+        applicationId?: string;
+        status?: AppStatus;
+        cvUrl?: string;
+        message?: string;
+      };
+      if (payload?.applicationId) {
+        appId = payload.applicationId;
+        status = payload.status || 'SENT_PENDING';
+        if (payload.cvUrl) cvUrl = payload.cvUrl;
+        if (payload.message) message = payload.message;
+      }
+    } else {
+      console.warn('[stagesApi] Dispatch server returned status:', response.status);
+    }
+  } catch (e) {
+    console.warn('[stagesApi] Network dispatch fallback to local memory:', e);
+    isOffline = true;
+  }
+
+  if (!appId) {
+    appId = `app-dispatch-${Date.now()}`;
+    isOffline = true;
+    message = 'Candidature enregistrée en local (mode hors-ligne).';
+  }
+
+  const targetJob = params.job || SEED_JOBS.find((j) => j.id === params.jobId) || SEED_JOBS[0];
+  const newApplication: StageApplication = {
+    id: appId,
+    studentId: 'student-current',
+    jobId: params.jobId,
+    status,
+    appliedAt: new Date().toISOString(),
+    job: targetJob,
+    cvFileUrl: cvUrl,
+    generatedCvText: params.cvText,
+    generatedLetterText: params.letterText,
+    officialCv: params.officialCv,
+    notes: `Candidature 1-Clic via ${params.channel === 'whatsapp' ? 'WhatsApp' : 'Email'}.`,
+  };
+
+  localApplications = [newApplication, ...localApplications.filter((a) => a.id !== appId)];
+  persistApplicationsLocally(localApplications);
+
+  return {
+    success: true,
+    applicationId: appId,
+    status,
+    cvUrl,
+    message,
+    offline: isOffline,
+  };
+}
+
 const APPLICATIONS_STORAGE_KEY = 'campus360_student_applications';
+
+/**
+ * Prunes bulky optional fields (officialCv, generatedCvText, generatedLetterText)
+ * so that local persistence remains lean and fits within storage limits.
+ */
+function pruneBulkyApplicationFields(app: StageApplication): StageApplication {
+  const { officialCv, generatedCvText, generatedLetterText, ...lean } = app;
+  return lean as StageApplication;
+}
+
+function getUtf8ByteLength(str: string): number {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.byteLength(str, 'utf8');
+  }
+  let s = str.length;
+  for (let i = str.length - 1; i >= 0; i--) {
+    const code = str.charCodeAt(i);
+    if (code > 0x7f && code <= 0x7ff) s++;
+    else if (code > 0x7ff && code <= 0xffff) s += 2;
+    if (code >= 0xdc00 && code <= 0xdfff) i--;
+  }
+  return s;
+}
+
+/**
+ * Trims applications array so that serialized JSON stays strictly below 1800 bytes,
+ * preventing native SecureStore 2048-byte quota exceptions.
+ */
+function fitSecureStoreBudget(apps: StageApplication[], maxBytes = 1800): string {
+  let list = apps.map(pruneBulkyApplicationFields);
+  while (list.length > 0) {
+    const raw = JSON.stringify(list);
+    if (getUtf8ByteLength(raw) <= maxBytes) {
+      return raw;
+    }
+    list.pop();
+  }
+  return '[]';
+}
+
+export async function getStoredApplicationsAsync(): Promise<StageApplication[]> {
+  try {
+    let raw: string | null = null;
+    if (Platform.OS === 'web') {
+      if (typeof localStorage !== 'undefined') {
+        raw = localStorage.getItem(APPLICATIONS_STORAGE_KEY);
+      }
+    } else {
+      raw = await SecureStore.getItemAsync(APPLICATIONS_STORAGE_KEY).catch(() => null);
+    }
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((app: Partial<StageApplication>) => {
+          const seedJob = SEED_JOBS.find((j) => j.id === app.jobId) || SEED_JOBS[0];
+          return {
+            ...app,
+            job: app.job || seedJob,
+          } as StageApplication;
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[stagesApi] Error reading stored applications:', err);
+  }
+  return [];
+}
 
 function getStoredApplications(): StageApplication[] {
   if (typeof localStorage !== 'undefined') {
@@ -1038,7 +1226,13 @@ function getStoredApplications(): StageApplication[] {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return parsed.map((app: Partial<StageApplication>) => {
+            const seedJob = SEED_JOBS.find((j) => j.id === app.jobId) || SEED_JOBS[0];
+            return {
+              ...app,
+              job: app.job || seedJob,
+            } as StageApplication;
+          });
         }
       }
     } catch {}
@@ -1046,11 +1240,20 @@ function getStoredApplications(): StageApplication[] {
   return [];
 }
 
-function persistApplicationsLocally(apps: StageApplication[]) {
-  if (typeof localStorage !== 'undefined') {
-    try {
-      localStorage.setItem(APPLICATIONS_STORAGE_KEY, JSON.stringify(apps));
-    } catch {}
+export function persistApplicationsLocally(apps: StageApplication[]): void {
+  try {
+    const leanApps = apps.map(pruneBulkyApplicationFields);
+    const raw = JSON.stringify(leanApps);
+    if (Platform.OS === 'web') {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(APPLICATIONS_STORAGE_KEY, raw);
+      }
+    } else {
+      const safePayload = fitSecureStoreBudget(apps, 1800);
+      SecureStore.setItemAsync(APPLICATIONS_STORAGE_KEY, safePayload).catch(() => {});
+    }
+  } catch (err) {
+    console.warn('[stagesApi] Error persisting applications locally:', err);
   }
 }
 
@@ -1067,7 +1270,7 @@ export async function fetchStudentApplications(): Promise<StageApplication[]> {
     console.warn('Fetch applications fallback to local store:', e);
   }
 
-  const stored = getStoredApplications();
+  const stored = await getStoredApplicationsAsync();
   if (stored.length > 0) {
     const storedIds = new Set(stored.map((a) => a.id));
     const merged = [...stored, ...localApplications.filter((a) => !storedIds.has(a.id))];
@@ -1111,7 +1314,7 @@ export function getDaysSinceApplication(appliedAt: string): number {
 }
 
 export function isEligibleForFollowup(app: StageApplication): boolean {
-  if (app.status !== 'PENDING') return false;
+  if (app.status !== 'PENDING' && app.status !== 'SENT_PENDING' && app.status !== 'DELIVERED') return false;
   return getDaysSinceApplication(app.appliedAt) >= 7;
 }
 
@@ -1130,6 +1333,7 @@ export async function recordApplicationReminder(applicationId: string): Promise<
   const app = localApplications.find((a) => a.id === applicationId);
   if (app) {
     app.lastRemindedAt = new Date().toISOString();
+    persistApplicationsLocally(localApplications);
     return true;
   }
   return false;

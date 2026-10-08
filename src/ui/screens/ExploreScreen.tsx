@@ -264,9 +264,9 @@ const styles = StyleSheet.create({
   },
   toggleBtns: {
     flexDirection: 'row',
-    backgroundColor: '#131024',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     padding: 3,
   },
@@ -276,11 +276,11 @@ const styles = StyleSheet.create({
     borderRadius: 9,
   },
   toggleBtnActive: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
   },
   toggleBtnText: {
     ...stitchTypography.labelSm,
-    color: '#94A3B8',
+    color: stitchColors.inkMuted,
     fontWeight: '700',
   },
   toggleBtnTextActive: {

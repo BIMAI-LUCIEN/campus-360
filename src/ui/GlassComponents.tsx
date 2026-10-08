@@ -5,6 +5,7 @@ import React from 'react';
 import {
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -155,7 +156,9 @@ export const IconButton = (props: { onPress: () => void; icon: React.ReactNode; 
         width: props.size ?? 44,
         height: props.size ?? 44,
         borderRadius: (props.size ?? 44) / 2,
-        backgroundColor: stitchColors.surfaceContainer,
+        backgroundColor: stitchColors.paperSoft,
+        borderWidth: 1,
+        borderColor: stitchColors.glassBorder,
         alignItems: 'center',
         justifyContent: 'center',
       },
@@ -167,7 +170,7 @@ export const IconButton = (props: { onPress: () => void; icon: React.ReactNode; 
   </Pressable>
 );
 
-// ─── Card — dark surface, hairline border ────────────────────────────────────
+// ─── Card — Clean white surface, subtle border, soft shadow ─────────────────
 export function Card({
   style,
   children,
@@ -179,14 +182,14 @@ export function Card({
 }) {
   const toneStyle =
     tone === 'ink'
-      ? { backgroundColor: stitchColors.surfaceContainerHigh, borderColor: stitchColors.glassBorder }
+      ? { backgroundColor: stitchColors.paperDeep, borderColor: stitchColors.glassBorder }
       : tone === 'sienna'
         ? { backgroundColor: stitchColors.siennaBg, borderColor: stitchColors.siennaSoft }
-        : { backgroundColor: stitchColors.surface, borderColor: stitchColors.glassBorder };
+        : { backgroundColor: stitchColors.surface, borderColor: stitchColors.paperSoft };
   return <View style={[styles.card, toneStyle, style]}>{children}</View>;
 }
 
-// ─── Pill — dark chip; active = filled brand ─────────────────────────────────
+// ─── Pill — Clean chip; active = solid royal violet pill ────────────────────
 export function Pill({
   label,
   active = false,
@@ -200,14 +203,14 @@ export function Pill({
 }) {
   const content = (
     <View style={[active ? styles.pillActive : styles.pillInactive, style]}>
-      <Text style={[styles.pillText, { color: active ? '#FFFFFF' : stitchColors.inkMuted }]}>{label}</Text>
+      <Text style={[styles.pillText, { color: active ? '#FFFFFF' : '#64748B' }]}>{label}</Text>
     </View>
   );
   if (onPress) return <Pressable onPress={onPress}>{content}</Pressable>;
   return content;
 }
 
-// ─── EditorialInput — dark field, mono label ─────────────────────────────────
+// ─── EditorialInput — Clean white field, crisp border, violet focus ring ─────
 export function EditorialInput({
   label,
   value,
@@ -249,7 +252,7 @@ export function EditorialInput({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={stitchColors.inkSubtle}
+          placeholderTextColor="#94A3B8"
           style={[styles.inputText, multiline && styles.inputTextMulti]}
           secureTextEntry={secureTextEntry && !showPassword}
           keyboardType={keyboardType}
@@ -261,9 +264,9 @@ export function EditorialInput({
         {showPasswordToggle && (
           <Pressable onPress={onTogglePassword} hitSlop={8}>
             {showPassword ? (
-              <EyeOff size={18} color={stitchColors.inkSubtle} />
+              <EyeOff size={18} color="#94A3B8" />
             ) : (
-              <Eye size={18} color={stitchColors.inkSubtle} />
+              <Eye size={18} color="#94A3B8" />
             )}
           </Pressable>
         )}
@@ -273,7 +276,7 @@ export function EditorialInput({
   );
 }
 
-// ─── GradientButton — the signature CTA ──────────────────────────────────────
+// ─── GradientButton — Solid Royal Violet & Electric Violet CTA ───────────────
 export function GradientButton({
   label,
   onPress,
@@ -305,9 +308,9 @@ export function GradientButton({
       ]}
     >
       <LinearGradient
-        colors={brandGradient.colors}
-        start={brandGradient.horizontal.start}
-        end={brandGradient.horizontal.end}
+        colors={['#7C3AED', '#8B5CF6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
         style={styles.gradBtn}
       >
         <View style={styles.btnRow}>
@@ -322,7 +325,7 @@ export function GradientButton({
 // PrimaryButton is now the gradient CTA (drop-in for existing screens).
 export const PrimaryButton = GradientButton;
 
-// ─── SiennaButton — solid pink alt CTA ───────────────────────────────────────
+// ─── SiennaButton — Solid Royal Violet CTA ──────────────────────────────────
 export function SiennaButton({
   label,
   onPress,
@@ -360,7 +363,7 @@ export function SiennaButton({
   );
 }
 
-// ─── SecondaryButton — dark surface button ───────────────────────────────────
+// ─── SecondaryButton — Clean light surface button ───────────────────────────
 export function SecondaryButton({
   label,
   onPress,
@@ -393,7 +396,7 @@ export function SecondaryButton({
   );
 }
 
-// ─── BottomNav — barre flottante en pilule frosted calquée sur la maquette ──
+// ─── BottomNav — Floating Clean White Curved Bar with Solid Violet Pill ──────
 export function BottomNav({
   activeSection,
   onPress,
@@ -415,7 +418,7 @@ export function BottomNav({
                 onPress={() => onPress(key)}
                 style={({ pressed }) => [styles.navActivePill, pressed && { opacity: 0.9 }]}
               >
-                <Icon size={17} color="#FFFFFF" strokeWidth={2.4} />
+                <Icon size={17} color={stitchColors.white} strokeWidth={2.4} />
                 <Text style={styles.navActiveLabel}>{label}</Text>
               </Pressable>
             );
@@ -429,7 +432,7 @@ export function BottomNav({
               hitSlop={8}
               style={({ pressed }) => [styles.navInactiveItem, pressed && { opacity: 0.6 }]}
             >
-              <Icon size={20} color="#94A3B8" strokeWidth={1.8} />
+              <Icon size={20} color={stitchColors.inkMuted} strokeWidth={1.8} />
             </Pressable>
           );
         })}
@@ -537,53 +540,162 @@ export function DashboardGrid({
   );
 }
 
-// ─── TopBar — dark, gradient brand mark ──────────────────────────────────────
+// ─── TopBar — Curved Royal Violet Header with Location & Search ──────────────
+export interface TopBarProps {
+  appName?: string;
+  onBellPress?: () => void;
+  hasUnread?: boolean;
+  unreadCount?: number;
+  onAvatarPress?: () => void;
+  avatarInitials?: string;
+  locationName?: string;
+  universityName?: string;
+  onLocationPress?: () => void;
+  showLocation?: boolean;
+  showSearch?: boolean;
+  searchValue?: string;
+  onSearchChange?: (text: string) => void;
+  searchPlaceholder?: string;
+  onFilterPress?: () => void;
+  onSearchPress?: () => void;
+  hasActiveFilters?: boolean;
+  iaCredits?: number;
+  onWalletPress?: () => void;
+  style?: ViewStyle;
+}
+
 export function TopBar({
   appName = 'Campus 360',
   onBellPress,
   hasUnread = false,
+  unreadCount,
   onAvatarPress,
   avatarInitials,
-}: {
-  appName?: string;
-  onBellPress: () => void;
-  hasUnread?: boolean;
-  onAvatarPress?: () => void;
-  avatarInitials?: string;
-}) {
-  return (
-    <View style={styles.topBar}>
-      <View style={styles.topBarBrand}>
-        <LinearGradient
-          colors={brandGradient.colors}
-          start={brandGradient.horizontal.start}
-          end={brandGradient.horizontal.end}
-          style={styles.topBarMark}
-        >
-          <Text style={styles.topBarMarkText}>C</Text>
-        </LinearGradient>
-        <Text style={styles.topBarName}>{appName}</Text>
-      </View>
+  locationName,
+  universityName,
+  onLocationPress,
+  showLocation = true,
+  showSearch = true,
+  searchValue = '',
+  onSearchChange,
+  searchPlaceholder = 'Rechercher un stage, entreprise...',
+  onFilterPress,
+  onSearchPress,
+  hasActiveFilters = false,
+  iaCredits,
+  onWalletPress,
+  style,
+}: TopBarProps) {
+  const displayLocation = locationName || universityName || 'Yaoundé • Univ. Ydé I';
 
-      <View style={styles.topBarActions}>
-        <Pressable onPress={onBellPress} hitSlop={8} style={styles.topBarIconBtn}>
-          <Bell size={20} color={stitchColors.ink} strokeWidth={1.75} />
-          {hasUnread && <View style={styles.topBarNotifDot} />}
-        </Pressable>
-        {onAvatarPress && (
-          <Pressable onPress={onAvatarPress} hitSlop={4}>
-            <LinearGradient
-              colors={brandGradient.colors}
-              start={brandGradient.horizontal.start}
-              end={brandGradient.horizontal.end}
-              style={styles.topBarAvatar}
+  return (
+    <LinearGradient
+      colors={['#7C3AED', '#6D28D9']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.topBarCurved, style]}
+    >
+      {/* ── Row 1: Location Pill & Action Buttons ── */}
+      <View style={styles.topBarHeaderRow}>
+        {showLocation ? (
+          <Pressable
+            onPress={onLocationPress}
+            style={({ pressed }) => [styles.topBarLocPill, pressed && { opacity: 0.85 }]}
+          >
+            <MapPin size={14} color={stitchColors.white} strokeWidth={2.2} />
+            <Text style={styles.topBarLocText} numberOfLines={1}>
+              {displayLocation}
+            </Text>
+            <ChevronDown size={13} color="rgba(255, 255, 255, 0.85)" />
+          </Pressable>
+        ) : (
+          <View style={styles.topBarBrand}>
+            <View style={styles.topBarMark}>
+              <Text style={styles.topBarMarkText}>C</Text>
+            </View>
+            <Text style={styles.topBarNameLight}>{appName}</Text>
+          </View>
+        )}
+
+        <View style={styles.topBarActions}>
+          {iaCredits !== undefined && onWalletPress && (
+            <Pressable
+              onPress={onWalletPress}
+              style={({ pressed }) => [styles.topBarCreditsPill, pressed && { opacity: 0.85 }]}
+            >
+              <Coins size={13} color="#FDE047" />
+              <Text style={styles.topBarCreditsText}>{iaCredits} cr</Text>
+            </Pressable>
+          )}
+
+          <Pressable
+            onPress={onBellPress}
+            hitSlop={6}
+            style={({ pressed }) => [styles.topBarIconCircle, pressed && { opacity: 0.8 }]}
+          >
+            <Bell size={18} color={stitchColors.white} strokeWidth={2} />
+            {hasUnread && (
+              <View style={unreadCount && unreadCount > 0 ? styles.topBarNotifBadge : styles.topBarNotifDot}>
+                {unreadCount && unreadCount > 0 ? (
+                  <Text style={styles.topBarNotifCountText}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Text>
+                ) : null}
+              </View>
+            )}
+          </Pressable>
+
+          {onAvatarPress && (
+            <Pressable
+              onPress={onAvatarPress}
+              hitSlop={4}
+              style={({ pressed }) => [styles.topBarAvatarCircle, pressed && { opacity: 0.85 }]}
             >
               <Text style={styles.topBarAvatarText}>{avatarInitials ?? 'CB'}</Text>
-            </LinearGradient>
-          </Pressable>
-        )}
+            </Pressable>
+          )}
+        </View>
       </View>
-    </View>
+
+      {/* ── Row 2: Integrated Clean White Search Pill ── */}
+      {showSearch && (
+        <View style={styles.topBarSearchPill}>
+          <Search size={18} color={stitchColors.inkSubtle} strokeWidth={2} />
+          {onSearchPress && !onSearchChange ? (
+            <Pressable onPress={onSearchPress} style={{ flex: 1 }}>
+              <Text style={styles.topBarSearchPlaceholder} numberOfLines={1}>
+                {searchValue || searchPlaceholder}
+              </Text>
+            </Pressable>
+          ) : (
+            <TextInput
+              value={searchValue}
+              onChangeText={onSearchChange}
+              placeholder={searchPlaceholder}
+              placeholderTextColor={stitchColors.inkSubtle}
+              style={styles.topBarSearchInput}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+            />
+          )}
+          <Pressable
+            onPress={onFilterPress}
+            style={({ pressed }) => [
+              styles.topBarFilterBtn,
+              hasActiveFilters && styles.topBarFilterBtnActive,
+              pressed && { opacity: 0.75 },
+            ]}
+          >
+            <SlidersHorizontal
+              size={15}
+              color={hasActiveFilters ? stitchColors.white : stitchColors.sienna}
+              strokeWidth={2.2}
+            />
+          </Pressable>
+        </View>
+      )}
+    </LinearGradient>
   );
 }
 
@@ -925,14 +1037,14 @@ export function LocationHeader({
         style={({ pressed }) => [styles.locLeft, pressed && { opacity: 0.8 }]}
       >
         <View style={styles.locPinBox}>
-          <MapPin size={17} color={stitchColors.emerald} strokeWidth={2.2} />
+          <MapPin size={17} color="#7C3AED" strokeWidth={2.2} />
         </View>
         <View style={{ flex: 1 }}>
           <View style={styles.locTitleRow}>
             <Text style={styles.locTitle} numberOfLines={1}>
               {universityName}
             </Text>
-            <ChevronDown size={14} color={stitchColors.inkMuted} style={{ marginLeft: 3 }} />
+            <ChevronDown size={14} color="#64748B" style={{ marginLeft: 3 }} />
           </View>
           <Text style={styles.locSubtitle} numberOfLines={1}>
             {facultyOrCity}
@@ -945,7 +1057,7 @@ export function LocationHeader({
           onPress={onBellPress}
           style={({ pressed }) => [styles.locActionBtn, pressed && { opacity: 0.75 }]}
         >
-          <Bell size={18} color={stitchColors.ink} strokeWidth={1.9} />
+          <Bell size={18} color="#0F172A" strokeWidth={1.9} />
           {hasUnread && <View style={styles.locNotifDot} />}
         </Pressable>
 
@@ -982,12 +1094,12 @@ export function SearchFilterBar({
   return (
     <View style={[styles.searchFilterWrap, style]}>
       <View style={styles.searchPill}>
-        <Search size={17} color={stitchColors.inkSubtle} />
+        <Search size={17} color="#94A3B8" />
         <TextInput
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={stitchColors.inkSubtle}
+          placeholderTextColor="#94A3B8"
           style={styles.searchInput}
           returnKeyType="search"
           onSubmitEditing={onSubmitEditing}
@@ -1004,7 +1116,7 @@ export function SearchFilterBar({
         >
           <SlidersHorizontal
             size={16}
-            color={hasActiveFilters ? '#FFFFFF' : stitchColors.inkMuted}
+            color={hasActiveFilters ? '#FFFFFF' : '#7C3AED'}
             strokeWidth={2}
           />
         </Pressable>
@@ -1013,7 +1125,7 @@ export function SearchFilterBar({
   );
 }
 
-// ─── CategoryGrid — 4x2 grid of thematic tiles ──────────────────────────────
+// ─── CategoryGrid — Circular Avatars with Horizontal Scroll & Grid Mode ─────
 export interface CategoryItem {
   id: string;
   label: string;
@@ -1029,6 +1141,7 @@ export function CategoryGrid({
   onSeeAllPress,
   title = 'Filières Populaires',
   seeAllLabel = 'Voir tout',
+  horizontal = true,
   style,
 }: {
   categories: CategoryItem[];
@@ -1037,8 +1150,47 @@ export function CategoryGrid({
   onSeeAllPress?: () => void;
   title?: string;
   seeAllLabel?: string;
+  horizontal?: boolean;
   style?: ViewStyle;
 }) {
+  const renderItem = (cat: CategoryItem) => {
+    const active = activeId === cat.id;
+    const Icon = cat.icon;
+    return (
+      <Pressable
+        key={cat.id}
+        onPress={() => onSelectCategory(cat.id)}
+        style={({ pressed }) => [
+          styles.categoryItemWrap,
+          pressed && { opacity: 0.8 },
+        ]}
+      >
+        <View
+          style={[
+            styles.categoryCircle,
+            { backgroundColor: cat.bg || '#F5F3FF' },
+            active && styles.categoryCircleActive,
+          ]}
+        >
+          <Icon
+            size={22}
+            color={active ? stitchColors.white : (cat.color || stitchColors.sienna)}
+            strokeWidth={active ? 2.2 : 2}
+          />
+        </View>
+        <Text
+          style={[
+            styles.categoryItemLabel,
+            active && styles.categoryItemLabelActive,
+          ]}
+          numberOfLines={2}
+        >
+          {cat.label}
+        </Text>
+      </Pressable>
+    );
+  };
+
   return (
     <View style={[styles.categorySection, style]}>
       <View style={styles.sectionHeaderRow}>
@@ -1046,43 +1198,26 @@ export function CategoryGrid({
         {onSeeAllPress ? (
           <Pressable onPress={onSeeAllPress} hitSlop={8}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-              <Text style={styles.seeAllText}>{seeAllLabel}</Text>
-              <ChevronRight size={14} color={stitchColors.emerald} />
+              <Text style={styles.seeAllTextViolet}>{seeAllLabel}</Text>
+              <ChevronRight size={14} color={stitchColors.sienna} strokeWidth={2.2} />
             </View>
           </Pressable>
         ) : null}
       </View>
 
-      <View style={styles.categoryGrid}>
-        {categories.map((cat) => {
-          const active = activeId === cat.id;
-          const Icon = cat.icon;
-          return (
-            <Pressable
-              key={cat.id}
-              onPress={() => onSelectCategory(cat.id)}
-              style={({ pressed }) => [
-                styles.categoryCard,
-                active && styles.categoryCardActive,
-                pressed && { opacity: 0.8 },
-              ]}
-            >
-              <View style={[styles.categoryIconCircle, { backgroundColor: cat.bg }]}>
-                <Icon size={20} color={cat.color} strokeWidth={2} />
-              </View>
-              <Text
-                style={[
-                  styles.categoryLabel,
-                  active && { color: stitchColors.ink, fontWeight: '700' },
-                ]}
-                numberOfLines={2}
-              >
-                {cat.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {horizontal ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryScrollContent}
+        >
+          {categories.map(renderItem)}
+        </ScrollView>
+      ) : (
+        <View style={styles.categoryGridWrap}>
+          {categories.map(renderItem)}
+        </View>
+      )}
     </View>
   );
 }
@@ -1115,81 +1250,112 @@ export function TrustBadgeStrip({ style }: { style?: ViewStyle }) {
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  rule: { height: 1, backgroundColor: stitchColors.glassBorder },
+  rule: { height: 1, backgroundColor: stitchColors.paperSoft },
 
   card: {
-    borderRadius: stitchRadius.card,
+    borderRadius: stitchRadius.lg,
     borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
+    borderColor: stitchColors.paperSoft,
+    backgroundColor: stitchColors.surface,
+    shadowColor: stitchColors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
   },
 
   // Pill
   pillActive: {
-    backgroundColor: '#1E283C',
+    backgroundColor: stitchColors.sienna,
     borderWidth: 1,
-    borderColor: '#4F46E5',
+    borderColor: stitchColors.sienna,
     borderRadius: stitchRadius.full,
     paddingVertical: 8,
     paddingHorizontal: 16,
+    shadowColor: stitchColors.sienna,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   pillInactive: {
-    backgroundColor: stitchColors.surfaceContainer,
+    backgroundColor: stitchColors.paperDeep,
     borderWidth: 1,
     borderColor: stitchColors.glassBorder,
     borderRadius: stitchRadius.full,
-    paddingVertical: 9,
-    paddingHorizontal: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
   pillText: { fontFamily: INTER, fontSize: 13, fontWeight: '600', letterSpacing: 0.1 },
 
   // Input
   inputLabel: {
     fontFamily: INTER,
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '600',
-    color: stitchColors.inkMuted,
+    color: stitchColors.inkSoft,
     letterSpacing: 0.2,
     marginBottom: 8,
   },
   inputBox: {
-    backgroundColor: stitchColors.surfaceContainerLowest,
+    backgroundColor: stitchColors.paperDeep,
     borderColor: stitchColors.glassBorder,
     borderWidth: 1,
-    borderRadius: stitchRadius.md,
+    borderRadius: stitchRadius.sm,
     paddingVertical: 14,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  inputBoxFocused: { borderColor: stitchColors.sienna },
-  inputText: { flex: 1, fontFamily: INTER, fontSize: 16, color: stitchColors.ink, padding: 0, outlineStyle: 'none', outlineWidth: 0 } as any,
+  inputBoxFocused: {
+    borderColor: stitchColors.sienna,
+    backgroundColor: stitchColors.surface,
+    shadowColor: stitchColors.sienna,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  inputText: { flex: 1, fontFamily: INTER, fontSize: 15, color: stitchColors.ink, padding: 0, outlineStyle: 'none', outlineWidth: 0 } as any,
   inputTextMulti: { minHeight: 80, textAlignVertical: 'top', paddingTop: 12 },
 
   // Gradient button
   gradBtn: {
-    borderRadius: stitchRadius.button,
+    borderRadius: stitchRadius.sm,
     paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: stitchColors.sienna,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.30,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  gradBtnText: { fontFamily: SANS, fontSize: 15, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.2 },
+  gradBtnText: { fontFamily: SANS, fontSize: 15, fontWeight: '700', color: stitchColors.white, letterSpacing: 0.2 },
   btnRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
   btnSienna: {
-    backgroundColor: stitchColors.secondary,
-    borderRadius: stitchRadius.button,
+    backgroundColor: stitchColors.sienna,
+    borderRadius: stitchRadius.sm,
     paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: stitchColors.sienna,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  btnSiennaText: { fontFamily: SANS, fontSize: 15, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.2 },
+  btnSiennaText: { fontFamily: SANS, fontSize: 15, fontWeight: '700', color: stitchColors.white, letterSpacing: 0.2 },
 
   btnSecondary: {
-    backgroundColor: stitchColors.surfaceContainerHigh,
-    borderRadius: stitchRadius.button,
+    backgroundColor: stitchColors.paperSoft,
+    borderRadius: stitchRadius.sm,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
     paddingVertical: 16,
     paddingHorizontal: 24,
     alignItems: 'center',
@@ -1197,7 +1363,7 @@ const styles = StyleSheet.create({
   },
   btnSecondaryText: { fontFamily: SANS, fontSize: 15, fontWeight: '600', color: stitchColors.ink },
 
-  // BottomNav — Frosted pill floating bar
+  // BottomNav — Floating Clean White Capsule
   bottomNavWrap: {
     position: 'absolute',
     left: 0,
@@ -1212,42 +1378,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(13, 10, 28, 0.94)',
+    backgroundColor: stitchColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.22)',
-    borderRadius: 9999,
+    borderColor: stitchColors.paperSoft,
+    borderRadius: stitchRadius.full,
     paddingVertical: 6,
-    paddingHorizontal: 10,
-    gap: 6,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 22,
-    elevation: 10,
+    paddingHorizontal: 8,
+    gap: 4,
+    shadowColor: stitchColors.ink,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.10,
+    shadowRadius: 20,
+    elevation: 12,
   },
   navActivePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    backgroundColor: '#7C3AED',
-    borderRadius: 9999,
+    backgroundColor: stitchColors.sienna,
+    borderRadius: stitchRadius.full,
     paddingHorizontal: 16,
     paddingVertical: 9,
-    shadowColor: '#8B5CF6',
+    shadowColor: stitchColors.sienna,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
+    elevation: 4,
   },
   navActiveLabel: {
     fontFamily: SANS,
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   navInactiveItem: {
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderRadius: 9999,
+    borderRadius: stitchRadius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1266,21 +1433,21 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 180,
     backgroundColor: stitchColors.surface,
-    borderRadius: 26,
+    borderRadius: stitchRadius.xl,
     padding: 18,
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.18)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 4,
+    borderColor: stitchColors.paperSoft,
+    shadowColor: stitchColors.ink,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 3,
   },
   hubIconCircle: {
     width: 48,
     height: 48,
-    borderRadius: 16,
+    borderRadius: stitchRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1291,7 +1458,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.serif,
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.ink,
     marginBottom: 4,
     letterSpacing: -0.2,
   },
@@ -1305,15 +1472,163 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: 'rgba(139, 92, 246, 0.14)',
+    backgroundColor: stitchColors.siennaBg,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
+    borderColor: 'rgba(124, 58, 237, 0.16)',
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-start',
   },
 
-  // TopBar
+  // TopBar — Curved Royal Violet & Legacy Aliases
+  topBarCurved: {
+    paddingTop: Platform.OS === 'ios' ? 52 : (Platform.OS === 'web' ? 24 : 40),
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: stitchColors.sienna,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  topBarHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  topBarLocPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+    borderRadius: stitchRadius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    maxWidth: '65%',
+  },
+  topBarLocText: {
+    fontFamily: INTER,
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: stitchColors.white,
+    letterSpacing: 0.1,
+  },
+  topBarBrand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  topBarMark: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarMarkText: { color: stitchColors.white, fontSize: 16, fontWeight: '800' },
+  topBarNameLight: { fontFamily: SANS, fontSize: 18, fontWeight: '700', color: stitchColors.white },
+  topBarActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  topBarCreditsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.20)',
+    borderRadius: stitchRadius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  topBarCreditsText: { fontFamily: SANS, fontSize: 12, fontWeight: '700', color: stitchColors.white },
+  topBarIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  topBarNotifDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: stitchColors.error,
+    borderWidth: 1.5,
+    borderColor: stitchColors.sienna,
+  },
+  topBarNotifBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: stitchColors.error,
+    borderWidth: 1.5,
+    borderColor: stitchColors.sienna,
+    paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarNotifCountText: {
+    color: stitchColors.white,
+    fontSize: 9,
+    fontWeight: '800',
+    lineHeight: 11,
+  },
+  topBarAvatarCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: stitchColors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarAvatarText: { color: stitchColors.sienna, fontSize: 12.5, fontWeight: '800' },
+  topBarSearchPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: stitchColors.surface,
+    borderRadius: stitchRadius.full,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    gap: 10,
+    shadowColor: stitchColors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.10,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  topBarSearchInput: {
+    flex: 1,
+    fontFamily: INTER,
+    fontSize: 13.5,
+    color: stitchColors.ink,
+    paddingVertical: 4,
+  } as any,
+  topBarSearchPlaceholder: {
+    fontFamily: INTER,
+    fontSize: 13.5,
+    color: stitchColors.inkSubtle,
+  },
+  topBarFilterBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F5F3FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarFilterBtnActive: {
+    backgroundColor: stitchColors.sienna,
+  },
+  // Legacy topBar styles
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1321,39 +1636,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: stitchSpacing.containerMargin,
     paddingTop: 12,
     paddingBottom: 14,
-    backgroundColor: stitchColors.background,
+    backgroundColor: stitchColors.surface,
   },
-  topBarBrand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  topBarMark: {
-    width: 34,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: stitchRadius.md,
-  },
-  topBarMarkText: { fontFamily: SANS, color: '#FFFFFF', fontSize: 18, fontWeight: '800', lineHeight: 22 },
-  topBarName: { fontFamily: SANS, fontSize: 19, fontWeight: '700', color: stitchColors.ink, letterSpacing: -0.3 },
-  topBarActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  topBarName: { fontFamily: SANS, fontSize: 19, fontWeight: '700', color: '#0F172A', letterSpacing: -0.3 },
   topBarIconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  topBarNotifDot: {
-    position: 'absolute',
-    top: 9,
-    right: 9,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: stitchColors.secondary,
-  },
   topBarAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  topBarAvatarText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
 
   // WalletCard
   walletCard: {
     backgroundColor: stitchColors.surface,
-    borderRadius: stitchRadius.card,
+    borderRadius: stitchRadius.xl,
     borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
+    borderColor: stitchColors.paperSoft,
     padding: 22,
+    shadowColor: stitchColors.ink,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
   },
   walletTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   walletKicker: { fontFamily: MONO, fontSize: 10, letterSpacing: 1.8, color: stitchColors.inkMuted, fontWeight: '700' },
@@ -1364,8 +1664,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: stitchRadius.full,
+    backgroundColor: stitchColors.sienna,
   },
-  walletIAPillText: { fontFamily: SANS, fontSize: 11, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3 },
+  walletIAPillText: { fontFamily: SANS, fontSize: 11, fontWeight: '700', color: stitchColors.white, letterSpacing: 0.3 },
   walletBalanceRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 20, marginBottom: 22 },
   walletBalance: { fontFamily: SANS, fontSize: 48, lineHeight: 50, fontWeight: '800', color: stitchColors.ink, letterSpacing: -1.5 },
   walletBalanceUnit: { fontFamily: SANS, fontSize: 18, fontWeight: '700', color: stitchColors.inkMuted },
@@ -1375,19 +1676,30 @@ const styles = StyleSheet.create({
   walletRecharge: {
     paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: stitchRadius.button,
+    borderRadius: stitchRadius.sm,
+    backgroundColor: stitchColors.sienna,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: stitchColors.sienna,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  walletRechargeText: { fontFamily: SANS, fontSize: 14, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3 },
+  walletRechargeText: { fontFamily: SANS, fontSize: 14, fontWeight: '700', color: stitchColors.white, letterSpacing: 0.3 },
 
   // MetricCard
   metricCard: {
     padding: 18,
     backgroundColor: stitchColors.surface,
-    borderRadius: stitchRadius.card,
+    borderRadius: stitchRadius.lg,
     borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
+    borderColor: stitchColors.paperSoft,
+    shadowColor: stitchColors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   metricKicker: { fontFamily: INTER, fontSize: 12, letterSpacing: 0.2, color: stitchColors.inkMuted, fontWeight: '600', marginBottom: 8 },
   metricValue: { fontFamily: SANS, fontSize: 28, lineHeight: 32, color: stitchColors.ink, fontWeight: '800', letterSpacing: -0.6 },
@@ -1395,51 +1707,56 @@ const styles = StyleSheet.create({
   // PackCard
   packCard: {
     width: 280,
-    backgroundColor: '#111622',
-    borderRadius: 16,
+    backgroundColor: stitchColors.surface,
+    borderRadius: stitchRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
     padding: 18,
+    shadowColor: stitchColors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
   },
   packCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   tagChip: {
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
     paddingHorizontal: 8,
     paddingVertical: 3.5,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
+    borderColor: 'rgba(124, 58, 237, 0.18)',
   },
-  tagChipText: { fontFamily: MONO, fontSize: 9.5, letterSpacing: 0.8, color: '#818CF8', fontWeight: '700' },
-  packCardDiscount: { fontFamily: SANS, fontSize: 14, fontWeight: '700', color: '#34D399', letterSpacing: -0.3 },
-  packCardTitle: { fontFamily: SANS, fontSize: 18, lineHeight: 24, fontWeight: '700', color: '#F8FAFC', letterSpacing: -0.3, marginBottom: 6 },
-  packCardDesc: { fontFamily: INTER, fontSize: 12.5, color: '#94A3B8', lineHeight: 18, marginBottom: 16 },
+  tagChipText: { fontFamily: MONO, fontSize: 9.5, letterSpacing: 0.8, color: stitchColors.sienna, fontWeight: '700' },
+  packCardDiscount: { fontFamily: SANS, fontSize: 14, fontWeight: '700', color: stitchColors.emeraldDeep, letterSpacing: -0.3 },
+  packCardTitle: { fontFamily: SANS, fontSize: 18, lineHeight: 24, fontWeight: '700', color: stitchColors.ink, letterSpacing: -0.3, marginBottom: 6 },
+  packCardDesc: { fontFamily: INTER, fontSize: 12.5, color: stitchColors.inkMuted, lineHeight: 18, marginBottom: 16 },
   packCardFooter: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  packCardMeta: { fontFamily: MONO, fontSize: 10, letterSpacing: 0.8, color: '#94A3B8', fontWeight: '600', marginBottom: 3 },
-  packCardPrice: { fontFamily: SANS, fontSize: 20, fontWeight: '700', color: '#F8FAFC', letterSpacing: -0.4 },
-  packCardCta: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  packCardCtaText: { fontSize: 16, color: '#FFFFFF', fontWeight: '700' },
+  packCardMeta: { fontFamily: MONO, fontSize: 10, letterSpacing: 0.8, color: stitchColors.inkMuted, fontWeight: '600', marginBottom: 3 },
+  packCardPrice: { fontFamily: SANS, fontSize: 20, fontWeight: '700', color: stitchColors.ink, letterSpacing: -0.4 },
+  packCardCta: { width: 38, height: 38, borderRadius: 19, backgroundColor: stitchColors.sienna, alignItems: 'center', justifyContent: 'center' },
+  packCardCtaText: { fontSize: 16, color: stitchColors.white, fontWeight: '700' },
 
-  // DocumentGridCard — book cover tile (Image 1 style)
+  // DocumentGridCard
   docCard: {
     width: '100%',
-    backgroundColor: '#131024',
-    borderRadius: 18,
+    backgroundColor: stitchColors.surface,
+    borderRadius: stitchRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.18)',
+    borderColor: stitchColors.glassBorder,
     padding: 10,
-    shadowColor: '#000',
+    shadowColor: stitchColors.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   docCover: {
     width: '100%',
     aspectRatio: 1.05,
-    borderRadius: 14,
+    borderRadius: stitchRadius.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.paperSoft,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
@@ -1454,22 +1771,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(9, 7, 20, 0.75)',
+    backgroundColor: '#FEF9C3',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 9999,
+    borderRadius: stitchRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(253, 224, 71, 0.3)',
+    borderColor: '#FDE047',
     zIndex: 5,
   },
   docRatingStar: {
     fontSize: 9,
-    color: '#FDE047',
+    color: '#CA8A04',
   },
   docRatingText: {
     fontSize: 9.5,
     fontWeight: '800',
-    color: '#FDE047',
+    color: '#854D0E',
     fontFamily: MONO,
   },
   docCoverInitials: { fontFamily: SANS, fontSize: 13, fontWeight: '900', letterSpacing: 0.5 },
@@ -1480,7 +1797,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#10B981',
+    backgroundColor: stitchColors.emerald,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 5,
@@ -1489,17 +1806,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 6,
     right: 6,
-    backgroundColor: 'rgba(16, 185, 129, 0.18)',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.35)',
+    borderColor: 'rgba(16, 185, 129, 0.28)',
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 8,
     zIndex: 5,
   },
-  docPriceBadgeText: { fontFamily: MONO, fontSize: 10, fontWeight: '800', color: '#34D399' },
-  docCardTitle: { fontFamily: SANS, fontSize: 12.5, lineHeight: 16, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.2 },
-  docCardSubtitle: { fontFamily: INTER, fontSize: 10.5, color: '#94A3B8', marginTop: 3 },
+  docPriceBadgeText: { fontFamily: MONO, fontSize: 10, fontWeight: '800', color: stitchColors.emeraldDeep },
+  docCardTitle: { fontFamily: SANS, fontSize: 12.5, lineHeight: 16, fontWeight: '700', color: stitchColors.ink, letterSpacing: -0.2 },
+  docCardSubtitle: { fontFamily: INTER, fontSize: 10.5, color: stitchColors.inkMuted, marginTop: 3 },
 
   // TransactionRow
   txRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, gap: 14 },
@@ -1507,7 +1824,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: stitchColors.surfaceContainerHigh,
+    backgroundColor: stitchColors.paperSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1535,15 +1852,15 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 20,
-    backgroundColor: stitchColors.surfaceContainerHigh,
+    backgroundColor: stitchColors.paperSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
   },
   emptyStateTitle: { fontFamily: SANS, fontSize: 20, lineHeight: 26, fontWeight: '700', color: stitchColors.ink, letterSpacing: -0.4, textAlign: 'center' },
   emptyStateBody: { fontFamily: INTER, fontSize: 14, lineHeight: 21, color: stitchColors.inkMuted, textAlign: 'center', maxWidth: 300 },
-  emptyStateCta: { marginTop: 8, paddingHorizontal: 24, paddingVertical: 14, borderRadius: stitchRadius.button, alignItems: 'center' },
-  emptyStateCtaText: { fontFamily: SANS, fontSize: 14, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3 },
+  emptyStateCta: { marginTop: 8, paddingHorizontal: 24, paddingVertical: 14, borderRadius: 14, backgroundColor: stitchColors.sienna, alignItems: 'center' },
+  emptyStateCtaText: { fontFamily: SANS, fontSize: 14, fontWeight: '700', color: stitchColors.white, letterSpacing: 0.3 },
 
   // LocationHeader
   locHeader: {
@@ -1565,7 +1882,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(52, 211, 153, 0.12)',
+    backgroundColor: stitchColors.siennaBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1595,7 +1912,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: stitchColors.surfaceContainerHigh,
+    backgroundColor: stitchColors.paperSoft,
     borderWidth: 1,
     borderColor: stitchColors.glassBorder,
     alignItems: 'center',
@@ -1620,7 +1937,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(251, 191, 36, 0.28)',
     paddingVertical: 7,
     paddingHorizontal: 11,
-    borderRadius: 9999,
+    borderRadius: stitchRadius.full,
   },
   locWalletText: {
     fontFamily: SANS,
@@ -1637,13 +1954,18 @@ const styles = StyleSheet.create({
   searchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: stitchColors.surfaceContainerLowest,
+    backgroundColor: stitchColors.surface,
     borderWidth: 1,
     borderColor: stitchColors.glassBorder,
-    borderRadius: 9999,
+    borderRadius: stitchRadius.full,
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 10,
+    shadowColor: stitchColors.ink,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
@@ -1658,15 +1980,15 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: stitchColors.surfaceContainerHigh,
+    backgroundColor: '#F5F3FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchFilterBtnActive: {
-    backgroundColor: stitchColors.primary,
+    backgroundColor: stitchColors.sienna,
   },
 
-  // CategoryGrid
+  // CategoryGrid — Circular Avatars
   categorySection: {
     paddingHorizontal: stitchSpacing.containerMargin,
     marginBottom: 24,
@@ -1684,12 +2006,65 @@ const styles = StyleSheet.create({
     color: stitchColors.ink,
     letterSpacing: -0.3,
   },
+  seeAllTextViolet: {
+    fontFamily: INTER,
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: stitchColors.sienna,
+  },
   seeAllText: {
     fontFamily: INTER,
     fontSize: 12.5,
     fontWeight: '600',
-    color: stitchColors.emerald,
+    color: stitchColors.sienna,
   },
+  categoryScrollContent: {
+    gap: 14,
+    paddingRight: 20,
+  },
+  categoryGridWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  categoryItemWrap: {
+    alignItems: 'center',
+    width: 76,
+  },
+  categoryCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#F5F3FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(124, 58, 237, 0.12)',
+  },
+  categoryCircleActive: {
+    backgroundColor: stitchColors.sienna,
+    borderColor: stitchColors.sienna,
+    shadowColor: stitchColors.sienna,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  categoryItemLabel: {
+    fontFamily: INTER,
+    fontSize: 11.5,
+    lineHeight: 14,
+    fontWeight: '600',
+    color: stitchColors.ink,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  categoryItemLabelActive: {
+    color: stitchColors.sienna,
+    fontWeight: '700',
+  },
+  // Legacy aliases
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1697,33 +2072,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   categoryCard: {
-    width: '22.5%',
+    width: 76,
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    backgroundColor: stitchColors.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
-    borderRadius: 14,
   },
-  categoryCardActive: {
-    borderColor: stitchColors.primary,
-    backgroundColor: 'rgba(124, 58, 237, 0.12)',
-  },
+  categoryCardActive: {},
   categoryIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
   },
   categoryLabel: {
     fontFamily: INTER,
-    fontSize: 10.5,
-    lineHeight: 13,
-    fontWeight: '500',
-    color: stitchColors.inkMuted,
+    fontSize: 11.5,
+    lineHeight: 14,
+    fontWeight: '600',
+    color: stitchColors.ink,
     textAlign: 'center',
   },
 
@@ -1732,14 +2098,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: stitchColors.surfaceContainerLow,
+    backgroundColor: stitchColors.surface,
     borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
+    borderColor: stitchColors.paperSoft,
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 12,
     marginHorizontal: stitchSpacing.containerMargin,
     marginBottom: 24,
+    shadowColor: stitchColors.ink,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   trustItem: {
     flex: 1,
@@ -1758,7 +2129,7 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     lineHeight: 12,
     fontWeight: '600',
-    color: stitchColors.inkMuted,
+    color: stitchColors.inkSoft,
     textAlign: 'center',
   },
 });

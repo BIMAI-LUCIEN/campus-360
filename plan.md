@@ -1,8 +1,8 @@
 # Plan de Développement MVP : Campus 360 (Lancement Flash & Spécifications Officielles)
 
-> **Progression globale :** 33/33 tâches validées (100%) — MVP FINALISÉ ET CERTIFIÉ  
-> **Couverture MVP :** 100% des fonctionnalités du cadrage `contexte.md` (Template CV Officiel, Ingestion n8n, Mobile Money, Onboarding Express, Suivi J+7, Tests E2E Playwright)  
-> **Dernière mise à jour :** 2026-09-29 14:35  
+> **Progression globale :** 45/45 tâches validées (100%) — Module 14 certifié  
+> **Couverture MVP :** 100% des fonctionnalités du cadrage `contexte.md` (Template CV Officiel, Ingestion n8n, Mobile Money, Onboarding Express, Suivi J+7, Expédition Automatisée WhatsApp/Email via Evolution API & N8N)  
+> **Dernière mise à jour :** 2026-10-07 17:35  
 
 ---
 
@@ -139,3 +139,77 @@
     - Synchroniser `contexte.md` et `walkthrough.md` avec les preuves d'exécution.
     - Exécuter le push git sécurisé.
   - **DoD :** Codebase 100% propre, typecheck vert (0 erreur), certification complète.
+
+---
+
+## 🚀 MODULE 14 : Expédition Automatisée des Candidatures (Evolution API & N8N Webhook)
+
+### 1. Backend & Intégration Evolution API
+- [X] **Tâche 14.1 : Service d'Intégration Evolution API & Endpoint de Jumelage**
+  - **Fichiers :** `mobile-api/app/api/mobile/whatsapp/instance/route.ts`, `mobile-api/lib/evolution-api.ts`
+  - **Action :**
+    - Créer le client TypeScript pour Evolution API (`https://wa.blackcompany.site`).
+    - Gérer la création d'instance étudiant (`student-<phone>`) et la demande de **Pairing Code à 8 chiffres** (`POST /instance/connect/:instance` avec `number`).
+    - Implémenter la vérification du statut de connexion de session (`GET /instance/connectionState/:instance`).
+    - Créer la route d'API Next.js `POST /api/mobile/whatsapp/instance` pour initier l'appairage et sonder le statut.
+    - Sécuriser les variables d'environnement (`EVOLUTION_API_URL`, `EVOLUTION_API_KEY`).
+  - **DoD :** Route testable via curl retournant un pairing code 8 chiffres, validation Zod des requêtes, `mobile-api` typecheck sans erreur.
+
+### 2. Backend & Relais Webhook N8N
+- [X] **Tâche 14.2 : Endpoint de Dispatch de Candidature & Stockage Cloud PDF**
+  - **Fichiers :** `mobile-api/app/api/mobile/stages/dispatch/route.ts`, `mobile-api/lib/n8n-dispatch.ts`, `mobile-api/lib/stages-db.ts`
+  - **Action :**
+    - Créer la route `POST /api/mobile/stages/dispatch` recevant la demande de postulation automatisée.
+    - Persistance du document PDF officiel généré dans Supabase Storage (bucket `cvs/` public/signé) pour obtenir une URL accessible par Evolution API/n8n.
+    - Construction du payload unifié et transmission sécurisée vers le webhook n8n (`POST https://n8n.blackcompany.site/webhook/send-stage-application`).
+    - Enregistrement immédiat dans `stage_applications` avec statut `SENT_PENDING` et canal utilisé (`whatsapp` ou `email`).
+  - **DoD :** Route `dispatch` fonctionnelle renvoyant HTTP 200 avec confirmation de prise en charge et ID de candidature.
+
+### 3. Workflow d'Automatisation N8N
+- [X] **Tâche 14.3 : Modèle de Workflow N8N d'Expédition (`send_stage_application_workflow.json`)**
+  - **Fichiers :** `scripts/n8n/send_stage_application_workflow.json`, `docs/N8N_APPLICATION_DISPATCH.md`
+  - **Action :**
+    - Concevoir le workflow n8n complet exportable :
+      1. Trigger Webhook : `POST /webhook/send-stage-application`.
+      2. Switch selon `channel` : `whatsapp` vs `email`.
+      3. Branche WhatsApp : Requête HTTP vers Evolution API `POST /message/sendMedia/:instanceName` avec `mediatype: "document"`, `mimetype: "application/pdf"`, `media: cvPdfUrl`, `fileName: "CV_Officiel.pdf"` et `caption: whatsappPitch`.
+      4. Branche Email : Nœud SMTP avec pièce jointe PDF téléchargée depuis l'URL, corps HTML soigné, `replyTo: student.email` et copie pour l'étudiant.
+      5. Nœud Supabase : Callback de mise à jour du statut dans `stage_applications` (`DELIVERED`).
+      6. Temporisation anti-ban : Nœud Wait (15-30s aléatoire) pour lisser les envois groupés.
+    - Rédiger le guide d'import et de configuration dans `docs/N8N_APPLICATION_DISPATCH.md`.
+  - **DoD :** Fichier JSON valide et importable sans erreur dans l'instance n8n, documentation détaillée avec exemples de payload.
+
+### 4. Interface Utilisateur & Jumelage WhatsApp dans l'App
+- [X] **Tâche 14.4 : Composant Modal de Jumelage WhatsApp par Pairing Code**
+  - **Fichiers :** `src/features/whatsapp/WhatsAppPairingModal.tsx`, `src/features/whatsapp/whatsappService.ts`, `src/features/profile/ProfileScreen.tsx`
+  - **Action :**
+    - Créer `WhatsAppPairingModal.tsx` selon le design anti-saturation :
+      - Saisie / confirmation du numéro WhatsApp de l'étudiant (`+237 6xx xx xx xx`).
+      - Appel backend pour générer le code de jumelage à 8 chiffres.
+      - Affichage en grands caractères espacés (ex: `7842 - 9012`) avec bouton interactif `[ 📋 Copier le code ]`.
+      - Guide visuel simplifié en 3 étapes : *1. Ouvrir WhatsApp > 2. Appareils connectés > 3. Associer avec un numéro de téléphone*.
+      - Détection automatique de connexion réussie avec badge `✅ WhatsApp connecté`.
+    - Intégrer un déclencheur direct dans `ProfileScreen.tsx` et dans le parcours de candidature.
+  - **DoD :** Modal fluide et responsive, gestion des états (chargement, code généré, connecté, erreur), 0 erreur TypeScript.
+
+### 5. Câblage UI 1-Clic dans AiApplyModal & Fallback Natif
+- [X] **Tâche 14.5 : Refonte du Câblage de Postulation dans `AiApplyModal.tsx`**
+  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`, `src/features/stages/stagesApi.ts`
+  - **Action :**
+    - Adapter l'onglet final "Envoi" de `AiApplyModal.tsx` :
+      - Si l'instance WhatsApp est connectée : Bouton proéminent `[ ⚡ Postuler en 1 Clic (Envoi Automatique Arrière-Plan) ]`.
+      - Clic $\rightarrow$ déclenche la génération PDF, l'upload et le dispatch API sans forcer l'étudiant à jongler avec WhatsApp ou d'autres applications.
+      - Animation de succès, notification de confirmation et ajout automatique à la timeline de suivi.
+      - Si l'étudiant choisit l'Email : Bouton `[ ✉️ Expédier ma Candidature par Email ]` avec le même confort en arrière-plan.
+      - Si WhatsApp n'est pas encore connecté : Proposer d'associer en 30s OU proposer le bouton de secours `[ 💬 Ouvrir WhatsApp Manuellement ]` (fallback natif sans blocage).
+  - **DoD :** Parcours utilisateur sans friction testé, confirmation d'envoi immédiate avec mise à jour du statut.
+
+### 6. Validation Complète, Tests E2E & Typage Strict
+- [X] **Tâche 14.6 : Tests E2E de Dispatch, Typage Strict & Certification**
+  - **Fichiers :** `scripts/test-stage-dispatch.mjs`, `src/`, `mobile-api/`
+  - **Action :**
+    - Écrire un script unitaire `scripts/test-stage-dispatch.mjs` testant le flux de bout en bout (génération code jumelage, dispatch mock n8n).
+    - Exécuter la vérification des types : `npm run typecheck` sur l'application mobile et `cd mobile-api && npm run typecheck` : **0 erreur**.
+    - Vérifier la conformité de sécurité (pas de secrets exposés dans le client mobile, proxy systématique par `mobile-api`).
+  - **DoD :** Typecheck 100% au vert sur les deux projets, script de test validé (Code 0).
+

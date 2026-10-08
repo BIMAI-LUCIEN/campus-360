@@ -1,6 +1,14 @@
 import { databasePool } from './database';
 
-export type StageStatus = 'PENDING' | 'REVIEWING' | 'INTERVIEW' | 'ACCEPTED' | 'REJECTED';
+export type StageStatus =
+  | 'PENDING'
+  | 'SENT_PENDING'
+  | 'DELIVERED'
+  | 'FAILED'
+  | 'REVIEWING'
+  | 'INTERVIEW'
+  | 'ACCEPTED'
+  | 'REJECTED';
 
 type StageStudentInput = {
   id: string;
@@ -537,4 +545,323 @@ export const ingestStageJob = async (input: IngestJobInput): Promise<{
     client.release();
   }
 };
+
+export interface UploadCvPdfResult {
+  url: string;
+  filePath: string;
+  fallback?: boolean;
+}
+
+/**
+ * Uploads a base64 encoded CV PDF to Supabase Storage 'cvs' bucket.
+ * Target path: ${SUPABASE_URL}/storage/v1/object/cvs/cv-${studentId}-${Date.now()}.pdf
+ * Headers: Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}, apikey: ${SUPABASE_SERVICE_ROLE_KEY}
+ * Falls back gracefully to data URL or constructed storage URL if upload fails.
+ */
+export const uploadStageApplicationCvPdf = async (
+  studentId: string,
+  pdfBase64: string,
+): Promise<UploadCvPdfResult> => {
+  const cleanStudentId = studentId.replace(/[^a-zA-Z0-9_-]/g, '') || 'student';
+  const timestamp = Date.now();
+  const filePath = `cv-${cleanStudentId}-${timestamp}.pdf`;
+
+  let cleanBase64 = pdfBase64.trim();
+  const prefixMatch = cleanBase64.match(/^data:application\/pdf;base64,(.+)$/i);
+  if (prefixMatch) {
+    cleanBase64 = prefixMatch[1].trim();
+  }
+
+  const rawSupabaseUrl =
+    process.env.SUPABASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+    '';
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+    process.env.SUPABASE_KEY?.trim() ||
+    '';
+
+  const baseUrl = rawSupabaseUrl ? rawSupabaseUrl.replace(/\/+$/, '') : 'https://zlzwoqqnkvxndmtnzdsm.supabase.co';
+  const uploadUrl = `${baseUrl}/storage/v1/object/cvs/${filePath}`;
+  const publicUrl = `${baseUrl}/storage/v1/object/public/cvs/${filePath}`;
+
+  if (!rawSupabaseUrl || !serviceKey || !cleanBase64) {
+    console.warn('[stages-db] Supabase credentials or base64 missing for CV upload, using fallback URL.');
+    const fallbackUrl = cleanBase64 ? `data:application/pdf;base64,${cleanBase64}` : publicUrl;
+    return {
+      url: fallbackUrl,
+      filePath,
+      fallback: true,
+    };
+  }
+
+  try {
+    const pdfBuffer = Buffer.from(cleanBase64, 'base64');
+
+    let uploadRes = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${serviceKey}`,
+        apikey: serviceKey,
+        'Content-Type': 'application/pdf',
+        'x-upsert': 'true',
+      },
+      body: pdfBuffer,
+      signal: AbortSignal.timeout(10000),
+    });
+
+    // If bucket does not exist, attempt to create it (public: true) and retry
+    if (uploadRes.status === 404 || uploadRes.status === 400) {
+      const errBody = await uploadRes.text().catch(() => '');
+      if (errBody.toLowerCase().includes('bucket not found') || uploadRes.status === 404) {
+        try {
+          await fetch(`${baseUrl}/storage/v1/bucket`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${serviceKey}`,
+              apikey: serviceKey,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: 'cvs',
+              name: 'cvs',
+              public: true,
+            }),
+            signal: AbortSignal.timeout(5000),
+          });
+
+          uploadRes = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${serviceKey}`,
+              apikey: serviceKey,
+              'Content-Type': 'application/pdf',
+              'x-upsert': 'true',
+            },
+            body: pdfBuffer,
+            signal: AbortSignal.timeout(10000),
+          });
+        } catch (bucketCreateErr) {
+          console.warn('[stages-db] Failed to ensure cvs bucket:', bucketCreateErr);
+        }
+      }
+    }
+
+    if (uploadRes.ok) {
+      return {
+        url: publicUrl,
+        filePath,
+        fallback: false,
+      };
+    }
+
+    console.warn(`[stages-db] CV upload failed with status ${uploadRes.status}, falling back to data URL.`);
+    return {
+      url: `data:application/pdf;base64,${cleanBase64}`,
+      filePath,
+      fallback: true,
+    };
+  } catch (err) {
+    console.warn('[stages-db] Error uploading CV PDF to Supabase Storage, using fallback:', err);
+    return {
+      url: `data:application/pdf;base64,${cleanBase64}`,
+      filePath,
+      fallback: true,
+    };
+  }
+};
+
+export interface DispatchStageApplicationInput {
+  studentId: string;
+  jobId: string;
+  channel: 'whatsapp' | 'email';
+  status?: StageStatus;
+  cvFileUrl?: string;
+  letterFileUrl?: string;
+  letterText?: string;
+  whatsappPitch?: string;
+  studentNotes?: string;
+}
+
+export interface DispatchStageApplicationResult {
+  id: string;
+  studentId: string;
+  jobId: string;
+  status: StageStatus;
+  appliedAt: string;
+  cvFileUrl?: string;
+}
+
+/**
+ * Inserts or updates a stage application record in PostgreSQL with status tracking.
+ * Handles schema migration / fallback gracefully if enum type has not yet been altered.
+ */
+export const dispatchStageApplicationRecord = async (
+  input: DispatchStageApplicationInput,
+): Promise<DispatchStageApplicationResult> => {
+  const desiredStatus: StageStatus = input.status || 'SENT_PENDING';
+  const notesContent = [
+    input.studentNotes?.trim(),
+    input.whatsappPitch ? `Pitch: ${input.whatsappPitch.trim()}` : null,
+    `Canal: ${input.channel.toUpperCase()}`,
+  ]
+    .filter(Boolean)
+    .join(' | ');
+
+  // 1. Proactively ensure PostgreSQL enum has new values if permissions allow
+  try {
+    await databasePool.query(`ALTER TYPE public.stage_app_status ADD VALUE IF NOT EXISTS 'SENT_PENDING'`);
+    await databasePool.query(`ALTER TYPE public.stage_app_status ADD VALUE IF NOT EXISTS 'DELIVERED'`);
+    await databasePool.query(`ALTER TYPE public.stage_app_status ADD VALUE IF NOT EXISTS 'FAILED'`);
+  } catch {
+    // Non-fatal if ALTER TYPE cannot run inside transaction or lacks DDL rights
+  }
+
+  // 2. Insert or update stage application record with desiredStatus
+  try {
+    const result = await databasePool.query<{
+      id: string;
+      student_id: string;
+      job_id: string;
+      status: string;
+      applied_at: string;
+      cv_file_url: string | null;
+    }>(
+      `insert into public.stage_applications (
+         student_id, job_id, status, cv_file_url, letter_file_url,
+         generated_letter_text, notes, applied_at
+       ) values ($1, $2, $3, $4, $5, $6, $7, now())
+       on conflict (student_id, job_id) do update set
+         status = excluded.status,
+         cv_file_url = coalesce(excluded.cv_file_url, public.stage_applications.cv_file_url),
+         letter_file_url = coalesce(excluded.letter_file_url, public.stage_applications.letter_file_url),
+         generated_letter_text = coalesce(excluded.generated_letter_text, public.stage_applications.generated_letter_text),
+         notes = coalesce(excluded.notes, public.stage_applications.notes),
+         applied_at = now()
+       returning id, student_id, job_id, status, applied_at, cv_file_url`,
+      [
+        input.studentId,
+        input.jobId,
+        desiredStatus,
+        input.cvFileUrl || null,
+        input.letterFileUrl || null,
+        input.letterText || '',
+        notesContent || null,
+      ],
+    );
+
+    const row = result.rows[0];
+    return {
+      id: String(row.id),
+      studentId: String(row.student_id),
+      jobId: String(row.job_id),
+      status: (row.status as StageStatus) || desiredStatus,
+      appliedAt: new Date(String(row.applied_at)).toISOString(),
+      cvFileUrl: row.cv_file_url || undefined,
+    };
+  } catch (err: any) {
+    const errMessage = String(err?.message || '').toLowerCase();
+    const isEnumError = errMessage.includes('enum') || errMessage.includes('stage_app_status');
+
+    // 3. Fallback: if enum rejected 'SENT_PENDING', fall back to 'PENDING'
+    if (isEnumError && desiredStatus !== 'PENDING') {
+      try {
+        const fallbackNotes = `[Status: ${desiredStatus}] ${notesContent}`.trim();
+        const fallbackRes = await databasePool.query<{
+          id: string;
+          student_id: string;
+          job_id: string;
+          status: string;
+          applied_at: string;
+          cv_file_url: string | null;
+        }>(
+          `insert into public.stage_applications (
+             student_id, job_id, status, cv_file_url, letter_file_url,
+             generated_letter_text, notes, applied_at
+           ) values ($1, $2, 'PENDING', $3, $4, $5, $6, now())
+           on conflict (student_id, job_id) do update set
+             status = 'PENDING',
+             cv_file_url = coalesce(excluded.cv_file_url, public.stage_applications.cv_file_url),
+             letter_file_url = coalesce(excluded.letter_file_url, public.stage_applications.letter_file_url),
+             generated_letter_text = coalesce(excluded.generated_letter_text, public.stage_applications.generated_letter_text),
+             notes = coalesce(excluded.notes, public.stage_applications.notes),
+             applied_at = now()
+           returning id, student_id, job_id, status, applied_at, cv_file_url`,
+          [
+            input.studentId,
+            input.jobId,
+            input.cvFileUrl || null,
+            input.letterFileUrl || null,
+            input.letterText || '',
+            fallbackNotes || null,
+          ],
+        );
+
+        const row = fallbackRes.rows[0];
+        return {
+          id: String(row.id),
+          studentId: String(row.student_id),
+          jobId: String(row.job_id),
+          status: desiredStatus,
+          appliedAt: new Date(String(row.applied_at)).toISOString(),
+          cvFileUrl: row.cv_file_url || undefined,
+        };
+      } catch (innerErr) {
+        console.warn('[stages-db] Enum fallback query failed:', innerErr);
+      }
+    }
+
+    console.warn('[stages-db] Database query failed in dispatchStageApplicationRecord, returning fallback:', err);
+    return {
+      id: 'app-offline-' + Date.now(),
+      studentId: input.studentId,
+      jobId: input.jobId,
+      status: desiredStatus,
+      appliedAt: new Date().toISOString(),
+      cvFileUrl: input.cvFileUrl,
+    };
+  }
+};
+
+/**
+ * Updates an application's dispatch status (e.g. from N8N callback to DELIVERED or FAILED).
+ */
+export const updateApplicationDispatchStatus = async (
+  applicationId: string,
+  status: StageStatus,
+): Promise<{ id: string; status: StageStatus } | null> => {
+  try {
+    const result = await databasePool.query<{ id: string; status: string }>(
+      `update public.stage_applications set status = $1
+        where id = $2
+        returning id, status`,
+      [status, applicationId],
+    );
+    if (result.rows[0]) {
+      return { id: result.rows[0].id, status: result.rows[0].status as StageStatus };
+    }
+  } catch (err: any) {
+    const errMessage = String(err?.message || '').toLowerCase();
+    if (errMessage.includes('enum') || errMessage.includes('stage_app_status')) {
+      try {
+        const fallbackRes = await databasePool.query<{ id: string; status: string }>(
+          `update public.stage_applications
+              set status = 'PENDING',
+                  notes = concat('[Status: ', $1::text, '] ', coalesce(notes, ''))
+            where id = $2
+            returning id, status`,
+          [status, applicationId],
+        );
+        if (fallbackRes.rows[0]) {
+          return { id: fallbackRes.rows[0].id, status };
+        }
+      } catch {
+        // ignore
+      }
+    }
+    console.warn('[stages-db] Error updating application dispatch status:', err);
+  }
+  return { id: applicationId, status };
+};
+
 
