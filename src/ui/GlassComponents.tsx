@@ -560,6 +560,7 @@ export interface TopBarProps {
   onSearchPress?: () => void;
   hasActiveFilters?: boolean;
   iaCredits?: number;
+  showCredits?: boolean;
   onWalletPress?: () => void;
   style?: ViewStyle;
 }
@@ -583,6 +584,7 @@ export function TopBar({
   onSearchPress,
   hasActiveFilters = false,
   iaCredits,
+  showCredits = false,
   onWalletPress,
   style,
 }: TopBarProps) {
@@ -618,7 +620,7 @@ export function TopBar({
         )}
 
         <View style={styles.topBarActions}>
-          {iaCredits !== undefined && onWalletPress && (
+          {showCredits && iaCredits !== undefined && onWalletPress && (
             <Pressable
               onPress={onWalletPress}
               style={({ pressed }) => [styles.topBarCreditsPill, pressed && { opacity: 0.85 }]}
@@ -1500,6 +1502,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   topBarLocPill: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -1509,16 +1512,17 @@ const styles = StyleSheet.create({
     borderRadius: stitchRadius.full,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    maxWidth: '65%',
+    marginRight: 10,
   },
   topBarLocText: {
+    flex: 1,
     fontFamily: INTER,
     fontSize: 12.5,
     fontWeight: '600',
     color: stitchColors.white,
     letterSpacing: 0.1,
   },
-  topBarBrand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  topBarBrand: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   topBarMark: {
     width: 32,
     height: 32,
@@ -1529,7 +1533,7 @@ const styles = StyleSheet.create({
   },
   topBarMarkText: { color: stitchColors.white, fontSize: 16, fontWeight: '800' },
   topBarNameLight: { fontFamily: SANS, fontSize: 18, fontWeight: '700', color: stitchColors.white },
-  topBarActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  topBarActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
   topBarCreditsPill: {
     flexDirection: 'row',
     alignItems: 'center',

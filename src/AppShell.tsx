@@ -1017,7 +1017,7 @@ export function AppShell() {
       if (!studentSession) { setActiveSection('account'); setAuthMode('sign-in'); setAuthNotice('Connecte-toi pour rédiger tes documents.'); setAuthVisible(true); return; }
       setActiveSection(section); return;
     }
-    if (section === 'premium') { setActiveSection('premium'); setSubscriptionVisible(false); return; }
+    if (section === 'premium') { setActiveSection('account'); setRechargeVisible(true); setSubscriptionVisible(false); return; }
     setActiveSection(section);
   };
 
@@ -1330,16 +1330,7 @@ export function AppShell() {
                 />
               )}
 
-              {activeSection === 'premium' && (
-                <PremiumSection
-                  subscriptionTier={subscriptionTier}
-                  balance={balance}
-                  iaCredits={iaCredits}
-                  onBuySubscription={buySubscription}
-                  onBuyIaPack={buyIaPack}
-                  onRecharge={() => { setActiveSection('account'); setRechargeVisible(true); }}
-                />
-              )}
+
 
               {activeSection !== 'stages' && activeSection !== 'applications' && activeSection !== 'resources' && activeSection !== 'premium' && activeSection !== 'account' && activeSection !== 'home' && activeSection !== 'dashboard' && activeSection !== 'explore' && activeSection !== 'library' && activeSection !== 'documents' ? (
                 <PdfStudentSection
@@ -1397,8 +1388,8 @@ export function AppShell() {
                   <Text style={styles.inlineUtilityText}>{syncingAccount ? 'Sync...' : 'Actualiser'}</Text>
                 </Pressable>
               </View>
-              <Text style={styles.walletAmount}>{formatCoins(balance)} C</Text>
-              <Text style={styles.walletHint}>{getSubscriptionPlan(subscriptionTier).name} • {iaCredits} cr IA</Text>
+              <Text style={styles.walletAmount}>{formatCoins(balance)} FCFA</Text>
+              <Text style={styles.walletHint}>Portefeuille prépayé • {iaCredits} cr IA</Text>
             </View>
             <View style={styles.accountQuickRow}>
               <Pressable style={styles.accountQuickAction} onPress={() => { setAccountVisible(false); openSection('library'); }}>
@@ -1407,14 +1398,11 @@ export function AppShell() {
               </Pressable>
               <Pressable style={styles.accountQuickAction} onPress={() => { setAccountVisible(false); setRechargeVisible(true); }}>
                 <Text style={styles.accountQuickActionLabel}>Wallet</Text>
-                <Text style={styles.accountQuickActionValue}>{`${formatCoins(balance)} C`}</Text>
+                <Text style={styles.accountQuickActionValue}>{`${formatCoins(balance)} FCFA`}</Text>
               </Pressable>
             </View>
             <View style={{ marginTop: 8 }}>
-              <PrimaryButtonLocal label="Comparer les offres" fluid onPress={() => { setAccountVisible(false); openSection('premium'); }} />
-            </View>
-            <View style={{ marginTop: 8 }}>
-              <PrimaryButtonLocal label="Recharger le wallet" fluid onPress={() => { setAccountVisible(false); setRechargeVisible(true); }} />
+              <PrimaryButtonLocal label="Recharger mon portefeuille (MoMo / OM)" fluid onPress={() => { setAccountVisible(false); setRechargeVisible(true); }} />
             </View>
             {(subscriptionTier === 'free' || !studentProfile?.email) && (
               <View style={{ marginTop: 8 }}>

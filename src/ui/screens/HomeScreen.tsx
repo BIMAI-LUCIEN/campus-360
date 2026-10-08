@@ -20,6 +20,8 @@ import {
   MapPin,
   Sparkles,
   Star,
+  ArrowRight,
+  Zap,
 } from 'lucide-react-native';
 
 import { type StudentProfile } from '../../features/auth/betterAuth';
@@ -35,7 +37,6 @@ import {
 } from '../../theme/stitch';
 import {
   CategoryGrid,
-  SearchFilterBar,
   type CategoryItem,
 } from '../GlassComponents';
 import { getRotatingJobBanner } from './StagesScreen';
@@ -81,7 +82,6 @@ export function HomeScreen({
   const [_recentApp, setRecentApp] = useState<StageApplication | null>(null);
   const [loading, setLoading] = useState(true);
   const [applyingJob, setApplyingJob] = useState<StageJob | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
 
   const effectiveSkills = useMemo(() => {
@@ -166,18 +166,7 @@ export function HomeScreen({
           </LinearGradient>
         </View>
 
-        {/* ── 2. Barre de Recherche Clean White ─────────────────────────── */}
-        <View style={styles.searchSection}>
-          <SearchFilterBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Rechercher un stage, entreprise, ville..."
-            onFilterPress={onStages}
-            onSubmitEditing={onStages}
-          />
-        </View>
-
-        {/* ── 3. Filières Circulaires (CategoryGrid) ───────────────────── */}
+        {/* ── 2. Filières Circulaires (CategoryGrid) ───────────────────── */}
         <CategoryGrid
           categories={HOME_CATEGORIES}
           activeId={selectedCategory}
@@ -262,21 +251,24 @@ export function HomeScreen({
                       resizeMode="cover"
                     />
                     <LinearGradient
-                      colors={['transparent', 'rgba(15, 23, 42, 0.72)']}
+                      colors={['rgba(15, 23, 42, 0.1)', 'rgba(15, 23, 42, 0.82)']}
                       style={styles.carouselImageGradient}
                     />
                     <View style={styles.carouselBadgeTop}>
                       <Text style={styles.carouselBadgeTopText}>{job.contractType || 'Stage'}</Text>
                     </View>
                     <View style={styles.carouselMatchBadge}>
-                      <Star size={10} color="#FDE047" fill="#FDE047" />
-                      <Text style={styles.carouselMatchText}>95% Match</Text>
+                      <Zap size={10} color="#FDE047" fill="#FDE047" />
+                      <Text style={styles.carouselMatchText}>95% Match IA</Text>
                     </View>
                   </View>
 
                   <View style={styles.carouselBody}>
-                    <Text style={styles.carouselTitle} numberOfLines={1}>{job.title}</Text>
+                    <Text style={styles.carouselTitle} numberOfLines={2}>
+                      {job.title}
+                    </Text>
                     <View style={styles.carouselCompanyRow}>
+                      <Building2 size={12} color={stitchColors.inkMuted} />
                       <Text style={styles.carouselCompany} numberOfLines={1}>
                         {job.company?.name || 'Entreprise partenaire'}
                       </Text>
@@ -288,16 +280,20 @@ export function HomeScreen({
                       <View style={styles.carouselMetaItem}>
                         <MapPin size={11} color="#64748B" />
                         <Text style={styles.carouselMetaText} numberOfLines={1}>
-                          {job.location || 'Douala'}
+                          {job.location || 'Douala / Yaoundé'}
                         </Text>
                       </View>
                     </View>
                     <View style={styles.carouselFooter}>
-                      <Text style={styles.carouselStipend}>
-                        {job.stipend || '75 000 FCFA'}
-                      </Text>
+                      <View style={{ flex: 1, paddingRight: 6 }}>
+                        <Text style={styles.carouselStipendLabel}>Indemnité</Text>
+                        <Text style={styles.carouselStipend} numberOfLines={1}>
+                          {job.stipend || '65 000 FCFA'}
+                        </Text>
+                      </View>
                       <View style={styles.carouselApplyBadge}>
                         <Text style={styles.carouselApplyText}>1-Clic</Text>
+                        <ArrowRight size={11} color="#7C3AED" strokeWidth={2.5} />
                       </View>
                     </View>
                   </View>
@@ -479,11 +475,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // 2. Recherche & Catégories
-  searchSection: {
-    marginTop: 4,
-    marginBottom: 6,
-  },
+  // 2. Catégories
   categorySection: {
     marginVertical: 4,
   },
@@ -547,17 +539,17 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   carouselCard: {
-    width: 220,
+    width: 250,
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
     overflow: 'hidden',
     ...stitchShadows.card,
   },
   carouselImageWrap: {
     width: '100%',
-    height: 110,
+    height: 125,
     backgroundColor: '#E2E8F0',
     position: 'relative',
   },
@@ -574,90 +566,110 @@ const styles = StyleSheet.create({
   },
   carouselBadgeTop: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(15, 23, 42, 0.7)',
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   carouselBadgeTopText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   carouselMatchBadge: {
     position: 'absolute',
-    bottom: 8,
-    left: 8,
+    bottom: 10,
+    left: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(124, 58, 237, 0.88)',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    gap: 4,
+    backgroundColor: '#7C3AED',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 3,
   },
   carouselMatchText: {
-    fontSize: 9.5,
+    fontSize: 10,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   carouselBody: {
-    padding: 12,
+    padding: 14,
   },
   carouselTitle: {
     fontFamily: stitchTypography.displayHero.fontFamily,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '700',
     color: stitchColors.ink,
     letterSpacing: -0.2,
+    lineHeight: 18,
+    minHeight: 36,
   },
   carouselCompanyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
+    gap: 5,
+    marginTop: 6,
   },
   carouselCompany: {
     fontFamily: stitchTypography.bodySm.fontFamily,
-    fontSize: 11.5,
+    fontSize: 12,
+    fontWeight: '500',
     color: stitchColors.inkMuted,
     flexShrink: 1,
   },
   carouselMetaRow: {
-    marginTop: 6,
-    marginBottom: 8,
+    marginTop: 8,
+    marginBottom: 10,
   },
   carouselMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
   },
   carouselMetaText: {
     fontFamily: stitchTypography.bodySm.fontFamily,
-    fontSize: 11,
+    fontSize: 11.5,
     color: stitchColors.inkMuted,
   },
   carouselFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 8,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
+  carouselStipendLabel: {
+    fontSize: 9.5,
+    fontWeight: '500',
+    color: stitchColors.inkSubtle,
+    marginBottom: 1,
+  },
   carouselStipend: {
     fontFamily: stitchTypography.labelMd.fontFamily,
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '800',
     color: '#059669',
   },
   carouselApplyBadge: {
-    backgroundColor: 'rgba(124, 58, 237, 0.1)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(124, 58, 237, 0.18)',
   },
   carouselApplyText: {
     fontSize: 11,
