@@ -6,7 +6,8 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
+  Modal,
+  FlatList,
   View,
 } from 'react-native';
 import {
@@ -18,7 +19,8 @@ import {
   Phone,
   GraduationCap,
   CheckCircle2,
-  Sparkles,
+  ChevronDown,
+  X,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -34,7 +36,6 @@ import {
   stitchRadius,
   stitchTypography,
   stitchShadows,
-  stitchComponents,
   fontFamilies,
 } from '../../theme/stitch';
 
@@ -109,57 +110,6 @@ interface AuthScreenProps {
   onClose?: () => void;
 }
 
-function DropdownSelector({
-  label,
-  value,
-  options,
-  onSelect,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  onSelect: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const filtered = options.filter((o) => o.toLowerCase().includes(value.toLowerCase()));
-
-  return (
-    <View>
-      <Text style={styles.inputLabel}>{label}</Text>
-      <Pressable
-        style={styles.dropdownTrigger}
-        onPress={() => setOpen(!open)}
-      >
-        <Text style={[styles.dropdownValue, !value && styles.dropdownPlaceholder]}>
-          {value || `Choisir...`}
-        </Text>
-        <Text style={styles.dropdownArrow}>▼</Text>
-      </Pressable>
-      {open && (
-        <View style={styles.dropdownList}>
-          <ScrollView style={{ maxHeight: 160 }} nestedScrollEnabled>
-            {filtered.map((opt) => (
-              <Pressable
-                key={opt}
-                style={({ pressed }) => [
-                  styles.dropdownOption,
-                  pressed && { backgroundColor: `${stitchColors.primary}10` },
-                ]}
-                onPress={() => {
-                  onSelect(opt);
-                  setOpen(false);
-                }}
-              >
-                <Text style={styles.dropdownOptionText}>{opt}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-    </View>
-  );
-}
-
 export function AuthScreen({
   mode,
   email,
@@ -186,9 +136,17 @@ export function AuthScreen({
   onClose,
 }: AuthScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const [univOpen, setUnivOpen] = useState(false);
-  const [facOpen, setFacOpen] = useState(false);
-  const [lvlOpen, setLvlOpen] = useState(false);
+  const [modalPicker, setModalPicker] = useState<{
+    visible: boolean;
+    title: string;
+    options: string[];
+    onSelect: (val: string) => void;
+  }>({
+    visible: false,
+    title: '',
+    options: [],
+    onSelect: () => {},
+  });
 
   const title =
     mode === 'sign-up'
@@ -203,13 +161,15 @@ export function AuthScreen({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
       style={styles.container}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <View style={styles.cardWrap}>
           <GlassCard style={styles.authCard}>
@@ -219,16 +179,17 @@ export function AuthScreen({
                 hitSlop={12}
                 style={styles.closeModalBtn}
               >
-                <Text style={{ color: '#DDD6FE', fontSize: 16, fontWeight: '700' }}>✕</Text>
+                <X size={18} color={stitchColors.inkMuted} strokeWidth={2.4} />
               </Pressable>
             )}
+
             {/* Editorial eyebrow */}
             <Text style={styles.eyebrow}>ACCÈS ÉTUDIANT</Text>
 
-            {/* Logo Emblem (Image 2 style) */}
+            {/* Logo Emblem */}
             <View style={styles.logoWrap}>
               <LinearGradient
-                colors={['#8B5CF6', '#6D28D9']}
+                colors={['#7C3AED', '#6D28D9']}
                 style={styles.logoMark}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -271,9 +232,10 @@ export function AuthScreen({
                       onChangeText={onNameChange}
                       placeholder="Ex: Jean Kamga"
                       autoCapitalize="words"
-                      leftIcon={<User size={17} color="#A78BFA" strokeWidth={1.8} />}
+                      leftIcon={<User size={17} color={stitchColors.sienna} strokeWidth={1.8} />}
                     />
                   </View>
+
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>WhatsApp</Text>
                     <GlassInput
@@ -281,99 +243,87 @@ export function AuthScreen({
                       onChangeText={onWhatsappChange}
                       placeholder="Ex: +237680000000"
                       keyboardType="phone-pad"
-                      leftIcon={<Phone size={17} color="#A78BFA" strokeWidth={1.8} />}
+                      leftIcon={<Phone size={17} color={stitchColors.sienna} strokeWidth={1.8} />}
                     />
                   </View>
+
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Université</Text>
                     <Pressable
                       style={styles.dropdownTrigger}
-                      onPress={() => setUnivOpen(!univOpen)}
+                      onPress={() =>
+                        setModalPicker({
+                          visible: true,
+                          title: 'Choisir une université',
+                          options: UNIVERSITIES,
+                          onSelect: (u) => onUniversityChange(u),
+                        })
+                      }
                     >
-                      <Text style={[styles.dropdownValue, !university && styles.dropdownPlaceholder]}>
+                      <Text
+                        style={[
+                          styles.dropdownValue,
+                          !university && styles.dropdownPlaceholder,
+                        ]}
+                        numberOfLines={1}
+                      >
                         {university || 'Choisir une université...'}
                       </Text>
-                      <Text style={styles.dropdownArrow}>▼</Text>
+                      <ChevronDown size={16} color={stitchColors.inkMuted} />
                     </Pressable>
-                    {univOpen && (
-                      <View style={styles.dropdownList}>
-                        <ScrollView style={{ maxHeight: 160 }} nestedScrollEnabled>
-                          {UNIVERSITIES.map((u) => (
-                            <Pressable
-                              key={u}
-                              style={({ pressed }) => [
-                                styles.dropdownOption,
-                                pressed && { backgroundColor: `${stitchColors.primary}10` },
-                              ]}
-                              onPress={() => { onUniversityChange(u); setUnivOpen(false); }}
-                            >
-                              <Text style={styles.dropdownOptionText}>{u}</Text>
-                            </Pressable>
-                          ))}
-                        </ScrollView>
-                      </View>
-                    )}
                   </View>
+
                   <View style={styles.inputRow}>
                     <View style={[styles.inputGroup, { flex: 1 }]}>
                       <Text style={styles.inputLabel}>Filière</Text>
                       <Pressable
                         style={styles.dropdownTrigger}
-                        onPress={() => setFacOpen(!facOpen)}
+                        onPress={() =>
+                          setModalPicker({
+                            visible: true,
+                            title: 'Choisir une filière',
+                            options: FACULTIES,
+                            onSelect: (f) => onFacultyChange(f),
+                          })
+                        }
                       >
-                        <Text style={[styles.dropdownValue, !faculty && styles.dropdownPlaceholder]}>
+                        <Text
+                          style={[
+                            styles.dropdownValue,
+                            !faculty && styles.dropdownPlaceholder,
+                          ]}
+                          numberOfLines={1}
+                        >
                           {faculty || 'Filière'}
                         </Text>
-                        <Text style={styles.dropdownArrow}>▼</Text>
+                        <ChevronDown size={14} color={stitchColors.inkMuted} />
                       </Pressable>
-                      {facOpen && (
-                        <View style={styles.dropdownList}>
-                          <ScrollView style={{ maxHeight: 140 }} nestedScrollEnabled>
-                            {FACULTIES.map((f) => (
-                              <Pressable
-                                key={f}
-                                style={({ pressed }) => [
-                                  styles.dropdownOption,
-                                  pressed && { backgroundColor: `${stitchColors.primary}10` },
-                                ]}
-                                onPress={() => { onFacultyChange(f); setFacOpen(false); }}
-                              >
-                                <Text style={styles.dropdownOptionText}>{f}</Text>
-                              </Pressable>
-                            ))}
-                          </ScrollView>
-                        </View>
-                      )}
                     </View>
+
                     <View style={[styles.inputGroup, { flex: 1 }]}>
                       <Text style={styles.inputLabel}>Niveau</Text>
                       <Pressable
                         style={styles.dropdownTrigger}
-                        onPress={() => setLvlOpen(!lvlOpen)}
+                        onPress={() =>
+                          setModalPicker({
+                            visible: true,
+                            title: 'Choisir un niveau',
+                            options: LEVELS,
+                            onSelect: (l) => onLevelChange(l),
+                          })
+                        }
                       >
-                        <Text style={[styles.dropdownValue, !level && styles.dropdownPlaceholder]}>
+                        <Text
+                          style={[
+                            styles.dropdownValue,
+                            !level && styles.dropdownPlaceholder,
+                          ]}
+                          numberOfLines={1}
+                        >
                           {level || 'Niveau'}
                         </Text>
-                        <Text style={styles.dropdownArrow}>▼</Text>
+                        <ChevronDown size={14} color={stitchColors.inkMuted} />
                       </Pressable>
-                      {lvlOpen && (
-                        <View style={styles.dropdownList}>
-                          <ScrollView style={{ maxHeight: 140 }} nestedScrollEnabled>
-                            {LEVELS.map((l) => (
-                              <Pressable
-                                key={l}
-                                style={({ pressed }) => [
-                                  styles.dropdownOption,
-                                  pressed && { backgroundColor: `${stitchColors.primary}10` },
-                                ]}
-                                onPress={() => { onLevelChange(l); setLvlOpen(false); }}
-                              >
-                                <Text style={styles.dropdownOptionText}>{l}</Text>
-                              </Pressable>
-                            ))}
-                          </ScrollView>
-                        </View>
-                      )}
                     </View>
                   </View>
                 </>
@@ -388,7 +338,7 @@ export function AuthScreen({
                     placeholder="ton@email.com"
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    leftIcon={<Mail size={17} color="#A78BFA" strokeWidth={1.8} />}
+                    leftIcon={<Mail size={17} color={stitchColors.sienna} strokeWidth={1.8} />}
                   />
                 </View>
               )}
@@ -408,7 +358,7 @@ export function AuthScreen({
                     showPasswordToggle
                     showPassword={showPassword}
                     onTogglePassword={() => setShowPassword(!showPassword)}
-                    leftIcon={<Lock size={17} color="#A78BFA" strokeWidth={1.8} />}
+                    leftIcon={<Lock size={17} color={stitchColors.sienna} strokeWidth={1.8} />}
                   />
                 </View>
               )}
@@ -479,12 +429,12 @@ export function AuthScreen({
               )}
             </View>
 
-            {/* Success Popup Dialog (Image 2 style) */}
+            {/* Success Popup Dialog */}
             {notice && (notice.toLowerCase().includes('succès') || notice.toLowerCase().includes('réussi') || notice.toLowerCase().includes('envoyé')) && (
               <View style={styles.successModalBackdrop}>
                 <View style={styles.successModalCard}>
                   <View style={styles.successIconCircle}>
-                    <CheckCircle2 size={36} color="#34D399" />
+                    <CheckCircle2 size={36} color="#10B981" />
                   </View>
                   <Text style={styles.successTitle}>Opération Réussie !</Text>
                   <Text style={styles.successMessage}>{notice}</Text>
@@ -506,6 +456,51 @@ export function AuthScreen({
           </GlassCard>
         </View>
       </ScrollView>
+
+      {/* Modal Picker for University, Faculty, Level (Smooth, no keyboard push or layout crash) */}
+      <Modal
+        visible={modalPicker.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalPicker((p) => ({ ...p, visible: false }))}
+      >
+        <Pressable
+          style={styles.pickerOverlay}
+          onPress={() => setModalPicker((p) => ({ ...p, visible: false }))}
+        >
+          <View style={styles.pickerModalContent} onStartShouldSetResponder={() => true}>
+            <View style={styles.pickerModalHeader}>
+              <Text style={styles.pickerModalTitle}>{modalPicker.title}</Text>
+              <Pressable
+                onPress={() => setModalPicker((p) => ({ ...p, visible: false }))}
+                hitSlop={10}
+              >
+                <X size={20} color={stitchColors.inkMuted} />
+              </Pressable>
+            </View>
+            <FlatList
+              data={modalPicker.options}
+              keyExtractor={(item) => item}
+              showsVerticalScrollIndicator={false}
+              style={{ maxHeight: 320 }}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.pickerOption,
+                    pressed && { backgroundColor: 'rgba(124, 58, 237, 0.08)' },
+                  ]}
+                  onPress={() => {
+                    modalPicker.onSelect(item);
+                    setModalPicker((p) => ({ ...p, visible: false }));
+                  }}
+                >
+                  <Text style={styles.pickerOptionText}>{item}</Text>
+                </Pressable>
+              )}
+            />
+          </View>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -513,12 +508,13 @@ export function AuthScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: stitchColors.background,
+    backgroundColor: '#F8FAFC', // Clean white / slate 50
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: stitchSpacing.containerMargin,
+    paddingVertical: 36,
   },
   cardWrap: {
     alignItems: 'center',
@@ -530,7 +526,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
@@ -539,29 +535,24 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
     padding: 24,
-    borderRadius: 22,
-    backgroundColor: '#131024',
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF', // Clean white
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.22)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 6,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
   },
   eyebrow: {
     fontFamily: MONO,
-    fontSize: 10,
-    letterSpacing: 1.5,
-    color: stitchColors.primary,
-    fontWeight: '700',
+    fontSize: 10.5,
+    letterSpacing: 1.6,
+    color: stitchColors.sienna,
+    fontWeight: '800',
     marginBottom: 8,
     textAlign: 'center',
-  },
-  headerRule: {
-    height: 1,
-    backgroundColor: stitchColors.outlineVariant,
-    marginBottom: 20,
   },
   logoWrap: {
     alignItems: 'center',
@@ -576,45 +567,31 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 5,
-  },
-  logoMarkText: {
-    fontFamily: SERIF,
-    color: stitchColors.paper,
-    fontSize: 24,
-    fontWeight: '900',
   },
   logoTitle: {
     fontFamily: fontFamilies.outfit,
     fontSize: 22,
     fontWeight: '900',
-    color: '#F8FAFC',
+    color: stitchColors.ink, // #0F172A
     letterSpacing: -0.4,
   },
   logoSubtitle: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: stitchColors.inkMuted,
     marginTop: 3,
     textAlign: 'center',
   },
-  iconInputWrap: {
-    position: 'relative',
-    justifyContent: 'center',
-  },
-  leadingInputIcon: {
-    position: 'absolute',
-    left: 14,
-    zIndex: 5,
-  },
   cardTitle: {
-    ...stitchTypography.headlineMd,
-    color: '#F8FAFC',
+    fontFamily: fontFamilies.outfit,
+    color: stitchColors.ink,
     textAlign: 'center',
     marginBottom: 18,
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: '800',
+    letterSpacing: -0.3,
   },
   modeToggle: {
     flexDirection: 'row',
@@ -632,67 +609,52 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   inputLabel: {
-    ...stitchTypography.labelSm,
-    color: stitchColors.onSurfaceVariant,
-    fontWeight: '600',
+    fontFamily: fontFamilies.inter,
+    fontSize: 11,
+    color: stitchColors.inkSoft,
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    marginBottom: 4,
   },
   dropdownTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: stitchColors.surfaceContainerLow,
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: stitchColors.outlineVariant,
-    borderRadius: stitchRadius.md,
-    paddingVertical: 14,
+    borderColor: '#E2E8F0',
+    borderRadius: stitchRadius.sm,
+    paddingVertical: 13,
     paddingHorizontal: 16,
   },
   dropdownValue: {
-    ...stitchComponents.inputText,
+    fontFamily: fontFamilies.inter,
+    fontSize: 14,
+    color: stitchColors.ink,
     flex: 1,
+    marginRight: 6,
   },
   dropdownPlaceholder: {
-    color: stitchColors.outline,
-  },
-  dropdownArrow: {
-    fontSize: 10,
-    color: stitchColors.onSurfaceVariant,
-  },
-  dropdownList: {
-    backgroundColor: stitchColors.surfaceContainerLowest,
-    borderWidth: 1,
-    borderColor: stitchColors.outlineVariant,
-    borderRadius: stitchRadius.md,
-    marginTop: 4,
-    overflow: 'hidden',
-    zIndex: 100,
-  },
-  dropdownOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: stitchColors.outlineVariant,
-  },
-  dropdownOptionText: {
-    ...stitchTypography.bodyMd,
-    color: stitchColors.onSurface,
+    color: '#94A3B8',
   },
   notice: {
-    ...stitchTypography.bodyMd,
-    color: stitchColors.secondary,
+    fontFamily: fontFamilies.inter,
+    fontSize: 13,
+    color: stitchColors.sienna,
     fontWeight: '600',
     textAlign: 'center',
-    padding: 8,
-    backgroundColor: `${stitchColors.secondary}10`,
+    padding: 10,
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
     borderRadius: stitchRadius.sm,
   },
   forgotLink: {
-    ...stitchTypography.labelMd,
-    color: stitchColors.primary,
+    fontFamily: fontFamilies.inter,
+    fontSize: 12.5,
+    color: stitchColors.sienna,
     textAlign: 'right',
-    fontWeight: '600',
+    fontWeight: '700',
+    marginTop: 2,
   },
   divider: {
     flexDirection: 'row',
@@ -703,22 +665,24 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: stitchColors.outlineVariant,
+    backgroundColor: '#E2E8F0',
   },
   dividerText: {
-    ...stitchTypography.labelSm,
-    color: stitchColors.onSurfaceVariant,
+    fontSize: 11,
+    fontWeight: '700',
+    color: stitchColors.inkMuted,
   },
   switchLink: {
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 6,
   },
   switchText: {
-    ...stitchTypography.bodyMd,
-    color: stitchColors.onSurfaceVariant,
+    fontFamily: fontFamilies.inter,
+    fontSize: 13,
+    color: stitchColors.inkMuted,
   },
   switchHighlight: {
-    color: stitchColors.primary,
+    color: stitchColors.sienna,
     fontWeight: '700',
   },
   closeBtn: {
@@ -726,8 +690,9 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   closeBtnText: {
-    ...stitchTypography.labelMd,
-    color: stitchColors.onSurfaceVariant,
+    fontSize: 13,
+    color: stitchColors.inkMuted,
+    fontWeight: '600',
   },
   successModalBackdrop: {
     position: 'absolute',
@@ -735,8 +700,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    borderRadius: 22,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -752,22 +717,23 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(124, 58, 237, 0.12)',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 8,
   },
   successIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(52, 211, 153, 0.15)',
-    borderWidth: 2,
-    borderColor: 'rgba(52, 211, 153, 0.4)',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
   },
   successTitle: {
+    fontFamily: fontFamilies.outfit,
     fontSize: 18,
     fontWeight: '800',
     color: stitchColors.ink,
@@ -775,9 +741,58 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   successMessage: {
+    fontFamily: fontFamilies.inter,
     fontSize: 13,
     color: stitchColors.inkMuted,
     textAlign: 'center',
-    lineHeight: 19,
+    lineHeight: 18,
+  },
+  // Modal Picker styles
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  pickerModalContent: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  pickerModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 6,
+  },
+  pickerModalTitle: {
+    fontFamily: fontFamilies.outfit,
+    fontSize: 16,
+    fontWeight: '700',
+    color: stitchColors.ink,
+  },
+  pickerOption: {
+    paddingVertical: 13,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  pickerOptionText: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 14,
+    color: stitchColors.ink,
+    fontWeight: '500',
   },
 });
