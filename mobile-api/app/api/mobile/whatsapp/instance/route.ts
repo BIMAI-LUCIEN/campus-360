@@ -27,7 +27,7 @@ export const OPTIONS = (request: NextRequest) =>
 
 const postSchema = z.object({
   phone: z.string().trim().min(6).max(25).optional(),
-  action: z.enum(['create', 'connect', 'reconnect']).optional().default('connect'),
+  action: z.enum(['create', 'connect', 'reconnect', 'pair']).optional().default('connect'),
   force: z.boolean().optional().default(false),
 });
 
