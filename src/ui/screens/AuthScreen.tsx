@@ -161,7 +161,7 @@ export function AuthScreen({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
       style={styles.container}
     >
@@ -169,7 +169,6 @@ export function AuthScreen({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
       >
         <View style={styles.cardWrap}>
           <GlassCard style={styles.authCard}>
@@ -382,7 +381,7 @@ export function AuthScreen({
                     : mode === 'sign-in'
                       ? "Entrer dans l'app"
                       : mode === 'sign-up'
-                        ? 'Créer mon espace'
+                        ? 'Inscrire mes informations'
                         : mode === 'reset'
                           ? 'Envoyer le lien'
                           : 'Modifier le mot de passe'
@@ -512,9 +511,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     padding: stitchSpacing.containerMargin,
-    paddingVertical: 36,
+    paddingTop: Platform.OS === 'ios' ? 44 : 20,
+    paddingBottom: 60,
   },
   cardWrap: {
     alignItems: 'center',

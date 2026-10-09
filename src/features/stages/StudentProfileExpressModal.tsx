@@ -9,6 +9,7 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
 import {
   X,
@@ -204,26 +205,29 @@ export function StudentProfileExpressModal({
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.overlay}
+      >
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
               <View style={styles.profileBadge}>
-                <Sparkles size={13} color="#A78BFA" />
-                <Text style={styles.profileBadgeText}>Onboarding Express 30s</Text>
+                <Sparkles size={13} color="#7C3AED" strokeWidth={2.4} />
+                <Text style={styles.profileBadgeText}>Profil Étudiant Express</Text>
               </View>
               <Pressable
                 onPress={onClose}
-                hitSlop={10}
+                hitSlop={12}
                 style={styles.closeBtn}
                 testID="btn-express-close"
                 accessibilityLabel="Fermer"
               >
-                <X size={18} color="#94A3B8" />
+                <X size={18} color="#64748B" strokeWidth={2.2} />
               </Pressable>
             </View>
-            <Text style={styles.title}>Complétez votre profil en 6 champs</Text>
+            <Text style={styles.title}>Inscrire mes informations</Text>
             <Text style={styles.subtitle}>
               Ces 6 informations alimentent automatiquement le Template CV Officiel et la lettre RH.
             </Text>
@@ -232,6 +236,7 @@ export function StudentProfileExpressModal({
           {/* Form Content */}
           <ScrollView
             style={styles.scrollArea}
+            contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -239,8 +244,8 @@ export function StudentProfileExpressModal({
               {/* Champ 1 : Nom Complet */}
               <View style={styles.fieldGroup}>
                 <View style={styles.labelRow}>
-                  <User size={13} color="#A78BFA" />
-                  <Text style={styles.label}>1. Nom & Prénom</Text>
+                  <User size={14} color="#7C3AED" strokeWidth={2} />
+                  <Text style={styles.label}>1. Nom &amp; Prénom</Text>
                 </View>
                 <TextInput
                   testID="input-express-fullname"
@@ -248,14 +253,15 @@ export function StudentProfileExpressModal({
                   value={fullName}
                   onChangeText={setFullName}
                   placeholder="Ex: Dave Lionel Kameni"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor="#94A3B8"
+                  autoCapitalize="words"
                 />
               </View>
 
               {/* Champ 2 : Téléphone WhatsApp */}
               <View style={styles.fieldGroup}>
                 <View style={styles.labelRow}>
-                  <Phone size={13} color="#A78BFA" />
+                  <Phone size={14} color="#7C3AED" strokeWidth={2} />
                   <Text style={styles.label}>2. Téléphone WhatsApp (Contact Recruteur)</Text>
                 </View>
                 <TextInput
@@ -264,7 +270,7 @@ export function StudentProfileExpressModal({
                   value={phoneWhatsapp}
                   onChangeText={setPhoneWhatsapp}
                   placeholder="Ex: +237 690 00 00 00"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor="#94A3B8"
                   keyboardType="phone-pad"
                 />
               </View>
@@ -272,8 +278,8 @@ export function StudentProfileExpressModal({
               {/* Champ 3 : Université & Ville */}
               <View style={styles.fieldGroup}>
                 <View style={styles.labelRow}>
-                  <School size={13} color="#A78BFA" />
-                  <Text style={styles.label}>3. Université & Ville</Text>
+                  <School size={14} color="#7C3AED" strokeWidth={2} />
+                  <Text style={styles.label}>3. Université &amp; Ville</Text>
                 </View>
                 <TextInput
                   testID="input-express-university"
@@ -281,12 +287,13 @@ export function StudentProfileExpressModal({
                   value={university}
                   onChangeText={setUniversity}
                   placeholder="Ex: Université de Yaoundé I (Cameroun)"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor="#94A3B8"
                 />
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.suggestionPillsRow}
+                  keyboardShouldPersistTaps="handled"
                 >
                   {SUGGESTED_UNIVERSITIES.slice(0, 4).map((univ) => {
                     const active = university === univ;
@@ -308,7 +315,7 @@ export function StudentProfileExpressModal({
               {/* Champ 4 : Filière / Spécialité */}
               <View style={styles.fieldGroup}>
                 <View style={styles.labelRow}>
-                  <BookOpen size={13} color="#A78BFA" />
+                  <BookOpen size={14} color="#7C3AED" strokeWidth={2} />
                   <Text style={styles.label}>4. Filière / Spécialité</Text>
                 </View>
                 <TextInput
@@ -316,13 +323,14 @@ export function StudentProfileExpressModal({
                   style={styles.input}
                   value={major}
                   onChangeText={setMajor}
-                  placeholder="Ex: Informatique & Génie Logiciel"
-                  placeholderTextColor="#64748B"
+                  placeholder="Ex: Informatique &amp; Génie Logiciel"
+                  placeholderTextColor="#94A3B8"
                 />
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.suggestionPillsRow}
+                  keyboardShouldPersistTaps="handled"
                 >
                   {Object.entries(SUGGESTED_MAJORS).map(([key, item]) => {
                     const active = major === item.label;
@@ -344,7 +352,7 @@ export function StudentProfileExpressModal({
               {/* Champ 5 : Niveau d'études */}
               <View style={styles.fieldGroup}>
                 <View style={styles.labelRow}>
-                  <GraduationCap size={13} color="#A78BFA" />
+                  <GraduationCap size={14} color="#7C3AED" strokeWidth={2} />
                   <Text style={styles.label}>5. Niveau d'études actuel</Text>
                 </View>
                 <View style={styles.chipsGrid}>
@@ -369,7 +377,7 @@ export function StudentProfileExpressModal({
               {/* Champ 6 : 3 à 5 Compétences clés cliquables */}
               <View style={styles.fieldGroup}>
                 <View style={styles.labelRow}>
-                  <Layers size={13} color="#A78BFA" />
+                  <Layers size={14} color="#7C3AED" strokeWidth={2} />
                   <Text style={styles.label}>
                     6. Compétences clés ({selectedSkills.length}/6 sélectionnées)
                   </Text>
@@ -399,15 +407,18 @@ export function StudentProfileExpressModal({
                 {/* Ajout manuel optionnel */}
                 <View style={styles.customSkillRow}>
                   <TextInput
-                    style={[styles.input, { flex: 1, height: 38 }]}
+                    style={[styles.input, { flex: 1, paddingVertical: 8 }]}
                     value={customSkillInput}
                     onChangeText={setCustomSkillInput}
                     placeholder="Autre compétence..."
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor="#94A3B8"
                     onSubmitEditing={handleAddCustomSkill}
                   />
                   <Pressable
-                    style={styles.addSkillBtn}
+                    style={[
+                      styles.addSkillBtn,
+                      (!customSkillInput.trim() || selectedSkills.length >= 6) && styles.addSkillBtnDisabled,
+                    ]}
                     onPress={handleAddCustomSkill}
                     disabled={!customSkillInput.trim() || selectedSkills.length >= 6}
                   >
@@ -431,13 +442,13 @@ export function StudentProfileExpressModal({
               ) : (
                 <View style={styles.submitBtnContent}>
                   <Check size={16} color="#FFFFFF" strokeWidth={2.4} />
-                  <Text style={styles.submitBtnText}>Enregistrer et continuer (30s)</Text>
+                  <Text style={styles.submitBtnText}>Inscrire mes informations (30s)</Text>
                 </View>
               )}
             </Pressable>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -445,22 +456,26 @@ export function StudentProfileExpressModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 7, 20, 0.88)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 24,
+    paddingVertical: Platform.OS === 'ios' ? 24 : 16,
   },
   container: {
     width: '100%',
     maxWidth: 480,
-    maxHeight: '92%',
-    backgroundColor: '#120E22',
-    borderRadius: 16,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    maxHeight: '94%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     padding: 20,
-    elevation: 6,
+    elevation: 8,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
     display: 'flex',
     flexDirection: 'column',
   },
@@ -477,32 +492,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 0.5,
-    borderColor: 'rgba(167, 139, 250, 0.3)',
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(124, 58, 237, 0.2)',
   },
   profileBadgeText: {
     fontFamily: fontFamilies.inter,
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#DDD6FE',
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#7C3AED',
   },
   closeBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontFamily: fontFamilies.serif,
     fontSize: 19,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '800',
+    color: '#0F172A',
     letterSpacing: -0.2,
     marginBottom: 4,
   },
@@ -510,15 +525,17 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.inter,
     fontSize: 12,
     lineHeight: 16,
-    color: stitchColors.inkMuted,
+    color: '#64748B',
   },
   scrollArea: {
     flexGrow: 1,
     marginVertical: 4,
   },
+  scrollContent: {
+    paddingBottom: 16,
+  },
   form: {
     gap: 14,
-    paddingBottom: 8,
   },
   fieldGroup: {
     gap: 6,
@@ -530,25 +547,25 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: fontFamilies.inter,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#DDD6FE',
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#1E293B',
   },
   hintText: {
     fontFamily: fontFamilies.inter,
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginBottom: 4,
   },
   input: {
-    backgroundColor: '#090714',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
     paddingVertical: Platform.OS === 'ios' ? 10 : 8,
-    color: '#FFFFFF',
-    fontSize: 13,
+    color: '#0F172A',
+    fontSize: 13.5,
     fontFamily: fontFamilies.inter,
   },
   suggestionPillsRow: {
@@ -557,25 +574,25 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   pill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 6,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   pillActive: {
-    backgroundColor: 'rgba(124, 58, 237, 0.25)',
-    borderColor: '#8B5CF6',
+    backgroundColor: '#7C3AED',
+    borderColor: '#7C3AED',
   },
   pillText: {
     fontFamily: fontFamilies.inter,
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#475569',
   },
   pillTextActive: {
-    color: '#DDD6FE',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   chipsGrid: {
     flexDirection: 'row',
@@ -585,23 +602,23 @@ const styles = StyleSheet.create({
   levelChip: {
     paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   levelChipActive: {
     backgroundColor: '#7C3AED',
-    borderColor: '#A78BFA',
+    borderColor: '#7C3AED',
   },
   levelChipText: {
     fontFamily: fontFamilies.inter,
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#475569',
   },
   levelChipTextActive: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   skillsChipsWrap: {
     flexDirection: 'row',
@@ -615,22 +632,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   skillBadgeActive: {
-    backgroundColor: 'rgba(124, 58, 237, 0.3)',
-    borderColor: '#8B5CF6',
+    backgroundColor: '#7C3AED',
+    borderColor: '#7C3AED',
   },
   skillBadgeText: {
     fontFamily: fontFamilies.inter,
     fontSize: 12,
-    color: '#CBD5E1',
+    color: '#334155',
   },
   skillBadgeTextActive: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   customSkillRow: {
     flexDirection: 'row',
@@ -639,32 +656,38 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   addSkillBtn: {
-    backgroundColor: 'rgba(124, 58, 237, 0.2)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(167, 139, 250, 0.3)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    backgroundColor: '#7C3AED',
+    borderRadius: 10,
+    paddingHorizontal: 14,
     height: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  addSkillBtnDisabled: {
+    backgroundColor: '#E2E8F0',
+  },
   addSkillBtnText: {
     fontFamily: fontFamilies.inter,
     fontSize: 12,
-    fontWeight: '600',
-    color: '#DDD6FE',
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   footer: {
     paddingTop: 12,
-    borderTopWidth: 0.5,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
   },
   submitBtn: {
     backgroundColor: '#7C3AED',
-    borderRadius: 10,
-    paddingVertical: 13,
+    borderRadius: 14,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
   submitBtnContent: {
     flexDirection: 'row',
@@ -673,8 +696,8 @@ const styles = StyleSheet.create({
   },
   submitBtnText: {
     fontFamily: fontFamilies.outfit,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 14.5,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
 });

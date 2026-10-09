@@ -8,6 +8,7 @@ import {
   TextInput,
   Dimensions,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -294,7 +295,10 @@ export function OnboardingScreen({
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.container}
+    >
       {/* Background glow effects */}
       <View style={styles.glowTop} />
       <View style={styles.glowBottom} />
@@ -621,7 +625,7 @@ export function OnboardingScreen({
           <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.4} />
         </Pressable>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

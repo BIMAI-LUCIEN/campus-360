@@ -14,6 +14,10 @@ import {
   requireMobileUser,
   withCors,
 } from '@/lib/mobile-access';
+import {
+  getStageStudentWhatsAppStatus,
+  updateStageStudentWhatsAppStatus,
+} from '@/lib/stages-db';
 
 export const runtime = 'nodejs';
 
@@ -82,6 +86,9 @@ export async function POST(request: NextRequest) {
     // 2. Request 8-digit pairing code
     const pairingResult = await requestPairingCode(instanceName, normalizedPhone);
 
+    // 3. Persist pending instance in Supabase
+    await updateStageStudentWhatsAppStatus(normalizedPhone, instanceName, false);
+
     return withCors(
       NextResponse.json({
         success: true,
@@ -102,6 +109,9 @@ export async function POST(request: NextRequest) {
 
     console.warn('[whatsapp/instance route POST] Caught error, returning graceful fallback:', error);
     const fallbackCode = generateFallbackPairingCode(phoneToUse);
+    if (phoneToUse) {
+      await updateStageStudentWhatsAppStatus(phoneToUse, instanceName || 'student-fallback', false).catch(() => {});
+    }
     return withCors(
       NextResponse.json({
         success: true,
@@ -117,7 +127,8 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/mobile/whatsapp/instance
- * Checks connection state of WhatsApp instance (open, close, connecting).
+ * Checks connection state of WhatsApp instance (open, close, connecting)
+ * and synchronizes live status with Supabase PostgreSQL.
  */
 export async function GET(request: NextRequest) {
   let instanceName = 'student-default';
@@ -158,6 +169,31 @@ export async function GET(request: NextRequest) {
 
     const stateResult = await getConnectionState(instanceName);
 
+    // Synchronize live status to Supabase
+    if (!stateResult.offline) {
+      await updateStageStudentWhatsAppStatus(
+        phoneToUse || instanceName,
+        instanceName,
+        stateResult.connected,
+      );
+    } else {
+      // If Evolution API is offline or slow, read cached status from Supabase
+      const dbStatus = await getStageStudentWhatsAppStatus(phoneToUse || instanceName);
+      if (dbStatus) {
+        return withCors(
+          NextResponse.json({
+            success: true,
+            instanceName,
+            state: dbStatus.connected ? 'open' : 'close',
+            connected: dbStatus.connected,
+            isConnected: dbStatus.connected,
+            offline: true,
+          }),
+          request,
+        );
+      }
+    }
+
     return withCors(
       NextResponse.json({
         success: true,
@@ -171,6 +207,23 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     console.warn('[whatsapp/instance route GET] Caught error checking state:', error);
+
+    // In catch block, attempt to check Supabase fallback
+    const dbStatus = await getStageStudentWhatsAppStatus(instanceName).catch(() => null);
+    if (dbStatus) {
+      return withCors(
+        NextResponse.json({
+          success: true,
+          instanceName,
+          state: dbStatus.connected ? 'open' : 'close',
+          connected: dbStatus.connected,
+          isConnected: dbStatus.connected,
+          offline: true,
+        }),
+        request,
+      );
+    }
+
     return withCors(
       NextResponse.json({
         success: true,

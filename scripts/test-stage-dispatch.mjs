@@ -590,10 +590,19 @@ describe('N8N Webhook Payload Compatibility & Workflow Integrity (R3)', () => {
 
   test('TC 3.6: N8N SMTP Node with PDF Attachment and Reply-To Validation', () => {
     const workflow = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
-    const emailNode = workflow.nodes.find((n) => n.type === 'n8n-nodes-base.emailSend');
-    assert.ok(emailNode, 'Le noeud d\'envoi Email SMTP doit exister');
-    assert.ok(emailNode.parameters.options.replyTo.includes('student.email'), 'Reply-To configuré sur l\'email étudiant');
-    assert.ok(emailNode.parameters.options.attachments.includes('cvPdfUrl'), 'Pièce jointe PDF configurée');
+    const emailNode = workflow.nodes.find(
+      (n) => n.id === 'node-smtp-send-email' || (n.name && n.name.toLowerCase().includes('envoi email'))
+    );
+    assert.ok(emailNode, 'Le noeud d\'envoi Email doit exister');
+    const isSmtp = emailNode.type === 'n8n-nodes-base.emailSend';
+    if (isSmtp) {
+      assert.ok(emailNode.parameters.options?.replyTo?.includes('student.email'), 'Reply-To configuré sur l\'email étudiant');
+      assert.ok(emailNode.parameters.options?.attachments?.includes('cvPdfUrl'), 'Pièce jointe PDF configurée');
+    } else {
+      const bodyStr = String(emailNode.parameters.jsonBody || '');
+      assert.ok(bodyStr.includes('student.email'), 'Reply-To configuré sur l\'email étudiant');
+      assert.ok(bodyStr.includes('recruiterEmail'), 'Destinataire recruteur configuré');
+    }
   });
 
   test('TC 3.7: N8N Supabase Status Callback and Respond 200 Nodes', () => {

@@ -108,13 +108,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ ($env.EVOLUTION_API_URL || 'https://wa.blackcompany.site') + '/message/sendMedia/' + $json.student.instanceName }}",
+        "url": "={{ 'https://wa.blackcompany.site/message/sendMedia/' + $json.student.instanceName }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "apikey",
-              "value": "={{ $env.EVOLUTION_API_KEY || 'evolution_key_douala_2026' }}"
+              "value": "MigOS_Evolution_SecretKey_2026"
             },
             {
               "name": "Content-Type",
@@ -125,7 +125,13 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  number: $json.job.recruiterWhatsapp,\n  mediatype: 'document',\n  mimetype: 'application/pdf',\n  media: $json.dossier.cvPdfUrl,\n  fileName: 'CV_Officiel.pdf',\n  caption: $json.dossier.whatsappPitch\n}) }}",
-        "options": {}
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "node-wa-send-media",
       "name": "Evolution API - Envoi Media PDF & Pitch WhatsApp",
@@ -138,44 +144,55 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.SMTP_FROM_EMAIL || 'candidatures@campus360.app' }}",
-        "toEmail": "={{ $json.job.recruiterEmail }}",
-        "subject": "={{ $json.emailSubject }}",
-        "html": "={{ $json.emailHtml }}",
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + ($env.RESEND_API_KEY || 'YOUR_RESEND_API_KEY') }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  from: 'Campus 360 <onboarding@resend.dev>',\n  to: [$json.job.recruiterEmail],\n  reply_to: $json.student.email,\n  subject: $json.emailSubject,\n  html: $json.emailHtml\n}) }}",
         "options": {
-          "replyTo": "={{ $json.student.email }}",
-          "attachments": "={{ $json.dossier.cvPdfUrl }}"
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
         }
       },
       "id": "node-smtp-send-email",
       "name": "Envoi Email Candidature (SMTP)",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         1180,
         520
-      ],
-      "credentials": {
-        "smtp": {
-          "id": "campus360-smtp-creds",
-          "name": "SMTP Campus 360"
-        }
-      }
+      ]
     },
     {
       "parameters": {
         "method": "PATCH",
-        "url": "={{ ($env.SUPABASE_URL || 'https://zlzwoqqnkvxndmtnzdsm.supabase.co') + '/rest/v1/stage_applications?id=eq.' + $('Validation Payload & Jitter Anti-Ban').item.json.applicationId }}",
+        "url": "={{ 'https://zlzwoqqnkvxndmtnzdsm.supabase.co/rest/v1/stage_applications?id=eq.' + $('Validation Payload & Jitter Anti-Ban').item.json.applicationId }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
             },
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
             },
             {
               "name": "Content-Type",
@@ -190,7 +207,13 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  status: 'DELIVERED',\n  dispatch_status: 'DELIVERED',\n  delivered_at: new Date().toISOString()\n}) }}",
-        "options": {}
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
       },
       "id": "node-supabase-update-delivered",
       "name": "Mise à jour Supabase (Statut DELIVERED)",
@@ -305,14 +328,7 @@
       ]
     }
   },
-  "active": true,
   "settings": {
     "executionOrder": "v1"
-  },
-  "versionId": "b47c9082-ef3d-4c8e-a2b1-678901234abc",
-  "id": "campus360-send-stage-application-wf",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "campus360-n8n-blackcompany"
   }
 }

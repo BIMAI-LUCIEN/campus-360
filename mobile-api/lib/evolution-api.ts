@@ -159,6 +159,26 @@ export async function createInstance(instanceName: string): Promise<EvolutionIns
     const data = await res.json().catch(() => null);
 
     if (res.ok) {
+      // Automatically configure webhook on n8n for connection update events
+      try {
+        await fetch(`${baseUrl}/webhook/set/${cleanInstanceName}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: apiKey,
+          },
+          body: JSON.stringify({
+            webhook: {
+              enabled: true,
+              url: 'https://n8n.blackcompany.site/webhook/evolution-connection-update',
+              byEvents: false,
+              base64: false,
+              events: ['CONNECTION_UPDATE'],
+            },
+          }),
+        }).catch(() => null);
+      } catch (_) {}
+
       return {
         success: true,
         instanceName: cleanInstanceName,
@@ -175,6 +195,26 @@ export async function createInstance(instanceName: string): Promise<EvolutionIns
       errorStr.includes('already in use');
 
     if (alreadyExists) {
+      // Ensure webhook is also configured on existing instance
+      try {
+        await fetch(`${baseUrl}/webhook/set/${cleanInstanceName}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: apiKey,
+          },
+          body: JSON.stringify({
+            webhook: {
+              enabled: true,
+              url: 'https://n8n.blackcompany.site/webhook/evolution-connection-update',
+              byEvents: false,
+              base64: false,
+              events: ['CONNECTION_UPDATE'],
+            },
+          }),
+        }).catch(() => null);
+      } catch (_) {}
+
       return {
         success: true,
         instanceName: cleanInstanceName,

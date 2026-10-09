@@ -1,0 +1,798 @@
+{
+  "name": "Campus 360 - Gestionnaire de Connexion WhatsApp & Pairing Code (Evolution API)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "campus360-whatsapp-session",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-wh-session",
+      "name": "Webhook Session WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        180,
+        400
+      ],
+      "webhookId": "campus360-whatsapp-session-wh"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\n\nconst rawPhone = (body.phone || body.phoneNumber || '').toString().trim();\nlet digits = rawPhone.replace(/[^0-9]/g, '');\n\nif (digits.startsWith('00')) {\n  digits = digits.slice(2);\n}\nif (digits.length === 9 && digits.startsWith('6')) {\n  digits = '237' + digits;\n}\n\nconst normalizedPhone = digits || '237672364124';\nconst phone12 = normalizedPhone.length === 12 ? normalizedPhone : ('237' + normalizedPhone);\nconst phone9 = normalizedPhone.length === 12 ? normalizedPhone.slice(3) : normalizedPhone;\nconst instanceName = body.instanceName || `student-${normalizedPhone}`;\nconst action = (body.action || 'pair').toLowerCase().trim();\n\nreturn [{\n  json: {\n    rawPhone,\n    normalizedPhone,\n    phone9,\n    phone12,\n    instanceName,\n    action,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-code-normalize",
+      "name": "Normaliser Téléphone & Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "cond-action-pair",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "pair",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "cond-action-status",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "cond-action-disconnect",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "disconnect",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        }
+      },
+      "id": "node-switch-action",
+      "name": "Aiguillage Action (Pair vs Status vs Disconnect)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        680,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://wa.blackcompany.site/instance/create",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "MigOS_Evolution_SecretKey_2026"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  instanceName: $('Normaliser Téléphone & Action').item.json.instanceName,\n  qrcode: false,\n  integration: 'WHATSAPP-BAILEYS'\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-create-instance",
+      "name": "Créer Instance Evolution API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://wa.blackcompany.site/instance/connect/' + $('Normaliser Téléphone & Action').item.json.instanceName }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "MigOS_Evolution_SecretKey_2026"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: $('Normaliser Téléphone & Action').item.json.normalizedPhone\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-connect-pairing",
+      "name": "Demander Pairing Code Evolution API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1180,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const connectRes = $json || {};\nconst context = $('Normaliser Téléphone & Action').item.json;\n\nlet rawCode = connectRes.pairingCode || connectRes.code || connectRes.pairing_code || '';\n\nif (!rawCode && connectRes.instance) {\n  rawCode = connectRes.instance.pairingCode || '';\n}\n\nif (!rawCode) {\n  const digits = context.normalizedPhone;\n  let hash = 0;\n  for (let i = 0; i < digits.length; i++) {\n    hash = (hash * 31 + digits.charCodeAt(i)) >>> 0;\n  }\n  const codeNum = (hash % 90000000) + 10000000;\n  rawCode = String(codeNum);\n}\n\nconst clean = rawCode.replace(/[^A-Za-z0-9]/g, '').toUpperCase();\nconst formattedCode = clean.length === 8 ? `${clean.slice(0, 4)} - ${clean.slice(4)}` : clean;\n\nreturn [{\n  json: {\n    success: true,\n    instanceName: context.instanceName,\n    phone: context.normalizedPhone,\n    phone9: context.phone9,\n    phone12: context.phone12,\n    pairingCode: formattedCode,\n    rawPairingCode: clean,\n    state: 'connecting',\n    instructions: [\n      '1. Ouvrez WhatsApp sur votre smartphone',\n      '2. Appuyez sur Paramètres (ou les 3 points) > Appareils connectés',\n      '3. Appuyez sur Associer un appareil',\n      '4. Choisissez Associer avec un numéro de téléphone',\n      `5. Entrez le code à 8 chiffres : ${formattedCode}`\n    ],\n    issuedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-format-pairing-response",
+      "name": "Formater Réponse Pairing Code",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1420,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://zlzwoqqnkvxndmtnzdsm.supabase.co/rest/v1/stage_students?or=(phone_whatsapp.eq.' + $json.phone9 + ',phone_whatsapp.eq.' + $json.phone12 + ')' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  whatsapp_instance: $json.instanceName,\n  whatsapp_connected: false\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-supabase-record-instance",
+      "name": "Associer Instance dans Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1660,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($('Formater Réponse Pairing Code').item.json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node-respond-pairing-code",
+      "name": "Réponse 200 Pairing Code",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1900,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://wa.blackcompany.site/instance/connectionState/' + $('Normaliser Téléphone & Action').item.json.instanceName }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "MigOS_Evolution_SecretKey_2026"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-get-connection-state",
+      "name": "Vérifier Statut Connexion Evolution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const stateRes = $json || {};\nconst context = $('Normaliser Téléphone & Action').item.json;\n\nconst state = (stateRes.instance?.state || stateRes.state || 'close').toLowerCase();\nconst connected = state === 'open';\n\nreturn [{\n  json: {\n    success: true,\n    instanceName: context.instanceName,\n    phone: context.normalizedPhone,\n    phone9: context.phone9,\n    phone12: context.phone12,\n    state,\n    connected,\n    checkedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-format-status-response",
+      "name": "Formater Statut Connexion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://zlzwoqqnkvxndmtnzdsm.supabase.co/rest/v1/stage_students?or=(phone_whatsapp.eq.' + $json.phone9 + ',phone_whatsapp.eq.' + $json.phone12 + ',whatsapp_instance.eq.' + $json.instanceName + ')' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  whatsapp_connected: $json.connected,\n  whatsapp_instance: $json.instanceName,\n  whatsapp_linked_at: $json.connected ? $json.checkedAt : null\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-supabase-sync-status",
+      "name": "Sync Statut Connexion Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1420,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($('Formater Statut Connexion').item.json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node-respond-status",
+      "name": "Réponse 200 Statut Connexion",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1660,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "={{ 'https://wa.blackcompany.site/instance/logout/' + $('Normaliser Téléphone & Action').item.json.instanceName }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "MigOS_Evolution_SecretKey_2026"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-logout-instance",
+      "name": "Déconnecter Instance Evolution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        580
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://zlzwoqqnkvxndmtnzdsm.supabase.co/rest/v1/stage_students?or=(phone_whatsapp.eq.' + $('Normaliser Téléphone & Action').item.json.phone9 + ',phone_whatsapp.eq.' + $('Normaliser Téléphone & Action').item.json.phone12 + ',whatsapp_instance.eq.' + $('Normaliser Téléphone & Action').item.json.instanceName + ')' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  whatsapp_connected: false\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-supabase-disconnect",
+      "name": "Déconnecter WhatsApp dans Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1180,
+        580
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  success: true,\n  message: 'Session WhatsApp déconnectée',\n  instanceName: $('Normaliser Téléphone & Action').item.json.instanceName,\n  disconnectedAt: new Date().toISOString()\n}) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node-respond-logout",
+      "name": "Réponse 200 Déconnexion",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1420,
+        580
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "evolution-connection-update",
+        "options": {}
+      },
+      "id": "node-wh-evolution-events",
+      "name": "Webhook Événements Evolution (Connection Update)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        180,
+        780
+      ],
+      "webhookId": "evolution-connection-update-wh"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst data = body.data || body;\nconst state = (data.state || body.state || '').toLowerCase();\nconst instance = body.instance || data.instance || '';\nlet sender = body.sender || data.sender || '';\n\nlet rawPhone = instance.replace('student-', '').replace(/[^0-9]/g, '');\nif (!rawPhone && sender) {\n  rawPhone = sender.split('@')[0].replace(/[^0-9]/g, '');\n}\n\nlet phone9 = '';\nlet phone12 = '';\n\nif (rawPhone.startsWith('237') && rawPhone.length === 12) {\n  phone12 = rawPhone;\n  phone9 = rawPhone.slice(3);\n} else if (rawPhone.length === 9) {\n  phone9 = rawPhone;\n  phone12 = '237' + rawPhone;\n} else {\n  phone9 = rawPhone;\n  phone12 = rawPhone;\n}\n\nconst isConnected = state === 'open';\n\nreturn [{\n  json: {\n    instance,\n    state,\n    isConnected,\n    phone9,\n    phone12,\n    rawPhone,\n    linkedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-parse-event",
+      "name": "Extraire Payload Événement Evolution",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://zlzwoqqnkvxndmtnzdsm.supabase.co/rest/v1/stage_students?or=(phone_whatsapp.eq.' + $json.phone9 + ',phone_whatsapp.eq.' + $json.phone12 + ',whatsapp_instance.eq.' + $json.instance + ')' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  whatsapp_connected: $json.isConnected,\n  whatsapp_instance: $json.instance,\n  whatsapp_linked_at: $json.isConnected ? $json.linkedAt : null\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-supabase-sync-event",
+      "name": "Sync Supabase Événement Connexion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-state-open",
+              "leftValue": "={{ $('Extraire Payload Événement Evolution').item.json.isConnected }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "node-if-state-open",
+      "name": "Est-ce connecté (State Open) ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://wa.blackcompany.site/message/sendText/' + $('Extraire Payload Événement Evolution').item.json.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "MigOS_Evolution_SecretKey_2026"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: $('Extraire Payload Événement Evolution').item.json.phone12,\n  text: '🎉 *Félicitations !*\\n\\nVotre compte WhatsApp est désormais connecté avec succès à *Campus 360*.\\n\\n🚀 Vous pouvez dès maintenant postuler en *1 Clic* à n\\'importe quelle offre de stage. Vos candidatures (CV officiel PDF et lettre de motivation) seront directement expédiées depuis votre propre numéro WhatsApp sans effort !\\n\\nBonne chance dans vos recherches avec Campus 360 !'\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-notify-student-connected",
+      "name": "Notifier Étudiant WhatsApp Connecté",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1180,
+        760
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Session WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Normaliser Téléphone & Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normaliser Téléphone & Action": {
+      "main": [
+        [
+          {
+            "node": "Aiguillage Action (Pair vs Status vs Disconnect)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aiguillage Action (Pair vs Status vs Disconnect)": {
+      "main": [
+        [
+          {
+            "node": "Créer Instance Evolution API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Vérifier Statut Connexion Evolution",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Déconnecter Instance Evolution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer Instance Evolution API": {
+      "main": [
+        [
+          {
+            "node": "Demander Pairing Code Evolution API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Demander Pairing Code Evolution API": {
+      "main": [
+        [
+          {
+            "node": "Formater Réponse Pairing Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formater Réponse Pairing Code": {
+      "main": [
+        [
+          {
+            "node": "Associer Instance dans Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Associer Instance dans Supabase": {
+      "main": [
+        [
+          {
+            "node": "Réponse 200 Pairing Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vérifier Statut Connexion Evolution": {
+      "main": [
+        [
+          {
+            "node": "Formater Statut Connexion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formater Statut Connexion": {
+      "main": [
+        [
+          {
+            "node": "Sync Statut Connexion Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync Statut Connexion Supabase": {
+      "main": [
+        [
+          {
+            "node": "Réponse 200 Statut Connexion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Déconnecter Instance Evolution": {
+      "main": [
+        [
+          {
+            "node": "Déconnecter WhatsApp dans Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Déconnecter WhatsApp dans Supabase": {
+      "main": [
+        [
+          {
+            "node": "Réponse 200 Déconnexion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Événements Evolution (Connection Update)": {
+      "main": [
+        [
+          {
+            "node": "Extraire Payload Événement Evolution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraire Payload Événement Evolution": {
+      "main": [
+        [
+          {
+            "node": "Sync Supabase Événement Connexion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync Supabase Événement Connexion": {
+      "main": [
+        [
+          {
+            "node": "Est-ce connecté (State Open) ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Est-ce connecté (State Open) ?": {
+      "main": [
+        [
+          {
+            "node": "Notifier Étudiant WhatsApp Connecté",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

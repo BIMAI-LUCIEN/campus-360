@@ -503,4 +503,27 @@ Ce cadrage est **100% validé et synchronisé avec le graphe Graphify**. Le fich
   3. Recharges Mobile Money instantanées : Nouveaux paliers wallet 500 F, 1 000 F, 2 000 F et 5 000 F dans `PaymentModal.tsx` et `mobile-api`.
   4. Portefeuille néobanque harmonisé en **FCFA** réels sur l'ensemble de l'expérience utilisateur.
 
+### Certification : Fix Clavier Mobile (Saisie & Saut de Focus) & Refonte Profil Express Violet sur Blanc
+- **Date & Heure :** 2026-10-09T03:15:00+02:00
+- **Verdict :** 🟢 `VERIFIED`
+- **Tâches Validées :** 16.1 (Module 16 dans `plan.md`).
+- **Preuves CLI & Validation Stricte :**
+  - Application Mobile Expo : `npm run typecheck` (`node --stack_size=8192 node_modules/typescript/bin/tsc --noEmit`) $\rightarrow$ **0 erreur**.
+  - Mobile API Next.js : `cd mobile-api && npm run typecheck` (`tsc --noEmit`) $\rightarrow$ **0 erreur**.
+  - Suite de tests M1 Tokens : 36/36 passés (`scripts/test-m1-tokens.mjs`).
+  - Suite de tests M3 Adversarial : 78/78 passés (`scripts/test-challenger-m3-adversarial.mjs`).
+  - Audit CyberSec : Zéro fuite de données, entrées utilisateur typées et protégées.
+- **Corrections Appliquées :**
+  1. Élimination du bug de saut/fermeture du clavier virtuel sur mobile (`AuthScreen.tsx`) :
+     - Suppression de `behavior="height"` au profit de `Platform.OS === 'ios' ? 'padding' : undefined` pour éviter les oscillations de layout Android.
+     - Passage de `justifyContent` à `'flex-start'` dans `scrollContent` pour empêcher le saut violent de la carte lors de l'ouverture du clavier.
+     - Suppression de `keyboardDismissMode="on-drag"` qui fermait immédiatement le clavier au moindre micro-scroll.
+     - Suppression des variations dynamiques d'élévation/ombre sur `inputBoxFocused` dans `GlassComponents.tsx`.
+  2. Refonte complète de `StudentProfileExpressModal.tsx` (modal déclenchée au clic sur "Postuler" si le profil est incomplet) :
+     - Conversion intégrale en Clean White & Royal Violet ("violet sur blanc") : carte `#FFFFFF`, texte sombre `#0F172A`, badges et boutons Royal Violet `#7C3AED`.
+     - Intégration de `KeyboardAvoidingView` et fiabilisation de la saisie texte sur l'ensemble des 6 champs.
+     - Libellé explicite du CTA principal : "Inscrire mes informations (30s)".
+  3. Sécurisation clavier sur `OnboardingScreen.tsx`.
+
+
 

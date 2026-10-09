@@ -279,4 +279,19 @@
     - Résoudre toute anomalie ou référence orpheline.
   - **DoD :** `npm run typecheck` passe avec 0 erreur sur le client et l'API.
 
+---
+
+## 🛠️ MODULE 16 : RÉPARATION DÉFINITIVE DE LA SAISIE CLAVIER MOBILE & REFONTE VIOLET SUR BLANC DU PROFIL EXPRESS
+
+### 1. Fix Clavier Mobile & Harmonisation Visuelle
+- [X] **Tâche 16.1 : Élimination du Bug de Saut de Clavier (Auth & Profil Express) et Refonte Violet sur Blanc**
+  - **Fichiers :** `src/ui/screens/AuthScreen.tsx`, `src/ui/GlassComponents.tsx`, `src/features/stages/StudentProfileExpressModal.tsx`, `src/ui/screens/OnboardingScreen.tsx`
+  - **Action :**
+    - Dans `AuthScreen.tsx` : Supprimer `behavior="height"` sur Android (`Platform.OS === 'ios' ? 'padding' : undefined`), remplacer `justifyContent: 'center'` par `justifyContent: 'flex-start'`, supprimer `keyboardDismissMode="on-drag"`, renommer le bouton d'inscription en "Inscrire mes informations".
+    - Dans `GlassComponents.tsx` : Supprimer les modifications dynamiques d'élévation/ombres dans `inputBoxFocused` qui provoquent l'invalidation native du focus Android.
+    - Dans `StudentProfileExpressModal.tsx` : Refonte complète en Clean White & Royal Violet (carte `#FFFFFF`, texte `#0F172A`, accents `#7C3AED`, bouton "Inscrire mes informations (30s)"), intégration `KeyboardAvoidingView` fluide sans saut de modale à l'apparition du clavier.
+    - Dans `OnboardingScreen.tsx` : Intégration `KeyboardAvoidingView` pour sécuriser l'onboarding.
+  - **DoD :** Saisie fluide sans fermeture intempestive du clavier virtuel sur mobile, `npm run typecheck` à 0 erreur, tests unitaires passés.
+
+
 
