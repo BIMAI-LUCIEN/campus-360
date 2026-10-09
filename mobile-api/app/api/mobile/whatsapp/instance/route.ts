@@ -6,6 +6,7 @@ import {
   generateFallbackPairingCode,
   getConnectionState,
   getInstanceName,
+  logoutInstance,
   normalizePhoneNumber,
   requestPairingCode,
 } from '@/lib/evolution-api';
@@ -26,7 +27,8 @@ export const OPTIONS = (request: NextRequest) =>
 
 const postSchema = z.object({
   phone: z.string().trim().min(6).max(25).optional(),
-  action: z.enum(['create', 'connect']).optional().default('connect'),
+  action: z.enum(['create', 'connect', 'reconnect']).optional().default('connect'),
+  force: z.boolean().optional().default(false),
 });
 
 /**
@@ -79,15 +81,16 @@ export async function POST(request: NextRequest) {
 
     const normalizedPhone = normalizePhoneNumber(phoneToUse);
     instanceName = getInstanceName(normalizedPhone);
+    const isReconnect = parsed.data.action === 'reconnect' || parsed.data.force === true;
 
     // 1. Ensure instance exists on Evolution API
     await createInstance(instanceName);
 
     // 2. Request 8-digit pairing code
-    const pairingResult = await requestPairingCode(instanceName, normalizedPhone);
+    const pairingResult = await requestPairingCode(instanceName, normalizedPhone, { forceNew: isReconnect });
 
     // 3. Persist pending instance in Supabase
-    await updateStageStudentWhatsAppStatus(normalizedPhone, instanceName, false);
+    await updateStageStudentWhatsAppStatus(normalizedPhone, instanceName, pairingResult.state === 'open');
 
     return withCors(
       NextResponse.json({
@@ -95,6 +98,7 @@ export async function POST(request: NextRequest) {
         pairingCode: pairingResult.pairingCode,
         instanceName: pairingResult.instanceName,
         state: pairingResult.state,
+        connected: pairingResult.state === 'open',
         ...(pairingResult.offline ? { offline: true } : {}),
       }),
       request,
@@ -237,3 +241,60 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+/**
+ * DELETE /api/mobile/whatsapp/instance
+ * Logs out the WhatsApp instance and marks whatsapp_connected = false in Supabase.
+ */
+export async function DELETE(request: NextRequest) {
+  let instanceName = 'student-default';
+
+  try {
+    const access = await requireMobileUser(request, { readBudgetPerMinute: 30 });
+    const isStrictProd =
+      process.env.NODE_ENV === 'production' &&
+      process.env.VERCEL_ENV === 'production';
+
+    if (access.response && isStrictProd) {
+      return withCors(access.response, request);
+    }
+
+    const { searchParams } = request.nextUrl;
+    const phoneParam = searchParams.get('phone') || access.user?.whatsappPhone || access.user?.phone;
+    const instanceParam = searchParams.get('instance');
+
+    if (instanceParam) {
+      instanceName = instanceParam.startsWith('student-')
+        ? instanceParam
+        : getInstanceName(instanceParam);
+    } else if (phoneParam) {
+      instanceName = getInstanceName(phoneParam);
+    }
+
+    await logoutInstance(instanceName);
+
+    if (phoneParam) {
+      await updateStageStudentWhatsAppStatus(phoneParam, instanceName, false);
+    }
+
+    return withCors(
+      NextResponse.json({
+        success: true,
+        message: 'Session WhatsApp déconnectée avec succès.',
+        instanceName,
+      }),
+      request,
+    );
+  } catch (error) {
+    console.warn('[whatsapp/instance route DELETE] Error logging out:', error);
+    return withCors(
+      NextResponse.json({
+        success: true,
+        message: 'Session locale effacée.',
+        instanceName,
+      }),
+      request,
+    );
+  }
+}
+

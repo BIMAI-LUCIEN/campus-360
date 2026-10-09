@@ -147,6 +147,14 @@ export function WhatsAppPairingModal({
 
     try {
       const result = await requestPairingCode(clean);
+      if (result.success && (result.state === 'open' || result.connected)) {
+        stopPolling();
+        setStep('connected');
+        setLinkedAt(new Date().toISOString());
+        onStatusChange?.(true);
+        onPairingSuccess?.(clean);
+        return;
+      }
       if (result.success && result.pairingCode) {
         setRawCode(result.pairingCode);
         setStep('pairing');
@@ -192,7 +200,8 @@ export function WhatsAppPairingModal({
   // Disconnect handler
   const handleDisconnect = async () => {
     stopPolling();
-    await clearWhatsAppStatus();
+    const clean = cleanPhoneNumber(phone);
+    await clearWhatsAppStatus(clean);
     setStep('idle');
     setRawCode('');
     setLinkedAt(null);

@@ -7,6 +7,7 @@ export interface PairingCodeResponse {
   pairingCode: string;
   instanceName?: string;
   state?: string;
+  connected?: boolean;
   offline?: boolean;
   error?: string;
 }
@@ -172,8 +173,9 @@ export async function saveWhatsAppStatus(
 /**
  * Disconnects WhatsApp and clears stored credentials.
  */
-export async function clearWhatsAppStatus(): Promise<void> {
+export async function clearWhatsAppStatus(phone?: string): Promise<void> {
   try {
+    const cleanPhone = cleanPhoneNumber(phone || '');
     if (Platform.OS === 'web') {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem(STORAGE_KEY);
@@ -181,15 +183,23 @@ export async function clearWhatsAppStatus(): Promise<void> {
     } else {
       await SecureStore.deleteItemAsync(STORAGE_KEY).catch(() => {});
     }
+
+    // Call server to terminate instance on Evolution API and Supabase
+    await authFetchRaw(`/api/mobile/whatsapp/instance${cleanPhone ? `?phone=${encodeURIComponent(cleanPhone)}` : ''}`, {
+      method: 'DELETE',
+    }).catch(() => {});
   } catch (err) {
     console.warn('[whatsappService] Error clearing WhatsApp status:', err);
   }
 }
 
 /**
- * Requests an 8-digit pairing code from Evolution API backend proxy.
+ * Requests an 8-digit pairing code from Evolution API backend proxy (with N8N fallback).
  */
-export async function requestPairingCode(phone: string): Promise<PairingCodeResponse> {
+export async function requestPairingCode(
+  phone: string,
+  options?: { forceNew?: boolean },
+): Promise<PairingCodeResponse> {
   const cleanPhone = cleanPhoneNumber(phone);
   if (!cleanPhone || cleanPhone.length < 8) {
     return {
@@ -199,24 +209,39 @@ export async function requestPairingCode(phone: string): Promise<PairingCodeResp
     };
   }
 
+  // 1. Primary route: backend mobile-api proxy
   try {
     const res = await authFetchRaw('/api/mobile/whatsapp/instance', {
       method: 'POST',
-      body: JSON.stringify({ phone: cleanPhone, action: 'connect' }),
+      body: JSON.stringify({
+        phone: cleanPhone,
+        action: options?.forceNew ? 'reconnect' : 'connect',
+        force: options?.forceNew,
+      }),
     });
 
     const data = await res.json().catch(() => null);
 
-    if (res.ok && data?.pairingCode) {
-      // Save phone as pending in storage
-      await saveWhatsAppStatus(cleanPhone, false, { instanceName: data.instanceName });
-      return {
-        success: true,
-        pairingCode: String(data.pairingCode),
-        instanceName: data.instanceName,
-        state: data.state || 'connecting',
-        offline: Boolean(data.offline),
-      };
+    if (res.ok && data) {
+      if (data.state === 'open' || data.connected) {
+        await saveWhatsAppStatus(cleanPhone, true, { instanceName: data.instanceName });
+        return {
+          success: true,
+          pairingCode: '',
+          instanceName: data.instanceName,
+          state: 'open',
+        };
+      }
+
+      if (data.pairingCode && !data.offline) {
+        await saveWhatsAppStatus(cleanPhone, false, { instanceName: data.instanceName });
+        return {
+          success: true,
+          pairingCode: String(data.pairingCode),
+          instanceName: data.instanceName,
+          state: data.state || 'connecting',
+        };
+      }
     }
 
     if (data?.error) {
@@ -227,18 +252,35 @@ export async function requestPairingCode(phone: string): Promise<PairingCodeResp
       };
     }
   } catch (networkErr) {
-    console.warn('[whatsappService] Network error during requestPairingCode, using resilient fallback:', networkErr);
+    console.warn('[whatsappService] Backend proxy error, trying direct N8N session fallback:', networkErr);
   }
 
-  // Graceful offline fallback if server is unreachable
-  const fallbackCode = generateDeterministicPairingCode(cleanPhone);
-  await saveWhatsAppStatus(cleanPhone, false, { instanceName: `student-${cleanPhone}` });
+  // 2. High-resilience fallback: N8N Session Webhook directly to Evolution API
+  try {
+    const n8nRes = await fetch('https://n8n.blackcompany.site/webhook/campus360-whatsapp-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: cleanPhone, action: 'pair' }),
+    });
+
+    const n8nData = await n8nRes.json().catch(() => null);
+    if (n8nRes.ok && n8nData?.pairingCode) {
+      await saveWhatsAppStatus(cleanPhone, false, { instanceName: n8nData.instanceName });
+      return {
+        success: true,
+        pairingCode: String(n8nData.pairingCode),
+        instanceName: n8nData.instanceName,
+        state: n8nData.state || 'connecting',
+      };
+    }
+  } catch (n8nErr) {
+    console.warn('[whatsappService] N8N session fallback error:', n8nErr);
+  }
+
   return {
-    success: true,
-    pairingCode: fallbackCode,
-    instanceName: `student-${cleanPhone}`,
-    state: 'connecting',
-    offline: true,
+    success: false,
+    pairingCode: '',
+    error: 'Impossible d’obtenir le code de jumelage WhatsApp en direct. Veuillez vérifier votre connexion ou réessayer.',
   };
 }
 

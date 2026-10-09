@@ -248,6 +248,7 @@ export async function createInstance(instanceName: string): Promise<EvolutionIns
 export async function requestPairingCode(
   instanceName: string,
   phoneNumber: string,
+  options?: { forceNew?: boolean },
 ): Promise<EvolutionPairingResult> {
   const { baseUrl, apiKey, isConfigured } = getEvolutionConfig();
   const normalizedPhone = normalizePhoneNumber(phoneNumber);
@@ -261,6 +262,11 @@ export async function requestPairingCode(
       state: 'connecting',
       offline: true,
     };
+  }
+
+  // If forceNew requested, logout stale session first
+  if (options?.forceNew) {
+    await logoutInstance(cleanInstanceName).catch(() => false);
   }
 
   try {
@@ -294,16 +300,18 @@ export async function requestPairingCode(
       data = await res.json().catch(() => null);
     }
 
+    const rawState = (data?.state || data?.instance?.state || '').toLowerCase();
+    if (rawState) {
+      state = rawState;
+    }
+
     if (res.ok && data) {
       pairingCode =
         data.pairingCode ||
         data.code ||
         data.pairing_code ||
+        data.instance?.pairingCode ||
         (typeof data === 'string' ? data : null);
-
-      if (data.state) {
-        state = data.state;
-      }
     }
 
     if (pairingCode) {
@@ -315,13 +323,38 @@ export async function requestPairingCode(
       };
     }
 
-    if (data?.state === 'open') {
+    if (rawState === 'open') {
       return {
         success: true,
         pairingCode: '',
         instanceName: cleanInstanceName,
         state: 'open',
       };
+    }
+
+    // If pairing code was null on first attempt, retry once after logout
+    if (!options?.forceNew) {
+      await logoutInstance(cleanInstanceName).catch(() => false);
+      const retryRes = await fetch(getUrl, {
+        method: 'GET',
+        headers: { apikey: apiKey },
+        signal: AbortSignal.timeout(12000),
+      });
+      const retryData = await retryRes.json().catch(() => null);
+      const retryCode =
+        retryData?.pairingCode ||
+        retryData?.code ||
+        retryData?.pairing_code ||
+        retryData?.instance?.pairingCode;
+
+      if (retryCode) {
+        return {
+          success: true,
+          pairingCode: formatPairingCode(retryCode),
+          instanceName: cleanInstanceName,
+          state: retryData?.state || 'connecting',
+        };
+      }
     }
 
     console.warn('[evolution-api] Could not extract pairingCode from response, falling back:', data);
