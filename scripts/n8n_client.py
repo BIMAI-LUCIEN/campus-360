@@ -14,10 +14,7 @@ if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
 N8N_BASE_URL = os.environ.get("N8N_INSTANCE_URL", "https://n8n.blackcompany.site/api/v1")
-N8N_API_KEY = os.environ.get(
-    "N8N_API_KEY",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzN2Q3MTA2ZC1kYzMzLTRlZDEtYTA2OC1lYTliMWVmOTZkNWYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiMDkzNzI0MGMtZTkwNi00Yzk1LWFhZDItYTYxNTVmYzc5NzU1IiwiaWF0IjoxNzkwNjkxMTI5LCJleHAiOjE3OTMyNDY0MDB9.nGJcc0Cot7RpFlmTFQYb3I6zprXFb1K-PxfHIh3ZdC8"
-)
+N8N_API_KEY = os.environ.get("N8N_API_KEY", "")
 
 def make_request(method, endpoint, data=None):
     url = f"{N8N_BASE_URL.rstrip('/')}/{endpoint.lstrip('/')}"

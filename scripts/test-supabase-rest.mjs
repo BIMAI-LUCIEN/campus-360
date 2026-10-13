@@ -1,5 +1,5 @@
-const SUPABASE_URL = 'https://zlzwoqqnkvxndmtnzdsm.supabase.co';
-const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zlzwoqqnkvxndmtnzdsm.supabase.co';
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 async function testOrQuery() {
   const phone9 = '690273500';

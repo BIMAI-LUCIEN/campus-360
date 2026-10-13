@@ -1,5 +1,5 @@
-const API_URL = 'https://wa.blackcompany.site';
-const API_KEY = 'MigOS_Evolution_SecretKey_2026';
+const API_URL = process.env.EVOLUTION_API_URL || 'https://wa.blackcompany.site';
+const API_KEY = process.env.EVOLUTION_API_KEY || '';
 const PHONE = '237690273500';
 const INSTANCE = 'student-237690273500';
 

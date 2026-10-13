@@ -120,7 +120,7 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "MigOS_Evolution_SecretKey_2026"
+              "value": "={{ $env.EVOLUTION_API_KEY }}"
             },
             {
               "name": "Content-Type",
@@ -157,7 +157,7 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "MigOS_Evolution_SecretKey_2026"
+              "value": "={{ $env.EVOLUTION_API_KEY }}"
             },
             {
               "name": "Content-Type",
@@ -207,11 +207,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
             },
             {
               "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
             },
             {
               "name": "Content-Type",
@@ -269,7 +269,7 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "MigOS_Evolution_SecretKey_2026"
+              "value": "={{ $env.EVOLUTION_API_KEY }}"
             }
           ]
         },
@@ -312,11 +312,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
             },
             {
               "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
             },
             {
               "name": "Content-Type",
@@ -374,7 +374,7 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "MigOS_Evolution_SecretKey_2026"
+              "value": "={{ $env.EVOLUTION_API_KEY }}"
             }
           ]
         },
@@ -404,11 +404,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
             },
             {
               "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
             },
             {
               "name": "Content-Type",
@@ -475,7 +475,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $json.body || $json;\nconst data = body.data || body;\nconst state = (data.state || body.state || '').toLowerCase();\nconst instance = body.instance || data.instance || '';\nlet sender = body.sender || data.sender || '';\n\nlet rawPhone = instance.replace('student-', '').replace(/[^0-9]/g, '');\nif (!rawPhone && sender) {\n  rawPhone = sender.split('@')[0].replace(/[^0-9]/g, '');\n}\n\nlet phone9 = '';\nlet phone12 = '';\n\nif (rawPhone.startsWith('237') && rawPhone.length === 12) {\n  phone12 = rawPhone;\n  phone9 = rawPhone.slice(3);\n} else if (rawPhone.length === 9) {\n  phone9 = rawPhone;\n  phone12 = '237' + rawPhone;\n} else {\n  phone9 = rawPhone;\n  phone12 = rawPhone;\n}\n\nconst isConnected = state === 'open';\n\nreturn [{\n  json: {\n    instance,\n    state,\n    isConnected,\n    phone9,\n    phone12,\n    rawPhone,\n    linkedAt: new Date().toISOString()\n  }\n}];"
+        "jsCode": "const body = $json.body || $json;\nconst data = body.data || body;\nconst state = (data.state || body.state || '').toLowerCase();\nconst instance = (body.instance || data.instance || '').trim();\n\n// RÈGLE STRICTE ANTI-SPAM : Ne traiter QUE les instances étudiantes réelles de Campus 360\nif (!instance || !instance.startsWith('student-')) {\n  return [];\n}\n\nconst rawPhone = instance.replace('student-', '').replace(/[^0-9]/g, '');\nif (!rawPhone || rawPhone.length < 8) {\n  return [];\n}\n\nlet phone9 = '';\nlet phone12 = '';\n\nif (rawPhone.startsWith('237') && rawPhone.length === 12) {\n  phone12 = rawPhone;\n  phone9 = rawPhone.slice(3);\n} else if (rawPhone.length === 9) {\n  phone9 = rawPhone;\n  phone12 = '237' + rawPhone;\n} else {\n  phone9 = rawPhone;\n  phone12 = rawPhone;\n}\n\nconst isConnected = state === 'open';\n\nreturn [{\n  json: {\n    instance,\n    state,\n    isConnected,\n    phone9,\n    phone12,\n    rawPhone,\n    linkedAt: new Date().toISOString()\n  }\n}];"
       },
       "id": "node-parse-event",
       "name": "Extraire Payload Événement Evolution",
@@ -495,11 +495,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
             },
             {
               "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ"
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
             },
             {
               "name": "Content-Type",
@@ -529,74 +529,6 @@
       "position": [
         660,
         780
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": false,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "cond-state-open",
-              "leftValue": "={{ $('Extraire Payload Événement Evolution').item.json.isConnected }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true"
-              }
-            }
-          ],
-          "combinator": "and"
-        }
-      },
-      "id": "node-if-state-open",
-      "name": "Est-ce connecté (State Open) ?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        900,
-        780
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ 'https://wa.blackcompany.site/message/sendText/' + $('Extraire Payload Événement Evolution').item.json.instance }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "MigOS_Evolution_SecretKey_2026"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  number: $('Extraire Payload Événement Evolution').item.json.phone12,\n  text: '🎉 *Félicitations !*\\n\\nVotre compte WhatsApp est désormais connecté avec succès à *Campus 360*.\\n\\n🚀 Vous pouvez dès maintenant postuler en *1 Clic* à n\\'importe quelle offre de stage. Vos candidatures (CV officiel PDF et lettre de motivation) seront directement expédiées depuis votre propre numéro WhatsApp sans effort !\\n\\nBonne chance dans vos recherches avec Campus 360 !'\n}) }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "node-notify-student-connected",
-      "name": "Notifier Étudiant WhatsApp Connecté",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1180,
-        760
       ]
     }
   ],
@@ -770,26 +702,7 @@
       ]
     },
     "Sync Supabase Événement Connexion": {
-      "main": [
-        [
-          {
-            "node": "Est-ce connecté (State Open) ?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Est-ce connecté (State Open) ?": {
-      "main": [
-        [
-          {
-            "node": "Notifier Étudiant WhatsApp Connecté",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": []
     }
   },
   "settings": {

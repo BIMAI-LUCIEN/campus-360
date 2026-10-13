@@ -1,6 +1,6 @@
-const N8N_URL = 'https://n8n.blackcompany.site';
-const SUPABASE_URL = 'https://zlzwoqqnkvxndmtnzdsm.supabase.co';
-const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsendvcXFua3Z4bmRtdG56ZHNtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTczMzQ4NiwiZXhwIjoyMDk3MzA5NDg2fQ.M_C0q0S-GwVXIAaVsvV2-LpJ1K6T29QkEL49zKreSrQ';
+const N8N_URL = process.env.N8N_URL || 'https://n8n.blackcompany.site';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zlzwoqqnkvxndmtnzdsm.supabase.co';
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 async function checkStudentInSupabase(phone) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/stage_students?phone_whatsapp=eq.${phone}&select=id,full_name,phone_whatsapp,whatsapp_connected,whatsapp_instance,whatsapp_linked_at`, {

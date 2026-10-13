@@ -8,7 +8,7 @@ const { Pool } = pg;
 
 async function main() {
   const pool = new Pool({
-    connectionString: 'postgresql://postgres.bplvhhckcstfhyqjpsnm:LucienLucien1234567890@aws-0-eu-central-1.pooler.supabase.com:6543/postgres'
+    connectionString: process.env.DATABASE_URL
   });
 
   const docId = '031a54ff-3a2a-4091-b3de-2270ade00cef';

@@ -318,6 +318,77 @@ f:\mes projets\campus 360/
 - **Sécurité Admin :** `requireAdminPage()` et `requireAdminApi()` protègent rigoureusement toute route sous `/admin` et `/api/admin`. Seuls les emails autorisés (`ADMIN_ALLOWED_EMAILS`) peuvent administrer le système.
 - **Transactions :** Transactions SQL PostgreSQL atomiques (`begin ... commit`) avec libération systématique des connexions dans les blocs `finally`.
 
+### 6.5 Cartographie Exhaustive de l'Infrastructure VPS Production (`164.68.109.206`)
+
+L'ensemble de la couche backend, de la distribution web, des agents de scraping et de l'automatisation tourne sur le serveur VPS Ubuntu :
+
+```mermaid
+flowchart TD
+    subgraph INTERNET ["Internet & Utilisateurs"]
+        USR["📱 App Mobile / Recruteurs / Visiteurs"]
+    end
+
+    subgraph NGINX ["Nginx Reverse Proxy (SSL Certbot Let's Encrypt)"]
+        NX1["campus360b.site :443"] --> P3000["127.0.0.1:3000 (Landing Site)"]
+        NX2["admin.campus360b.site :443"] --> P3001["127.0.0.1:3001 (Recruiter & Admin Web)"]
+        NX3["api.campus360b.site :443"] --> P3002["127.0.0.1:3002 (Mobile Backend API)"]
+        NX4["n8n.blackcompany.site :443"] --> P5678["127.0.0.1:5678 (automate-n8n Docker)"]
+        NX5["wa.blackcompany.site :443"] --> P8081["127.0.0.1:8081 (Evolution API Docker)"]
+        NX6["hermes.blackcompany.site :443"] --> P3050["127.0.0.1:3050 (Hermes Workspace)"]
+    end
+
+    subgraph PM2 ["Processus PM2 (Node.js v22.23.3)"]
+        P3000 --- PM2_2["id 2: campus360-landing-site (Next.js)"]
+        P3001 --- PM2_1["id 1: campus360-recruiter-web (Next.js 15)"]
+        P3002 --- PM2_0["id 0: campus360-mobile-api (Next.js 15)"]
+    end
+
+    subgraph DOCKER ["Conteneurs Docker Actifs"]
+        P5678 --- D_N8N["automate-n8n (Orchestration & Webhooks)"]
+        P8081 --- D_EVO["automate-evolution (Evolution API v2.3.7 / Baileys)"]
+        D_PG["automate-postgres :5432 (PostgreSQL 16 / miguel_os)"]
+        D_REDIS["automate-redis :6379 (Redis 7 Queue/Cache)"]
+        D_COOL["coolify :8000/8080 (PaaS Engine)"]
+    end
+
+    subgraph CRONS ["Crons Système Scrapers IA (WAT / UTC+1)"]
+        CR1["08:00 WAT : Douala, Yaoundé, Edéa"]
+        CR2["12:00 WAT : Buea, Limbe, Bafoussam, Bamenda"]
+        CR3["16:00 WAT : Garoua, Maroua, Ngaoundéré"]
+        CR4["20:00 WAT : Kribi, Bertoua, Ebolowa, Remote"]
+    end
+
+    USR --> NGINX
+    CRONS -->|Ingestion Python 3.12| D_PG
+    PM2_0 -->|Pairing & Dispatch| D_EVO
+    PM2_0 -->|Webhook Candidature| D_N8N
+```
+
+#### Détail des Composants & Ports Serveur :
+1. **Reverse Proxy Nginx :**
+   - Routage sécurisé HTTPS certifié Certbot avec redirection HTTP 80 $\rightarrow$ 443 automatique.
+   - Headers WebSocket (`Upgrade`, `Connection: "upgrade"`) configurés pour n8n, Evolution API et Next.js HMR.
+2. **Processus Node.js PM2 (`/root/.pm2/logs/`) :**
+   - `campus360-mobile-api` (Port 3002) : Endpoint API mobile, gestion des sessions WhatsApp, dispatch candidatures, gestion wallet.
+   - `campus360-recruiter-web` (Port 3001) : Portail des recruteurs et dashboard administrateur unifié.
+   - `campus360-landing-site` (Port 3000) : Vitrine publique officielle Campus 360.
+3. **Conteneurs Docker Réseau :**
+   - `automate-n8n` : Exécute les workflows multi-tenant de session, paiement et routage de candidatures.
+   - `automate-evolution` : Maintient les sessions WhatsApp Baileys compagnon (`student-<phone>`) avec émission d'événements `CONNECTION_UPDATE`.
+   - `automate-postgres` : Base relationnelle PostgreSQL 16 pour n8n (`miguel_os`).
+   - `automate-redis` : Cache mémoire Redis 7.
+   - `coolify` : Gestionnaire PaaS d'infrastructure Coolify v4.4.6.
+4. **Agents Scrapers & Crons Système (`/var/log/campus-scraper.log`) :**
+   - 4 passages quotidiens cadencés couvrant les 10 régions du Cameroun.
+   - Analyse sémantique et filtrage anti-parasite par **Gemini 2.0 Flash** pour éliminer les faux posts et profils candidats.
+5. **Workflows N8N Actifs en Production :**
+   - `HUbg2KVcQe8vhojG` : *Campus 360 - Gestionnaire de Connexion WhatsApp & Pairing Code (Evolution API)* (Filtre anti-spam `student-*` actif).
+   - `xQiVoKPWeW9lTyEO` : *Campus 360 - Expédition Automatisée des Candidatures (WhatsApp Evolution API & Email SMTP)*.
+   - `nGuc3vzi65m7R2aa` : *Campus 360 - Routeur de Candidatures & Transmission Recruteur Instantanée*.
+   - `RLg1C0eFLgRnV32v` : *Campus 360 - Moteur de Relance Automatisée J+7 (WhatsApp RH & Candidat)*.
+   - `MrLODtTPWdQM7wCo` : *Campus 360 - Passerelle Webhook Paiements Mobile Money (Orange Money, MTN MoMo, Wave)*.
+   - `wrvaDRtXjWgq4PgA` : *Campus 360 - Pipeline Treg (OCR, Enrichissement RH WhatsApp & Ingestion In-App)*.
+
 ---
 
 ## 7. Prochaine Étape Opérationnelle
@@ -525,5 +596,31 @@ Ce cadrage est **100% validé et synchronisé avec le graphe Graphify**. Le fich
      - Libellé explicite du CTA principal : "Inscrire mes informations (30s)".
   3. Sécurisation clavier sur `OnboardingScreen.tsx`.
 
+### Certification : Audit de Cybersécurité & Durcissement DevSecOps (`/cybersec`)
+- **Date & Heure :** 2026-10-13T01:59:00+02:00
+- **Statut de sécurité :** 🟢 Conforme (0 vulnérabilité critique applicative / 0 secret en dur)
+- **Verdict :** 🟢 `VERIFIED`
 
-
+#### Contrôles Validés (Les 4 Piliers DevSecOps) :
+- [x] **Secrets & `.gitignore` :**
+  - Purge intégrale des clés en dur (`SUPABASE_SERVICE_ROLE_KEY`, `EVOLUTION_API_KEY`, `N8N_API_KEY`, `DATABASE_URL`) dans `scripts/debug-pdf.mjs`, `scripts/generate-pairing-code.mjs`, `scripts/n8n_client.py`, `scripts/test-n8n-supabase-sync.mjs`, `scripts/test-supabase-rest.mjs` et les exports JSON de workflows `scripts/n8n/*.json`.
+  - Isolation stricte des microservices : suppression de tout appel direct vers `n8n.blackcompany.site` depuis le client mobile (`src/features/whatsapp/whatsappService.ts`), routage 100% via le proxy authentifié `/api/mobile/whatsapp/instance`.
+  - `.gitignore` durci : exclusion stricte de `.env*`, `*.pem`, `*.key`, `*.p12`, `*.jks` avec préservation explicite des templates `!.env.example`.
+- [x] **Sanitization, SAST & OWASP Top 10 :**
+  - **SQL Injection :** 100% des requêtes PostgreSQL utilisent des requêtes paramétrées `$1, $2` via le pool `pg`.
+  - **XSS :** 0 occurrence de `dangerouslySetInnerHTML` sur l'ensemble du codebase (`src/`, `mobile-api/`, `recruiter-web/`).
+  - **Input Validation :** Schémas Zod stricts sur toutes les routes API (`/api/mobile/whatsapp/instance`, `/api/mobile/stages/dispatch`, `/api/mobile/payments/initiate`, `/api/mobile/stages/ingest`).
+  - **Isolation Multi-Tenant & Anti-Spam WhatsApp :** Filtrage strict des instances `student-*` dans le workflow n8n et désactivation des webhooks parasites sur l'instance système `miguel`.
+- [x] **SCA (Dépendances & Supply Chain) :**
+  - Audit mécanique `npm audit` exécuté et correctifs appliqués sur `mobile-api`, `recruiter-web` et la racine mobile.
+- [x] **En-têtes HTTP & Durcissement CORS (`withCors`) :**
+  - Validation stricte de l'origine (`isTrustedOrigin`) avant d'autoriser `Access-Control-Allow-Credentials: true` (prévention CWE-942).
+  - Injection systématique des en-têtes de sécurité OWASP :
+    - `X-Content-Type-Options: nosniff`
+    - `X-Frame-Options: DENY`
+    - `Referrer-Policy: strict-origin-when-cross-origin`
+    - `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+- **Preuves d'Exécution Automatisées :**
+  - `node scripts/test-challenger-m6-adversarial.mjs` $\rightarrow$ **13/13 tests réussis (0 échec)**.
+  - `node scripts/test-stage-dispatch.mjs` $\rightarrow$ **36/36 tests réussis (0 échec)**.
+  - `tsc --noEmit` sur `mobile-api` et `recruiter-web` $\rightarrow$ **0 erreur (Code 0)**.

@@ -252,29 +252,7 @@ export async function requestPairingCode(
       };
     }
   } catch (networkErr) {
-    console.warn('[whatsappService] Backend proxy error, trying direct N8N session fallback:', networkErr);
-  }
-
-  // 2. High-resilience fallback: N8N Session Webhook directly to Evolution API
-  try {
-    const n8nRes = await fetch('https://n8n.blackcompany.site/webhook/campus360-whatsapp-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: cleanPhone, action: 'pair' }),
-    });
-
-    const n8nData = await n8nRes.json().catch(() => null);
-    if (n8nRes.ok && n8nData?.pairingCode) {
-      await saveWhatsAppStatus(cleanPhone, false, { instanceName: n8nData.instanceName });
-      return {
-        success: true,
-        pairingCode: String(n8nData.pairingCode),
-        instanceName: n8nData.instanceName,
-        state: n8nData.state || 'connecting',
-      };
-    }
-  } catch (n8nErr) {
-    console.warn('[whatsappService] N8N session fallback error:', n8nErr);
+    console.warn('[whatsappService] Backend proxy error:', networkErr);
   }
 
   return {

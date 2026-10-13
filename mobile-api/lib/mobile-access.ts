@@ -331,22 +331,52 @@ export class MobileApiError extends Error {
   }
 }
 
+const isTrustedOrigin = (origin: string): boolean => {
+  try {
+    const extraAllowed = (process.env.CORS_ALLOWED_ORIGINS ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (extraAllowed.includes(origin)) return true;
+
+    const url = new URL(origin);
+    const host = url.hostname.toLowerCase();
+    return (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === 'campus360b.site' ||
+      host.endsWith('.campus360b.site') ||
+      host.endsWith('.vercel.app') ||
+      host.endsWith('.expo.dev')
+    );
+  } catch {
+    return false;
+  }
+};
+
 export const withCors = (
   response: NextResponse,
   request?: NextRequest | Request | null,
 ): NextResponse => {
   const origin = request?.headers?.get('origin');
-  if (origin) {
+  if (origin && isTrustedOrigin(origin)) {
     response.headers.set('Access-Control-Allow-Origin', origin);
     response.headers.set('Access-Control-Allow-Credentials', 'true');
-  } else {
+    response.headers.set('Vary', 'Origin');
+  } else if (!origin) {
+    // Native mobile clients (React Native / Expo) do not send an Origin header
     response.headers.set('Access-Control-Allow-Origin', '*');
   }
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   response.headers.set(
     'Access-Control-Allow-Headers',
-    'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
+    'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With, X-N8N-API-KEY',
   );
+  // DevSecOps Hardening Headers (OWASP)
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   return response;
 };
 

@@ -78,6 +78,9 @@ graphify-out/
 
 .vercel
 .env*
+!.env.example
+!mobile-api/.env.example
+!recruiter-web/.env.example
 scratch/
 __pycache__/
 *.pyc
