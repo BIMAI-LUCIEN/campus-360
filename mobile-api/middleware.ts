@@ -23,8 +23,17 @@ const ALLOWED_ORIGINS = [
 const LAN_ORIGIN_PATTERN =
   /^http:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}):\d+$/;
 
-const isAllowedOrigin = (_origin: string) => {
-  return true;
+const extraOrigins = (process.env.TRUSTED_EXTRA_ORIGINS || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+const isAllowedOrigin = (origin: string) => {
+  if (origin.startsWith('exp://') || origin.startsWith('campus-bordes://')) return true;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  if (extraOrigins.includes(origin)) return true;
+  if (LAN_ORIGIN_PATTERN.test(origin) && process.env.NODE_ENV !== 'production') return true;
+  return false;
 };
 
 export function middleware(request: NextRequest) {

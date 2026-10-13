@@ -43,9 +43,10 @@ export async function POST(request: NextRequest) {
       request.headers.get('X-N8N-API-KEY') ||
       request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
 
-    const expectedKey = process.env.N8N_INGESTION_SECRET || 'campus360_n8n_secret_prod_key';
+    // Fail closed: no hardcoded fallback secret.
+    const expectedKey = process.env.N8N_INGESTION_SECRET?.trim();
 
-    if (!apiKey || apiKey !== expectedKey) {
+    if (!expectedKey || !apiKey || apiKey !== expectedKey) {
       return withCors(
         NextResponse.json(
           {

@@ -12,8 +12,12 @@ const ALLOWED_ORIGIN_PREFIXES = [
 const LAN_ORIGIN_PATTERN =
   /^http:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}):\d+$/;
 
-const isAllowedOrigin = (_origin: string) => {
-  return true;
+const isAllowedOrigin = (origin: string) => {
+  if (origin.startsWith('exp://') || origin.startsWith('campus-bordes://')) return true;
+  if (ALLOWED_ORIGIN_PREFIXES.some((prefix) => origin.startsWith(prefix))) return true;
+  if (origin === 'https://admin.campus360b.site' || origin === 'https://api.campus360b.site') return true;
+  if (LAN_ORIGIN_PATTERN.test(origin) && process.env.NODE_ENV !== 'production') return true;
+  return false;
 };
 
 // ─────────────────────────────────────────────────────────────────────────

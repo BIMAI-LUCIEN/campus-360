@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'node:crypto';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -20,6 +22,12 @@ import {
 } from '@/lib/stages-db';
 
 export const runtime = 'nodejs';
+
+const safeEqual = (a: string, b: string) => {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  return left.length === right.length && timingSafeEqual(left, right);
+};
 
 export const OPTIONS = (request: NextRequest) =>
   withCors(new NextResponse(null, { status: 204 }), request);
@@ -65,15 +73,8 @@ const patchSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const access = await requireMobileUser(request, { readBudgetPerMinute: 30 });
-    const isStrictProd =
-      process.env.NODE_ENV === 'production' &&
-      process.env.VERCEL_ENV === 'production';
-
-    // In strict production, an active session is required.
-    // In dev / test / local environments, allow requests with dev fallback for testing.
-    if (access.response && isStrictProd) {
-      return withCors(access.response, request);
-    }
+    if (access.response || !access.user) return withCors(access.response!, request);
+    const user = access.user;
 
     const rawBody = await request.json().catch(() => ({}));
     const parsed = dispatchSchema.safeParse(rawBody);
@@ -92,20 +93,6 @@ export async function POST(request: NextRequest) {
 
     const input = parsed.data;
 
-    // Resilient student resolution: authenticated user or dev fallback
-    const user = access.user ?? {
-      id: 'student-offline',
-      betterAuthUserId: 'auth-student-offline',
-      email: input.studentEmail || 'dave.kameni@polytechnique.cm',
-      name: input.studentName || 'Dave Lionel Kameni',
-      role: 'student',
-      phone: input.studentPhone || input.phoneNumber || '237672364124',
-      whatsappPhone: input.studentPhone || input.phoneNumber || '237672364124',
-      university: 'Polytechnique Yaoundé',
-      faculty: 'Génie Logiciel',
-      level: 'Master 1',
-    };
-
     const studentId = await ensureStageStudent(user);
     const studentName = input.studentName || user.name || 'Étudiant Campus 360';
     const studentEmail = input.studentEmail || user.email || 'etudiant@campus360.cm';
@@ -114,8 +101,14 @@ export async function POST(request: NextRequest) {
       input.phoneNumber ||
       user.whatsappPhone ||
       user.phone ||
-      '237672364124';
-    const studentPhone = normalizePhoneNumber(rawStudentPhone) || '237672364124';
+      '';
+    const studentPhone = normalizePhoneNumber(rawStudentPhone);
+    if (input.channel === 'whatsapp' && !studentPhone) {
+      return withCors(
+        NextResponse.json({ error: 'Numéro WhatsApp requis pour cet envoi.' }, { status: 400 }),
+        request,
+      );
+    }
     const instanceName = getInstanceName(studentPhone);
 
     // Resolve job and recruiter details
@@ -241,6 +234,16 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
+    // Server-to-server callback only: require the shared n8n secret (fail closed if unset).
+    const expectedKey = process.env.N8N_INGESTION_SECRET?.trim();
+    const providedKey =
+      request.headers.get('x-n8n-api-key')?.trim() ||
+      request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim() ||
+      '';
+    if (!expectedKey || !safeEqual(providedKey, expectedKey)) {
+      return withCors(NextResponse.json({ error: 'Non autorisé.' }, { status: 401 }), request);
+    }
+
     const body = await request.json().catch(() => ({}));
     const parsed = patchSchema.safeParse(body);
     if (!parsed.success) {

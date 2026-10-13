@@ -24,22 +24,9 @@ const initiateSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const access = await requireMobileUser(request).catch(() => ({
-      user: {
-        id: 'guest-student-001',
-        name: 'Étudiant Campus 360',
-        email: 'etudiant@campus360.app',
-        role: 'STUDENT',
-      },
-      response: null,
-    }));
-
-    const user = access?.user ?? {
-      id: 'guest-student-001',
-      name: 'Étudiant Campus 360',
-      email: 'etudiant@campus360.app',
-      role: 'STUDENT',
-    };
+    const access = await requireMobileUser(request);
+    if (access.response || !access.user) return withCors(access.response!, request);
+    const user = access.user;
 
     const rawBody = await request.json().catch(() => ({}));
     const validated = initiateSchema.parse(rawBody);

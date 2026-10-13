@@ -150,21 +150,9 @@ export const ensureMobileUser = async (authUser: AuthSessionUser): Promise<Mobil
       client.release();
     }
   } catch (err) {
-    console.warn('[mobile-access] Database query failed in ensureMobileUser, falling back to session user:', err);
-    return {
-      id: authUser.id || 'student-offline',
-      betterAuthUserId: authUser.id || 'student-offline',
-      email: authUser.email || 'dave.kameni@polytechnique.cm',
-      name: authUser.name || 'Dave Lionel Kameni',
-      role: 'student',
-      phone: (authUser as any).phone || '+237 672 36 41 24',
-      whatsappPhone: (authUser as any).whatsappPhone || '+237 672 36 41 24',
-      university: (authUser as any).university || 'École Nationale Supérieure Polytechnique de Yaoundé',
-      faculty: (authUser as any).faculty || 'Informatique & Génie Logiciel',
-      level: (authUser as any).level || 'Master 1',
-      subscription_tier: 'pro',
-      subscription_expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
-    };
+    // Never fabricate an identity or a paid tier when the DB is unavailable.
+    console.error('[mobile-access] Database query failed in ensureMobileUser:', err);
+    throw new MobileApiError('Service temporairement indisponible.', 503);
   }
 };
 
@@ -263,25 +251,6 @@ export const requireMobileUser = async (
       } catch (err) {
         console.warn('[mobile-access] Direct DB session fallback check error:', err);
       }
-    }
-  }
-
-  if (!session?.user) {
-    const authHeader = headers.get('authorization') || headers.get('Authorization');
-    if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
-      session = {
-        user: {
-          id: 'student-offline',
-          email: 'dave.kameni@polytechnique.cm',
-          name: 'Dave Lionel Kameni',
-          role: 'student',
-        },
-        session: {
-          id: 'sess-resilient',
-          userId: 'student-offline',
-          expiresAt: new Date(Date.now() + 30 * 86400000),
-        },
-      } as any;
     }
   }
 

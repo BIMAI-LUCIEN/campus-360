@@ -36,16 +36,9 @@ export async function POST(request: NextRequest) {
     if (contentLength > MAX_BODY_BYTES) {
       return withCors(NextResponse.json({ error: 'Requete trop volumineuse.' }, { status: 413 }), request);
     }
-    const access = await requireMobileUser(request).catch(() => ({
-      user: { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null },
-      response: null,
-    }));
-    const user = access?.user ?? { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null };
-
-    if (user.id === 'guest-student') {
-      const { packId } = bodySchema.parse(await request.json().catch(() => ({})));
-      return withCors(NextResponse.json({ id: 'mock-pack', pack_id: packId, buyer_id: 'guest-student' }), request);
-    }
+    const access = await requireMobileUser(request);
+    if (access.response || !access.user) return withCors(access.response!, request);
+    const user = access.user;
 
     try {
       await enforceRateLimit(request, {

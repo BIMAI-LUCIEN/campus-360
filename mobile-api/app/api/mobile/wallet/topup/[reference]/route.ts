@@ -34,15 +34,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       throw new MobileApiError('Reference invalide.', 400);
     }
 
-    const access = await requireMobileUser(request).catch(() => ({
-      user: { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null },
-      response: null,
-    }));
-    const user = access?.user ?? { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null };
-
-    if (user.id === 'guest-student') {
-      return withCors(NextResponse.json({ status: 'success', balanceCoins: 5000 }), request);
-    }
+    const access = await requireMobileUser(request);
+    if (access.response || !access.user) return withCors(access.response!, request);
+    const user = access.user;
 
     try {
       await enforceRateLimit(request, {

@@ -159,24 +159,26 @@ export async function verifyAndProcessMobilePaymentWebhook(params: {
     customer?: { email?: string; phone?: string };
   };
 }): Promise<{ success: boolean; studentId?: string; packType?: string; message: string }> {
-  const webhookSecret = process.env.NOTCHPAY_WEBHOOK_SECRET;
-  const isRealProvider = Boolean(process.env.NOTCHPAY_PRIVATE_KEY);
+  const webhookSecret = process.env.NOTCHPAY_WEBHOOK_SECRET?.trim();
 
-  // Vérification de la signature cryptographique si clé configurée
-  if (webhookSecret && params.signature) {
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(params.rawBody)
-      .digest('hex');
+  // Fail closed: a webhook that credits wallets must always be signed and verified.
+  if (!webhookSecret) {
+    throw new Error('Webhook de paiement non configuré (NOTCHPAY_WEBHOOK_SECRET manquant).');
+  }
+  if (!params.signature) {
+    throw new Error('Signature webhook absente');
+  }
 
-    const sigBuf = Buffer.from(params.signature);
-    const expBuf = Buffer.from(expectedSignature);
+  const expectedSignature = crypto
+    .createHmac('sha256', webhookSecret)
+    .update(params.rawBody)
+    .digest('hex');
 
-    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
-      throw new Error('Signature webhook invalide');
-    }
-  } else if (isRealProvider && !params.signature) {
-    throw new Error('Signature webhook absente en production');
+  const sigBuf = Buffer.from(params.signature);
+  const expBuf = Buffer.from(expectedSignature);
+
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+    throw new Error('Signature webhook invalide');
   }
 
   const { reference, status, event } = params.eventPayload;
@@ -219,6 +221,13 @@ export async function verifyAndProcessMobilePaymentWebhook(params: {
     if (tx.status === 'success' || tx.status === 'completed') {
       await client.query('rollback');
       return { success: true, message: 'Transaction déjà traitée.' };
+    }
+
+    // The amount the provider confirms must match what we initiated.
+    const paidAmount = Number(params.eventPayload.amount ?? 0);
+    if (paidAmount > 0 && paidAmount !== Number(tx.amount_coins)) {
+      await client.query('rollback');
+      return { success: false, message: `Montant incohérent pour la référence ${reference}.` };
     }
 
     // Mettre à jour le statut de la transaction

@@ -84,11 +84,9 @@ export async function POST(request: NextRequest) {
       return withCors(NextResponse.json({ error: 'Requete trop volumineuse.' }, { status: 413 }), request);
     }
 
-    const access = await requireMobileUser(request).catch(() => ({
-      user: { id: 'guest-student', subscription_tier: 'free', subscription_expires_at: null },
-      response: null,
-    }));
-    const userId = access?.user?.id ?? 'guest-student';
+    const access = await requireMobileUser(request);
+    if (access.response || !access.user) return withCors(access.response!, request);
+    const userId = access.user.id;
 
     try {
       await enforceRateLimit(request, {

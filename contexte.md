@@ -254,9 +254,10 @@ Loisirs : sport, lecture
 ## 6. Architecture, Graphe & Contexte Technique Global
 
 ### 6.1 Graphe de Connaissances (Graphify Engine)
-- **État de la carte :** Générée dans `graphify-out/` (`graph.json` [2564 nœuds, 5463 arêtes, 145 communautés], `GRAPH_REPORT.md`, `graph.html`).
+- **État de la carte (2026-10-13) :** Régénérée dans `graphify-out/` (`graph.json` [6405 nœuds, 10251 arêtes, 525 communautés, 816 fichiers de code], `GRAPH_REPORT.md`, `graph.html` en vue agrégée par communauté car > 5000 nœuds).
+- **Cartographie détaillée :** `docs/ARCHITECTURE_MAP.md` (routes, tables, intégrations, code mort, constats sécurité).
 - **Règle de consultation :** Consulter `graphify-out/graph.json` et `graphify-out/GRAPH_REPORT.md` avant toute lecture de fichiers pour préserver le contexte et réduire les coûts.
-- **Mise à jour :** Exécuter `python -m graphify extract . --code-only` après chaque refactor ou ajout majeur.
+- **Mise à jour :** `graphify update .` (CLI installée via `pip install --user graphifyy`, exécutable dans `%APPDATA%\Python\Python312\Scripts\graphify.exe`). Les `.sql` sont ignorés tant que `graphifyy[sql]` n'est pas installé.
 
 ### 6.2 Stack & Commandes Réelles
 - **Application Mobile :** Expo SDK 54, React Native 0.81.5, React 19, Lucide React Native, Expo File System, Expo Print (PDF).
@@ -271,10 +272,15 @@ Loisirs : sport, lecture
   - Dev : `npm run dev` (Port 3001)
   - Typecheck : `npm run typecheck` (`tsc --noEmit`)
   - Build : `npm run build`
+  - ⚠️ Contient AUSSI ~40 routes `/api/mobile/*` dupliquées (divergentes) de `mobile-api/`, ainsi que `/api/pdf`, `/api/packs`, `/api/admin/*`. Pas de proxy (`rewrites()` renvoie `[]`).
+- **Landing publique :** Next.js 15.5.19, Tailwind 4, Better Auth propre (cookiePrefix `campus-landing`).
+  - Dossier : `landing-site/` — Dev : `npm run dev` (port 3000 par défaut), `npm run lint`
+- **Tests mobile-api :** `npm test` (`node --test tests/*.test.mjs`)
+- **CI/CD :** `.github/workflows/` — `vercel-{backend,landing,mobile-api}.yml` ET `deploy-vps.yml` partent tous sur push `main` (double déploiement Vercel + VPS), `eas-android.yml`, `eas-update.yml` (OTA canal production), `daily-scraper.yml` (cron 09:00 UTC).
 
 ### 6.3 Arborescence Nette du Codebase Multi-Modules
 ```text
-f:\mes projets\campus 360/
+campus-360/  (C:\Users\DELL\Desktop\mes projet\campus-360)
 ├── src/                               # Application Mobile React Native (Expo)
 │   ├── components/                    # Composants réutilisables (Markdown, Glass)
 │   ├── features/
