@@ -51,6 +51,7 @@ type StageJobRow = {
   apply_method: 'WHATSAPP' | 'EMAIL' | 'PHYSICAL';
   is_sponsored: boolean;
   source: 'INTERNAL' | 'SCRAPED';
+  kind: 'stage' | 'emploi';
   location: string | null;
   duration: string | null;
   stipend: string | null;
@@ -78,6 +79,7 @@ const mapJob = (row: StageJobRow) => ({
   applyMethod: row.apply_method,
   isSponsored: row.is_sponsored,
   source: row.source,
+  kind: row.kind,
   location: row.location ?? undefined,
   duration: row.duration ?? undefined,
   stipend: row.stipend ?? undefined,
@@ -110,7 +112,7 @@ const JOB_SELECT = `
 `;
 
 export const listStageJobs = async (params: { query?: string; sector?: string }) => {
-  const conditions = [`j.expires_at > now()`, `c.status != 'SUSPENDED'`];
+  const conditions = [`j.expires_at > now()`, `c.status != 'SUSPENDED'`, `j.status = 'published'`];
   const values: string[] = [];
   if (params.sector && params.sector !== 'Tous') {
     values.push(`%${params.sector}%`);
@@ -129,7 +131,7 @@ export const listStageJobs = async (params: { query?: string; sector?: string })
 
 export const getStageJob = async (jobId: string) => {
   const result = await databasePool.query<StageJobRow>(
-    `${JOB_SELECT} where j.id = $1 and j.expires_at > now() and c.status != 'SUSPENDED' limit 1`,
+    `${JOB_SELECT} where j.id = $1 and j.status = 'published' and j.expires_at > now() and c.status != 'SUSPENDED' limit 1`,
     [jobId],
   );
   return result.rows[0] ? mapJob(result.rows[0]) : null;

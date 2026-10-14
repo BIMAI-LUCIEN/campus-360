@@ -295,3 +295,137 @@
 
 
 
+
+---
+
+## 🕵️ MODULE 17 : PIPELINE DE SCRAPING FIABLE (4 AGENTS) + VALIDATION HUMAINE TELEGRAM VIA HERMES
+
+> Cadrage validé le 2026-10-14 : stages **et** emplois, 4 agents spécialisés, Claude Haiku 5.5 (OpenRouter) + secours Gemini Flash, aucune heuristique de repli (mise en attente), validation des cas douteux sur Telegram via Hermes, re-passage des 72 offres existantes.
+> **Prérequis utilisateur (bloquant pour 17.9) :** bot Telegram créé via @BotFather et branché dans Hermes (`platforms` vide au 2026-10-14).
+
+### 1. Base de Données
+- [X] **Tâche 17.1 : Colonnes de qualité sur `stage_jobs`**
+  - **Fichiers :** `mobile-api/sql/0005_stage_jobs_quality.sql`, `scripts/run-sql.cjs`
+  - **Action :** Migration idempotente : `kind` (`stage`|`emploi`, défaut `stage`), `status` (`published`|`pending_review`|`rejected`, défaut `published`), `confidence` numeric, `review_reason` text, `evidence` jsonb (citations par champ), `source_url` text, `source_published_at` timestamptz, `company_normalized` text + index, `reviewed_at`/`reviewed_by`. Table `stage_job_rejections` (journal des rejets : texte source, raison, étape).
+  - **DoD :** migration exécutée 2× sans erreur ; `select status, kind, count(*) from stage_jobs group by 1,2` OK.
+
+- [X] **Tâche 17.2 : Seules les offres publiées sont visibles**
+  - **Fichiers :** `mobile-api/lib/stages-db.ts`, `recruiter-web/lib/stages-db.ts`, `mobile-api/lib/automations.ts`
+  - **Action :** Filtre `status = 'published'` sur les listes/détails/alertes de correspondance ; exposer `kind`.
+  - **DoD :** `npm run typecheck` (mobile-api + recruiter-web) code 0 ; une offre `pending_review` n'apparaît pas dans `GET /api/mobile/stages`.
+
+### 2. Agents (Python, `scripts/agents/`)
+- [X] **Tâche 17.3 : Client LLM unique (Haiku 5.5 + secours Gemini)**
+  - **Fichiers :** `scripts/agents/llm_client.py`, `scripts/agents/config.py`
+  - **Action :** `call_json(prompt, schema)` : OpenRouter `anthropic/claude-haiku-5.5` (sortie JSON structurée, température 0), secours Gemini Flash (modèle le plus récent disponible, vérifié à l'implémentation) ; si les deux échouent → exception `LLMUnavailable` (pas de devinette). Modèles configurables par env (`SCRAPER_MODEL`, `SCRAPER_FALLBACK_MODEL`).
+  - **DoD :** `python -c "from llm_client import call_json; ..."` sur un exemple renvoie un JSON validé.
+
+- [X] **Tâche 17.4 : Agent 1 — Filtre (règles dures, sans IA)**
+  - **Fichiers :** `scripts/agents/filter_agent.py`
+  - **Action :** Rejets : concours, formations payantes, posts personnels (patterns existants repris), année < année courante, ni entreprise ni contact, hors Cameroun explicite, texte < 80 caractères. Retourne `(ok, reason)`.
+  - **DoD :** `python scripts/agents/tests/test_filter.py` vert sur un jeu de 20 exemples réels (dont ENIET, Oasis Lounge, CAMPOST).
+
+- [X] **Tâche 17.5 : Agent 2 — Classifieur**
+  - **Fichiers :** `scripts/agents/classifier_agent.py`
+  - **Action :** Prompt court → `{category: stage|emploi|concours|formation|bruit, confidence: 0..1, reason}`.
+  - **DoD :** test sur le jeu d'exemples : 0 concours/bruit classé stage/emploi.
+
+- [X] **Tâche 17.6 : Agent 3 — Extracteur avec citations**
+  - **Fichiers :** `scripts/agents/extractor_agent.py`
+  - **Action :** Extrait titre, entreprise, ville, date limite, durée, rémunération, contact WhatsApp/email, compétences ; chaque champ accompagné de la citation exacte du texte, sinon `null`. Vérification côté code que la citation existe bien dans le texte (sinon champ mis à `null`). Aucune valeur par défaut inventée.
+  - **DoD :** test : aucun champ non nul sans citation présente dans la source.
+
+- [X] **Tâche 17.7 : Agent 4 — Vérificateur + décision**
+  - **Fichiers :** `scripts/agents/verifier_agent.py`
+  - **Action :** Normalisation entreprise (suffixes SARL/SA/Cameroun…), doublon flou (entreprise normalisée + similarité titre ≥ 0,85 sur 60 jours), date limite passée, entreprise générique ; score final → `published` (≥ 0,8), `pending_review` (0,5–0,8, avec `review_reason`), `rejected` (< 0,5, journalisé).
+  - **DoD :** test : les doublons HYST/KEISIS/SANLAM sont détectés.
+
+- [X] **Tâche 17.8 : Orchestrateur + ingestion refondus**
+  - **Fichiers :** `scripts/agents/orchestrator.py`, `scripts/agents/database_ingestor.py`, `scripts/agents/ai_analyzer_agent.py` (retrait du chemin offres + heuristique)
+  - **Action :** Collecte → Filtre → Classifieur → Extracteur → Vérificateur → insertion avec `kind`/`status`/`confidence`/`evidence`/`source_url` ; `LLMUnavailable` → `pending_review`. Notification push seulement pour `published`. Mode `--dry-run`.
+  - **DoD :** `python scripts/agents/run_scraper.py --dry-run` termine avec un résumé par statut.
+
+### 3. Validation humaine (Hermes / Telegram + Admin)
+- [X] **Tâche 17.9 : Route de revue protégée**
+  - **Fichiers :** `mobile-api/app/api/mobile/stages/review/route.ts`, `mobile-api/lib/stages-db.ts`
+  - **Action :** `GET` (file `pending_review`) et `POST {jobId, decision: publish|reject}` ; auth par secret partagé `STAGES_REVIEW_SECRET` (comparaison à temps constant), validation zod, rate limit, journal `reviewed_by`.
+  - **DoD :** curl sans secret → 401 ; avec secret → 200 et statut changé.
+
+- [ ] **Tâche 17.10 : Envoi Telegram via Hermes**
+  - **Fichiers :** `scripts/agents/review_notifier.py`, skill/hook Hermes sur le VPS (`/root/.hermes/skills/` ou cron Hermes)
+  - **Action :** Pour chaque nouvelle offre `pending_review` : message Telegram (titre, entreprise, ville, confiance, raison du doute, lien source) avec boutons ✅ Publier / ❌ Rejeter qui appellent la route 17.9. Accès limité à l'ID Telegram de l'utilisateur.
+  - **DoD :** une offre de test reçue sur Telegram ; clic ✅ → offre visible dans l'app.
+  - **Bloqué tant que** le bot Telegram n'est pas branché dans Hermes.
+
+- [/] **Tâche 17.11 : File « À valider » dans l'admin**
+  - **Fichiers :** `recruiter-web/app/admin/stages/` (onglet ou filtre), `recruiter-web/lib/stages-db.ts`
+  - **Action :** Liste des offres `pending_review` avec raison, citations et lien source ; boutons Publier/Rejeter.
+  - **DoD :** `npm run typecheck` recruiter-web code 0 + capture navigateur.
+
+### 4. App mobile
+- [X] **Tâche 17.12 : Filtre Stages / Emplois**
+  - **Fichiers :** `src/features/stages/stagesApi.ts`, `src/types.ts`, écran Stages
+  - **Action :** Type `kind`, puces « Stages » / « Emplois » / « Tout », badge sur la carte.
+  - **DoD :** `npm run typecheck` code 0 + capture e2e de l'onglet Stages.
+
+### 5. Reprise des données & mise en production
+- [ ] **Tâche 17.13 : Re-passage des 72 offres existantes**
+  - **Fichiers :** `scripts/agents/reprocess_existing.py`
+  - **Action :** Rejoue Filtre → Vérificateur sur chaque offre existante (texte = titre + description) en `--dry-run` d'abord (rapport CSV : décision, raison), puis application : rejetées → `rejected`, douteuses → `pending_review` (envoyées sur Telegram), les autres → `published`. Les ~20 offres du 2026-10-03 au style généré passent d'office en `pending_review`.
+  - **DoD :** rapport dry-run relu par l'utilisateur avant application ; après application, 0 concours/CDI mal classé publié.
+
+- [ ] **Tâche 17.14 : Déploiement & planification**
+  - **Fichiers :** `scripts/agents/daily_scheduler.py`, `.env` VPS (`OPENROUTER_API_KEY`, `STAGES_REVIEW_SECRET`)
+  - **Action :** `/vps-deploy`, exécution quotidienne du pipeline, vérification de santé.
+  - **DoD :** API health 200 ; un run réel produit un résumé published/pending/rejected cohérent.
+
+---
+
+## 🌐 MODULE 18 : Refonte de la Landing Publique (`landing-site/`)
+
+> Cadrage validé le 2026-10-14 (voir `contexte.md` §12). Périmètre : `landing-site/` uniquement. Aucune modification de l'app mobile ni de `recruiter-web/`. Aucun déploiement sans accord explicite.
+> **Décisions :** tarifs = constantes de `src/types.ts` (candidature 500 FCFA, 1re offerte ; rapport 2 000 ; mémoire 5 000 ; PDF 250 ; recharge min 500) ; « fonction de la vie » = **Coach de soutenance** (`DefenseCoachModal.tsx`) ; recruteur masqué ; emails = redirection ImprovMX vers Gmail ; formulaire de contact = envoi réel via Resend (clé `RESEND_API_KEY` à fournir).
+
+### 1. Captures & visuels
+- [X] **Tâche 18.1 : Captures réelles de l'app dans la landing**
+  - **Fichiers :** `landing-site/public/images/screens/*.png` (nouveaux), `components/hero-scene.tsx`, `components/screenshots.tsx`
+  - **Action :** Copier les captures à thème clair (`campus360_home_violet`, `01_stages_feed_verified`→ à exclure si sombre, `apply_modal_match_tab`, `02_official_cv_and_letter_verified`, `03_timeline_j7_relance_verified`, `e2e-13-atelier-ia`, `e2e-14-recharge-wallet`). Remplacer les références `app-home/app-explore/app-premium/packs-card`. Retirer le slide « Catalogue PDFs ».
+  - **DoD :** `npm run build` (landing) code 0 ; aucune référence à `app-premium` ni `packs-card` dans `components/` et `app/`.
+
+### 2. Accueil & textes
+- [X] **Tâche 18.2 : Accueil — textes réels, Coach de soutenance, sans chiffres non vérifiés**
+  - **Fichiers :** `app/page.tsx`, `components/how-it-works.tsx`, `components/faq.tsx`
+  - **Action :** Retirer `stats` (12 000+, 95 %, 3 500+) et la mention « n°1 » ; piliers recentrés sur stage IA, CV officiel, suivi J+7, Atelier IA, **Coach de soutenance**, wallet à l'usage ; retirer « PDFs académiques » et « iOS » ; FAQ sans PDF ni abonnement.
+  - **DoD :** `npm run build` code 0 ; `grep` ne trouve plus `12 000`, `95%`, `3 500`, `Pass`, `abonnement` dans `app/page.tsx`, `components/how-it-works.tsx`, `components/faq.tsx`.
+
+- [X] **Tâche 18.3 : Pages Fonctionnalités, Inscription, Aide**
+  - **Fichiers :** `app/fonctionnalites/page.tsx`, `app/inscription/page.tsx`, `app/aide/page.tsx`, `app/layout.tsx`
+  - **Action :** Réécrire les 12 fonctionnalités sur l'app réelle ; retirer « bilingue », « 3 500+ PDFs », « mode hors-ligne » non vérifié, abonnements Basique/Pro/Elite ; métadonnées (`layout.tsx`) alignées ; `wa.me/campus360` → `wa.me/237690273500`.
+  - **DoD :** `npm run build` code 0 ; `grep -ri "basique\|pro/elite\|3 500\|bilingue" app` ne renvoie rien hors pages légales/blog.
+
+### 3. Tarifs
+- [X] **Tâche 18.4 : Tarifs à l'usage (sans Pass)**
+  - **Fichiers :** `components/pricing.tsx`, `app/tarifs/page.tsx`
+  - **Action :** Remplacer les 4 offres par la grille à l'usage issue de `src/types.ts` : Découverte (1re candidature offerte), Candidature 500 FCFA, Rapport 2 000 FCFA, Mémoire 5 000 FCFA, PDF 250 FCFA ; recharge min 500 FCFA (Orange Money / MTN MoMo).
+  - **DoD :** `npm run build` code 0 ; aucun « Pass » ni « / mois » dans `components/pricing.tsx` et `app/tarifs/page.tsx`.
+
+### 4. Recruteur
+- [X] **Tâche 18.5 : Masquer le Portail Recruteur**
+  - **Fichiers :** `components/navbar-client.tsx`, `components/footer.tsx`, `app/fonctionnalites/page.tsx`
+  - **Action :** Retirer les liens « Espace Recruteur » (navbar, footer) et la carte « Portail Recruteur ». Réactivation prévue plus tard.
+  - **DoD :** `grep -rn "admin.campus360b\|Espace Recruteur\|Portail Recruteur" components app` ne renvoie rien.
+
+### 5. Contact & emails
+- [X] **Tâche 18.6 : Formulaire de contact fonctionnel & coordonnées réelles**
+  - **Fichiers :** `app/contact/page.tsx`, `app/api/contact/route.ts` (nouveau), `app/aide/page.tsx`
+  - **Action :** Route `POST /api/contact` (validation, envoi via Resend API si `RESEND_API_KEY`, sinon 503 explicite). Formulaire branché (états envoi / succès / erreur). Téléphone `+237 690 27 35 00`, WhatsApp `https://wa.me/237690273500`. Retirer « Bureau Akwa — sur rendez-vous » tant que non confirmé.
+  - **DoD :** `npm run build` code 0 ; `POST /api/contact` avec payload invalide → 400 (test local).
+
+- [ ] **Tâche 18.7 : Emails `@campus360b.site` (action utilisateur DNS)**
+  - **Action :** Ajouter chez LWS les enregistrements MX d'ImprovMX + SPF, vers la redirection vers l'adresse de l'utilisateur. Hors code.
+  - **DoD :** `nslookup -type=MX campus360b.site 8.8.8.8` renvoie des MX ; un mail test arrive.
+
+### 6. Vérification
+- [/] **Tâche 18.8 : Build, liens internes & rendu mobile** (build ✅, liens ✅ ; capture 390 px en attente : le navigateur intégré ne joint pas localhost)
+  - **Action :** `npm run build` ; contrôle HTTP de chaque lien interne ; capture 390 px de l'accueil.
+  - **DoD :** build code 0 ; aucun lien interne cassé ; capture jointe.

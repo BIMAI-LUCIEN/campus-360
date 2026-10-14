@@ -20,6 +20,8 @@ from cameroon_jobs_agent import CameroonJobsAgent
 from ocr_flyer_agent import OCRFlyerAgent
 from ai_analyzer_agent import AIAnalyzerAgent
 from database_ingestor import DatabaseIngestor
+from job_store import JobStore
+from offer_pipeline import process as process_offer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("ScraperOrchestrator")
@@ -35,7 +37,7 @@ class ScraperOrchestrator:
         self.ai_agent = AIAnalyzerAgent()
         self.db_ingestor = DatabaseIngestor()
 
-    def run_full_pipeline(self, query: str = "informatique", platforms: list = None, limit_per_platform: int = 5, city: str = None) -> dict:
+    def run_full_pipeline(self, query: str = "informatique", platforms: list = None, limit_per_platform: int = 5, city: str = None, dry_run: bool = False) -> dict:
         """
         Exécute le cycle complet : Collecte -> Analyse IA -> Sauvegarde.
         """
@@ -47,7 +49,8 @@ class ScraperOrchestrator:
         start_time = time.time()
 
         # 1. Vérification des tables de base
-        self.db_ingestor.ensure_tables()
+        if not dry_run:
+            self.db_ingestor.ensure_tables()
 
         collected_items = []
 
@@ -101,67 +104,79 @@ class ScraperOrchestrator:
 
         logger.info(f"📥 Total documents collectés bruts : {len(collected_items)}")
 
-        # 3. Phase d'Analyse IA et d'Ingestion
+        # 3. Analysis: offers go through the 4-agent pipeline, academic documents through the report analyzer.
         reports_saved = 0
-        jobs_saved = 0
-        analyzed_results = []
+        statuses = {"published": 0, "pending_review": 0, "rejected": 0, "deferred": 0}
+        store = JobStore(dry_run=dry_run)
+        existing = store.recent_offers()
 
-        for idx, item in enumerate(collected_items, start=1):
-            logger.info(f"[{idx}/{len(collected_items)}] Analyse IA de : {item['title'][:50]} ({item['platform']})")
-            
-            # Si un flyer est disponible et que le texte est court, l'OCR Flyer enrichit l'analyse
-            if item.get("flyer_url") and len(item.get("snippet", "")) < 200:
+        try:
+            for idx, item in enumerate(collected_items, start=1):
+                logger.info(f"[{idx}/{len(collected_items)}] {item.get('title', '')[:50]} ({item.get('platform')})")
+                self._enrich_with_flyer(item)
                 try:
-                    ocr_res = self.ocr_agent.read_flyer(item["flyer_url"], item.get("snippet", ""))
-                    if ocr_res.get("success") and ocr_res.get("data"):
-                        ocr_data = ocr_res["data"]
-                        item["snippet"] = f"{item.get('snippet', '')}\n[TEXTE EXTRAIT DU FLYER]: {ocr_data.get('raw_text_extracted', '')}\nEntreprise: {ocr_data.get('company')}\nLieu: {ocr_data.get('location')}"
-                        if ocr_data.get("contact_whatsapp") and not item.get("contact_whatsapp"):
-                            item["contact_whatsapp"] = ocr_data["contact_whatsapp"]
-                        if ocr_data.get("contact_email") and not item.get("contact_email"):
-                            item["contact_email"] = ocr_data["contact_email"]
-                except Exception as ocr_err:
-                    logger.debug(f"Erreur OCR flyer ignorée : {ocr_err}")
+                    if self._is_report_candidate(item):
+                        analysis = self.ai_agent.analyze_document_content(
+                            text_snippet=item.get("snippet", ""),
+                            source_title=item.get("title", ""),
+                            source_url=item.get("url", ""),
+                            platform=item.get("platform", "WEB"),
+                        )
+                        if analysis.get("is_relevant") and analysis.get("document_type") in ("RAPPORT_DE_STAGE", "MEMOIRE"):
+                            if dry_run:
+                                reports_saved += 1
+                            elif self.db_ingestor.save_stage_report(analysis, item).get("status") == "success":
+                                reports_saved += 1
+                        continue
 
-            try:
-                analysis = self.ai_agent.analyze_document_content(
-                    text_snippet=item.get("snippet", ""),
-                    source_title=item.get("title", ""),
-                    source_url=item.get("url", ""),
-                    platform=item.get("platform", "WEB")
-                )
-                
-                analyzed_results.append({
-                    "source": item,
-                    "analysis": analysis
-                })
-
-                if not analysis.get("is_relevant"):
-                    logger.info("⏩ Élément ignoré par l'IA (hors-sujet ou non académique).")
-                    continue
-
-                if analysis.get("is_offer") or analysis.get("document_type") == "OFFRE_DE_STAGE":
-                    res = self.db_ingestor.save_stage_job(analysis, item)
-                    if res.get("status") in ["job_inserted", "dry_run"]:
-                        jobs_saved += 1
-                else:
-                    res = self.db_ingestor.save_stage_report(analysis, item)
-                    if res.get("status") in ["success", "dry_run"]:
-                        reports_saved += 1
-
-            except Exception as e:
-                logger.error(f"Erreur lors du traitement IA / Ingestion de l'élément : {e}")
+                    result = process_offer(item, store, existing)
+                    statuses[result["status"]] = statuses.get(result["status"], 0) + 1
+                    logger.info(f"   -> {result['status']} ({result.get('kind')}, {result.get('confidence')}) : {result.get('reason')}")
+                    if result["status"] == "published" and not dry_run:
+                        self._notify_published(result, item)
+                except Exception as e:
+                    logger.error(f"Erreur lors du traitement de l'élément : {e}")
+        finally:
+            store.close()
 
         duration = round(time.time() - start_time, 2)
         summary = {
             "query": query,
             "duration_seconds": duration,
             "total_collected": len(collected_items),
-            "total_analyzed": len(analyzed_results),
+            "total_analyzed": len(collected_items),
             "reports_saved": reports_saved,
-            "jobs_saved": jobs_saved,
+            "jobs_saved": statuses["published"],
+            "offers_by_status": statuses,
+            "dry_run": dry_run,
             "platforms": platforms
         }
 
-        logger.info(f"🏁 Mission terminée en {duration}s : {reports_saved} rapports enregistrés, {jobs_saved} offres enregistrées.")
+        logger.info(f"🏁 Mission terminée en {duration}s : {reports_saved} rapports, offres {statuses}.")
         return summary
+
+    def _is_report_candidate(self, item: dict) -> bool:
+        text = f"{item.get('title', '')} {item.get('snippet', '')}".lower()
+        return item.get("platform") == "ACADEMIC_WEB" or "rapport de stage" in text or "mémoire" in text
+
+    def _enrich_with_flyer(self, item: dict):
+        """Reads the flyer when the post text is too short to analyze."""
+        if not item.get("flyer_url") or len(item.get("snippet", "")) >= 200:
+            return
+        try:
+            ocr_res = self.ocr_agent.read_flyer(item["flyer_url"], item.get("snippet", ""))
+            if ocr_res.get("success") and ocr_res.get("data"):
+                extracted = ocr_res["data"].get("raw_text_extracted", "")
+                item["snippet"] = f"{item.get('snippet', '')}\n{extracted}"
+        except Exception as ocr_err:
+            logger.debug(f"Erreur OCR flyer ignorée : {ocr_err}")
+
+    def _notify_published(self, result: dict, item: dict):
+        try:
+            from in_app_push_notifier_agent import InAppPushNotifierAgent
+            InAppPushNotifierAgent().notify_new_stage_job(
+                job_title=result.get("title", ""), company=item.get("company") or "", location=item.get("location") or "Cameroun",
+                job_id=result.get("job_id"),
+            )
+        except Exception as push_err:
+            logger.debug(f"Push notification ignorée : {push_err}")

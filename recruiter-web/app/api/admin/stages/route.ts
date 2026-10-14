@@ -5,6 +5,7 @@ import {
   getAdminStages,
   toggleAdminJobSponsored,
   deleteAdminJob,
+  reviewAdminJob,
 } from '@/lib/admin-platform-service';
 
 export const runtime = 'nodejs';
@@ -18,9 +19,10 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status') ?? undefined;
   const source = searchParams.get('source') ?? undefined;
   const sponsored = searchParams.get('sponsored') ?? undefined;
+  const pipeline = searchParams.get('pipeline') ?? undefined;
 
   try {
-    const stages = await getAdminStages({ query, status, source, sponsored });
+    const stages = await getAdminStages({ query, status, source, sponsored, pipeline });
     return NextResponse.json(stages);
   } catch (err) {
     console.error('[api/admin/stages] GET failed:', err);
@@ -41,10 +43,15 @@ const actionSchema = z.discriminatedUnion('action', [
     action: z.literal('delete'),
     jobId: z.string().min(1),
   }),
+  z.object({
+    action: z.literal('review'),
+    jobId: z.string().uuid(),
+    decision: z.enum(['publish', 'reject']),
+  }),
 ]);
 
 export async function POST(request: NextRequest) {
-  const { response } = await requireAdminApi();
+  const { response, user } = await requireAdminApi();
   if (response) return response;
 
   let payload: unknown;
@@ -72,6 +79,18 @@ export async function POST(request: NextRequest) {
         message: body.isSponsored
           ? 'Offre sponsorisée et mise en avant dans le feed'
           : 'Sponsoring désactivé',
+      });
+    }
+
+    if (body.action === 'review') {
+      const reviewer = `admin:${user?.email ?? 'inconnu'}`.slice(0, 80);
+      const updated = await reviewAdminJob(body.jobId, body.decision, reviewer);
+      if (!updated) {
+        return NextResponse.json({ error: 'Offre introuvable ou déjà traitée' }, { status: 404 });
+      }
+      return NextResponse.json({
+        ok: true,
+        message: body.decision === 'publish' ? "Offre publiée dans l'app" : 'Offre rejetée',
       });
     }
 

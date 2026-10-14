@@ -18,6 +18,8 @@ import {
   Users,
   Eye,
   Filter,
+  Check,
+  X,
 } from 'lucide-react';
 import type { AdminStageJob } from '@/lib/admin-platform-service';
 import {
@@ -36,6 +38,7 @@ export function StagesDashboardClient() {
   const [search, setSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState('ALL');
   const [sponsoredFilter, setSponsoredFilter] = useState('ALL');
+  const [pipelineFilter, setPipelineFilter] = useState('ALL');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -47,6 +50,7 @@ export function StagesDashboardClient() {
       if (sourceFilter !== 'ALL') params.append('source', sourceFilter);
       if (sponsoredFilter === 'true') params.append('sponsored', 'true');
       if (sponsoredFilter === 'false') params.append('sponsored', 'false');
+      if (pipelineFilter !== 'ALL') params.append('pipeline', pipelineFilter);
 
       const res = await fetch(`/api/admin/stages?${params.toString()}`);
       if (!res.ok) throw new Error('Impossible de charger les stages');
@@ -65,7 +69,7 @@ export function StagesDashboardClient() {
   useEffect(() => {
     fetchStages();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceFilter, sponsoredFilter]);
+  }, [sourceFilter, sponsoredFilter, pipelineFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +102,31 @@ export function StagesDashboardClient() {
         text: err instanceof Error ? err.message : 'Erreur',
         type: 'error',
       });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleReview = async (job: AdminStageJob, decision: 'publish' | 'reject') => {
+    setActionLoadingId(job.id);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/stages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'review', jobId: job.id, decision }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur lors de la validation');
+      const nextStatus = decision === 'publish' ? 'published' : 'rejected';
+      setStages((prev) =>
+        pipelineFilter === 'pending_review'
+          ? prev.filter((s) => s.id !== job.id)
+          : prev.map((s) => (s.id === job.id ? { ...s, pipelineStatus: nextStatus } : s)),
+      );
+      setMessage({ text: data.message, type: 'success' });
+    } catch (err) {
+      setMessage({ text: err instanceof Error ? err.message : 'Erreur', type: 'error' });
     } finally {
       setActionLoadingId(null);
     }
@@ -243,6 +272,21 @@ export function StagesDashboardClient() {
               </select>
             </div>
 
+            {/* Filter Pipeline status */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase text-fg-subtle">Validation :</span>
+              <select
+                value={pipelineFilter}
+                onChange={(e) => setPipelineFilter(e.target.value)}
+                className="h-9 rounded-md border border-border bg-surface px-3 text-xs font-medium text-fg focus:outline-none"
+              >
+                <option value="ALL">Toutes</option>
+                <option value="pending_review">À valider</option>
+                <option value="published">Publiées</option>
+                <option value="rejected">Rejetées</option>
+              </select>
+            </div>
+
             {/* Filter Sponsoring */}
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase text-fg-subtle">Sponsoring :</span>
@@ -267,7 +311,7 @@ export function StagesDashboardClient() {
             title="Aucune offre de stage trouvée"
             description="Aucune annonce ne correspond à vos filtres actuels."
             action={
-              <Button variant="secondary" onClick={() => { setSearch(''); setSourceFilter('ALL'); setSponsoredFilter('ALL'); }}>
+              <Button variant="secondary" onClick={() => { setSearch(''); setSourceFilter('ALL'); setSponsoredFilter('ALL'); setPipelineFilter('ALL'); }}>
                 Réinitialiser les filtres
               </Button>
             }
@@ -311,6 +355,22 @@ export function StagesDashboardClient() {
                             <Building2 size={13} className="shrink-0 text-fg-subtle" />
                             <span className="truncate">{job.companyName}</span>
                           </div>
+                          {job.pipelineStatus === 'pending_review' && (
+                            <div className="mt-1.5 text-[11px] text-amber-700">
+                              {job.reviewReason || 'À vérifier'}
+                              {typeof job.confidence === 'number' && ` · confiance ${Math.round(job.confidence * 100)} %`}
+                            </div>
+                          )}
+                          {job.sourceUrl && (
+                            <a
+                              href={job.sourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                            >
+                              <ExternalLink size={11} /> Voir la source
+                            </a>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -369,7 +429,10 @@ export function StagesDashboardClient() {
                         <Users size={14} className="text-fg-subtle" />
                         <span>{job.applicationsCount} postulants</span>
                       </div>
-                      <div className="mt-1">
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {job.kind === 'emploi' ? <Pill tone="indigo" label="Emploi" /> : <Pill tone="cyan" label="Stage" />}
+                        {job.pipelineStatus === 'pending_review' && <Pill tone="amber" label="À valider" />}
+                        {job.pipelineStatus === 'rejected' && <Pill tone="rose" label="Rejetée" />}
                         {job.isExpired ? (
                           <Pill tone="rose" label="Expirée" />
                         ) : (
@@ -381,6 +444,23 @@ export function StagesDashboardClient() {
                     {/* Actions */}
                     <td className="py-4 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {job.pipelineStatus === 'pending_review' && (
+                          <>
+                            <IconButton
+                              icon={Check}
+                              label="Publier l'offre"
+                              onClick={() => handleReview(job, 'publish')}
+                              disabled={actionLoadingId === job.id}
+                            />
+                            <IconButton
+                              icon={X}
+                              label="Rejeter l'offre"
+                              variant="danger"
+                              onClick={() => handleReview(job, 'reject')}
+                              disabled={actionLoadingId === job.id}
+                            />
+                          </>
+                        )}
                         <IconButton
                           icon={Trash2}
                           label="Supprimer le stage"

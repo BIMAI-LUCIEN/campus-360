@@ -64,6 +64,7 @@ type StageJobRow = {
   apply_method: 'WHATSAPP' | 'EMAIL' | 'PHYSICAL';
   is_sponsored: boolean;
   source: 'INTERNAL' | 'SCRAPED';
+  kind: 'stage' | 'emploi';
   location: string | null;
   duration: string | null;
   stipend: string | null;
@@ -91,6 +92,7 @@ const mapJob = (row: StageJobRow) => ({
   applyMethod: row.apply_method,
   isSponsored: row.is_sponsored,
   source: row.source,
+  kind: row.kind,
   location: row.location ?? undefined,
   duration: row.duration ?? undefined,
   stipend: row.stipend ?? undefined,
@@ -272,7 +274,7 @@ export const FALLBACK_STAGE_JOBS = [
 
 export const listStageJobs = async (params: { query?: string; sector?: string }) => {
   try {
-    const conditions = [`j.expires_at > now()`, `c.status != 'SUSPENDED'`];
+    const conditions = [`j.expires_at > now()`, `c.status != 'SUSPENDED'`, `j.status = 'published'`];
     const values: string[] = [];
     if (params.sector && params.sector !== 'Tous') {
       values.push(`%${params.sector}%`);
@@ -313,7 +315,7 @@ export const listStageJobs = async (params: { query?: string; sector?: string })
 export const getStageJob = async (jobId: string) => {
   try {
     const result = await databasePool.query<StageJobRow>(
-      `${JOB_SELECT} where j.id = $1 and j.expires_at > now() and c.status != 'SUSPENDED' limit 1`,
+      `${JOB_SELECT} where j.id = $1 and j.status = 'published' and j.expires_at > now() and c.status != 'SUSPENDED' limit 1`,
       [jobId],
     );
     if (result.rows[0]) return mapJob(result.rows[0]);
@@ -932,3 +934,71 @@ export const getStageStudentWhatsAppStatus = async (
 };
 
 
+
+// ---------------------------------------------------------------------------
+// Human review of scraped offers (pipeline status 'pending_review').
+// ---------------------------------------------------------------------------
+
+export type PendingStageJob = {
+  id: string;
+  title: string;
+  kind: 'stage' | 'emploi';
+  companyName: string;
+  location: string | null;
+  confidence: number | null;
+  reviewReason: string | null;
+  sourceUrl: string | null;
+  evidence: Record<string, string | null>;
+  createdAt: string;
+};
+
+export const listPendingStageJobs = async (limit = 50): Promise<PendingStageJob[]> => {
+  const { rows } = await databasePool.query<{
+    id: string;
+    title: string;
+    kind: 'stage' | 'emploi';
+    company_name: string;
+    location: string | null;
+    confidence: string | null;
+    review_reason: string | null;
+    source_url: string | null;
+    evidence: Record<string, string | null> | null;
+    created_at: string;
+  }>(
+    `select j.id, j.title, j.kind, c.name as company_name, j.location, j.confidence,
+            j.review_reason, j.source_url, j.evidence, j.created_at
+       from public.stage_jobs j
+       join public.stage_companies c on c.id = j.company_id
+      where j.status = 'pending_review'
+      order by j.created_at asc
+      limit $1`,
+    [limit],
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    kind: row.kind,
+    companyName: row.company_name,
+    location: row.location,
+    confidence: row.confidence === null ? null : Number(row.confidence),
+    reviewReason: row.review_reason,
+    sourceUrl: row.source_url,
+    evidence: row.evidence ?? {},
+    createdAt: new Date(row.created_at).toISOString(),
+  }));
+};
+
+/** Publishes or rejects a pending offer. Returns false when it was not pending anymore. */
+export const reviewStageJob = async (
+  jobId: string,
+  decision: 'publish' | 'reject',
+  reviewer: string,
+): Promise<boolean> => {
+  const { rowCount } = await databasePool.query(
+    `update public.stage_jobs
+        set status = $2, reviewed_at = now(), reviewed_by = $3
+      where id = $1 and status = 'pending_review'`,
+    [jobId, decision === 'publish' ? 'published' : 'rejected', reviewer],
+  );
+  return (rowCount ?? 0) > 0;
+};

@@ -100,7 +100,7 @@ const listActiveJobs = async (): Promise<JobForMatching[]> => {
     `select j.id, j.title, j.description, j.requirements, c.name as company_name
        from public.stage_jobs j
        join public.stage_companies c on c.id = j.company_id
-      where j.expires_at > now() and c.status != 'SUSPENDED'
+      where j.status = 'published' and j.expires_at > now() and c.status != 'SUSPENDED'
       order by j.is_sponsored desc, j.created_at desc
       limit 200`,
   );

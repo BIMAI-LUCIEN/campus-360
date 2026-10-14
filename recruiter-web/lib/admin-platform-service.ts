@@ -22,6 +22,12 @@ export interface AdminStageJob {
   expiresAt: string;
   isExpired: boolean;
   applicationsCount: number;
+  kind?: 'stage' | 'emploi';
+  pipelineStatus?: 'published' | 'pending_review' | 'rejected';
+  confidence?: number | null;
+  reviewReason?: string | null;
+  sourceUrl?: string | null;
+  evidence?: Record<string, string | null>;
 }
 
 export interface AdminCompany {
@@ -390,6 +396,7 @@ export async function getAdminStages(params?: {
   status?: string;
   source?: string;
   sponsored?: string;
+  pipeline?: string;
 }): Promise<AdminStageJob[]> {
   try {
     const conditions: string[] = [];
@@ -404,6 +411,11 @@ export async function getAdminStages(params?: {
     if (params?.source && params.source !== 'ALL') {
       conditions.push(`j.source = $${idx}`);
       values.push(params.source);
+      idx++;
+    }
+    if (params?.pipeline && ['published', 'pending_review', 'rejected'].includes(params.pipeline)) {
+      conditions.push(`j.status = $${idx}`);
+      values.push(params.pipeline);
       idx++;
     }
     if (params?.sponsored === 'true') {
@@ -426,7 +438,7 @@ export async function getAdminStages(params?: {
     `;
 
     const result = await databasePool.query<any>(sql, values);
-    if (result.rows.length === 0 && !params?.query) {
+    if (result.rows.length === 0 && !params?.query && !params?.pipeline) {
       return MOCK_JOBS;
     }
 
@@ -452,6 +464,12 @@ export async function getAdminStages(params?: {
       expiresAt: new Date(row.expires_at).toISOString(),
       isExpired: new Date(row.expires_at).getTime() < Date.now(),
       applicationsCount: Number(row.applications_count || 0),
+      kind: row.kind,
+      pipelineStatus: row.status,
+      confidence: row.confidence === null || row.confidence === undefined ? null : Number(row.confidence),
+      reviewReason: row.review_reason,
+      sourceUrl: row.source_url,
+      evidence: row.evidence ?? {},
     }));
   } catch (err) {
     console.warn('[AdminStages] DB Query fallback to mock:', (err as Error).message);
@@ -483,6 +501,16 @@ export async function toggleAdminJobSponsored(jobId: string, isSponsored: boolea
     if (job) job.isSponsored = isSponsored;
     return true;
   }
+}
+
+export async function reviewAdminJob(jobId: string, decision: 'publish' | 'reject', reviewer: string): Promise<boolean> {
+  const { rowCount } = await databasePool.query(
+    `UPDATE public.stage_jobs
+        SET status = $2, reviewed_at = now(), reviewed_by = $3
+      WHERE id = $1 AND status = 'pending_review'`,
+    [jobId, decision === 'publish' ? 'published' : 'rejected', reviewer],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 export async function deleteAdminJob(jobId: string): Promise<boolean> {

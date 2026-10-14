@@ -192,12 +192,11 @@ const SECTORS = [
   'Santé',
 ];
 
-const CONTRACT_TYPES = [
-  'Tous',
-  'Stage PFE',
-  'Stage Académique',
-  'Premier Emploi',
-  'Alternance',
+// Stage / emploi split comes from the scraping pipeline classification (stage_jobs.kind).
+const KIND_FILTERS: { label: string; value: 'Tous' | 'stage' | 'emploi' }[] = [
+  { label: 'Tout', value: 'Tous' },
+  { label: 'Stages', value: 'stage' },
+  { label: 'Emplois', value: 'emploi' },
 ];
 
 export function StagesScreen({
@@ -211,7 +210,7 @@ export function StagesScreen({
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSector, setActiveSector] = useState('Tous');
-  const [activeContractType, setActiveContractType] = useState('Tous');
+  const [activeKind, setActiveKind] = useState<'Tous' | 'stage' | 'emploi'>('Tous');
   const [applyingJob, setApplyingJob] = useState<StageJob | null>(null);
   const [selectedDetailJob, setSelectedDetailJob] = useState<StageJob | null>(null);
   const [showTopThreeOnly, setShowTopThreeOnly] = useState(false);
@@ -225,7 +224,7 @@ export function StagesScreen({
       const data = await fetchStageJobs({
         query: searchQuery,
         sector: activeSector,
-        contractType: activeContractType,
+        kind: activeKind,
         userSkills: studentProfile.skills,
         studentProfile,
       });
@@ -240,7 +239,7 @@ export function StagesScreen({
 
   useEffect(() => {
     loadData();
-  }, [searchQuery, activeSector, activeContractType, studentProfile.skills]);
+  }, [searchQuery, activeSector, activeKind, studentProfile.skills]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -374,7 +373,7 @@ export function StagesScreen({
           onChangeText={setSearchQuery}
           placeholder="Poste, entreprise, compétences, ville..."
           onFilterPress={() => setShowTopThreeOnly(!showTopThreeOnly)}
-          hasActiveFilters={showTopThreeOnly || activeSector !== 'Tous' || activeContractType !== 'Tous'}
+          hasActiveFilters={showTopThreeOnly || activeSector !== 'Tous' || activeKind !== 'Tous'}
           style={{ paddingHorizontal: 0, marginBottom: 12 }}
         />
 
@@ -427,17 +426,17 @@ export function StagesScreen({
           style={styles.contractsScroll}
           contentContainerStyle={styles.filtersContent}
         >
-          {CONTRACT_TYPES.map((contract) => {
-            const isActive = activeContractType === contract;
+          {KIND_FILTERS.map((filter) => {
+            const isActive = activeKind === filter.value;
             return (
               <Pressable
-                key={contract}
-                testID={`filter-contract-${contract}`}
+                key={filter.value}
+                testID={`filter-kind-${filter.value}`}
                 style={[styles.contractChip, isActive && styles.contractChipActive]}
-                onPress={() => setActiveContractType(contract)}
+                onPress={() => setActiveKind(filter.value)}
               >
                 <Text style={[styles.contractChipText, isActive && styles.contractChipTextActive]}>
-                  {contract}
+                  {filter.label}
                 </Text>
               </Pressable>
             );
@@ -485,7 +484,7 @@ export function StagesScreen({
               onPress={() => {
                 setSearchQuery('');
                 setActiveSector('Tous');
-                setActiveContractType('Tous');
+                setActiveKind('Tous');
                 setShowTopThreeOnly(false);
               }}
             >
@@ -518,7 +517,7 @@ export function StagesScreen({
                   {/* Contract Badge on Left, AI Match Badge on Right */}
                   <View style={styles.floatingBadgesRow}>
                     <View style={styles.floatingContractBadge}>
-                      <Text style={styles.floatingContractText}>{job.contractType || 'Stage'}</Text>
+                      <Text style={styles.floatingContractText}>{job.kind === 'emploi' ? 'Emploi' : job.contractType || 'Stage'}</Text>
                     </View>
 
                     <View style={styles.floatingMatchBadge}>

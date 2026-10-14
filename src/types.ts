@@ -40,6 +40,8 @@ export type StageCompany = {
   logoUrl?: string;
 };
 
+export type JobKind = 'stage' | 'emploi';
+
 export type StageJob = {
   id: string;
   companyId: string;
@@ -49,6 +51,7 @@ export type StageJob = {
   applyMethod: ApplyMethod;
   isSponsored: boolean;
   source: JobSource;
+  kind?: JobKind; // 'stage' | 'emploi' (classified by the scraping pipeline)
   createdAt: string;
   expiresAt: string;
   location?: string;

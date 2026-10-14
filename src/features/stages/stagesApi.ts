@@ -1,4 +1,4 @@
-import type { StageJob, StageApplication, StageCompany, StudentProfileData, AppStatus, CompanyStatus, ApplyMethod, OfficialCvData } from '../../types';
+import type { StageJob, StageApplication, StageCompany, StudentProfileData, AppStatus, CompanyStatus, ApplyMethod, OfficialCvData, JobKind } from '../../types';
 import { authFetch, authFetchRaw, authBaseUrl } from '../auth/betterAuth';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
@@ -646,6 +646,7 @@ export async function fetchStageJobs(params?: {
   query?: string;
   sector?: string;
   contractType?: string;
+  kind?: 'Tous' | JobKind;
   duration?: string;
   userSkills?: string[];
   studentProfile?: {
@@ -686,7 +687,7 @@ export async function fetchStageJobs(params?: {
   // 3. Fallback direct et infaillible vers Supabase REST (Cloud PostgreSQL)
   if (!jobsList || jobsList.length === 0) {
     if (publicEnv.supabaseUrl && publicEnv.supabaseAnonKey) {
-      const supabaseRestUrl = `${publicEnv.supabaseUrl}/rest/v1/stage_jobs?select=*,company:stage_companies(*)&order=created_at.desc&limit=100`;
+      const supabaseRestUrl = `${publicEnv.supabaseUrl}/rest/v1/stage_jobs?select=*,company:stage_companies(*)&status=eq.published&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&order=created_at.desc&limit=100`;
       const sbRes = await fetch(supabaseRestUrl, {
         headers: {
           apikey: publicEnv.supabaseAnonKey,
@@ -706,6 +707,7 @@ export async function fetchStageJobs(params?: {
             applyMethod: (r.apply_method || 'WHATSAPP') as ApplyMethod,
             isSponsored: Boolean(r.is_sponsored),
             source: r.source || 'SCRAPED',
+            kind: r.kind === 'emploi' ? 'emploi' : 'stage',
             location: r.location || 'Cameroun',
             duration: r.duration || '3 à 6 mois',
             contractType: r.contract_type || 'Stage académique / professionnel',
@@ -760,6 +762,11 @@ export async function fetchStageJobs(params?: {
         job.title.toLowerCase().includes(s) ||
         job.requirements.some((r) => r.toLowerCase().includes(s))
     );
+  }
+
+  // Filtrage local stage / emploi
+  if (params?.kind && params.kind !== 'Tous') {
+    jobsList = jobsList.filter((job) => (job.kind ?? 'stage') === params.kind);
   }
 
   // Filtrage local par type de contrat

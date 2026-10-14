@@ -23,6 +23,7 @@ def main():
     parser.add_argument("--query", type=str, default="informatique", help="Mot-clé ou filière recherchée")
     parser.add_argument("--platforms", type=str, default="LINKEDIN,FACEBOOK,ACADEMIC_WEB", help="Plateformes séparées par des virgules")
     parser.add_argument("--limit", type=int, default=5, help="Nombre max de résultats par plateforme")
+    parser.add_argument("--dry-run", action="store_true", help="Analyse sans rien écrire en base")
     parser.add_argument("--city", type=str, default=None, help="Ville ou région ciblée au Cameroun (ex: Bafoussam, Buea, Garoua, Douala, Yaoundé, Kribi)")
 
     args = parser.parse_args()
@@ -42,7 +43,8 @@ def main():
         query=args.query,
         city=args.city,
         platforms=selected_platforms,
-        limit_per_platform=args.limit
+        limit_per_platform=args.limit,
+        dry_run=args.dry_run,
     )
 
     print("\n================================================================")
@@ -51,7 +53,7 @@ def main():
     print(f"📥 Documents collectés : {summary['total_collected']}")
     print(f"🧠 Analyses IA faites  : {summary['total_analyzed']}")
     print(f"📚 Rapports sauvegardés: {summary['reports_saved']}")
-    print(f"💼 Offres sauvegardées : {summary['jobs_saved']}")
+    print(f"💼 Offres par statut   : {summary['offers_by_status']}")
     print("================================================================")
 
 if __name__ == "__main__":
