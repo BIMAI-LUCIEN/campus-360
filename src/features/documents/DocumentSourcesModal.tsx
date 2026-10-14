@@ -150,7 +150,7 @@ export function DocumentSourcesModal({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerIcon}>
-              <FileText size={18} color="#818CF8" />
+              <FileText size={18} color={stitchColors.secondary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.headerTitle}>Sources & Documents de référence</Text>
@@ -159,14 +159,14 @@ export function DocumentSourcesModal({
               </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
-              <X size={18} color="#94A3B8" />
+              <X size={18} color={stitchColors.inkSubtle} />
             </Pressable>
           </View>
 
           <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
             {/* Callout information */}
             <View style={styles.infoBanner}>
-              <CheckCircle2 size={16} color="#34D399" />
+              <CheckCircle2 size={16} color={stitchColors.emeraldDeep} />
               <Text style={styles.infoText}>
                 Tous les documents téléversés ici (livret d&apos;accueil, notes de stage, cahier des charges) sont analysés et alimentent les suggestions de l&apos;IA.
               </Text>
@@ -175,7 +175,7 @@ export function DocumentSourcesModal({
             {/* List of existing sources */}
             {loading ? (
               <View style={styles.centerBox}>
-                <ActivityIndicator size="small" color="#818CF8" />
+                <ActivityIndicator size="small" color={stitchColors.secondary} />
                 <Text style={styles.loadingText}>Chargement des sources...</Text>
               </View>
             ) : sources.length === 0 && !showAddForm ? (
@@ -186,7 +186,7 @@ export function DocumentSourcesModal({
                   Importez vos notes de stage, documents PDF ou rapports de réunion pour que l&apos;IA écrive avec les vraies données de votre stage.
                 </Text>
                 <Pressable style={styles.primaryBtn} onPress={() => setShowAddForm(true)}>
-                  <Plus size={16} color="#FFFFFF" />
+                  <Plus size={16} color={stitchColors.white} />
                   <Text style={styles.primaryBtnText}>Ajouter une première source</Text>
                 </Pressable>
               </View>
@@ -195,7 +195,7 @@ export function DocumentSourcesModal({
                 {sources.map((s) => (
                   <View key={s.id} style={styles.sourceCard}>
                     <View style={styles.sourceIconBox}>
-                      <FileText size={20} color="#818CF8" />
+                      <FileText size={20} color={stitchColors.secondary} />
                     </View>
                     <View style={{ flex: 1, paddingRight: 8 }}>
                       <Text style={styles.sourceName} numberOfLines={1}>
@@ -230,7 +230,7 @@ export function DocumentSourcesModal({
                 <TextInput
                   style={styles.textInput}
                   placeholder="Ex: Livret_Entreprise_2026.pdf ou Notes_Semaine1"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   value={fileName}
                   onChangeText={setFileName}
                 />
@@ -256,7 +256,7 @@ export function DocumentSourcesModal({
                   multiline
                   numberOfLines={5}
                   placeholder="Copiez-collez ici le texte du document, les chiffres clés, missions, ou notes..."
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   value={textContent}
                   onChangeText={setTextContent}
                 />
@@ -275,10 +275,10 @@ export function DocumentSourcesModal({
                     disabled={submitting}
                   >
                     {submitting ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={stitchColors.white} />
                     ) : (
                       <>
-                        <Upload size={15} color="#FFFFFF" />
+                        <Upload size={15} color={stitchColors.white} />
                         <Text style={styles.saveBtnText}>Enregistrer la source</Text>
                       </>
                     )}
@@ -287,7 +287,7 @@ export function DocumentSourcesModal({
               </View>
             ) : sources.length > 0 ? (
               <Pressable style={styles.outlineBtn} onPress={() => setShowAddForm(true)}>
-                <Plus size={16} color="#818CF8" />
+                <Plus size={16} color={stitchColors.secondary} />
                 <Text style={styles.outlineBtnText}>Ajouter une autre source</Text>
               </Pressable>
             ) : null}
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   headerSub: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 12,
     marginTop: 2,
   },
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 13,
   },
   emptyBox: {
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   emptyDesc: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 19,
@@ -404,13 +404,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#4F46E5',
+    backgroundColor: stitchColors.primary,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 10,
   },
   primaryBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontWeight: '700',
     fontSize: 13.5,
   },
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   sourceMeta: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 11.5,
     marginTop: 2,
   },
@@ -462,13 +462,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1.5,
-    borderColor: 'rgba(99, 102, 241, 0.4)',
+    borderColor: 'rgba(124, 58, 237, 0.4)',
     borderRadius: 12,
     paddingVertical: 12,
     borderStyle: 'dashed',
   },
   outlineBtnText: {
-    color: '#818CF8',
+    color: stitchColors.secondary,
     fontWeight: '700',
     fontSize: 13.5,
   },
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   inputLabel: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 12,
     fontWeight: '600',
     marginTop: 4,
@@ -520,16 +520,16 @@ const styles = StyleSheet.create({
     borderColor: stitchColors.glassBorder,
   },
   typePillActive: {
-    backgroundColor: '#4F46E5',
-    borderColor: '#4F46E5',
+    backgroundColor: stitchColors.primary,
+    borderColor: stitchColors.primary,
   },
   typePillText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 12,
     fontWeight: '600',
   },
   typePillTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   formBtnRow: {
     flexDirection: 'row',
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   cancelBtnText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -551,13 +551,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#4F46E5',
+    backgroundColor: stitchColors.primary,
     paddingVertical: 9,
     paddingHorizontal: 16,
     borderRadius: 8,
   },
   saveBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 13,
     fontWeight: '700',
   },

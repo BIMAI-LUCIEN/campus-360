@@ -74,6 +74,7 @@ import {
   fontFamilies,
 } from '../theme/stitch';
 
+
 const SANS = Platform.select({ ios: 'System', android: 'sans-serif-medium', web: 'Outfit, sans-serif' }) as string;
 const INTER = Platform.select({ ios: 'System', android: 'sans-serif', web: 'Inter, sans-serif' }) as string;
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace' }) as string;
@@ -203,7 +204,7 @@ export function Pill({
 }) {
   const content = (
     <View style={[active ? styles.pillActive : styles.pillInactive, style]}>
-      <Text style={[styles.pillText, { color: active ? '#FFFFFF' : '#64748B' }]}>{label}</Text>
+      <Text style={[styles.pillText, { color: active ? stitchColors.white : stitchColors.inkMuted }]}>{label}</Text>
     </View>
   );
   if (onPress) return <Pressable onPress={onPress}>{content}</Pressable>;
@@ -257,7 +258,7 @@ export function EditorialInput({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={stitchColors.inkSubtle}
           style={[styles.inputText, multiline && styles.inputTextMulti]}
           secureTextEntry={secureTextEntry && !showPassword}
           keyboardType={keyboardType}
@@ -272,9 +273,9 @@ export function EditorialInput({
         {showPasswordToggle && (
           <Pressable onPress={onTogglePassword} hitSlop={8}>
             {showPassword ? (
-              <EyeOff size={18} color="#94A3B8" />
+              <EyeOff size={18} color={stitchColors.inkSubtle} />
             ) : (
-              <Eye size={18} color="#94A3B8" />
+              <Eye size={18} color={stitchColors.inkSubtle} />
             )}
           </Pressable>
         )}
@@ -316,7 +317,7 @@ export function GradientButton({
       ]}
     >
       <LinearGradient
-        colors={['#7C3AED', '#8B5CF6']}
+        colors={[stitchColors.primary, stitchColors.secondary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.gradBtn}
@@ -455,7 +456,7 @@ export function DashboardHubCard({
   subtitle,
   icon: Icon,
   iconBg = 'rgba(139, 92, 246, 0.12)',
-  iconColor = '#8B5CF6',
+  iconColor = stitchColors.secondary,
   onPress,
   style,
 }: {
@@ -514,7 +515,7 @@ export function DashboardGrid({
           subtitle="Génère CV & lettre ciblés pour décrocher ton stage."
           icon={Sparkles}
           iconBg="rgba(139, 92, 246, 0.15)"
-          iconColor="#7C3AED"
+          iconColor={stitchColors.primary}
           onPress={onApplyIa}
         />
         <DashboardHubCard
@@ -532,7 +533,7 @@ export function DashboardGrid({
           subtitle="Rédige et optimise tes rapports et mémoires."
           icon={FileText}
           iconBg="rgba(245, 158, 11, 0.15)"
-          iconColor="#D97706"
+          iconColor={stitchColors.warning}
           onPress={onDocuments}
         />
         <DashboardHubCard
@@ -600,7 +601,7 @@ export function TopBar({
 
   return (
     <LinearGradient
-      colors={['#7C3AED', '#6D28D9']}
+      colors={[stitchColors.primary, stitchColors.siennaDeep]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[styles.topBarCurved, style]}
@@ -731,7 +732,7 @@ export function WalletCard({
           end={brandGradient.horizontal.end}
           style={styles.walletIAPill}
         >
-          <Sparkles size={11} color="#FFFFFF" strokeWidth={2} />
+          <Sparkles size={11} color={stitchColors.white} strokeWidth={2} />
           <Text style={styles.walletIAPillText}>{iaCredits} IA</Text>
         </LinearGradient>
       </View>
@@ -869,7 +870,7 @@ export function DocumentGridCard({
 
         {isOwned ? (
           <View style={styles.docOwnedBadge}>
-            <Check size={12} color="#FFFFFF" strokeWidth={3} />
+            <Check size={12} color={stitchColors.white} strokeWidth={3} />
           </View>
         ) : price ? (
           <View style={styles.docPriceBadge}>
@@ -1047,14 +1048,14 @@ export function LocationHeader({
         style={({ pressed }) => [styles.locLeft, pressed && { opacity: 0.8 }]}
       >
         <View style={styles.locPinBox}>
-          <MapPin size={17} color="#7C3AED" strokeWidth={2.2} />
+          <MapPin size={17} color={stitchColors.primary} strokeWidth={2.2} />
         </View>
         <View style={{ flex: 1 }}>
           <View style={styles.locTitleRow}>
             <Text style={styles.locTitle} numberOfLines={1}>
               {universityName}
             </Text>
-            <ChevronDown size={14} color="#64748B" style={{ marginLeft: 3 }} />
+            <ChevronDown size={14} color={stitchColors.inkMuted} style={{ marginLeft: 3 }} />
           </View>
           <Text style={styles.locSubtitle} numberOfLines={1}>
             {facultyOrCity}
@@ -1067,7 +1068,7 @@ export function LocationHeader({
           onPress={onBellPress}
           style={({ pressed }) => [styles.locActionBtn, pressed && { opacity: 0.75 }]}
         >
-          <Bell size={18} color="#0F172A" strokeWidth={1.9} />
+          <Bell size={18} color={stitchColors.ink} strokeWidth={1.9} />
           {hasUnread && <View style={styles.locNotifDot} />}
         </Pressable>
 
@@ -1104,12 +1105,12 @@ export function SearchFilterBar({
   return (
     <View style={[styles.searchFilterWrap, style]}>
       <View style={styles.searchPill}>
-        <Search size={17} color="#94A3B8" />
+        <Search size={17} color={stitchColors.inkSubtle} />
         <TextInput
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={stitchColors.inkSubtle}
           style={styles.searchInput}
           returnKeyType="search"
           onSubmitEditing={onSubmitEditing}
@@ -1126,7 +1127,7 @@ export function SearchFilterBar({
         >
           <SlidersHorizontal
             size={16}
-            color={hasActiveFilters ? '#FFFFFF' : '#7C3AED'}
+            color={hasActiveFilters ? stitchColors.white : stitchColors.primary}
             strokeWidth={2}
           />
         </Pressable>
@@ -1308,8 +1309,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputBox: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E2E8F0',
+    backgroundColor: stitchColors.white,
+    borderColor: stitchColors.glassBorder,
     borderWidth: 1.5,
     borderRadius: stitchRadius.sm,
     paddingVertical: 13,
@@ -1319,10 +1320,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   inputBoxFocused: {
-    borderColor: '#7C3AED',
-    backgroundColor: '#FFFFFF',
+    borderColor: stitchColors.primary,
+    backgroundColor: stitchColors.white,
   },
-  inputText: { flex: 1, fontFamily: INTER, fontSize: 15, color: '#0F172A', padding: 0, outlineStyle: 'none', outlineWidth: 0 } as any,
+  inputText: { flex: 1, fontFamily: INTER, fontSize: 15, color: stitchColors.ink, padding: 0, outlineStyle: 'none', outlineWidth: 0 } as any,
   inputTextMulti: { minHeight: 80, textAlignVertical: 'top', paddingTop: 12 },
 
   // Gradient button
@@ -1645,7 +1646,7 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     backgroundColor: stitchColors.surface,
   },
-  topBarName: { fontFamily: SANS, fontSize: 19, fontWeight: '700', color: '#0F172A', letterSpacing: -0.3 },
+  topBarName: { fontFamily: SANS, fontSize: 19, fontWeight: '700', color: stitchColors.ink, letterSpacing: -0.3 },
   topBarIconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   topBarAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 

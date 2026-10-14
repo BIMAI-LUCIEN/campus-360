@@ -277,7 +277,7 @@ export function ApplicationDetailModal({
               hitSlop={12}
               style={styles.closeBtn}
             >
-              <X size={18} color="#94A3B8" />
+              <X size={18} color={stitchColors.inkSubtle} />
             </Pressable>
           </View>
 
@@ -288,7 +288,7 @@ export function ApplicationDetailModal({
               style={[styles.tabBtn, activeTab === 'cv' && styles.tabBtnActive]}
               onPress={() => setActiveTab('cv')}
             >
-              <FileText size={14} color={activeTab === 'cv' ? '#FFFFFF' : '#94A3B8'} />
+              <FileText size={14} color={activeTab === 'cv' ? stitchColors.white : stitchColors.inkSubtle} />
               <Text style={[styles.tabBtnText, activeTab === 'cv' && styles.tabBtnTextActive]}>
                 CV Officiel
               </Text>
@@ -299,7 +299,7 @@ export function ApplicationDetailModal({
               style={[styles.tabBtn, activeTab === 'letter' && styles.tabBtnActive]}
               onPress={() => setActiveTab('letter')}
             >
-              <Mail size={14} color={activeTab === 'letter' ? '#FFFFFF' : '#94A3B8'} />
+              <Mail size={14} color={activeTab === 'letter' ? stitchColors.white : stitchColors.inkSubtle} />
               <Text style={[styles.tabBtnText, activeTab === 'letter' && styles.tabBtnTextActive]}>
                 Lettre RH
               </Text>
@@ -310,7 +310,7 @@ export function ApplicationDetailModal({
               style={[styles.tabBtn, activeTab === 'company' && styles.tabBtnActive]}
               onPress={() => setActiveTab('company')}
             >
-              <Building2 size={14} color={activeTab === 'company' ? '#FFFFFF' : '#94A3B8'} />
+              <Building2 size={14} color={activeTab === 'company' ? stitchColors.white : stitchColors.inkSubtle} />
               <Text style={[styles.tabBtnText, activeTab === 'company' && styles.tabBtnTextActive]}>
                 Suivi & Contact
               </Text>
@@ -330,9 +330,9 @@ export function ApplicationDetailModal({
                     disabled={downloadingPdf}
                   >
                     {downloadingPdf ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={stitchColors.white} />
                     ) : (
-                      <Download size={14} color="#FFFFFF" />
+                      <Download size={14} color={stitchColors.white} />
                     )}
                     <Text style={styles.primaryActionBtnText}>Télécharger le CV (PDF)</Text>
                   </Pressable>
@@ -371,7 +371,7 @@ export function ApplicationDetailModal({
                     style={({ pressed }) => [styles.whatsappActionBtn, pressed && { opacity: 0.85 }]}
                     onPress={handleSendReminderWhatsapp}
                   >
-                    <Send size={13} color="#FFFFFF" />
+                    <Send size={13} color={stitchColors.white} />
                     <Text style={styles.whatsappActionBtnText}>WhatsApp RH</Text>
                   </Pressable>
 
@@ -379,7 +379,7 @@ export function ApplicationDetailModal({
                     style={({ pressed }) => [styles.emailActionBtn, pressed && { opacity: 0.85 }]}
                     onPress={handleSendEmail}
                   >
-                    <Mail size={13} color="#FFFFFF" />
+                    <Mail size={13} color={stitchColors.white} />
                     <Text style={styles.emailActionBtnText}>Email RH</Text>
                   </Pressable>
                 </View>
@@ -397,7 +397,7 @@ export function ApplicationDetailModal({
                 {/* Urgent Follow-up Banner */}
                 {eligibleReminder && (
                   <View style={styles.urgentBanner}>
-                    <Clock size={14} color="#F59E0B" />
+                    <Clock size={14} color={stitchColors.warningTone} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.urgentBannerTitle}>
                         Relance J+7 recommandée ({daysElapsed} jours sans réponse)
@@ -434,7 +434,7 @@ export function ApplicationDetailModal({
                             ]}
                           >
                             {isPassed ? (
-                              <CheckCircle2 size={13} color="#FFFFFF" />
+                              <CheckCircle2 size={13} color={stitchColors.white} />
                             ) : (
                               <Text style={styles.pipelineNumber}>{idx + 1}</Text>
                             )}
@@ -464,18 +464,18 @@ export function ApplicationDetailModal({
                 <View style={styles.cardBox}>
                   <Text style={styles.cardBoxTitle}>Coordonnées de l'Entreprise</Text>
                   <View style={styles.infoRow}>
-                    <Building2 size={14} color="#94A3B8" />
+                    <Building2 size={14} color={stitchColors.inkSubtle} />
                     <Text style={styles.infoText}>{company?.name || 'Entreprise Partenaire'}</Text>
                     {company?.status === 'VERIFIED' && (
                       <View style={styles.verifiedTag}>
-                        <ShieldCheck size={11} color="#34D399" />
+                        <ShieldCheck size={11} color={stitchColors.emeraldDeep} />
                         <Text style={styles.verifiedTagText}>KYB Vérifié</Text>
                       </View>
                     )}
                   </View>
 
                   <View style={styles.infoRow}>
-                    <MapPin size={14} color="#94A3B8" />
+                    <MapPin size={14} color={stitchColors.inkSubtle} />
                     <Text style={styles.infoText}>{company?.address || job?.location || 'Douala / Yaoundé'}</Text>
                   </View>
 
@@ -485,7 +485,7 @@ export function ApplicationDetailModal({
                         style={styles.contactBtn}
                         onPress={handleSendReminderWhatsapp}
                       >
-                        <MessageSquare size={13} color="#34D399" />
+                        <MessageSquare size={13} color={stitchColors.emeraldDeep} />
                         <Text style={styles.contactBtnText}>
                           {company.contactWhatsapp}
                         </Text>
@@ -507,7 +507,7 @@ export function ApplicationDetailModal({
                   <TextInput
                     style={styles.notesInput}
                     placeholder="Notez ici les échanges avec le recruteur, questions posées ou dates de rappel..."
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor={stitchColors.inkMuted}
                     multiline
                     value={notes}
                     onChangeText={setNotes}
@@ -518,7 +518,7 @@ export function ApplicationDetailModal({
                     disabled={savingNotes}
                   >
                     {savingNotes ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={stitchColors.white} />
                     ) : (
                       <Text style={styles.saveNotesBtnText}>Enregistrer mes notes</Text>
                     )}
@@ -539,13 +539,13 @@ export function ApplicationDetailModal({
                       Code intégrité {refCode} • Vérifiable en ligne par le recruteur
                     </Text>
                   </View>
-                  <ChevronRight size={16} color="#94A3B8" />
+                  <ChevronRight size={16} color={stitchColors.inkSubtle} />
                 </Pressable>
 
                 {showCertificate && (
                   <View style={styles.certModalBox}>
                     <View style={styles.certHeader}>
-                      <ShieldCheck size={20} color="#34D399" />
+                      <ShieldCheck size={20} color={stitchColors.emeraldDeep} />
                       <Text style={styles.certModalTitle}>Attestation de Dépôt Institutionnel</Text>
                     </View>
                     <Text style={styles.certModalText}>
@@ -641,7 +641,7 @@ const styles = StyleSheet.create({
   companySubtitle: {
     fontFamily: fontFamilies.inter,
     fontSize: 12,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
   },
   closeBtn: {
     width: 32,
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.inter,
     fontSize: 12,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
   },
   tabBtnTextActive: {
     color: stitchColors.primary,
@@ -703,7 +703,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 10,
@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.inter,
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   secondaryActionBtn: {
     flexDirection: 'row',
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#10B981',
+    backgroundColor: stitchColors.emerald,
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 10,
@@ -744,7 +744,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.inter,
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   emailActionBtn: {
     flexDirection: 'row',
@@ -759,14 +759,14 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.inter,
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   letterPaper: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderRadius: 8,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
   },
   letterText: {
     fontFamily: fontFamilies.inter,
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
     color: stitchColors.inkMuted,
   },
   urgentRelanceBtn: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: stitchColors.warningTone,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
@@ -843,7 +843,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   pipelineDotPassed: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
   },
   pipelineDotCurrent: {
     borderWidth: 2,
@@ -852,12 +852,12 @@ const styles = StyleSheet.create({
   pipelineNumber: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
   },
   pipelineLabel: {
     fontFamily: fontFamilies.inter,
     fontSize: 9.5,
-    color: '#64748B',
+    color: stitchColors.inkMuted,
     textAlign: 'center',
   },
   pipelineLabelCurrent: {
@@ -873,7 +873,7 @@ const styles = StyleSheet.create({
   cycleStatusBtnText: {
     fontFamily: fontFamilies.inter,
     fontSize: 11.5,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontWeight: '600',
   },
   infoRow: {
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
   verifiedTagText: {
     fontFamily: fontFamilies.inter,
     fontSize: 10,
-    color: '#34D399',
+    color: stitchColors.emeraldDeep,
     fontWeight: '700',
   },
   contactsRow: {
@@ -979,7 +979,7 @@ const styles = StyleSheet.create({
   certSub: {
     fontFamily: fontFamilies.inter,
     fontSize: 10.5,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
   },
   certModalBox: {
     marginTop: 8,
@@ -999,7 +999,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 12,
     fontWeight: '700',
-    color: '#34D399',
+    color: stitchColors.emeraldDeep,
   },
   certModalText: {
     fontFamily: fontFamilies.inter,
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
   certMetaItem: {
     fontFamily: fontFamilies.inter,
     fontSize: 10,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontWeight: '600',
   },
   footer: {

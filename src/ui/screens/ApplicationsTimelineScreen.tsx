@@ -136,7 +136,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8B5CF6" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={stitchColors.secondary} />
         }
       >
         {/* Motivation Card */}
@@ -190,12 +190,12 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
                 {/* Job Title & Company */}
                 <Text style={styles.ticketJobTitle} numberOfLines={2}>{app.job?.title || 'Stage Professionnel'}</Text>
                 <View style={styles.ticketCompanyRow}>
-                  <Building2 size={13} color="#94A3B8" />
+                  <Building2 size={13} color={stitchColors.inkSubtle} />
                   <Text style={styles.ticketCompanyName}>{app.job?.company?.name || 'Entreprise Partenaire'}</Text>
                   {app.job?.location && (
                     <>
                       <Text style={styles.ticketDot}>•</Text>
-                      <MapPin size={12} color="#94A3B8" />
+                      <MapPin size={12} color={stitchColors.inkSubtle} />
                       <Text style={styles.ticketLocationText}>{app.job.location}</Text>
                     </>
                   )}
@@ -204,7 +204,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
                 {/* Urgent Followup J+7 Badge */}
                 {isEligibleReminder && (
                   <View style={styles.urgentBanner} testID={`urgent-banner-${app.id}`}>
-                    <Clock size={12} color="#F59E0B" />
+                    <Clock size={12} color={stitchColors.warningTone} />
                     <Text style={styles.urgentBannerText}>
                       Relance J+7 recommandée ({daysElapsed}j sans réponse)
                     </Text>
@@ -246,7 +246,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
                   {/* QR Code Verification Preview */}
                   <View style={styles.qrBox}>
-                    <QrCode size={28} color="#CBD5E1" />
+                    <QrCode size={28} color={stitchColors.outline} />
                     <Text style={styles.qrLabel}>Vérifié</Text>
                   </View>
                 </View>
@@ -285,12 +285,12 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
                       style={styles.reminderBtn}
                       onPress={() => handleSendReminder(app)}
                     >
-                      <MessageSquare size={13} color="#FFFFFF" />
+                      <MessageSquare size={13} color={stitchColors.white} />
                       <Text style={styles.reminderBtnText}>💬 Relancer sur WhatsApp (J+7)</Text>
                     </Pressable>
                   ) : isPending ? (
                     <View style={styles.waitingBadge}>
-                      <Clock size={11} color="#94A3B8" />
+                      <Clock size={11} color={stitchColors.inkSubtle} />
                       <Text style={styles.waitingBadgeText}>Dépôt il y a {daysElapsed}j (relance à J+7)</Text>
                     </View>
                   ) : null}
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 12.5,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     marginTop: 3,
   },
   scroll: {
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontSize: 12.5,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     textAlign: 'center',
     lineHeight: 18,
   },
@@ -497,16 +497,16 @@ const styles = StyleSheet.create({
   },
   ticketCompanyName: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontWeight: '500',
   },
   ticketDot: {
-    color: '#64748B',
+    color: stitchColors.inkMuted,
     fontSize: 11,
   },
   ticketLocationText: {
     fontSize: 11.5,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
   },
 
   // Perforated line
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
   },
   ticketMetaLabel: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
   qrLabel: {
     fontSize: 8.5,
     fontWeight: '500',
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     marginTop: 2,
   },
 
@@ -616,14 +616,14 @@ const styles = StyleSheet.create({
   },
   changeStatusPillText: {
     fontSize: 11.5,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontWeight: '500',
   },
   reminderBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 6,
@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
   reminderBtnText: {
     fontSize: 11.5,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   urgentBanner: {
     flexDirection: 'row',
@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
   },
   waitingBadgeText: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
   },
   viewDossierButton: {
     flexDirection: 'row',

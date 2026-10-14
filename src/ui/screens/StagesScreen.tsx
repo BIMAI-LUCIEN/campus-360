@@ -392,8 +392,8 @@ export function StagesScreen({
           >
             <Star
               size={12}
-              color={showTopThreeOnly ? '#FFFFFF' : '#D97706'}
-              fill={showTopThreeOnly ? '#FFFFFF' : '#D97706'}
+              color={showTopThreeOnly ? stitchColors.white : stitchColors.warning}
+              fill={showTopThreeOnly ? stitchColors.white : stitchColors.warning}
             />
             <Text style={[styles.podiumChipText, showTopThreeOnly && styles.podiumChipTextActive]}>
               Top 3
@@ -605,7 +605,7 @@ export function StagesScreen({
                         setApplyingJob(job);
                       }}
                     >
-                      <Sparkles size={13} color="#FFFFFF" />
+                      <Sparkles size={13} color={stitchColors.white} />
                       <Text style={styles.applyBtnText}>Postuler</Text>
                     </Pressable>
                   </View>
@@ -668,8 +668,8 @@ export function StagesScreen({
                     >
                       <Heart
                         size={19}
-                        color={favorites[selectedDetailJob.id] ? '#EF4444' : stitchColors.ink}
-                        fill={favorites[selectedDetailJob.id] ? '#EF4444' : 'transparent'}
+                        color={favorites[selectedDetailJob.id] ? stitchColors.error : stitchColors.ink}
+                        fill={favorites[selectedDetailJob.id] ? stitchColors.error : 'transparent'}
                       />
                     </Pressable>
                   </View>
@@ -1043,7 +1043,7 @@ export function StagesScreen({
                       style={styles.recruiterWhatsAppBtn}
                       onPress={handleRecruiterWhatsapp}
                     >
-                      <MessageCircle size={16} color="#059669" />
+                      <MessageCircle size={16} color={stitchColors.emeraldDeep} />
                       <Text style={styles.recruiterWhatsAppText}>WhatsApp RH</Text>
                     </Pressable>
 
@@ -1080,7 +1080,7 @@ export function StagesScreen({
                 style={styles.stickyApplyBtn}
                 onPress={handleApplyFromDetail}
               >
-                <Sparkles size={17} color="#FFFFFF" />
+                <Sparkles size={17} color={stitchColors.white} />
                 <Text style={styles.stickyApplyBtnText}>Postuler en 1 Clic</Text>
               </Pressable>
             </View>
@@ -1108,7 +1108,7 @@ export function StagesScreen({
                     style={styles.photoPreviewCloseBtn}
                     onPress={() => setSelectedPreviewPhoto(null)}
                   >
-                    <X size={20} color="#FFFFFF" />
+                    <X size={20} color={stitchColors.white} />
                   </Pressable>
                 </View>
               </Pressable>
@@ -1143,7 +1143,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: stitchColors.paper, // #FFFFFF
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: stitchColors.paperSoft,
   },
   greetingRow: {
     flexDirection: 'row',
@@ -1185,16 +1185,16 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   podiumChipActive: {
-    backgroundColor: '#D97706',
-    borderColor: '#D97706',
+    backgroundColor: stitchColors.warning,
+    borderColor: stitchColors.warning,
   },
   podiumChipText: {
     fontSize: 12,
-    color: '#D97706',
+    color: stitchColors.warning,
     fontWeight: '700',
   },
   podiumChipTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   filterChip: {
     paddingHorizontal: 13,
@@ -1202,7 +1202,7 @@ const styles = StyleSheet.create({
     borderRadius: stitchRadius.full,
     backgroundColor: stitchColors.paperSoft,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
   },
   filterChipActive: {
     backgroundColor: stitchColors.sienna,
@@ -1215,7 +1215,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   filterChipTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontWeight: '700',
   },
   contractChip: {
@@ -1224,7 +1224,7 @@ const styles = StyleSheet.create({
     borderRadius: stitchRadius.full,
     backgroundColor: stitchColors.paperSoft,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
   },
   contractChipActive: {
     backgroundColor: stitchColors.siennaBg,
@@ -1277,7 +1277,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchColors.paper,
     borderRadius: stitchRadius.card,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     marginTop: 20,
     ...stitchShadows.card,
   },
@@ -1309,7 +1309,7 @@ const styles = StyleSheet.create({
     borderRadius: stitchRadius.button,
   },
   resetFiltersBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -1320,14 +1320,14 @@ const styles = StyleSheet.create({
     borderRadius: stitchRadius.card, // 20
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: stitchColors.paperSoft,
     ...stitchShadows.card,
   },
   cardHeroImageContainer: {
     width: '100%',
     height: 155,
     position: 'relative',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: stitchColors.paperSoft,
   },
   cardHeroImage: {
     width: '100%',
@@ -1443,7 +1443,7 @@ const styles = StyleSheet.create({
   },
   skillTag: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     backgroundColor: stitchColors.paperSoft,
     borderRadius: 8,
     paddingHorizontal: 8,
@@ -1456,7 +1456,7 @@ const styles = StyleSheet.create({
   },
   cardDivider: {
     height: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: stitchColors.paperSoft,
     marginBottom: 12,
   },
   cardBottomRow: {
@@ -1491,7 +1491,7 @@ const styles = StyleSheet.create({
     ...stitchShadows.primary,
   },
   applyBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -1514,7 +1514,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     overflow: 'hidden',
-    backgroundColor: '#0F172A',
+    backgroundColor: stitchColors.ink,
   },
   detailHeroImage: {
     width: '100%',
@@ -1573,8 +1573,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F1F5F9',
+    borderColor: stitchColors.glassBorder,
+    backgroundColor: stitchColors.paperSoft,
     position: 'relative',
   },
   workspaceThumbImg: {
@@ -1588,7 +1588,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   workspaceOverlayText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -1644,7 +1644,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: stitchColors.paperSoft,
   },
   companyInfoLeft: {
     flexDirection: 'row',
@@ -1683,7 +1683,7 @@ const styles = StyleSheet.create({
   segmentedTabsContainer: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: stitchColors.paperSoft,
     marginTop: 14,
   },
   segmentedTab: {
@@ -1725,7 +1725,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
   },
   metadataCardLabel: {
     fontSize: 10.5,
@@ -1781,7 +1781,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: stitchColors.paperSoft,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
@@ -1807,7 +1807,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
   },
   kybIconCircle: {
     width: 36,
@@ -1835,7 +1835,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
   },
   companyAddressText: {
     fontSize: 12.5,
@@ -1884,7 +1884,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     marginBottom: 16,
   },
   strategicAdviceTitle: {
@@ -1924,7 +1924,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     ...stitchShadows.card,
   },
   recruiterHeaderRow: {
@@ -1972,7 +1972,7 @@ const styles = StyleSheet.create({
   recruiterWhatsAppText: {
     fontSize: 12.5,
     fontWeight: '700',
-    color: '#059669',
+    color: stitchColors.emeraldDeep,
   },
   recruiterEmailBtn: {
     flex: 1,
@@ -1998,9 +1998,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: stitchColors.paperSoft,
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 32 : 16,
@@ -2029,7 +2029,7 @@ const styles = StyleSheet.create({
     ...stitchShadows.primary,
   },
   stickyApplyBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 14.5,
     fontWeight: '700',
   },

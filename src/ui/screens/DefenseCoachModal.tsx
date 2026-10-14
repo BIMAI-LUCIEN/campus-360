@@ -116,7 +116,7 @@ export function DefenseCoachModal({
               </Text>
             </View>
             <Pressable style={styles.closeBtn} onPress={onClose}>
-              <X size={18} color="#94A3B8" />
+              <X size={18} color={stitchColors.inkSubtle} />
             </Pressable>
           </View>
 
@@ -126,7 +126,7 @@ export function DefenseCoachModal({
               style={[styles.tab, activeTab === 'slides' && styles.tabActive]}
               onPress={() => setActiveTab('slides')}
             >
-              <Presentation size={13} color={activeTab === 'slides' ? '#FFFFFF' : '#94A3B8'} />
+              <Presentation size={13} color={activeTab === 'slides' ? stitchColors.white : stitchColors.inkSubtle} />
               <Text style={[styles.tabText, activeTab === 'slides' && styles.tabTextActive]}>
                 Slides ({slides.length})
               </Text>
@@ -136,7 +136,7 @@ export function DefenseCoachModal({
               style={[styles.tab, activeTab === 'jury' && styles.tabActive]}
               onPress={() => setActiveTab('jury')}
             >
-              <HelpCircle size={13} color={activeTab === 'jury' ? '#FFFFFF' : '#94A3B8'} />
+              <HelpCircle size={13} color={activeTab === 'jury' ? stitchColors.white : stitchColors.inkSubtle} />
               <Text style={[styles.tabText, activeTab === 'jury' && styles.tabTextActive]}>
                 Questions Jury ({juryQuestions.length})
               </Text>
@@ -146,7 +146,7 @@ export function DefenseCoachModal({
               style={[styles.tab, activeTab === 'tips' && styles.tabActive]}
               onPress={() => setActiveTab('tips')}
             >
-              <Lightbulb size={13} color={activeTab === 'tips' ? '#FFFFFF' : '#94A3B8'} />
+              <Lightbulb size={13} color={activeTab === 'tips' ? stitchColors.white : stitchColors.inkSubtle} />
               <Text style={[styles.tabText, activeTab === 'tips' && styles.tabTextActive]}>
                 Conseils 18/20
               </Text>
@@ -156,7 +156,7 @@ export function DefenseCoachModal({
           {/* Body Content */}
           {loading ? (
             <View style={styles.centerBox}>
-              <ActivityIndicator size="large" color="#8B5CF6" />
+              <ActivityIndicator size="large" color={stitchColors.secondary} />
               <Text style={styles.loadingText}>L'IA prépare ta soutenance d'élite...</Text>
             </View>
           ) : (
@@ -174,7 +174,7 @@ export function DefenseCoachModal({
                           <Text style={styles.slideNumberText}>Slide {s.slide_number}</Text>
                         </View>
                         <View style={styles.timingBadge}>
-                          <Clock size={11} color="#34D399" />
+                          <Clock size={11} color={stitchColors.emeraldDeep} />
                           <Text style={styles.timingText}>{s.timing_minutes} min</Text>
                         </View>
                       </View>
@@ -216,7 +216,7 @@ export function DefenseCoachModal({
                           {isExpanded ? (
                             <ChevronUp size={16} color="#A78BFA" />
                           ) : (
-                            <ChevronDown size={16} color="#94A3B8" />
+                            <ChevronDown size={16} color={stitchColors.inkSubtle} />
                           )}
                         </Pressable>
 
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   subtitle: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 12,
     marginTop: 2,
   },
@@ -322,18 +322,18 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: 'rgba(30, 27, 58, 0.6)',
+    backgroundColor: stitchColors.paperSoft,
   },
   tabActive: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
   },
   tabText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 11,
     fontWeight: '600',
   },
   tabTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontWeight: '700',
   },
   scroll: {
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   timingText: {
-    color: '#34D399',
+    color: stitchColors.emeraldDeep,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#8B5CF6',
+    backgroundColor: stitchColors.secondary,
   },
   bulletText: {
     color: stitchColors.inkMuted,

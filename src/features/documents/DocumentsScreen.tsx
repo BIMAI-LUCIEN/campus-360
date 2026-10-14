@@ -16,7 +16,7 @@ import type { OfficialCvData } from '../../types';
 const getDocBadgeTheme = (type: string) => {
   switch (type) {
     case 'cv':
-      return { bg: 'rgba(99, 102, 241, 0.15)', text: '#818CF8', border: 'rgba(255, 255, 255, 0.1)' };
+      return { bg: 'rgba(99, 102, 241, 0.15)', text: stitchColors.secondary, border: 'rgba(255, 255, 255, 0.1)' };
     case 'lettre_motivation':
       return { bg: 'rgba(56, 189, 248, 0.15)', text: '#38BDF8', border: 'rgba(255, 255, 255, 0.1)' };
     case 'stage':
@@ -24,7 +24,7 @@ const getDocBadgeTheme = (type: string) => {
     case 'memoire':
       return { bg: 'rgba(168, 85, 247, 0.15)', text: '#C084FC', border: 'rgba(255, 255, 255, 0.1)' };
     default:
-      return { bg: 'rgba(99, 102, 241, 0.15)', text: '#818CF8', border: 'rgba(255, 255, 255, 0.1)' };
+      return { bg: 'rgba(99, 102, 241, 0.15)', text: stitchColors.secondary, border: 'rgba(255, 255, 255, 0.1)' };
   }
 };
 
@@ -539,7 +539,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       <View style={styles.cvShowcaseCard}>
         <View style={styles.cvShowcaseHeader}>
           <View style={styles.cvShowcaseBadge}>
-            <Sparkles size={11} color="#7C3AED" />
+            <Sparkles size={11} color={stitchColors.primary} />
             <Text style={styles.cvShowcaseBadgeText}>Gabarit Officiel RH</Text>
           </View>
           <Text style={styles.cvShowcaseFormat}>Format 2 Colonnes</Text>
@@ -553,7 +553,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
             style={({ pressed }) => [styles.cvPreviewBtn, pressed && { opacity: 0.88 }]}
             onPress={() => setCvPreviewVisible(true)}
           >
-            <Eye size={15} color="#FFFFFF" strokeWidth={2.2} style={{ marginRight: 6 }} />
+            <Eye size={15} color={stitchColors.white} strokeWidth={2.2} style={{ marginRight: 6 }} />
             <Text style={styles.cvPreviewBtnText}>Aperçu du CV Officiel RH</Text>
           </Pressable>
         </View>
@@ -598,7 +598,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                 <Text style={styles.cardTitle}>{doc.title}</Text>
                 <View style={styles.cardActions}>
                   <Pressable style={[styles.actionButton, styles.editButton]} onPress={() => onEditDocument(doc.id)}>
-                    <Edit3 size={13} color="#FFFFFF" strokeWidth={2.2} style={{ marginRight: 6 }} />
+                    <Edit3 size={13} color={stitchColors.white} strokeWidth={2.2} style={{ marginRight: 6 }} />
                     <Text style={styles.editButtonText}>Éditer</Text>
                   </Pressable>
                   <Pressable style={[styles.actionButton, styles.pdfButton]} onPress={() => {
@@ -874,7 +874,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                 style={({ pressed }) => [styles.officialCvCloseBtn, pressed && { opacity: 0.8 }]}
                 onPress={() => setCvPreviewVisible(false)}
               >
-                <X size={18} color="#0F172A" />
+                <X size={18} color={stitchColors.ink} />
               </Pressable>
             </View>
 
@@ -898,7 +898,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                   }
                 }}
               >
-                <Download size={15} color="#FFFFFF" strokeWidth={2.2} />
+                <Download size={15} color={stitchColors.white} strokeWidth={2.2} />
                 <Text style={styles.officialCvDownloadBtnText}>Télécharger le PDF Officiel</Text>
               </Pressable>
             </View>
@@ -960,10 +960,10 @@ const styles = StyleSheet.create({
 
   // Options de rédaction — tile grid
   optionsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: stitchColors.paperSoft,
     padding: 16,
     marginBottom: 16,
     ...stitchShadows.card,
@@ -982,17 +982,17 @@ const styles = StyleSheet.create({
   },
   tile: {
     width: '48%',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.background,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     paddingVertical: 14,
     paddingHorizontal: 14,
     gap: 10,
   },
   tilePressed: {
-    backgroundColor: '#F1F5F9',
-    borderColor: '#CBD5E1',
+    backgroundColor: stitchColors.paperSoft,
+    borderColor: stitchColors.outline,
   },
   tileIcon: {
     width: 40,
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 0.8,
-    color: '#7C3AED',
+    color: stitchColors.primary,
     backgroundColor: 'rgba(124, 58, 237, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(124, 58, 237, 0.25)',
@@ -1026,10 +1026,10 @@ const styles = StyleSheet.create({
 
   // Vitrine CV Officiel RH
   cvShowcaseCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: stitchColors.paperSoft,
     padding: 16,
     marginBottom: 24,
     ...stitchShadows.card,
@@ -1054,7 +1054,7 @@ const styles = StyleSheet.create({
   cvShowcaseBadgeText: {
     fontSize: 10.5,
     fontWeight: '700',
-    color: '#7C3AED',
+    color: stitchColors.primary,
   },
   cvShowcaseFormat: {
     fontFamily: MONO,
@@ -1090,7 +1090,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cvPreviewBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 13,
     fontWeight: '700',
     fontFamily: SANS,
@@ -1108,10 +1108,10 @@ const styles = StyleSheet.create({
   listContainer: { gap: 12, paddingBottom: 40 },
 
   documentCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderRadius: 16,
     padding: 18,
-    borderColor: '#F1F5F9',
+    borderColor: stitchColors.paperSoft,
     borderWidth: 1,
     ...stitchShadows.card,
   },
@@ -1148,7 +1148,7 @@ const styles = StyleSheet.create({
   actionButton: { height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
   editButton: { flex: 1, backgroundColor: stitchColors.primary },
   editButtonText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 13,
     fontWeight: '600',
     fontFamily: SANS,
@@ -1178,10 +1178,10 @@ const styles = StyleSheet.create({
     paddingVertical: 36,
     alignItems: 'center',
     paddingHorizontal: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: stitchColors.paperSoft,
     ...stitchShadows.card,
   },
   emptyTitle: {
@@ -1207,7 +1207,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   officialCvModalSheet: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '92%',
@@ -1221,7 +1221,7 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: stitchColors.paperSoft,
   },
   officialCvModalTitle: {
     fontSize: 17,
@@ -1237,7 +1237,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: stitchColors.paperSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1253,7 +1253,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: stitchColors.paperSoft,
   },
   officialCvDownloadBtn: {
     height: 46,
@@ -1265,7 +1265,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   officialCvDownloadBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -1285,7 +1285,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   retryText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 13,
     fontWeight: '700',
     fontFamily: SERIF,
@@ -1352,7 +1352,7 @@ const styles = StyleSheet.create({
   },
   tagChipActive: { backgroundColor: stitchColors.surfaceContainerHigh, borderColor: stitchColors.glassBorder },
   tagChipText: { fontSize: 12, color: stitchColors.ink, fontWeight: '600' },
-  tagChipTextActive: { color: '#FFFFFF' },
+  tagChipTextActive: { color: stitchColors.white },
 
   tagRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   tagCheckbox: {
@@ -1366,7 +1366,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tagCheckboxActive: { backgroundColor: stitchColors.surfaceContainerHigh, borderColor: stitchColors.glassBorder },
-  tagCheckboxCheck: { color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' },
+  tagCheckboxCheck: { color: stitchColors.white, fontSize: 11, fontWeight: 'bold' },
   tagRowLabel: { fontSize: 13, color: stitchColors.ink, fontWeight: '600' },
 
   addMoreText: {
@@ -1418,9 +1418,9 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: { color: stitchColors.ink, fontSize: 14, fontWeight: '700', fontFamily: SERIF },
   confirmBtn: { backgroundColor: stitchColors.surfaceContainerHigh },
-  confirmBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', fontFamily: SERIF },
+  confirmBtnText: { color: stitchColors.white, fontSize: 14, fontWeight: '700', fontFamily: SERIF },
   aiGenerateBtn: { backgroundColor: stitchColors.sienna, flex: 2 },
-  aiGenerateBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', fontFamily: SERIF },
+  aiGenerateBtnText: { color: stitchColors.white, fontSize: 14, fontWeight: '700', fontFamily: SERIF },
   buttonDisabled: { opacity: 0.5 },
 
   // ── Editorial poster sheet (type selector) ─────────────────────────────

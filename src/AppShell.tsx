@@ -1053,7 +1053,7 @@ export function AppShell() {
         {/* Update Banner */}
         {updateAvailable && (
           <View style={{ backgroundColor: stitchColors.surfaceContainerHigh, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600', flex: 1 }}>Nouvelle version disponible !</Text>
+            <Text style={{ color: stitchColors.white, fontSize: 14, fontWeight: '600', flex: 1 }}>Nouvelle version disponible !</Text>
             <Pressable onPress={handleDownloadUpdate} disabled={updateLoading} style={{ backgroundColor: stitchColors.paper, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
               {updateLoading ? <ActivityIndicator size="small" color={stitchColors.ink} /> : <Text style={{ color: stitchColors.ink, fontSize: 13, fontWeight: '700' }}>Mettre à jour</Text>}
             </Pressable>
@@ -1296,7 +1296,7 @@ export function AppShell() {
                   onOpenSecuritySettings={() => setSecuritySettingsVisible(true)}
                   onOpenSupport={() => setSupportModalVisible(true)}
                   onSync={() => syncStudentAccount(studentSession ?? undefined)}
-                  onRecharge={() => { setAccountVisible(true); }}
+                  onRecharge={() => { setRechargeVisible(true); }}
                   onPremium={() => openSection('premium')}
                   onLibrary={() => openSection('resources')}
                   onDocuments={() => openSection('documents')}
@@ -1351,7 +1351,7 @@ export function AppShell() {
         {/* Account Modal */}
         <Modal transparent animationType="slide" visible={accountVisible}>
           <ModalCard>
-            <Text style={styles.modalTitle}>Compte PDF</Text>
+            <Text style={styles.modalTitle}>Mon compte</Text>
             <View style={styles.accountHeader}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{initials}</Text>
@@ -1363,7 +1363,7 @@ export function AppShell() {
             </View>
             <View style={styles.walletPanel}>
               <View style={styles.walletPanelTop}>
-                <Text style={styles.kicker}>Solde PDF & IA</Text>
+                <Text style={styles.kicker}>Solde du wallet</Text>
                 <Pressable onPress={() => syncStudentAccount(studentSession ?? undefined)}>
                   <Text style={styles.inlineUtilityText}>{syncingAccount ? 'Sync...' : 'Actualiser'}</Text>
                 </Pressable>
@@ -1411,8 +1411,8 @@ export function AppShell() {
           <ModalCard>
             <View style={styles.rechargeHero}>
               <View style={styles.rechargeHeroBadge}><Text style={styles.rechargeHeroBadgeText}>C</Text></View>
-              <Text style={styles.modalTitle}>Recharger le wallet PDF</Text>
-              <Text style={{ ...stitchTypography.bodyMd, color: stitchColors.onSurfaceVariant }}>Ajoute des coins pour acheter tes packs et PDF sans friction.</Text>
+              <Text style={styles.modalTitle}>Recharger mon wallet</Text>
+              <Text style={{ ...stitchTypography.bodyMd, color: stitchColors.onSurfaceVariant }}>Ajoute des coins pour postuler, rédiger avec l’IA et acheter tes PDF.</Text>
             </View>
             <View style={styles.walletPanel}>
               <Text style={styles.kicker}>Solde actuel</Text>
@@ -1460,8 +1460,13 @@ export function AppShell() {
               </View>
             ) : (
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-                <PrimaryButtonLocal label="Annuler" variant="secondary" fluid onPress={cancelRechargePolling} />
-                <PrimaryButtonLocal label="Valider" fluid onPress={rechargeWallet} />
+                {/* Two equal columns: each "fluid" button would otherwise take the full row. */}
+                <View style={{ flex: 1 }}>
+                  <PrimaryButtonLocal label="Annuler" variant="secondary" fluid onPress={cancelRechargePolling} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <PrimaryButtonLocal label="Valider" fluid onPress={rechargeWallet} />
+                </View>
               </View>
             )}
           </ModalCard>
@@ -1621,7 +1626,7 @@ export function AppShell() {
                 <Text style={{ fontSize: 14, color: stitchColors.inkMuted, textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>Notre équipe est disponible sur WhatsApp pour t'aider avec tes recharges, tes PDF ou tout autre problème.</Text>
                 <Pressable style={{ backgroundColor: '#25D366', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 24, width: '100%', justifyContent: 'center' }} onPress={() => Linking.openURL('https://wa.me/237690273500')}>
                   <Text style={{ fontSize: 20, marginRight: 8 }}>📱</Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>Discuter sur WhatsApp</Text>
+                  <Text style={{ color: stitchColors.white, fontSize: 16, fontWeight: '700' }}>Discuter sur WhatsApp</Text>
                 </Pressable>
               </View>
             </Pressable>
@@ -1684,7 +1689,7 @@ const styles = StyleSheet.create({
   scrollContent: { width: '100%', maxWidth: 1040, alignSelf: 'center', paddingBottom: 160 },
   scrollContentCompact: { paddingBottom: 116 },
   loadingScreen: { flex: 1, backgroundColor: stitchColors.surfaceContainerHigh, justifyContent: 'center', alignItems: 'center', gap: 16 },
-  loadingEyebrow: { fontFamily: stitchTypography.monoEyebrow.fontFamily, fontSize: 12, letterSpacing: 2, color: '#FFFFFF', fontWeight: '700' },
+  loadingEyebrow: { fontFamily: stitchTypography.monoEyebrow.fontFamily, fontSize: 12, letterSpacing: 2, color: stitchColors.white, fontWeight: '700' },
   loadingRule: { width: 48, height: 1, backgroundColor: stitchColors.sienna },
 
   loadingText: { color: stitchColors.inkSubtle, fontSize: 14, fontWeight: '600' },
@@ -1694,7 +1699,7 @@ const styles = StyleSheet.create({
 
   accountHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: stitchColors.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: stitchColors.surfaceContainerHighest },
-  avatarText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  avatarText: { color: stitchColors.white, fontSize: 16, fontWeight: '800' },
   cardTitle: { ...stitchTypography.labelMd, fontWeight: '700', color: stitchColors.onSurface },
 
   walletPanel: { backgroundColor: stitchColors.surfaceContainerLow, borderRadius: stitchRadius.lg, padding: 16, marginBottom: 16 },
@@ -1718,7 +1723,7 @@ const styles = StyleSheet.create({
   rechargeHero: { alignItems: 'center', marginBottom: 16, gap: 8 },
   rechargeHeroBadge: { width: 48, height: 48, borderRadius: 24, backgroundColor: stitchColors.primary, alignItems: 'center', justifyContent: 'center' },
   rechargeHeroAlert: { backgroundColor: stitchColors.error },
-  rechargeHeroBadgeText: { color: '#FFFFFF', fontSize: 20, fontWeight: '900' },
+  rechargeHeroBadgeText: { color: stitchColors.white, fontSize: 20, fontWeight: '900' },
 
   rechargePreset: { flex: 1, backgroundColor: stitchColors.surfaceContainerHigh, borderRadius: stitchRadius.md, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center', borderWidth: 1, borderColor: stitchColors.outlineVariant },
   rechargePresetActive: { backgroundColor: stitchColors.primaryFixed, borderColor: stitchColors.primary },
@@ -1760,7 +1765,7 @@ const styles = StyleSheet.create({
   passCardFeatured: { borderColor: stitchColors.siennaDeep, backgroundColor: stitchColors.surfaceContainer },
   passCardCurrent: { borderColor: stitchColors.emerald },
   passRibbon: { position: 'absolute', top: -12, right: 22, paddingHorizontal: 12, paddingVertical: 6, borderRadius: stitchRadius.full },
-  passRibbonText: { color: '#FFFFFF', fontFamily: SANS, fontSize: 10, fontWeight: '700', letterSpacing: 0.6 },
+  passRibbonText: { color: stitchColors.white, fontFamily: SANS, fontSize: 10, fontWeight: '700', letterSpacing: 0.6 },
   passCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   passKicker: { fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0.2, color: stitchColors.inkMuted, fontWeight: '600' },
   passCurrentTag: { fontFamily: MONO, fontSize: 9, fontWeight: '700', color: stitchColors.emerald, letterSpacing: 1.2 },
@@ -1784,7 +1789,7 @@ const styles = StyleSheet.create({
   },
   passCtaText: { color: stitchColors.ink, fontFamily: SANS, fontSize: 14, fontWeight: '700' },
   passCtaFeatured: { paddingVertical: 14, alignItems: 'center', borderRadius: stitchRadius.button },
-  passCtaFeaturedText: { color: '#FFFFFF', fontFamily: SANS, fontSize: 14, fontWeight: '700' },
+  passCtaFeaturedText: { color: stitchColors.white, fontFamily: SANS, fontSize: 14, fontWeight: '700' },
 
   // IA top-up — icon-tile grid
   iaSection: { marginBottom: 28 },
@@ -1824,5 +1829,5 @@ const styles = StyleSheet.create({
   walletCalloutTitle: { fontFamily: SANS, fontSize: 19, fontWeight: '700', color: stitchColors.ink, letterSpacing: -0.3, marginBottom: 6 },
   walletCalloutBody: { fontFamily: 'Inter, sans-serif', fontSize: 13.5, color: stitchColors.inkMuted, lineHeight: 20, marginBottom: 16 },
   walletCalloutCta: { paddingVertical: 14, alignItems: 'center', borderRadius: stitchRadius.button },
-  walletCalloutCtaText: { fontFamily: SANS, fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
+  walletCalloutCtaText: { fontFamily: SANS, fontSize: 14, fontWeight: '700', color: stitchColors.white },
 });

@@ -9,6 +9,29 @@ const BASE_URL = process.argv[2] || 'http://localhost:8081';
 const EMAIL = process.env.E2E_EMAIL;
 const PASSWORD = process.env.E2E_PASSWORD;
 const OUT_DIR = path.resolve(__dirname, '../.agent/screenshots');
+const API_BASE = process.env.E2E_API_BASE || 'http://localhost:3001';
+const E2E_DOC_TITLE = 'Document E2E Campus 360';
+
+// Makes sure the test account owns a blank document so the editor can be opened.
+async function ensureTestDocument() {
+  const signIn = await fetch(`${API_BASE}/api/auth/sign-in/email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'expo-origin': 'campus-bordes://' },
+    body: JSON.stringify({ email: EMAIL, password: PASSWORD }),
+  });
+  const { token } = await signIn.json();
+  if (!token) throw new Error(`E2E sign-in failed (${signIn.status})`);
+  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  const list = await (await fetch(`${API_BASE}/api/mobile/documents`, { headers })).json();
+  const documents = Array.isArray(list) ? list : list.documents ?? [];
+  if (documents.some((doc) => doc.title === E2E_DOC_TITLE)) return;
+  const created = await fetch(`${API_BASE}/api/mobile/documents`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ title: E2E_DOC_TITLE, type: 'blank' }),
+  });
+  if (!created.ok) throw new Error(`E2E document creation failed (${created.status})`);
+}
 
 const report = { baseUrl: BASE_URL, startedAt: new Date().toISOString(), steps: [], consoleErrors: [] };
 
@@ -26,6 +49,7 @@ async function launch() {
 async function main() {
   if (!EMAIL || !PASSWORD) throw new Error('E2E_EMAIL and E2E_PASSWORD are required.');
   fs.mkdirSync(OUT_DIR, { recursive: true });
+  await ensureTestDocument();
 
   const browser = await launch();
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
@@ -36,6 +60,10 @@ async function main() {
   const page = await context.newPage();
   page.on('console', (msg) => { if (msg.type() === 'error') report.consoleErrors.push(msg.text().slice(0, 300)); });
   page.on('pageerror', (err) => report.consoleErrors.push(`pageerror: ${String(err).slice(0, 300)}`));
+  report.failedRequests = [];
+  page.on('response', (res) => {
+    if (res.status() >= 400) report.failedRequests.push(`${res.status()} ${res.request().method()} ${res.url().slice(0, 160)}`);
+  });
 
   const step = async (name, fn) => {
     const entry = { name, ok: false };
@@ -118,6 +146,57 @@ async function main() {
   await step('11-applications-timeline', async () => {
     await page.getByTestId('nav-home').first().click();
     await page.getByText('Candidatures').first().click();
+  });
+
+  // Each following flow restarts from a fresh load (the session persists in the browser storage).
+  const fresh = async () => {
+    await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 120000 });
+    await page.getByTestId('nav-home').first().waitFor({ timeout: 90000 });
+    await page.waitForTimeout(1500);
+  };
+
+  await step('12-ressources-rapports-de-stage', async () => {
+    await fresh();
+    await page.getByTestId('nav-resources').first().click();
+    await page.getByText('Rapports de Stage').first().click();
+    await page.waitForTimeout(2500);
+  });
+
+  await step('13-atelier-ia', async () => {
+    await fresh();
+    await page.getByTestId('nav-resources').first().click();
+    await page.getByText('Atelier IA').first().click();
+    await page.waitForTimeout(1500);
+  });
+
+  await step('14-recharge-wallet', async () => {
+    await fresh();
+    await page.getByTestId('nav-account').first().click();
+    await page.getByText('Recharger', { exact: true }).first().click();
+    await page.waitForTimeout(2000);
+  });
+
+  const openEditor = async () => {
+    await fresh();
+    await page.getByTestId('nav-documents').first().click();
+    await page.getByText(E2E_DOC_TITLE).first().waitFor({ timeout: 30000 });
+    await page.getByText('Éditer', { exact: true }).first().click();
+    await page.getByText('Images').first().waitFor({ timeout: 30000 });
+    await page.waitForTimeout(2500);
+  };
+
+  await step('15-editeur-document', openEditor);
+
+  await step('16-editeur-images', async () => {
+    await openEditor();
+    await page.getByText('Images').first().click();
+    await page.waitForTimeout(1500);
+  });
+
+  await step('17-editeur-sources', async () => {
+    await openEditor();
+    await page.getByText('Sources').first().click();
+    await page.waitForTimeout(1500);
   });
 
   report.finishedAt = new Date().toISOString();

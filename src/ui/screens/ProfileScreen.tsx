@@ -118,7 +118,7 @@ function MenuCardGroup({ title, rows }: { title: string; rows: MenuRow[] }) {
             {row.badge}
             <ChevronRight
               size={16}
-              color={row.danger ? '#DC2626' : '#94A3B8'}
+              color={row.danger ? '#DC2626' : stitchColors.inkSubtle}
               strokeWidth={1.8}
             />
           </Pressable>
@@ -183,7 +183,7 @@ export function ProfileScreen({
       label: 'Mes candidatures & relances',
       Icon: TrendingUp,
       iconBg: 'rgba(124, 58, 237, 0.1)',
-      iconColor: '#7C3AED',
+      iconColor: stitchColors.primary,
       onPress: onApplications || onSync,
     },
     {
@@ -199,7 +199,7 @@ export function ProfileScreen({
       label: 'Ma bibliothèque de cours PDF',
       Icon: BookOpen,
       iconBg: 'rgba(5, 150, 105, 0.1)',
-      iconColor: '#059669',
+      iconColor: stitchColors.emeraldDeep,
       onPress: onLibrary,
     },
   ];
@@ -211,7 +211,7 @@ export function ProfileScreen({
       label: 'Liaison WhatsApp (Candidatures 1-Clic)',
       Icon: MessageSquare,
       iconBg: 'rgba(16, 185, 129, 0.12)',
-      iconColor: '#059669',
+      iconColor: stitchColors.emeraldDeep,
       badge: (
         <View
           style={
@@ -238,7 +238,7 @@ export function ProfileScreen({
       label: 'Sécurité & mot de passe',
       Icon: Shield,
       iconBg: 'rgba(100, 116, 139, 0.1)',
-      iconColor: '#64748B',
+      iconColor: stitchColors.inkMuted,
       onPress: onOpenSecuritySettings,
     },
     {
@@ -246,7 +246,7 @@ export function ProfileScreen({
       label: 'Notifications',
       Icon: Bell,
       iconBg: 'rgba(100, 116, 139, 0.1)',
-      iconColor: '#64748B',
+      iconColor: stitchColors.inkMuted,
       onPress: onOpenNotificationsSettings,
     },
   ];
@@ -257,7 +257,7 @@ export function ProfileScreen({
       label: 'Support WhatsApp Campus 360',
       Icon: MessageSquare,
       iconBg: 'rgba(16, 185, 129, 0.12)',
-      iconColor: '#059669',
+      iconColor: stitchColors.emeraldDeep,
       onPress: onOpenSupport,
     },
     ...(onSignInPress && !studentProfile?.email
@@ -267,7 +267,7 @@ export function ProfileScreen({
             label: 'Se connecter à un compte',
             Icon: LogIn,
             iconBg: 'rgba(124, 58, 237, 0.1)',
-            iconColor: '#7C3AED',
+            iconColor: stitchColors.primary,
             onPress: onSignInPress,
           },
         ]
@@ -277,7 +277,7 @@ export function ProfileScreen({
       label: syncingAccount ? 'Synchronisation…' : 'Synchroniser le compte',
       Icon: RefreshCw,
       iconBg: 'rgba(100, 116, 139, 0.1)',
-      iconColor: '#64748B',
+      iconColor: stitchColors.inkMuted,
       onPress: onSync,
     },
     {
@@ -305,7 +305,7 @@ export function ProfileScreen({
             onPress={onOpenNotificationsSettings}
             style={({ pressed }) => [styles.bellBtn, pressed && { opacity: 0.8 }]}
           >
-            <Bell size={18} color="#0F172A" strokeWidth={2} />
+            <Bell size={18} color={stitchColors.ink} strokeWidth={2} />
           </Pressable>
         </View>
 
@@ -323,8 +323,8 @@ export function ProfileScreen({
                   {studentProfile?.name || 'Lucien Miguel'}
                 </Text>
                 <View style={styles.premiumBadge}>
-                  <Shield size={11} color="#7C3AED" />
-                  <Text style={[styles.premiumBadgeText, { color: '#7C3AED' }]}>
+                  <Shield size={11} color={stitchColors.primary} />
+                  <Text style={[styles.premiumBadgeText, { color: stitchColors.primary }]}>
                     Étudiant Vérifié
                   </Text>
                 </View>
@@ -381,7 +381,7 @@ export function ProfileScreen({
                 <Text style={styles.neobankHolder}>{studentProfile?.name || 'Étudiant Certifié'}</Text>
               </View>
               <View style={styles.neobankIaPill}>
-                <Sparkles size={11} color="#FFFFFF" strokeWidth={2.4} />
+                <Sparkles size={11} color={stitchColors.white} strokeWidth={2.4} />
                 <Text style={styles.neobankIaText}>{iaCredits} CRÉDITS IA</Text>
               </View>
             </View>
@@ -470,9 +470,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: stitchColors.paperSoft,
     alignItems: 'center',
     justifyContent: 'center',
     ...stitchShadows.card,
@@ -480,9 +480,9 @@ const styles = StyleSheet.create({
 
   // 2. Profile Card
   profileCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: stitchColors.paperSoft,
     borderRadius: 20,
     padding: 16,
     marginBottom: 16,
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 10.5,
     fontWeight: '700',
-    color: '#D97706',
+    color: stitchColors.warning,
   },
 
   // Stats Pills Row
@@ -543,14 +543,14 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: stitchColors.paperSoft,
   },
   statPill: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.background,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
     fontFamily: stitchTypography.displayHero.fontFamily,
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
     marginTop: 2,
   },
   neobankIaPill: {
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
   neobankIaText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
     letterSpacing: 0.5,
   },
   neobankBalanceRow: {
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
     fontFamily: stitchTypography.displayHero.fontFamily,
     fontSize: 28,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: stitchColors.white,
     letterSpacing: -0.5,
   },
   neobankCurrency: {
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
   },
   neobankRechargeBtn: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderRadius: 10,
     paddingVertical: 6,
     paddingHorizontal: 14,
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
     fontFamily: stitchTypography.labelMd.fontFamily,
     fontSize: 12,
     fontWeight: '700',
-    color: '#7C3AED',
+    color: stitchColors.primary,
   },
 
   // 4. Menu Groups
@@ -676,9 +676,9 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
   },
   menuCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: stitchColors.paperSoft,
     borderRadius: 16,
     overflow: 'hidden',
     ...stitchShadows.card,
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
   },
   menuItemDivider: {
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: stitchColors.paperSoft,
   },
   menuIconCircle: {
     width: 34,
@@ -714,9 +714,9 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   txCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: stitchColors.paperSoft,
     borderRadius: 16,
     paddingHorizontal: 14,
     ...stitchShadows.card,
@@ -736,7 +736,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 11,
     fontWeight: '700',
-    color: '#059669',
+    color: stitchColors.emeraldDeep,
   },
   whatsappDisconnectedBadge: {
     backgroundColor: 'rgba(124, 58, 237, 0.08)',
@@ -751,6 +751,6 @@ const styles = StyleSheet.create({
     fontFamily: stitchTypography.bodySm.fontFamily,
     fontSize: 11,
     fontWeight: '600',
-    color: '#7C3AED',
+    color: stitchColors.primary,
   },
 });

@@ -1111,7 +1111,7 @@ export function PdfStudentSection({
 
               {isReaderPreview && (
                 <View style={styles.previewModeBadge}>
-                  <Lock size={12} color="#FFFFFF" />
+                  <Lock size={12} color={stitchColors.white} />
                   <Text style={styles.previewModeBadgeText}>MODE APERÇU</Text>
                 </View>
               )}
@@ -1569,7 +1569,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
   },
   editorialTabTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
 
   // ── Search input ────────────────────────────────────────────────────────
@@ -1624,7 +1624,7 @@ const styles = StyleSheet.create({
     ...MONO,
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   filterSummaryRow: {
     gap: 8,
@@ -1729,7 +1729,7 @@ const styles = StyleSheet.create({
     ...MONO,
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
     textTransform: 'uppercase',
   },
 
@@ -1902,7 +1902,7 @@ const styles = StyleSheet.create({
     color: stitchColors.warning,
   },
   editorialBadgeTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
 
   // ── Progress ───────────────────────────────────────────────────────────
@@ -1944,7 +1944,7 @@ const styles = StyleSheet.create({
     ...MONO,
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
   },
@@ -2225,7 +2225,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   toolSegmentTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
 
   // ── Preview badge ───────────────────────────────────────────────────────
@@ -2245,7 +2245,7 @@ const styles = StyleSheet.create({
     ...MONO,
     fontSize: 9,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
     textTransform: 'uppercase',
     letterSpacing: 1.4,
   },
@@ -2307,7 +2307,7 @@ const styles = StyleSheet.create({
     ...MONO,
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
   },
@@ -2453,7 +2453,7 @@ const styles = StyleSheet.create({
     ...MONO,
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
     lineHeight: 18,
   },
 });

@@ -1,5 +1,6 @@
 import type { StageJob } from '../../types';
 
+import { stitchColors } from '../../theme/stitch';
 export interface MatchAnalysis {
   score: number; // Score continu et réaliste (18% à 98%)
   headline: string; // e.g. "Match Exceptionnel (95%)", "Forte Adéquation (82%)", "Profil Transversal (61%)", "Compétences à Développer (38%)"
@@ -595,7 +596,7 @@ export function analyzeJobMatch(
       : `L'IA a articulé ta lettre pour démontrer une synergie forte entre tes acquis académiques et le poste.`;
   } else if (finalScore >= 60) {
     headline = `Profil Transversal (${finalScore}%)`;
-    badgeColor = '#F59E0B'; // Amber
+    badgeColor = stitchColors.warningTone; // Amber
     strategicAdvice = `L'IA met en avant tes compétences transférables et ta forte capacité d'apprentissage pour combler les spécificités du métier.`;
   } else if (finalScore >= 45) {
     headline = `Passerelle Métier (${finalScore}%)`;
@@ -603,7 +604,7 @@ export function analyzeJobMatch(
     strategicAdvice = `L'IA a orienté ta lettre sur ta polyvalence, ton esprit d'initiative et ta motivation concrète à monter rapidement en compétences.`;
   } else {
     headline = `Compétences à Développer (${finalScore}%)`;
-    badgeColor = '#EF4444'; // Red
+    badgeColor = stitchColors.error; // Red
     strategicAdvice = `L'IA conseille de valoriser tes projets personnels, ta curiosité intellectuelle et ta proactivité pour retenir l'attention du recruteur.`;
   }
 

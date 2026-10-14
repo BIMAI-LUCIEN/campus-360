@@ -356,7 +356,7 @@ export function WhatsAppPairingModal({
                 >
                   {step === 'requesting' ? (
                     <View style={styles.btnLoadingRow}>
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={stitchColors.white} />
                       <Text style={styles.primaryBtnText}>Génération du code sécurisé…</Text>
                     </View>
                   ) : (
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 14.5,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
     letterSpacing: 0.2,
   },
   btnLoadingRow: {

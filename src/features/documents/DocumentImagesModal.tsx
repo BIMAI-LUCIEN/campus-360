@@ -145,7 +145,7 @@ export function DocumentImagesModal({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerIcon}>
-              <ImageIcon size={18} color="#38BDF8" />
+              <ImageIcon size={18} color={stitchColors.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.headerTitle}>Galerie & Placement d&apos;Images IA</Text>
@@ -154,14 +154,14 @@ export function DocumentImagesModal({
               </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
-              <X size={18} color="#94A3B8" />
+              <X size={18} color={stitchColors.inkSubtle} />
             </Pressable>
           </View>
 
           <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
             {loading ? (
               <View style={styles.centerBox}>
-                <ActivityIndicator size="small" color="#38BDF8" />
+                <ActivityIndicator size="small" color={stitchColors.primary} />
                 <Text style={styles.loadingText}>Chargement des images...</Text>
               </View>
             ) : images.length === 0 && !showAddForm ? (
@@ -172,7 +172,7 @@ export function DocumentImagesModal({
                   Importez des captures d&apos;écran, photos d&apos;atelier ou schémas. L&apos;IA analysera le contenu pour vous indiquer dans quelle section la placer et rédigera la légende « Figure X : ... ».
                 </Text>
                 <Pressable style={styles.primaryBtn} onPress={() => setShowAddForm(true)}>
-                  <Plus size={16} color="#FFFFFF" />
+                  <Plus size={16} color={stitchColors.white} />
                   <Text style={styles.primaryBtnText}>Ajouter une première image</Text>
                 </Pressable>
               </View>
@@ -200,7 +200,7 @@ export function DocumentImagesModal({
 
                         {/* AI Recommendation Badge */}
                         <View style={styles.aiBadgeBox}>
-                          <Sparkles size={13} color="#38BDF8" />
+                          <Sparkles size={13} color={stitchColors.primary} />
                           <Text style={styles.aiBadgeText} numberOfLines={1}>
                             Recommandé : {targetSec ? targetSec.title : 'Section courante'}
                           </Text>
@@ -217,7 +217,7 @@ export function DocumentImagesModal({
                             onClose();
                           }}
                         >
-                          <CornerDownLeft size={13} color="#FFFFFF" />
+                          <CornerDownLeft size={13} color={stitchColors.white} />
                           <Text style={styles.insertBtnText}>Insérer dans la section</Text>
                         </Pressable>
                       </View>
@@ -236,7 +236,7 @@ export function DocumentImagesModal({
                 <TextInput
                   style={styles.textInput}
                   placeholder="Ex: Architecture logicielle ou Photo atelier"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   value={fileName}
                   onChangeText={setFileName}
                 />
@@ -245,7 +245,7 @@ export function DocumentImagesModal({
                 <TextInput
                   style={styles.textInput}
                   placeholder="https://... ou lien Supabase Storage"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   value={imageUrl}
                   onChangeText={setImageUrl}
                 />
@@ -264,10 +264,10 @@ export function DocumentImagesModal({
                     disabled={submitting}
                   >
                     {submitting ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={stitchColors.white} />
                     ) : (
                       <>
-                        <Sparkles size={14} color="#FFFFFF" />
+                        <Sparkles size={14} color={stitchColors.white} />
                         <Text style={styles.saveBtnText}>Analyser & Ajouter</Text>
                       </>
                     )}
@@ -276,7 +276,7 @@ export function DocumentImagesModal({
               </View>
             ) : images.length > 0 ? (
               <Pressable style={styles.outlineBtn} onPress={() => setShowAddForm(true)}>
-                <Plus size={16} color="#38BDF8" />
+                <Plus size={16} color={stitchColors.primary} />
                 <Text style={styles.outlineBtnText}>Ajouter une autre image</Text>
               </Pressable>
             ) : null}
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   headerSub: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 12,
     marginTop: 2,
   },
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 13,
   },
   emptyBox: {
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   emptyDesc: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 19,
@@ -377,13 +377,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#0284C7',
+    backgroundColor: stitchColors.primary,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 10,
   },
   primaryBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontWeight: '700',
     fontSize: 13.5,
   },
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    backgroundColor: 'rgba(124, 58, 237, 0.1)',
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -436,12 +436,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   aiBadgeText: {
-    color: '#38BDF8',
+    color: stitchColors.primary,
     fontSize: 11,
     fontWeight: '700',
   },
   captionPreview: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 12,
     fontStyle: 'italic',
     marginTop: 4,
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#0284C7',
+    backgroundColor: stitchColors.primary,
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 10,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   insertBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -468,13 +468,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1.5,
-    borderColor: 'rgba(56, 189, 248, 0.4)',
+    borderColor: 'rgba(124, 58, 237, 0.4)',
     borderRadius: 12,
     paddingVertical: 12,
     borderStyle: 'dashed',
   },
   outlineBtnText: {
-    color: '#38BDF8',
+    color: stitchColors.primary,
     fontWeight: '700',
     fontSize: 13.5,
   },
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   inputLabel: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 12,
     fontWeight: '600',
     marginTop: 4,
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   cancelBtnText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -528,13 +528,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#0284C7',
+    backgroundColor: stitchColors.primary,
     paddingVertical: 9,
     paddingHorizontal: 16,
     borderRadius: 8,
   },
   saveBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 13,
     fontWeight: '700',
   },

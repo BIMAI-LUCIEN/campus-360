@@ -437,13 +437,13 @@ const styles = StyleSheet.create({
     fontFamily: SERIF,
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
     letterSpacing: 0.5,
   },
   ctaArrow: {
     fontFamily: SERIF,
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
 });

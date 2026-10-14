@@ -122,14 +122,14 @@ export function PaymentModal({
               onPress={handleResetAndClose}
               disabled={loading || waitingUssd}
             >
-              <X size={18} color="#94A3B8" />
+              <X size={18} color={stitchColors.inkSubtle} />
             </Pressable>
           </View>
 
           {success ? (
             <View style={styles.successContainer}>
               <View style={styles.successIconCircle}>
-                <CheckCircle2 size={44} color="#10B981" />
+                <CheckCircle2 size={44} color={stitchColors.emerald} />
               </View>
               <Text style={styles.successTitle}>Paiement Confirmé !</Text>
               <Text style={styles.successText}>
@@ -141,7 +141,7 @@ export function PaymentModal({
             </View>
           ) : waitingUssd ? (
             <View style={styles.waitingContainer}>
-              <ActivityIndicator size="large" color="#8B5CF6" style={{ marginBottom: 16 }} />
+              <ActivityIndicator size="large" color={stitchColors.secondary} style={{ marginBottom: 16 }} />
               <Text style={styles.waitingTitle}>Validation USSD en cours...</Text>
               <Text style={styles.waitingText}>
                 Un message de confirmation a été envoyé sur le{' '}
@@ -150,7 +150,7 @@ export function PaymentModal({
               <View style={styles.pinInstructionBox}>
                 <Text style={styles.pinInstructionText}>
                   👉 Tapez votre code secret Mobile Money sur votre téléphone pour valider le débit de{' '}
-                  <Text style={{ fontWeight: '700', color: '#10B981' }}>
+                  <Text style={{ fontWeight: '700', color: stitchColors.emerald }}>
                     {selectedPack.priceFcfa} FCFA
                   </Text>.
                 </Text>
@@ -237,11 +237,11 @@ export function PaymentModal({
               {/* 3. Numéro de Téléphone */}
               <Text style={styles.sectionLabel}>3. Numéro de compte Mobile Money</Text>
               <View style={styles.phoneInputContainer}>
-                <Smartphone size={18} color="#94A3B8" style={{ marginRight: 10 }} />
+                <Smartphone size={18} color={stitchColors.inkSubtle} style={{ marginRight: 10 }} />
                 <TextInput
                   style={styles.phoneInput}
                   placeholder="Ex: 672364124 ou +237690123456"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   value={phone}
                   onChangeText={setPhone}
                   keyboardType="phone-pad"
@@ -264,20 +264,20 @@ export function PaymentModal({
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={stitchColors.white} />
                 ) : (
                   <>
-                    <Zap size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                    <Zap size={16} color={stitchColors.white} style={{ marginRight: 8 }} />
                     <Text style={styles.actionBtnText}>
                       Payer {selectedPack.priceFcfa.toLocaleString()} FCFA par Mobile Money
                     </Text>
-                    <ArrowRight size={16} color="#FFFFFF" style={{ marginLeft: 8 }} />
+                    <ArrowRight size={16} color={stitchColors.white} style={{ marginLeft: 8 }} />
                   </>
                 )}
               </Pressable>
 
               <View style={styles.securityRow}>
-                <ShieldCheck size={14} color="#64748B" />
+                <ShieldCheck size={14} color={stitchColors.inkMuted} />
                 <Text style={styles.securityText}>
                   Paiement chiffré et sécurisé. Débit immédiat par confirmation USSD.
                 </Text>
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 12.5,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     marginTop: 2,
     lineHeight: 18,
   },
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   packCardSelected: {
-    borderColor: '#8B5CF6',
+    borderColor: stitchColors.secondary,
     backgroundColor: 'rgba(139, 92, 246, 0.12)',
   },
   packCardHighlight: {
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   packBadge: {
     fontSize: 10.5,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     backgroundColor: stitchColors.paperSoft,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -411,11 +411,11 @@ const styles = StyleSheet.create({
   packCurrency: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
   },
   packDesc: {
     fontSize: 11.5,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     lineHeight: 16,
   },
   operatorRow: {
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   operatorText: {
     fontSize: 12.5,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
   },
   operatorTextActive: {
     color: stitchColors.ink,
@@ -472,14 +472,14 @@ const styles = StyleSheet.create({
   },
   errorNoticeText: {
     fontSize: 12,
-    color: '#EF4444',
+    color: stitchColors.error,
     marginBottom: 10,
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
     paddingVertical: 13,
     borderRadius: 12,
     marginTop: 6,
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
   actionBtnText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   securityRow: {
     flexDirection: 'row',
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
   },
   securityText: {
     fontSize: 11,
-    color: '#64748B',
+    color: stitchColors.inkMuted,
   },
   waitingContainer: {
     paddingVertical: 24,
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
   },
   waitingText: {
     fontSize: 13,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   },
   successText: {
     fontSize: 13,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 20,

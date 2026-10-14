@@ -137,12 +137,12 @@ export function AuthScreen({
             {/* Logo Emblem */}
             <View style={styles.logoWrap}>
               <LinearGradient
-                colors={['#7C3AED', '#6D28D9']}
+                colors={[stitchColors.primary, stitchColors.siennaDeep]}
                 style={styles.logoMark}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <GraduationCap size={28} color="#FFFFFF" strokeWidth={2} />
+                <GraduationCap size={28} color={stitchColors.white} strokeWidth={2} />
               </LinearGradient>
               <Text style={styles.logoTitle}>Campus 360</Text>
               <Text style={styles.logoSubtitle}>Portail Étudiant, Stages &amp; Réussite</Text>
@@ -362,7 +362,7 @@ export function AuthScreen({
               <View style={styles.successModalBackdrop}>
                 <View style={styles.successModalCard}>
                   <View style={styles.successIconCircle}>
-                    <CheckCircle2 size={36} color="#10B981" />
+                    <CheckCircle2 size={36} color={stitchColors.emerald} />
                   </View>
                   <Text style={styles.successTitle}>Opération Réussie !</Text>
                   <Text style={styles.successMessage}>{notice}</Text>
@@ -391,7 +391,7 @@ export function AuthScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC', // Clean white / slate 50
+    backgroundColor: stitchColors.background, // Clean white / slate 50
   },
   scrollContent: {
     flexGrow: 1,
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: stitchColors.paperSoft,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
@@ -420,10 +420,10 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     padding: 24,
     borderRadius: 24,
-    backgroundColor: '#FFFFFF', // Clean white
+    backgroundColor: stitchColors.white, // Clean white
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
+    borderColor: stitchColors.glassBorder,
+    shadowColor: stitchColors.ink,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
     shadowRadius: 20,
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
-    shadowColor: '#7C3AED',
+    shadowColor: stitchColors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
@@ -505,9 +505,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     borderRadius: stitchRadius.sm,
     paddingVertical: 13,
     paddingHorizontal: 16,
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   dropdownPlaceholder: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
   },
   notice: {
     fontFamily: fontFamilies.inter,
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: stitchColors.glassBorder,
   },
   dividerText: {
     fontSize: 11,
@@ -610,13 +610,13 @@ const styles = StyleSheet.create({
   },
   successModalCard: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(124, 58, 237, 0.12)',
-    shadowColor: '#0F172A',
+    shadowColor: stitchColors.ink,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
@@ -659,10 +659,10 @@ const styles = StyleSheet.create({
   pickerModalContent: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderRadius: 20,
     padding: 18,
-    shadowColor: '#0F172A',
+    shadowColor: stitchColors.ink,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.15,
     shadowRadius: 24,
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: stitchColors.paperSoft,
     marginBottom: 6,
   },
   pickerModalTitle: {
@@ -688,7 +688,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
+    borderBottomColor: stitchColors.background,
   },
   pickerOptionText: {
     fontFamily: fontFamilies.inter,

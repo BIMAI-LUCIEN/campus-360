@@ -59,11 +59,11 @@ interface HomeScreenProps {
 }
 
 const HOME_CATEGORIES: CategoryItem[] = [
-  { id: 'tech', label: 'Tech & Dév', icon: Briefcase, color: '#7C3AED', bg: '#F5F3FF' },
+  { id: 'tech', label: 'Tech & Dév', icon: Briefcase, color: stitchColors.primary, bg: '#F5F3FF' },
   { id: 'finance', label: 'Finance & Audit', icon: BookOpen, color: '#2563EB', bg: '#EFF6FF' },
   { id: 'marketing', label: 'Marketing', icon: Sparkles, color: '#DB2777', bg: '#FDF2F8' },
-  { id: 'btp', label: 'BTP & Génie', icon: Building2, color: '#D97706', bg: '#FFFBEB' },
-  { id: 'droit', label: 'Droit & RH', icon: FileText, color: '#4F46E5', bg: '#EEF2FF' },
+  { id: 'btp', label: 'BTP & Génie', icon: Building2, color: stitchColors.warning, bg: '#FFFBEB' },
+  { id: 'droit', label: 'Droit & RH', icon: FileText, color: stitchColors.primary, bg: '#EEF2FF' },
 ];
 
 export function HomeScreen({
@@ -146,7 +146,7 @@ export function HomeScreen({
         {/* ── 1. Hero Banner Courbé Violet Royal ────────────────────────── */}
         <View style={styles.heroBannerWrap}>
           <LinearGradient
-            colors={['#7C3AED', '#6D28D9']}
+            colors={[stitchColors.primary, stitchColors.siennaDeep]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroBanner}
@@ -194,7 +194,7 @@ export function HomeScreen({
             onPress={onDocuments}
           >
             <View style={[styles.quickToolIcon, { backgroundColor: '#F5F3FF' }]}>
-              <FileText size={18} color="#7C3AED" strokeWidth={2} />
+              <FileText size={18} color={stitchColors.primary} strokeWidth={2} />
             </View>
             <Text style={styles.quickToolLabel}>Mon CV Officiel</Text>
           </Pressable>
@@ -214,7 +214,7 @@ export function HomeScreen({
             onPress={onApplications}
           >
             <View style={[styles.quickToolIcon, { backgroundColor: '#ECFDF5' }]}>
-              <CheckCircle2 size={18} color="#059669" strokeWidth={2} />
+              <CheckCircle2 size={18} color={stitchColors.emeraldDeep} strokeWidth={2} />
             </View>
             <Text style={styles.quickToolLabel}>Candidatures</Text>
           </Pressable>
@@ -227,14 +227,14 @@ export function HomeScreen({
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={styles.sectionTitle}>#RecommandéPourToi</Text>
                 <View style={styles.sparklePill}>
-                  <Sparkles size={11} color="#7C3AED" />
+                  <Sparkles size={11} color={stitchColors.primary} />
                   <Text style={styles.sparklePillText}>IA</Text>
                 </View>
               </View>
               <Pressable onPress={onStages} hitSlop={8}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                   <Text style={styles.seeAllText}>Explorer tout</Text>
-                  <ChevronRight size={14} color="#7C3AED" />
+                  <ChevronRight size={14} color={stitchColors.primary} />
                 </View>
               </Pressable>
             </View>
@@ -279,12 +279,12 @@ export function HomeScreen({
                         {job.company?.name || 'Entreprise partenaire'}
                       </Text>
                       {job.company?.status === 'VERIFIED' && (
-                        <CheckCircle2 size={12} color="#059669" />
+                        <CheckCircle2 size={12} color={stitchColors.emeraldDeep} />
                       )}
                     </View>
                     <View style={styles.carouselMetaRow}>
                       <View style={styles.carouselMetaItem}>
-                        <MapPin size={11} color="#64748B" />
+                        <MapPin size={11} color={stitchColors.inkMuted} />
                         <Text style={styles.carouselMetaText} numberOfLines={1}>
                           {job.location || 'Douala / Yaoundé'}
                         </Text>
@@ -299,7 +299,7 @@ export function HomeScreen({
                       </View>
                       <View style={styles.carouselApplyBadge}>
                         <Text style={styles.carouselApplyText}>1-Clic</Text>
-                        <ArrowRight size={11} color="#7C3AED" strokeWidth={2.5} />
+                        <ArrowRight size={11} color={stitchColors.primary} strokeWidth={2.5} />
                       </View>
                     </View>
                   </View>
@@ -316,14 +316,14 @@ export function HomeScreen({
             <Pressable onPress={onStages} hitSlop={8}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                 <Text style={styles.seeAllText}>Voir tout</Text>
-                <ChevronRight size={14} color="#7C3AED" />
+                <ChevronRight size={14} color={stitchColors.primary} />
               </View>
             </Pressable>
           </View>
 
           {loading ? (
             <View style={styles.loadingWrap}>
-              <ActivityIndicator size="small" color="#7C3AED" />
+              <ActivityIndicator size="small" color={stitchColors.primary} />
               <Text style={styles.loadingText}>Chargement des offres disponibles...</Text>
             </View>
           ) : recommendedJobs.length === 0 ? (
@@ -348,7 +348,7 @@ export function HomeScreen({
                           {job.company?.name || 'Entreprise partenaire'}
                         </Text>
                         {job.company?.status === 'VERIFIED' && (
-                          <CheckCircle2 size={12} color="#059669" />
+                          <CheckCircle2 size={12} color={stitchColors.emeraldDeep} />
                         )}
                       </View>
                     </View>
@@ -359,11 +359,11 @@ export function HomeScreen({
 
                   <View style={styles.metaRow}>
                     <View style={styles.metaItem}>
-                      <MapPin size={12} color="#64748B" />
+                      <MapPin size={12} color={stitchColors.inkMuted} />
                       <Text style={styles.metaText}>{job.location || 'Douala / Yaoundé'}</Text>
                     </View>
                     <View style={styles.metaItem}>
-                      <Clock size={12} color="#64748B" />
+                      <Clock size={12} color={stitchColors.inkMuted} />
                       <Text style={styles.metaText}>{job.duration || '3 à 6 mois'}</Text>
                     </View>
                   </View>
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
     fontFamily: stitchTypography.displayHero.fontFamily,
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
     letterSpacing: -0.4,
   },
   heroGreetingSub: {
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
     fontFamily: stitchTypography.labelSm.fontFamily,
     fontSize: 11,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   heroCatchphrase: {
     fontFamily: stitchTypography.bodyMd.fontFamily,
@@ -499,9 +499,9 @@ const styles = StyleSheet.create({
   },
   quickToolCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: stitchColors.paperSoft,
     borderRadius: stitchRadius.card,
     paddingVertical: 12,
     paddingHorizontal: 8,
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
   sparklePillText: {
     fontSize: 10.5,
     fontWeight: '700',
-    color: '#7C3AED',
+    color: stitchColors.primary,
   },
   carouselScroll: {
     paddingHorizontal: stitchSpacing.containerMargin,
@@ -549,17 +549,17 @@ const styles = StyleSheet.create({
   },
   carouselCard: {
     width: 250,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     overflow: 'hidden',
     ...stitchShadows.card,
   },
   carouselImageWrap: {
     width: '100%',
     height: 125,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: stitchColors.glassBorder,
     position: 'relative',
   },
   carouselImage: {
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
   carouselBadgeTopText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
     letterSpacing: 0.2,
   },
   carouselMatchBadge: {
@@ -595,11 +595,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    shadowColor: '#7C3AED',
+    shadowColor: stitchColors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.35,
     shadowRadius: 4,
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
   carouselMatchText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   carouselBody: {
     padding: 14,
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: stitchColors.paperSoft,
   },
   carouselStipendLabel: {
     fontSize: 9.5,
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
     fontFamily: stitchTypography.labelMd.fontFamily,
     fontSize: 12.5,
     fontWeight: '800',
-    color: '#059669',
+    color: stitchColors.emeraldDeep,
   },
   carouselApplyBadge: {
     flexDirection: 'row',
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
   carouselApplyText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#7C3AED',
+    color: stitchColors.primary,
   },
 
   // 5. Section Offres Recommandées (Feed vertical)
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
     fontFamily: stitchTypography.labelMd.fontFamily,
     fontSize: 12,
     fontWeight: '600',
-    color: '#7C3AED',
+    color: stitchColors.primary,
   },
 
   // Feed Jobs List & Cards
@@ -715,9 +715,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   jobCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: stitchColors.paperSoft,
     borderRadius: 18,
     padding: 16,
     ...stitchShadows.card,
@@ -758,7 +758,7 @@ const styles = StyleSheet.create({
     fontFamily: stitchTypography.labelMd.fontFamily,
     fontSize: 11,
     fontWeight: '600',
-    color: '#7C3AED',
+    color: stitchColors.primary,
   },
   metaRow: {
     flexDirection: 'row',
@@ -782,16 +782,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: stitchColors.paperSoft,
   },
   stipendText: {
     fontFamily: stitchTypography.labelMd.fontFamily,
     fontSize: 13,
     fontWeight: '700',
-    color: '#059669',
+    color: stitchColors.emeraldDeep,
   },
   applyBtn: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 16,
@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
     fontFamily: stitchTypography.labelMd.fontFamily,
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
 
   // États chargement & vide

@@ -103,11 +103,11 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
       {/* Search Header */}
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
-          <Search size={16} color="#94A3B8" style={{ marginRight: 8 }} />
+          <Search size={16} color={stitchColors.inkSubtle} style={{ marginRight: 8 }} />
           <TextInput
             style={styles.searchInput}
             placeholder="Rechercher un rapport, école, entreprise..."
-            placeholderTextColor="#64748B"
+            placeholderTextColor={stitchColors.inkMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={loadReports}
@@ -149,12 +149,12 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
       >
         {loading ? (
           <View style={styles.centerBox}>
-            <ActivityIndicator size="large" color="#8B5CF6" />
+            <ActivityIndicator size="large" color={stitchColors.secondary} />
             <Text style={styles.loadingText}>Récupération des rapports de référence...</Text>
           </View>
         ) : filteredReports.length === 0 ? (
           <View style={styles.centerBox}>
-            <BookOpen size={36} color="#64748B" />
+            <BookOpen size={36} color={stitchColors.inkMuted} />
             <Text style={styles.emptyTitle}>Aucun rapport trouvé</Text>
             <Text style={styles.emptySubtitle}>
               Les agents IA moissonnent le web et les réseaux en continu. Réessaie avec d'autres mots-clés.
@@ -198,7 +198,7 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
                   )}
                   {item.company && (
                     <View style={styles.metaItem}>
-                      <Building2 size={13} color="#34D399" />
+                      <Building2 size={13} color={stitchColors.emeraldDeep} />
                       <Text style={styles.metaText} numberOfLines={1}>
                         {item.company}
                       </Text>
@@ -221,15 +221,15 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
                       onPress={() => setExpandedReportId(isExpanded ? null : item.id)}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Layers size={13} color="#818CF8" />
+                        <Layers size={13} color={stitchColors.secondary} />
                         <Text style={styles.tocToggleText}>
                           Sommaire & Plan Académique ({toc.length} sections)
                         </Text>
                       </View>
                       {isExpanded ? (
-                        <ChevronUp size={16} color="#94A3B8" />
+                        <ChevronUp size={16} color={stitchColors.inkSubtle} />
                       ) : (
-                        <ChevronDown size={16} color="#94A3B8" />
+                        <ChevronDown size={16} color={stitchColors.inkSubtle} />
                       )}
                     </Pressable>
 
@@ -253,7 +253,7 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
                       style={styles.openDocBtn}
                       onPress={() => handleOpenSource(item.file_url)}
                     >
-                      <ExternalLink size={13} color="#FFFFFF" />
+                      <ExternalLink size={13} color={stitchColors.white} />
                       <Text style={styles.openDocBtnText}>Ouvrir l'exemplaire</Text>
                     </Pressable>
                   ) : null}
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(30, 27, 58, 0.8)',
+    backgroundColor: stitchColors.surface,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 44,
@@ -333,21 +333,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: 'rgba(30, 27, 58, 0.6)',
+    backgroundColor: stitchColors.paperSoft,
     borderWidth: 1,
     borderColor: 'rgba(139, 92, 246, 0.15)',
   },
   chipActive: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#8B5CF6',
+    backgroundColor: stitchColors.primary,
+    borderColor: stitchColors.secondary,
   },
   chipText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 12,
     fontWeight: '500',
   },
   chipTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontWeight: '600',
   },
   scroll: {
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 13,
   },
   emptyTitle: {
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     marginTop: 6,
-    color: '#64748B',
+    color: stitchColors.inkMuted,
     fontSize: 12,
     textAlign: 'center',
     maxWidth: 280,
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   metaText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 12,
   },
   abstractText: {
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#818CF8',
+    backgroundColor: stitchColors.secondary,
   },
   tocItemText: {
     color: stitchColors.inkSoft,
@@ -510,13 +510,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
   },
   openDocBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 12,
     fontWeight: '600',
   },

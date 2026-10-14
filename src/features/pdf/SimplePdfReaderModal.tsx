@@ -617,7 +617,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                   onPress={() => handleAskAssistant(assistantInput)}
                   disabled={!assistantInput.trim() || assistantLoading}
                 >
-                  <Send size={16} color="#FFFFFF" />
+                  <Send size={16} color={stitchColors.white} />
                 </Pressable>
               </View>
             </KeyboardAvoidingView>
@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 4,
   },
-  timelineNumberText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
+  timelineNumberText: { fontSize: 13, fontWeight: '700', color: stitchColors.white },
   timelineCard: {
     flex: 1,
     backgroundColor: stitchColors.paperDeep,
@@ -1007,7 +1007,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
   },
   messageText: { fontSize: 13, lineHeight: 19 },
-  messageTextUser: { color: '#FFFFFF' },
+  messageTextUser: { color: stitchColors.white },
   messageTextAssistant: { color: stitchColors.ink },
 
   aiLoadingRow: {

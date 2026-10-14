@@ -618,7 +618,7 @@ export function AiApplyModal({
                   testID="ai-modal-close"
                   accessibilityLabel="Fermer"
                 >
-                  <X size={18} color="#94A3B8" />
+                  <X size={18} color={stitchColors.inkSubtle} />
                 </Pressable>
               </View>
 
@@ -634,7 +634,7 @@ export function AiApplyModal({
             {step === 'generating' && (
               <View style={styles.loadingContainer}>
                 <View style={styles.loadingOrb}>
-                  <ActivityIndicator size="large" color="#7C3AED" />
+                  <ActivityIndicator size="large" color={stitchColors.primary} />
                 </View>
                 <Text style={styles.loadingTitle}>Préparation de votre dossier</Text>
                 <Text style={styles.loadingSubtitle}>{progressMsg}</Text>
@@ -648,7 +648,7 @@ export function AiApplyModal({
                     </View>
                     {matchAnalysis.matchedPoints.slice(0, 2).map((point, idx) => (
                       <View key={idx} style={styles.matchPointRow}>
-                        <CheckCircle2 size={13} color="#34D399" />
+                        <CheckCircle2 size={13} color={stitchColors.emeraldDeep} />
                         <Text style={styles.matchPointText}>{point}</Text>
                       </View>
                     ))}
@@ -673,7 +673,7 @@ export function AiApplyModal({
                     >
                       <FileText
                         size={14}
-                        color={activePreviewTab === 'letter' ? '#FFFFFF' : '#94A3B8'}
+                        color={activePreviewTab === 'letter' ? stitchColors.white : stitchColors.inkSubtle}
                       />
                       <Text
                         style={[
@@ -692,7 +692,7 @@ export function AiApplyModal({
                     >
                       <Building2
                         size={14}
-                        color={activePreviewTab === 'cv' ? '#FFFFFF' : '#94A3B8'}
+                        color={activePreviewTab === 'cv' ? stitchColors.white : stitchColors.inkSubtle}
                       />
                       <Text
                         style={[
@@ -711,7 +711,7 @@ export function AiApplyModal({
                     >
                       <ShieldCheck
                         size={14}
-                        color={activePreviewTab === 'match' ? '#FFFFFF' : '#94A3B8'}
+                        color={activePreviewTab === 'match' ? stitchColors.white : stitchColors.inkSubtle}
                       />
                       <Text
                         style={[
@@ -729,7 +729,7 @@ export function AiApplyModal({
                       style={[styles.editToggleBtn, isEditing && styles.editToggleBtnActive]}
                       onPress={() => setIsEditing(!isEditing)}
                     >
-                      <Edit3 size={13} color={isEditing ? '#FFFFFF' : '#A78BFA'} />
+                      <Edit3 size={13} color={isEditing ? stitchColors.white : '#A78BFA'} />
                       <Text style={[styles.editToggleText, isEditing && styles.editToggleTextActive]}>
                         {isEditing ? 'Terminer' : 'Modifier'}
                       </Text>
@@ -775,7 +775,7 @@ export function AiApplyModal({
                       <Text style={styles.matchSectionTitle}>Points forts du profil :</Text>
                       {matchAnalysis.matchedPoints.map((p, i) => (
                         <View key={i} style={styles.matchPointItem}>
-                          <CheckCircle2 size={15} color="#34D399" />
+                          <CheckCircle2 size={15} color={stitchColors.emeraldDeep} />
                           <Text style={styles.matchPointItemText}>{p}</Text>
                         </View>
                       ))}
@@ -795,7 +795,7 @@ export function AiApplyModal({
                       onChangeText={
                         activePreviewTab === 'letter' ? setEditableLetter : setEditableCv
                       }
-                      placeholderTextColor="#64748B"
+                      placeholderTextColor={stitchColors.inkMuted}
                     />
                   ) : (
                     <Text style={styles.previewText}>
@@ -815,11 +815,11 @@ export function AiApplyModal({
                     onPress={handleCopyPitchForWhatsapp}
                   >
                     {copiedPitch ? (
-                      <Check size={14} color="#10B981" />
+                      <Check size={14} color={stitchColors.emerald} />
                     ) : (
                       <Copy size={14} color="#A78BFA" />
                     )}
-                    <Text style={[styles.utilBtnText, copiedPitch && { color: '#10B981' }]}>
+                    <Text style={[styles.utilBtnText, copiedPitch && { color: stitchColors.emerald }]}>
                       {copiedPitch ? 'Texte copié' : 'Copier le texte'}
                     </Text>
                   </Pressable>
@@ -854,7 +854,7 @@ export function AiApplyModal({
                     >
                       <MessageSquare
                         size={14}
-                        color={selectedChannel === 'whatsapp' ? '#34D399' : '#94A3B8'}
+                        color={selectedChannel === 'whatsapp' ? '#34D399' : stitchColors.inkSubtle}
                       />
                       <Text
                         style={[
@@ -876,7 +876,7 @@ export function AiApplyModal({
                     >
                       <Mail
                         size={14}
-                        color={selectedChannel === 'email' ? '#A78BFA' : '#94A3B8'}
+                        color={selectedChannel === 'email' ? '#A78BFA' : stitchColors.inkSubtle}
                       />
                       <Text
                         style={[
@@ -894,7 +894,7 @@ export function AiApplyModal({
                     isWhatsAppLinked ? (
                       <View style={styles.oneClickBox}>
                         <View style={styles.linkedBadgeRow}>
-                          <CheckCircle2 size={13} color="#34D399" />
+                          <CheckCircle2 size={13} color={stitchColors.emeraldDeep} />
                           <Text style={styles.linkedBadgeText}>
                             WhatsApp connecté ({linkedPhone || currentProfile.phoneWhatsapp || 'associé'})
                           </Text>
@@ -906,10 +906,10 @@ export function AiApplyModal({
                           disabled={submitting}
                         >
                           {submitting ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
+                            <ActivityIndicator size="small" color={stitchColors.white} />
                           ) : (
                             <>
-                              <Zap size={16} color="#FFFFFF" />
+                              <Zap size={16} color={stitchColors.white} />
                               <Text style={styles.primaryOneClickBtnText}>
                                 ⚡ Postuler en 1 Clic (Envoi Automatique)
                               </Text>
@@ -953,7 +953,7 @@ export function AiApplyModal({
                             style={styles.pairingOfferBtn}
                             onPress={() => setShowPairingModal(true)}
                           >
-                            <Zap size={14} color="#7C3AED" />
+                            <Zap size={14} color={stitchColors.primary} />
                             <Text style={styles.pairingOfferBtnText}>🔗 Associer mon WhatsApp en 30s</Text>
                           </Pressable>
                           <Pressable
@@ -986,10 +986,10 @@ export function AiApplyModal({
                         disabled={submitting}
                       >
                         {submitting ? (
-                          <ActivityIndicator size="small" color="#FFFFFF" />
+                          <ActivityIndicator size="small" color={stitchColors.white} />
                         ) : (
                           <>
-                            <Mail size={16} color="#FFFFFF" />
+                            <Mail size={16} color={stitchColors.white} />
                             <Text style={styles.primaryEmailBtnText}>
                               ✉️ Expédier ma Candidature par Email
                             </Text>
@@ -1027,7 +1027,7 @@ export function AiApplyModal({
             {step === 'sent' && (
               <View style={styles.receiptContainer}>
                 <View style={styles.receiptIconCircle}>
-                  <CheckCircle2 size={40} color="#10B981" />
+                  <CheckCircle2 size={40} color={stitchColors.emerald} />
                 </View>
                 <Text style={styles.receiptTitle}>Candidature transmise avec succès !</Text>
                 <Text style={styles.receiptSubtitle}>
@@ -1177,15 +1177,15 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   container: {
-    backgroundColor: '#FFFFFF', // Clean White
+    backgroundColor: stitchColors.white, // Clean White
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     maxHeight: '92%',
     minHeight: 520,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    shadowColor: '#0F172A',
+    shadowColor: stitchColors.ink,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
@@ -1196,7 +1196,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: stitchColors.paperSoft,
   },
   headerTitleRow: {
     flexDirection: 'row',
@@ -1220,15 +1220,15 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 11,
     fontWeight: '700',
-    color: '#7C3AED',
+    color: stitchColors.primary,
   },
   matchBadgeTop: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -1253,13 +1253,13 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 11,
     fontWeight: '700',
-    color: '#7C3AED',
+    color: stitchColors.primary,
   },
   closeBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: stitchColors.paperSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1267,13 +1267,13 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.serif,
     fontSize: 18,
     fontWeight: '700',
-    color: '#0F172A',
+    color: stitchColors.ink,
     letterSpacing: -0.2,
   },
   companyName: {
     fontFamily: fontFamilies.inter,
     fontSize: 12.5,
-    color: '#64748B',
+    color: stitchColors.inkMuted,
     marginTop: 2,
     fontWeight: '500',
   },
@@ -1300,21 +1300,21 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.serif,
     fontSize: 18,
     fontWeight: '700',
-    color: '#0F172A',
+    color: stitchColors.ink,
     marginBottom: 4,
   },
   loadingSubtitle: {
     fontFamily: fontFamilies.inter,
     fontSize: 13,
-    color: '#64748B',
+    color: stitchColors.inkMuted,
     textAlign: 'center',
     marginBottom: 16,
   },
   matchBriefCard: {
     width: '100%',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     borderRadius: 12,
     padding: 14,
     gap: 8,
@@ -1329,7 +1329,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
+    color: stitchColors.ink,
   },
   matchPointRow: {
     flexDirection: 'row',
@@ -1339,13 +1339,13 @@ const styles = StyleSheet.create({
   matchPointText: {
     fontFamily: fontFamilies.inter,
     fontSize: 12.5,
-    color: '#334155',
+    color: stitchColors.inkSoft,
     flex: 1,
   },
   matchAdviceText: {
     fontFamily: fontFamilies.inter,
     fontSize: 12,
-    color: '#7C3AED',
+    color: stitchColors.primary,
     marginTop: 4,
     fontWeight: '500',
   },
@@ -1362,7 +1362,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: stitchColors.paperSoft,
   },
   tabGroup: {
     flexDirection: 'row',
@@ -1375,22 +1375,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
   },
   tabBtnActive: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
+    borderColor: stitchColors.primary,
   },
   tabBtnText: {
     fontFamily: fontFamilies.inter,
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748B',
+    color: stitchColors.inkMuted,
   },
   tabBtnTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontWeight: '700',
   },
   editToggleBtn: {
@@ -1405,17 +1405,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(124, 58, 237, 0.2)',
   },
   editToggleBtnActive: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
+    borderColor: stitchColors.primary,
   },
   editToggleText: {
     fontFamily: fontFamilies.inter,
     fontSize: 11.5,
     fontWeight: '600',
-    color: '#7C3AED',
+    color: stitchColors.primary,
   },
   editToggleTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
 
   // AI Toolbar
@@ -1435,9 +1435,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
   },
   aiPillText: {
     fontFamily: fontFamilies.inter,
@@ -1459,32 +1459,32 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     lineHeight: 22,
     color: '#1E293B',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.background,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
   },
   editorTextInput: {
     fontFamily: fontFamilies.inter,
     fontSize: 13.5,
     lineHeight: 22,
-    color: '#0F172A',
-    backgroundColor: '#FFFFFF',
+    color: stitchColors.ink,
+    backgroundColor: stitchColors.white,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#7C3AED',
+    borderColor: stitchColors.primary,
     minHeight: 220,
     textAlignVertical: 'top',
   },
 
   // Match Tab
   matchTabCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.background,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     padding: 16,
   },
   matchHeaderScore: {
@@ -1496,7 +1496,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.serif,
     fontSize: 32,
     fontWeight: '800',
-    color: '#7C3AED',
+    color: stitchColors.primary,
   },
   matchScoreHeadline: {
     fontFamily: fontFamilies.outfit,
@@ -1506,14 +1506,14 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: stitchColors.glassBorder,
     marginVertical: 12,
   },
   matchSectionTitle: {
     fontFamily: fontFamilies.outfit,
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
+    color: stitchColors.ink,
     marginBottom: 8,
   },
   matchPointItem: {
@@ -1526,7 +1526,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.inter,
     fontSize: 12.5,
     lineHeight: 18,
-    color: '#334155',
+    color: stitchColors.inkSoft,
     flex: 1,
   },
   strategicBox: {
@@ -1541,7 +1541,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 12,
     fontWeight: '700',
-    color: '#7C3AED',
+    color: stitchColors.primary,
     marginBottom: 4,
   },
   strategicText: {
@@ -1565,21 +1565,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     paddingVertical: 10,
     borderRadius: 10,
   },
   utilBtnSuccess: {
-    borderColor: '#10B981',
+    borderColor: stitchColors.emerald,
     backgroundColor: 'rgba(16, 185, 129, 0.08)',
   },
   utilBtnText: {
     fontFamily: fontFamilies.inter,
     fontSize: 12,
     fontWeight: '600',
-    color: '#334155',
+    color: stitchColors.inkSoft,
   },
 
   // Actions Box & Channel Selector
@@ -1587,13 +1587,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: stitchColors.paperSoft,
   },
   actionsTitle: {
     fontFamily: fontFamilies.inter,
     fontSize: 11.5,
     fontWeight: '600',
-    color: '#64748B',
+    color: stitchColors.inkMuted,
     marginBottom: 8,
   },
   channelSegmentContainer: {
@@ -1609,30 +1609,30 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 9,
     borderRadius: 10,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
   },
   channelSegmentPillActiveWhatsApp: {
     backgroundColor: 'rgba(16, 185, 129, 0.10)',
-    borderColor: '#10B981',
+    borderColor: stitchColors.emerald,
   },
   channelSegmentPillActiveEmail: {
     backgroundColor: 'rgba(124, 58, 237, 0.10)',
-    borderColor: '#7C3AED',
+    borderColor: stitchColors.primary,
   },
   channelSegmentText: {
     fontFamily: fontFamilies.outfit,
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748B',
+    color: stitchColors.inkMuted,
   },
   channelSegmentTextActiveWhatsApp: {
-    color: '#059669',
+    color: stitchColors.emeraldDeep,
     fontWeight: '700',
   },
   channelSegmentTextActiveEmail: {
-    color: '#7C3AED',
+    color: stitchColors.primary,
     fontWeight: '700',
   },
 
@@ -1655,7 +1655,7 @@ const styles = StyleSheet.create({
   linkedBadgeText: {
     fontFamily: fontFamilies.inter,
     fontSize: 11.5,
-    color: '#059669',
+    color: stitchColors.emeraldDeep,
     fontWeight: '600',
   },
   primaryOneClickBtn: {
@@ -1663,10 +1663,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#059669',
+    backgroundColor: stitchColors.emeraldDeep,
     paddingVertical: 13,
     borderRadius: 12,
-    shadowColor: '#10B981',
+    shadowColor: stitchColors.emerald,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -1676,7 +1676,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
 
   // Unlinked WhatsApp Box
@@ -1697,7 +1697,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 12.5,
     fontWeight: '700',
-    color: '#D97706',
+    color: stitchColors.warning,
   },
   unlinkedWarningDesc: {
     fontFamily: fontFamilies.inter,
@@ -1716,7 +1716,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
     paddingVertical: 10,
     borderRadius: 10,
   },
@@ -1724,15 +1724,15 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   manualFallbackBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     paddingVertical: 10,
     borderRadius: 10,
   },
@@ -1740,7 +1740,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.inter,
     fontSize: 11.5,
     fontWeight: '600',
-    color: '#334155',
+    color: stitchColors.inkSoft,
     textAlign: 'center',
   },
 
@@ -1753,10 +1753,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
     paddingVertical: 13,
     borderRadius: 12,
-    shadowColor: '#7C3AED',
+    shadowColor: stitchColors.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -1766,7 +1766,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
 
   // Secondary text buttons row
@@ -1783,13 +1783,13 @@ const styles = StyleSheet.create({
   textFallbackBtnText: {
     fontFamily: fontFamilies.inter,
     fontSize: 11,
-    color: '#64748B',
+    color: stitchColors.inkMuted,
     textDecorationLine: 'underline',
   },
   subHintText: {
     fontFamily: fontFamilies.inter,
     fontSize: 10.5,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     textAlign: 'center',
     marginTop: 2,
   },
@@ -1805,7 +1805,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
     paddingVertical: 10,
     borderRadius: 8,
   },
@@ -1815,7 +1815,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    backgroundColor: '#16A34A',
+    backgroundColor: stitchColors.emeraldDeep,
     paddingVertical: 10,
     borderRadius: 8,
   },
@@ -1825,22 +1825,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.background,
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
   },
   channelBtnText: {
     fontFamily: fontFamilies.outfit,
     fontSize: 11.5,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   savedHint: {
     fontFamily: fontFamilies.inter,
     fontSize: 10.5,
-    color: '#64748B',
+    color: stitchColors.inkMuted,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -1866,23 +1866,23 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 18,
     fontWeight: '800',
-    color: '#0F172A',
+    color: stitchColors.ink,
     marginBottom: 4,
     textAlign: 'center',
   },
   receiptSubtitle: {
     fontFamily: fontFamilies.inter,
     fontSize: 12.5,
-    color: '#64748B',
+    color: stitchColors.inkMuted,
     textAlign: 'center',
     marginBottom: 16,
     paddingHorizontal: 12,
   },
   receiptCard: {
     width: '100%',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: stitchColors.background,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     borderRadius: 12,
     padding: 16,
     gap: 10,
@@ -1896,12 +1896,12 @@ const styles = StyleSheet.create({
   receiptLabel: {
     fontFamily: fontFamilies.inter,
     fontSize: 12,
-    color: '#64748B',
+    color: stitchColors.inkMuted,
   },
   receiptValue: {
     fontFamily: fontFamilies.inter,
     fontSize: 12.5,
-    color: '#0F172A',
+    color: stitchColors.ink,
     maxWidth: '65%',
     textAlign: 'right',
     fontWeight: '500',
@@ -1910,13 +1910,13 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 13,
     fontWeight: '700',
-    color: '#7C3AED',
+    color: stitchColors.primary,
   },
   receiptValueChannel: {
     fontFamily: fontFamilies.inter,
     fontSize: 11.5,
     fontWeight: '600',
-    color: '#34D399',
+    color: stitchColors.emeraldDeep,
   },
   receiptStatusBadge: {
     backgroundColor: 'rgba(59, 130, 246, 0.12)',
@@ -1935,12 +1935,12 @@ const styles = StyleSheet.create({
   receiptValueMuted: {
     fontFamily: fontFamilies.inter,
     fontSize: 11,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontStyle: 'italic',
   },
   receiptTimelineBtn: {
     width: '100%',
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -1950,7 +1950,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   receiptCloseBtn: {
     paddingVertical: 8,
@@ -1959,7 +1959,7 @@ const styles = StyleSheet.create({
   receiptCloseBtnText: {
     fontFamily: fontFamilies.inter,
     fontSize: 12.5,
-    color: '#64748B',
+    color: stitchColors.inkMuted,
     fontWeight: '600',
   },
 
@@ -1982,7 +1982,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.serif,
     fontSize: 19,
     fontWeight: '700',
-    color: '#0F172A',
+    color: stitchColors.ink,
     marginBottom: 6,
     textAlign: 'center',
   },
@@ -1990,12 +1990,12 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.inter,
     fontSize: 13,
     lineHeight: 19,
-    color: '#64748B',
+    color: stitchColors.inkMuted,
     textAlign: 'center',
     marginBottom: 20,
   },
   doneBtn: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
     paddingHorizontal: 20,
     paddingVertical: 11,
     borderRadius: 8,
@@ -2004,15 +2004,15 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 13,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
 
   // Official CV Card Preview styles (Gabarit 2 Colonnes)
   officialCvBox: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     padding: 16,
     marginBottom: 12,
   },
@@ -2039,8 +2039,8 @@ const styles = StyleSheet.create({
     width: 48,
     height: 58,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#F8FAFC',
+    borderColor: stitchColors.outline,
+    backgroundColor: stitchColors.background,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 3,
@@ -2049,7 +2049,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 14,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
   },
   officialCvBlueDivider: {
     height: 2,
@@ -2130,7 +2130,7 @@ const styles = StyleSheet.create({
   officialCvPageNumber: {
     textAlign: 'center',
     fontSize: 9.5,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     marginTop: 12,
   },
 });

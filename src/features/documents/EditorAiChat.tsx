@@ -185,7 +185,7 @@ export function EditorAiChat({
                 </Text>
                 
                 <Pressable style={styles.autoDraftBtn} onPress={draftFullSection}>
-                  <Sparkles size={15} color="#FFFFFF" />
+                  <Sparkles size={15} color={stitchColors.white} />
                   <Text style={styles.autoDraftText}>⚡ Rédiger toute la section avec mes sources</Text>
                 </Pressable>
 
@@ -228,7 +228,7 @@ export function EditorAiChat({
                               onClose();
                             }}
                           >
-                            <Sparkles size={13} color="#FFFFFF" />
+                            <Sparkles size={13} color={stitchColors.white} />
                             <Text style={styles.replaceText}>Remplacer la section</Text>
                           </Pressable>
                         ) : null}
@@ -347,19 +347,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#4F46E5',
+    backgroundColor: stitchColors.primary,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
     marginTop: 6,
-    shadowColor: '#4F46E5',
+    shadowColor: stitchColors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 2,
   },
   autoDraftText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 13.5,
     fontWeight: '700',
   },
@@ -384,12 +384,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#4338CA',
+    backgroundColor: stitchColors.siennaDeep,
     borderRadius: 9,
     paddingVertical: 7,
     paddingHorizontal: 11,
   },
-  replaceText: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '700' },
+  replaceText: { color: stitchColors.white, fontSize: 12.5, fontWeight: '700' },
   typing: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   typingText: { color: stitchColors.inkMuted, fontSize: 13 },
   inputBar: {

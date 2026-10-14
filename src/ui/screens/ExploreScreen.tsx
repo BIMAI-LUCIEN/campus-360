@@ -264,9 +264,9 @@ const styles = StyleSheet.create({
   },
   toggleBtns: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: stitchColors.paperSoft,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
     borderRadius: 12,
     padding: 3,
   },
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   toggleBtnTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
   },
   gridContent: {
     flexDirection: 'row',

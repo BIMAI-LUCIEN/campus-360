@@ -94,7 +94,7 @@ export function WritingWorkshopModal({
               <Text style={styles.title}>Générateur Académique & Pro</Text>
             </View>
             <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
-              <X size={20} color="#94A3B8" />
+              <X size={20} color={stitchColors.inkSubtle} />
             </Pressable>
           </View>
 
@@ -113,7 +113,7 @@ export function WritingWorkshopModal({
                       style={[styles.typeCard, isSelected && styles.typeCardSelected]}
                       onPress={() => setDocType(t)}
                     >
-                      <Icon size={20} color={isSelected ? '#A855F7' : '#94A3B8'} />
+                      <Icon size={20} color={isSelected ? '#A855F7' : stitchColors.inkSubtle} />
                       <Text style={[styles.typeCardTitle, isSelected && styles.typeCardTitleSelected]}>
                         {item.title}
                       </Text>
@@ -131,7 +131,7 @@ export function WritingWorkshopModal({
                 <TextInput
                   style={styles.textInput}
                   placeholder="ex: Impact de la digitalisation sur la performance financière..."
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   value={topic}
                   onChangeText={setTopic}
                 />
@@ -142,7 +142,7 @@ export function WritingWorkshopModal({
                 <TextInput
                   style={styles.textInput}
                   placeholder="ex: Master Finance / INP-HB"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   value={field}
                   onChangeText={setField}
                 />
@@ -153,7 +153,7 @@ export function WritingWorkshopModal({
                 <TextInput
                   style={[styles.textInput, styles.textArea]}
                   placeholder="ex: Mettre l'accent sur les outils SYSCOHADA et inclure 3 graphiques..."
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   multiline
                   value={outlineNotes}
                   onChangeText={setOutlineNotes}
@@ -166,16 +166,16 @@ export function WritingWorkshopModal({
                 disabled={isGenerating}
               >
                 <LinearGradient
-                  colors={['#8B5CF6', '#6D28D9']}
+                  colors={[stitchColors.secondary, stitchColors.siennaDeep]}
                   style={styles.btnGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
                   {isGenerating ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color={stitchColors.white} />
                   ) : (
                     <>
-                      <Sparkles size={18} color="#FFFFFF" />
+                      <Sparkles size={18} color={stitchColors.white} />
                       <Text style={styles.btnText}>Rédiger avec l'IA ({pricing[docType].price})</Text>
                     </>
                   )}
@@ -185,7 +185,7 @@ export function WritingWorkshopModal({
           ) : (
             <View style={styles.resultContainer}>
               <View style={styles.resultHeader}>
-                <CheckCircle2 size={18} color="#10B981" />
+                <CheckCircle2 size={18} color={stitchColors.emerald} />
                 <Text style={styles.resultHeaderText}>Document rédigé avec succès</Text>
               </View>
 
@@ -195,7 +195,7 @@ export function WritingWorkshopModal({
 
               <View style={styles.resultFooter}>
                 <Pressable style={styles.copyBtn} onPress={handleCopy}>
-                  <Copy size={16} color="#94A3B8" />
+                  <Copy size={16} color={stitchColors.inkSubtle} />
                   <Text style={styles.copyBtnText}>Copier le texte</Text>
                 </Pressable>
                 <Pressable
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   typeCardTitle: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     marginTop: 6,
     textAlign: 'center',
   },
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   },
   docDesc: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     marginBottom: 16,
     fontStyle: 'italic',
   },
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   btnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -361,12 +361,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   resultHeaderText: {
-    color: '#34D399',
+    color: stitchColors.emeraldDeep,
     fontSize: 13,
     fontWeight: '700',
   },
   resultScroll: {
-    backgroundColor: 'rgba(15, 23, 42, 0.7)',
+    backgroundColor: stitchColors.background,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: stitchColors.glassBorder,
@@ -402,12 +402,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7C3AED',
+    backgroundColor: stitchColors.primary,
     borderRadius: 12,
     paddingVertical: 12,
   },
   newDocBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 13,
     fontWeight: '700',
   },

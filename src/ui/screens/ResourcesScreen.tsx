@@ -82,7 +82,7 @@ export function ResourcesScreen({
 
             {onOpenAssistant && (
               <Pressable style={styles.assistantBtn} onPress={onOpenAssistant}>
-                <Sparkles size={13} color="#34D399" />
+                <Sparkles size={13} color={stitchColors.emeraldDeep} />
                 <Text style={styles.assistantBtnText}>Chat IA</Text>
               </Pressable>
             )}
@@ -97,7 +97,7 @@ export function ResourcesScreen({
           >
             <Layers
               size={14}
-              color={activeSubTab === 'catalogue' ? '#FFFFFF' : '#94A3B8'}
+              color={activeSubTab === 'catalogue' ? stitchColors.white : stitchColors.inkSubtle}
             />
             <Text
               style={[
@@ -115,7 +115,7 @@ export function ResourcesScreen({
           >
             <BookOpen
               size={14}
-              color={activeSubTab === 'library' ? '#FFFFFF' : '#94A3B8'}
+              color={activeSubTab === 'library' ? stitchColors.white : stitchColors.inkSubtle}
             />
             <Text
               style={[
@@ -133,7 +133,7 @@ export function ResourcesScreen({
           >
             <FileText
               size={14}
-              color={activeSubTab === 'reports' ? '#FFFFFF' : '#94A3B8'}
+              color={activeSubTab === 'reports' ? stitchColors.white : stitchColors.inkSubtle}
             />
             <Text
               style={[
@@ -204,9 +204,9 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 52 : 40,
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: stitchColors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: stitchColors.paperSoft,
   },
   titleRow: {
     flexDirection: 'row',
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   writingBtnText: {
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#7C3AED',
+    color: stitchColors.primary,
   },
   assistantBtn: {
     flexDirection: 'row',
@@ -267,16 +267,16 @@ const styles = StyleSheet.create({
   assistantBtnText: {
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#059669',
+    color: stitchColors.emeraldDeep,
   },
   subTabBar: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: stitchColors.paperSoft,
     borderRadius: 14,
     padding: 3,
     gap: 4,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: stitchColors.glassBorder,
   },
   subTab: {
     flex: 1,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   },
   subTabActive: {
     backgroundColor: stitchColors.primary,
-    shadowColor: '#7C3AED',
+    shadowColor: stitchColors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   subTabTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontWeight: '700',
   },
   body: {

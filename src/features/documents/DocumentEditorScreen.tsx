@@ -941,7 +941,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color={stitchColors.primary} />
           <Text style={styles.loadingText}>Ouverture de votre document...</Text>
         </View>
       </SafeAreaView>
@@ -973,26 +973,30 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
     <SafeAreaView style={styles.container}>
       {/* ── Top Header ──────────────────────────────────────────────── */}
       <View style={styles.header}>
-        <Pressable style={styles.headerBtn} onPress={onClose}>
-          <ArrowLeft size={18} color={stitchColors.ink} />
-          <Text style={styles.headerBtnText}>Fermer</Text>
-        </Pressable>
+        {/* Row 1: close + title/status (never overlapped by the actions). */}
+        <View style={styles.headerTopRow}>
+          <Pressable style={styles.headerBtn} onPress={onClose}>
+            <ArrowLeft size={18} color={stitchColors.ink} />
+            <Text style={styles.headerBtnText}>Fermer</Text>
+          </Pressable>
 
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {report?.title || 'Rapport de stage'}
-          </Text>
-          <Text style={styles.saveStatus}>
-            {saving ? 'Sauvegarde...' : '✓ Enregistré'}
-          </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {report?.title || 'Rapport de stage'}
+            </Text>
+            <Text style={styles.saveStatus}>
+              {saving ? 'Sauvegarde...' : '✓ Enregistré'}
+            </Text>
+          </View>
         </View>
 
+        {/* Row 2: actions, wrapping instead of being cut on narrow screens. */}
         <View style={styles.headerActions}>
           <Pressable
             style={[styles.headerActionBtn, styles.sourcesBtn]}
             onPress={() => setSourcesModalVisible(true)}
           >
-            <FileText size={13} color="#818CF8" />
+            <FileText size={13} color={stitchColors.primary} />
             <Text style={styles.sourcesBtnText}>
               Sources{sourcesCount > 0 ? ` (${sourcesCount})` : ''}
             </Text>
@@ -1001,7 +1005,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
             style={[styles.headerActionBtn, styles.imagesBtn]}
             onPress={() => setImagesModalVisible(true)}
           >
-            <ImageIcon size={13} color="#38BDF8" />
+            <ImageIcon size={13} color={stitchColors.primary} />
             <Text style={styles.imagesBtnText}>
               Images{imagesCount > 0 ? ` (${imagesCount})` : ''}
             </Text>
@@ -1019,7 +1023,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
             disabled={exporting}
           >
             {exporting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color={stitchColors.white} />
             ) : (
               <Text style={styles.actionBtnText}>PDF</Text>
             )}
@@ -1062,7 +1066,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
           })}
 
           <Pressable style={styles.addTabBtn} onPress={() => setShowAddSection(true)}>
-            <Plus size={14} color="#818CF8" />
+            <Plus size={14} color={stitchColors.secondary} />
             <Text style={styles.addTabBtnText}>Section</Text>
           </Pressable>
         </ScrollView>
@@ -1092,7 +1096,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
               <TextInput
                 style={styles.fieldInput}
                 placeholder="Ex: Institut National Polytechnique"
-                placeholderTextColor="#64748B"
+                placeholderTextColor={stitchColors.inkMuted}
                 value={cover.school || ''}
                 onChangeText={v => handleCoverDataChange('school', v)}
               />
@@ -1103,7 +1107,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
               <TextInput
                 style={styles.fieldInput}
                 placeholder="Ex: Rapport de Stage de Fin d'Études"
-                placeholderTextColor="#64748B"
+                placeholderTextColor={stitchColors.inkMuted}
                 value={cover.title || ''}
                 onChangeText={v => handleCoverDataChange('title', v)}
               />
@@ -1116,7 +1120,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
                 multiline
                 numberOfLines={3}
                 placeholder="Ex: Mise en place d'une architecture d'automatisation IA..."
-                placeholderTextColor="#64748B"
+                placeholderTextColor={stitchColors.inkMuted}
                 value={cover.subtitle || ''}
                 onChangeText={v => handleCoverDataChange('subtitle', v)}
               />
@@ -1128,7 +1132,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="Ex: Jean Dupont"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   value={cover.studentName || ''}
                   onChangeText={v => handleCoverDataChange('studentName', v)}
                 />
@@ -1138,7 +1142,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="Ex: Orange / MTN"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   value={cover.company || ''}
                   onChangeText={v => handleCoverDataChange('company', v)}
                 />
@@ -1151,7 +1155,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="Ex: M. Paul Martin"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   value={cover.tutorCorporate || ''}
                   onChangeText={v => handleCoverDataChange('tutorCorporate', v)}
                 />
@@ -1161,7 +1165,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="Ex: Dr. Samuel Eto"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   value={cover.tutorAcademic || ''}
                   onChangeText={v => handleCoverDataChange('tutorAcademic', v)}
                 />
@@ -1174,7 +1178,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="Ex: Génie Logiciel"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   value={cover.specialty || ''}
                   onChangeText={v => handleCoverDataChange('specialty', v)}
                 />
@@ -1184,7 +1188,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="Ex: 2024-2025"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={stitchColors.inkMuted}
                   value={cover.year || ''}
                   onChangeText={v => handleCoverDataChange('year', v)}
                 />
@@ -1239,7 +1243,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
               <TextInput
                 style={styles.aiDockInput}
                 placeholder="Demande à l'IA de rédiger, compléter ou corriger..."
-                placeholderTextColor="#64748B"
+                placeholderTextColor={stitchColors.inkMuted}
                 value={aiPrompt}
                 onChangeText={setAiPrompt}
               />
@@ -1249,9 +1253,9 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
                 onPress={() => handleRunAi(aiPrompt)}
               >
                 {aiLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={stitchColors.white} />
                 ) : (
-                  <Send size={16} color="#FFFFFF" />
+                  <Send size={16} color={stitchColors.white} />
                 )}
               </Pressable>
             </View>
@@ -1261,7 +1265,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
 
       {/* ── Floating AI Chat Assistant Trigger ──────────────────────── */}
       <Pressable style={styles.floatingAiFab} onPress={() => setChatVisible(true)}>
-        <Sparkles size={18} color="#FFFFFF" />
+        <Sparkles size={18} color={stitchColors.white} />
         <Text style={styles.floatingAiFabText}>Assistant IA</Text>
       </Pressable>
 
@@ -1273,7 +1277,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
             <TextInput
               style={styles.modalInput}
               placeholder="Ex: Analyse des besoins, Conclusion..."
-              placeholderTextColor="#64748B"
+              placeholderTextColor={stitchColors.inkMuted}
               value={newSectionTitle}
               onChangeText={setNewSectionTitle}
               autoFocus
@@ -1354,7 +1358,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   loadingText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 14,
     marginTop: 12,
   },
@@ -1365,27 +1369,31 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   retryBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: stitchColors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
   },
   retryBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontWeight: '700',
     fontSize: 14,
   },
 
   // Header
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 10,
+    paddingBottom: 12,
+    gap: 10,
     borderBottomWidth: 1,
     borderBottomColor: stitchColors.glassBorder,
     backgroundColor: stitchColors.background,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerBtn: {
     flexDirection: 'row',
@@ -1401,8 +1409,7 @@ const styles = StyleSheet.create({
   },
   headerCenter: {
     flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 8,
+    minWidth: 0,
   },
   headerTitle: {
     color: stitchColors.ink,
@@ -1410,13 +1417,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   saveStatus: {
-    color: '#34D399',
+    color: stitchColors.emeraldDeep,
     fontSize: 11,
     fontWeight: '600',
     marginTop: 1,
   },
   headerActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 8,
   },
@@ -1431,35 +1439,33 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   sourcesBtn: {
-    backgroundColor: stitchColors.paperSoft,
+    backgroundColor: stitchColors.siennaBg,
     borderWidth: 1,
-    borderColor: 'rgba(129, 140, 248, 0.3)',
+    borderColor: stitchColors.siennaSoft,
   },
   sourcesBtnText: {
-    color: '#818CF8',
+    color: stitchColors.primary,
     fontSize: 12,
     fontWeight: '700',
   },
   imagesBtn: {
-    backgroundColor: stitchColors.paperSoft,
+    backgroundColor: stitchColors.siennaBg,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
+    borderColor: stitchColors.siennaSoft,
   },
   imagesBtnText: {
-    color: '#38BDF8',
+    color: stitchColors.primary,
     fontSize: 12,
     fontWeight: '700',
   },
   wordBtn: {
     backgroundColor: stitchColors.primary,
-    borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
   },
   pdfBtn: {
-    backgroundColor: '#059669',
+    backgroundColor: stitchColors.siennaDeep,
   },
   actionBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -1490,10 +1496,10 @@ const styles = StyleSheet.create({
   },
   tabPillActive: {
     backgroundColor: stitchColors.paperSoft,
-    borderColor: '#4F46E5',
+    borderColor: stitchColors.primary,
   },
   tabPillText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 12.5,
     fontWeight: '600',
     maxWidth: 160,
@@ -1513,12 +1519,12 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
+    borderColor: 'rgba(124, 58, 237, 0.3)',
     borderStyle: 'dashed',
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
   },
   addTabBtnText: {
-    color: '#818CF8',
+    color: stitchColors.secondary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -1543,7 +1549,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   cardSubtitle: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontSize: 13,
     marginTop: 4,
     lineHeight: 18,
@@ -1593,7 +1599,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   tocItemNumber: {
-    color: '#818CF8',
+    color: stitchColors.secondary,
     fontWeight: '700',
     fontSize: 14,
     width: 26,
@@ -1605,7 +1611,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tocItemArrow: {
-    color: '#818CF8',
+    color: stitchColors.secondary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -1631,7 +1637,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   wordCountBadge: {
-    color: '#64748B',
+    color: stitchColors.inkMuted,
     fontSize: 12,
   },
   wysiwygContainer: {
@@ -1650,7 +1656,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     backgroundColor: stitchColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.25)',
+    borderColor: 'rgba(124, 58, 237, 0.25)',
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1662,7 +1668,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   aiDockBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: stitchColors.primary,
     width: 34,
     height: 34,
     borderRadius: 10,
@@ -1678,7 +1684,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#4F46E5',
+    backgroundColor: stitchColors.primary,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 24,
@@ -1689,7 +1695,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   floatingAiFabText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontWeight: '700',
     fontSize: 13.5,
   },
@@ -1740,19 +1746,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalBtnCancelText: {
-    color: '#94A3B8',
+    color: stitchColors.inkSubtle,
     fontWeight: '600',
     fontSize: 13,
   },
   modalBtnConfirm: {
     flex: 1,
-    backgroundColor: '#4F46E5',
+    backgroundColor: stitchColors.primary,
     paddingVertical: 10,
     borderRadius: 10,
     alignItems: 'center',
   },
   modalBtnConfirmText: {
-    color: '#FFFFFF',
+    color: stitchColors.white,
     fontWeight: '700',
     fontSize: 13,
   },
