@@ -133,7 +133,9 @@ export function HomeScreen({
     ? studentProfile.name.trim().split(' ')[0]
     : studentName
       ? studentName.trim().split(' ')[0]
-      : 'Étudiant';
+      : '';
+  // Only real profile data: nothing is shown until the profile is loaded or filled in.
+  const studiesLine = [studentProfile?.university, studentProfile?.faculty].filter(Boolean).join(' • ');
 
   return (
     <View style={styles.container}>
@@ -151,10 +153,12 @@ export function HomeScreen({
           >
             <View style={styles.heroGreetingRow}>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={styles.heroGreetingText}>Bonjour, {firstName} 👋</Text>
-                <Text style={styles.heroGreetingSub} numberOfLines={1}>
-                  {studentProfile?.university || 'Université de Yaoundé I'} • {studentProfile?.faculty || 'Faculté des Sciences'}
-                </Text>
+                <Text style={styles.heroGreetingText}>{firstName ? `Bonjour, ${firstName} 👋` : 'Bonjour 👋'}</Text>
+                {studiesLine ? (
+                  <Text style={styles.heroGreetingSub} numberOfLines={1}>
+                    {studiesLine}
+                  </Text>
+                ) : null}
               </View>
               <View style={styles.heroMatchBadge}>
                 <Sparkles size={12} color="#FDE047" />

@@ -596,7 +596,7 @@ export function TopBar({
   onWalletPress,
   style,
 }: TopBarProps) {
-  const displayLocation = locationName || universityName || 'Yaoundé • Univ. Ydé I';
+  const displayLocation = locationName || universityName || 'Campus 360';
 
   return (
     <LinearGradient
@@ -661,7 +661,7 @@ export function TopBar({
               hitSlop={4}
               style={({ pressed }) => [styles.topBarAvatarCircle, pressed && { opacity: 0.85 }]}
             >
-              <Text style={styles.topBarAvatarText}>{avatarInitials ?? 'CB'}</Text>
+              <Text style={styles.topBarAvatarText}>{avatarInitials ?? ''}</Text>
             </Pressable>
           )}
         </View>

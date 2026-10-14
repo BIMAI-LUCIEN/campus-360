@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -64,6 +64,17 @@ export function OnboardingScreen({
   const [university, setUniversity] = useState(initialUniversity);
   const [faculty, setFaculty] = useState(initialFaculty);
   const [level, setLevel] = useState(initialLevel);
+
+  // The profile can arrive after the first render: fill fields the student has not touched yet.
+  useEffect(() => {
+    if (initialUniversity) setUniversity((current) => current || initialUniversity);
+  }, [initialUniversity]);
+  useEffect(() => {
+    if (initialFaculty) setFaculty((current) => current || initialFaculty);
+  }, [initialFaculty]);
+  useEffect(() => {
+    if (initialLevel) setLevel((current) => current || initialLevel);
+  }, [initialLevel]);
   const [skills, setSkills] = useState<string[]>([]);
   const [customSkill, setCustomSkill] = useState('');
 

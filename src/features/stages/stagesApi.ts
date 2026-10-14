@@ -1260,25 +1260,15 @@ export function persistApplicationsLocally(apps: StageApplication[]): void {
 export async function fetchStudentApplications(): Promise<StageApplication[]> {
   try {
     const response = await authFetch('/api/mobile/stages/applications');
-    if (response.ok) {
-      const payload = (await response.json()) as { applications?: StageApplication[] };
-      if (Array.isArray(payload?.applications) && payload.applications.length > 0) {
-        return payload.applications;
-      }
-    }
+    const payload = (await response.json()) as { applications?: StageApplication[] };
+    // The server is the source of truth, including when the student has no application yet.
+    if (Array.isArray(payload?.applications)) return payload.applications;
   } catch (e) {
     console.warn('Fetch applications fallback to local store:', e);
   }
 
-  const stored = await getStoredApplicationsAsync();
-  if (stored.length > 0) {
-    const storedIds = new Set(stored.map((a) => a.id));
-    const merged = [...stored, ...localApplications.filter((a) => !storedIds.has(a.id))];
-    localApplications = merged;
-    return merged;
-  }
-
-  return localApplications;
+  // Offline: only the applications actually created on this device (never the sample seeds).
+  return getStoredApplicationsAsync();
 }
 
 export async function updateApplicationStatus(applicationId: string, status: AppStatus): Promise<boolean> {

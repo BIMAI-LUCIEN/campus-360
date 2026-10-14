@@ -361,7 +361,9 @@ export function StagesScreen({
           <View style={{ flex: 1 }}>
             <Text style={styles.greetingTitle}>Stages &amp; Emplois</Text>
             <Text style={styles.greetingSubtitle} numberOfLines={1}>
-              Opportunités adaptées à votre profil ({studentProfile.major || 'Étudiant'})
+              {studentProfile.major
+                ? `Opportunités adaptées à votre profil (${studentProfile.major})`
+                : 'Opportunités adaptées à votre profil'}
             </Text>
           </View>
         </View>

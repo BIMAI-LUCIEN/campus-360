@@ -1038,7 +1038,10 @@ export function AppShell() {
   }
 
   const showAuthGate = !studentSession;
-  const initials = studentProfile?.name?.slice(0, 2).toUpperCase() ?? 'CB';
+  // Real initials only; while the profile loads the avatar stays empty instead of fake letters.
+  const initials = studentProfile?.name?.trim()
+    ? studentProfile.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
+    : '';
 
   return (
     <SafeAreaProvider>
@@ -1152,8 +1155,8 @@ export function AppShell() {
                 avatarInitials={initials}
                 locationName={
                   studentProfile?.university
-                    ? `${studentProfile.university} • ${studentProfile.faculty || 'Cameroun'}`
-                    : 'Yaoundé • Univ. Ydé I'
+                    ? [studentProfile.university, studentProfile.faculty].filter(Boolean).join(' • ')
+                    : 'Campus 360'
                 }
                 onLocationPress={() => openSection('account')}
                 iaCredits={iaCredits}
@@ -1181,8 +1184,9 @@ export function AppShell() {
               {activeSection === 'stages' && (
                 <StagesScreen
                   studentProfile={{
-                    fullName: studentProfile?.name || 'Étudiant',
-                    email: studentProfile?.email || 'etudiant@campus360.app',
+                    // Real values only: these feed the CV / application sent to recruiters.
+                    fullName: studentProfile?.name || '',
+                    email: studentProfile?.email || '',
                     phoneWhatsapp: studentProfile?.whatsappPhone || studentProfile?.phone,
                     major: studentProfile?.faculty || '',
                     educationLevel: studentProfile?.level || '',

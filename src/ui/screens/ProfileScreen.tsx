@@ -25,6 +25,7 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import { TransactionRow } from '../GlassComponents';
+import { fetchStudentApplications } from '../../features/stages/stagesApi';
 import type { StudentProfile } from '../../features/auth/betterAuth';
 import type { Transaction } from '../../types';
 import {
@@ -164,10 +165,17 @@ export function ProfileScreen({
   const handle = studentProfile?.email
     ? `@${studentProfile.email.split('@')[0]}`
     : '@campus360';
-  const subline = studentProfile?.university || 'Université de Yaoundé I';
+  const subline = studentProfile?.university || '';
 
-  const applicationsCount =
-    transactions.filter((t) => t.type === 'stage_token').length || 4;
+  // Real count from the same source as the applications timeline (no placeholder number).
+  const [applicationsCount, setApplicationsCount] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    let active = true;
+    fetchStudentApplications()
+      .then((apps) => { if (active) setApplicationsCount(apps.length); })
+      .catch(() => { if (active) setApplicationsCount(null); });
+    return () => { active = false; };
+  }, [studentProfile?.id]);
 
   const activityRows: MenuRow[] = [
     {
@@ -337,7 +345,7 @@ export function ProfileScreen({
               style={({ pressed }) => [styles.statPill, pressed && { opacity: 0.8 }]}
               onPress={onApplications}
             >
-              <Text style={styles.statNumber}>{applicationsCount}</Text>
+              <Text style={styles.statNumber}>{applicationsCount ?? '–'}</Text>
               <Text style={styles.statLabel}>Candidatures</Text>
             </Pressable>
 
@@ -345,8 +353,8 @@ export function ProfileScreen({
               style={({ pressed }) => [styles.statPill, pressed && { opacity: 0.8 }]}
               onPress={onDocuments}
             >
-              <Text style={styles.statNumber}>1</Text>
-              <Text style={styles.statLabel}>CV Officiel RH</Text>
+              <Text style={styles.statNumber}>CV</Text>
+              <Text style={styles.statLabel}>Officiel RH</Text>
             </Pressable>
 
             <Pressable

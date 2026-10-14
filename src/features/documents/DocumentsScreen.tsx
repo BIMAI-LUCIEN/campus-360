@@ -187,7 +187,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       formations: [
         {
           diplome: studentProfile?.level || 'Licence 3',
-          etablissement: studentProfile?.university || 'Université de Yaoundé I',
+          etablissement: studentProfile?.university || '',
           ville: 'Yaoundé',
           periode: 'En cours',
         },
