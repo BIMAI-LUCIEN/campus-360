@@ -26,7 +26,7 @@ import {
 
 import { type StudentProfile } from '../../features/auth/betterAuth';
 import { fetchStageJobs, fetchStudentApplications } from '../../features/stages/stagesApi';
-import { AiApplyModal } from '../../features/stages/AiApplyModal';
+import { AiApplyModal, type ApplicationProfilePatch } from '../../features/stages/AiApplyModal';
 import type { StageApplication, StageJob, Transaction } from '../../types';
 import {
   stitchColors,
@@ -55,6 +55,7 @@ interface HomeScreenProps {
   onDocuments: () => void;
   onResources: () => void;
   onProfile: () => void;
+  onProfileSaved?: (patch: ApplicationProfilePatch) => void;
 }
 
 const HOME_CATEGORIES: CategoryItem[] = [
@@ -77,6 +78,7 @@ export function HomeScreen({
   onDocuments,
   onResources,
   onProfile: _onProfile,
+  onProfileSaved,
 }: HomeScreenProps) {
   const [jobs, setJobs] = useState<StageJob[]>([]);
   const [_recentApp, setRecentApp] = useState<StageApplication | null>(null);
@@ -395,12 +397,15 @@ export function HomeScreen({
           studentProfile={{
             fullName: studentProfile?.name || studentName || 'Étudiant',
             email: studentProfile?.email || '',
-            phoneWhatsapp: studentProfile?.whatsappPhone,
-            major: studentProfile?.faculty || 'Informatique & Télécoms',
-            educationLevel: studentProfile?.level || 'Licence 3 / Master 1',
+            phoneWhatsapp: studentProfile?.whatsappPhone || studentProfile?.phone,
+            university: studentProfile?.university,
+            // Empty values (not placeholders) so missing data is asked before applying.
+            major: studentProfile?.faculty || '',
+            educationLevel: studentProfile?.level || '',
             skills: effectiveSkills,
             tokens: iaCredits,
           }}
+          onProfileSaved={onProfileSaved}
           onApplicationComplete={() => {
             setApplyingJob(null);
             onApplications();

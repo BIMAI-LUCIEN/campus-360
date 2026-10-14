@@ -38,6 +38,7 @@ import {
 import { analyzeJobMatch, type MatchAnalysis } from './aiMatchEngine';
 import { exportApplicationPdf, buildWhatsAppPitch, generateCvPdfBase64 } from './pdfExportService';
 import { StudentProfileExpressModal } from './StudentProfileExpressModal';
+import { updateStudentProfile } from '../auth/betterAuth';
 import { PaymentModal } from '../wallet/PaymentModal';
 import { WhatsAppPairingModal } from '../whatsapp/WhatsAppPairingModal';
 import { getStoredWhatsAppStatus, cleanPhoneNumber } from '../whatsapp/whatsappService';
@@ -60,6 +61,15 @@ interface AiApplyModalProps {
   onClose: () => void;
   onApplicationComplete?: () => void;
   onRecharge?: () => void;
+  /** Called after the pre-application sheet saved missing profile data (WhatsApp, studies, skills). */
+  onProfileSaved?: (patch: ApplicationProfilePatch) => void;
+}
+
+export interface ApplicationProfilePatch {
+  whatsappPhone: string;
+  faculty: string;
+  level: string;
+  skills: string[];
 }
 
 function OfficialCvCardPreview({ cv }: { cv: OfficialCvData }) {
@@ -185,6 +195,7 @@ export function AiApplyModal({
   onClose,
   onApplicationComplete,
   onRecharge,
+  onProfileSaved,
 }: AiApplyModalProps) {
   const [step, setStep] = useState<'generating' | 'preview' | 'sent'>('generating');
   const [progressMsg, setProgressMsg] = useState("Analyse de l'offre et correspondance des compétences...");
@@ -248,9 +259,10 @@ export function AiApplyModal({
     return analyzeJobMatch(job, currentProfile);
   }, [job, currentProfile]);
 
-  // Check if profile is missing essentials
+  // Check if profile is missing essentials (WhatsApp is first asked here, at the first application)
   const isProfileIncomplete = useMemo(() => {
     return (
+      !currentProfile.phoneWhatsapp?.trim() ||
       !currentProfile.major ||
       currentProfile.major === 'Non renseigné' ||
       !currentProfile.skills ||
@@ -327,15 +339,28 @@ export function AiApplyModal({
     skills: string[];
   }) => {
     setShowExpressModal(false);
+    const patch: ApplicationProfilePatch = {
+      whatsappPhone: data.phoneWhatsapp || currentProfile.phoneWhatsapp || '',
+      faculty: data.major || currentProfile.major,
+      level: data.level || currentProfile.educationLevel,
+      skills: data.skills.length > 0 ? data.skills : currentProfile.skills,
+    };
     setCurrentProfile((prev) => ({
       ...prev,
-      fullName: data.fullName || prev.fullName,
-      phoneWhatsapp: data.phoneWhatsapp || prev.phoneWhatsapp,
-      university: data.university,
-      major: data.major,
-      educationLevel: data.level,
-      skills: data.skills,
+      phoneWhatsapp: patch.whatsappPhone,
+      major: patch.faculty,
+      educationLevel: patch.level,
+      skills: patch.skills,
     }));
+    // Persist on the account so the sheet is never shown again for the same data.
+    updateStudentProfile({
+      whatsappPhone: patch.whatsappPhone,
+      phone: patch.whatsappPhone,
+      faculty: patch.faculty,
+      level: patch.level,
+      skills: patch.skills,
+    }).catch((error) => console.warn('[AiApplyModal] profile save failed:', error));
+    onProfileSaved?.(patch);
   };
 
   const handleReformulateTone = (tone: 'formal' | 'concise' | 'impact') => {
@@ -1091,7 +1116,7 @@ export function AiApplyModal({
         visible={showExpressModal}
         initialFullName={currentProfile.fullName}
         initialPhoneWhatsapp={currentProfile.phoneWhatsapp}
-        initialUniversity={currentProfile.university || "Université de Yaoundé I"}
+        initialUniversity={currentProfile.university || ''}
         initialMajor={currentProfile.major}
         initialLevel={currentProfile.educationLevel}
         initialSkills={currentProfile.skills}

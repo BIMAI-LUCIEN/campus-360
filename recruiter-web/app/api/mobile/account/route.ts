@@ -22,13 +22,29 @@ export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers });
 }
 
+// Partial update: every field is optional and an empty string means "keep the current value".
+// The profile is filled progressively (sign-up: name, onboarding: studies, first application: WhatsApp).
+const phoneField = z
+  .string()
+  .trim()
+  .max(20)
+  .refine((value) => value === '' || (value.length >= 6 && /^[+0-9 ()\-]+$/.test(value)), 'Telephone invalide.')
+  .optional();
+const textField = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .refine((value) => value === '' || value.length >= 2, 'Valeur trop courte.')
+    .optional();
+
 const updateProfileSchema = z.object({
-  name: z.string().trim().min(2).max(120),
-  phone: z.string().trim().min(6).max(20).regex(/^[+0-9 ()\-]+$/, 'Telephone invalide.'),
-  whatsappPhone: z.string().trim().min(6).max(20).regex(/^[+0-9 ()\-]+$/, 'WhatsApp invalide.'),
-  university: z.string().trim().min(2).max(120),
-  faculty: z.string().trim().min(2).max(120),
-  level: z.string().trim().max(60).optional().default(''),
+  name: textField(120),
+  phone: phoneField,
+  whatsappPhone: phoneField,
+  university: textField(120),
+  faculty: textField(120),
+  level: z.string().trim().max(60).optional(),
 });
 
 const MAX_BODY_BYTES = 4 * 1024;
@@ -127,22 +143,22 @@ export async function PATCH(request: NextRequest) {
     const result = await databasePool.query(
       `update public.app_users
        set
-         name = $2,
-         phone = $3,
-         whatsapp_phone = $4,
-         university = $5,
-         faculty = $6,
-         level = nullif($7, ''),
+         name = coalesce(nullif($2, ''), name),
+         phone = coalesce(nullif($3, ''), phone),
+         whatsapp_phone = coalesce(nullif($4, ''), whatsapp_phone),
+         university = coalesce(nullif($5, ''), university),
+         faculty = coalesce(nullif($6, ''), faculty),
+         level = coalesce(nullif($7, ''), level),
          updated_at = now()
        where id = $1
        returning id, email, name, role, phone, whatsapp_phone, university, faculty, level`,
       [
         user.id,
-        parsed.data.name,
-        parsed.data.phone,
-        parsed.data.whatsappPhone,
-        parsed.data.university,
-        parsed.data.faculty,
+        parsed.data.name ?? '',
+        parsed.data.phone ?? '',
+        parsed.data.whatsappPhone ?? '',
+        parsed.data.university ?? '',
+        parsed.data.faculty ?? '',
         parsed.data.level ?? '',
       ],
     );

@@ -65,6 +65,7 @@ import {
 } from './features/auth/betterAuth';
 import { OnboardingScreen as IntroSliderScreen } from './features/onboarding/OnboardingScreen';
 import { OnboardingScreen } from './ui/screens/OnboardingScreen';
+import type { ApplicationProfilePatch } from './features/stages/AiApplyModal';
 import { FreePdfSelector } from './features/onboarding/FreePdfSelector';
 import { Toast, type ToastMessage, type ToastVariant } from './ui/Toast';
 import { PdfStudentSection } from './features/pdf/PdfStudentSection';
@@ -171,58 +172,6 @@ const makeTransaction = (label: string, amount: number, type: Transaction['type'
     minute: '2-digit',
   }),
 });
-
-const CAMEROON_UNIVERSITIES = [
-  'Université de Douala',
-  'Université de Yaoundé I',
-  'Université de Yaoundé II',
-  'Université de Dschang',
-  'Université de Buea',
-  'Université de Bamenda',
-  'Université de Ngaoundéré',
-  'Université de Maroua',
-  'ENSP (Polytechnique)',
-  'ENAM',
-  'IUC',
-  'IUT',
-  'IUG',
-  'UCAC',
-  'Autre / Privé',
-];
-
-const CAMEROON_FACULTIES = [
-  'Informatique et Génie Logiciel',
-  'Génie Informatique',
-  'Génie Réseaux et Télécommunications',
-  'Génie Électrique',
-  'Génie Civil',
-  'Génie Mécanique',
-  'Techniques de Commercialisation',
-  'Logistique Industrielle',
-  'Gestion Comptable et Financière',
-  'Médecine et Pharmacie',
-  'Droit et Sciences Politiques',
-  'Sciences Économiques et Gestion',
-  'Ingénierie et Technologies',
-  'Lettres et Sciences Humaines',
-  'Mathématiques et Physique',
-  'Comptabilité et Finance',
-  'Communication',
-  'Agronomie',
-  'Autre',
-];
-
-const CAMEROON_LEVELS = [
-  'Licence 1',
-  'Licence 2',
-  'Licence 3',
-  'Master 1',
-  'Master 2',
-  'BTS 1ère année',
-  'BTS 2ème année',
-  'Cycle Ingénieur',
-  'Autre',
-];
 
 type ClientCatalogTab = 'packs' | 'catalog' | 'library';
 // Matches the server-side OTP rate limit (3 codes / 60 s).
@@ -359,9 +308,6 @@ export function AppShell() {
   const [purchasingPackId, setPurchasingPackId] = React.useState<string | null>(null);
   const [rechargeVisible, setRechargeVisible] = React.useState(false);
   const [subscriptionVisible, setSubscriptionVisible] = React.useState(false);
-  const [universityModalVisible, setUniversityModalVisible] = React.useState(false);
-  const [facultyModalVisible, setFacultyModalVisible] = React.useState(false);
-  const [levelModalVisible, setLevelModalVisible] = React.useState(false);
   const [rechargeAmount, setRechargeAmount] = React.useState('1000');
   const [provider, setProvider] = React.useState<'MTN MoMo' | 'Orange Money'>('MTN MoMo');
   const [insufficientVisible, setInsufficientVisible] = React.useState(false);
@@ -373,11 +319,6 @@ export function AppShell() {
   const [authEmail, setAuthEmail] = React.useState('');
   const [authPassword, setAuthPassword] = React.useState('');
   const [authName, setAuthName] = React.useState('');
-  const [authPhone, setAuthPhone] = React.useState('');
-  const [authWhatsappPhone, setAuthWhatsappPhone] = React.useState('');
-  const [authUniversity, setAuthUniversity] = React.useState('');
-  const [authFaculty, setAuthFaculty] = React.useState('');
-  const [authLevel, setAuthLevel] = React.useState('');
   const [authLoading, setAuthLoading] = React.useState(false);
   const [authNotice, setAuthNotice] = React.useState('');
   const [authCapabilities, setAuthCapabilities] = React.useState<AuthCapabilities>({ passwordReset: false, emailOtp: false, google: false });
@@ -566,12 +507,6 @@ export function AppShell() {
     checkForUpdates();
   }, []);
 
-  React.useEffect(() => {
-    if (authMode === 'sign-up') return;
-    setAuthPhone(''); setAuthWhatsappPhone('');
-    setAuthUniversity(''); setAuthFaculty(''); setAuthLevel('');
-  }, [authMode]);
-
   // Load the persisted "intro already seen" flag once at launch so the pre-auth
   // OnboardingScreen never reappears for a returning user (it used to reset to
   // false on every launch because the flag lived only in component state).
@@ -687,11 +622,6 @@ export function AppShell() {
     const email = authEmail.trim();
     const password = authPassword.trim();
     const name = authName.trim();
-    const whatsappPhone = authWhatsappPhone.trim();
-    const phone = whatsappPhone;
-    const university = authUniversity.trim();
-    const faculty = authFaculty.trim();
-    const level = authLevel.trim();
 
     const otp = authOtp.replace(/\D/g, '');
 
@@ -751,10 +681,8 @@ export function AppShell() {
 
     if (!email) { Alert.alert('Connexion', 'Entre ton email.'); return; }
     if ((authMode === 'sign-in' || authMode === 'sign-up') && !password) { Alert.alert('Connexion', 'Entre ton mot de passe.'); return; }
-    if (authMode === 'sign-up' && !name) { Alert.alert('Création du compte', 'Entre ton nom.'); return; }
-    if (authMode === 'sign-up' && !whatsappPhone) { Alert.alert('Création du compte', 'Entre ton numero WhatsApp.'); return; }
-    if (authMode === 'sign-up' && !university) { Alert.alert('Création du compte', 'Choisis ton université.'); return; }
-    if (authMode === 'sign-up' && !faculty) { Alert.alert('Création du compte', 'Entre ta filière.'); return; }
+    if (authMode === 'sign-up' && name.length < 2) { Alert.alert('Création du compte', 'Entre ton nom.'); return; }
+    if (authMode === 'sign-up' && password.length < 8) { Alert.alert('Création du compte', 'Choisis un mot de passe d’au moins 8 caractères.'); return; }
 
     setAuthLoading(true);
     setAuthNotice('');
@@ -775,7 +703,7 @@ export function AppShell() {
               email,
               password,
               name,
-              { phone, whatsappPhone, university, faculty, level },
+              undefined,
               { requireEmailVerification: Boolean(authCapabilities.emailOtp) },
             );
       if (!session) {
@@ -801,21 +729,23 @@ export function AppShell() {
     setAuthNotice(`Nous avons transmis un code à 6 chiffres à ${email}. Il expire dans 10 minutes.`);
   };
 
+  // Data saved by the pre-application sheet (WhatsApp, studies, skills): keep the shell profile in sync
+  // so the sheet is not shown again on the next application.
+  const applyApplicationProfilePatch = (patch: ApplicationProfilePatch) => {
+    setStudentProfile((prev) => (prev ? {
+      ...prev,
+      whatsappPhone: patch.whatsappPhone || prev.whatsappPhone,
+      phone: prev.phone || patch.whatsappPhone,
+      faculty: patch.faculty || prev.faculty,
+      level: patch.level || prev.level,
+      skills: patch.skills.length > 0 ? patch.skills : prev.skills,
+    } : prev));
+  };
+
   // Shared ending for every successful authentication (password, OTP, sign-up).
   const completeAuthenticatedSession = async (session: StudentSession, isNewAccount: boolean) => {
     setStudentSession(session);
-    if (isNewAccount) {
-      const whatsappPhone = authWhatsappPhone.trim();
-      const updatedProfile = await updateStudentProfile({
-        name: authName.trim(),
-        phone: whatsappPhone,
-        whatsappPhone,
-        university: authUniversity.trim(),
-        faculty: authFaculty.trim(),
-        level: authLevel.trim(),
-      });
-      setStudentProfile(updatedProfile);
-    }
+    // The name is stored at sign-up; studies are collected by the onboarding right after.
     await syncStudentAccount(session);
     setAuthOtp('');
     setAuthNotice('');
@@ -1193,10 +1123,6 @@ export function AppShell() {
             email={authEmail}
             password={authPassword}
             name={authName}
-            whatsappPhone={authWhatsappPhone}
-            university={authUniversity}
-            faculty={authFaculty}
-            level={authLevel}
             loading={authLoading}
             notice={authNotice}
             canGoogle={authCapabilities.google}
@@ -1211,47 +1137,40 @@ export function AppShell() {
             onEmailChange={setAuthEmail}
             onPasswordChange={setAuthPassword}
             onNameChange={setAuthName}
-            onWhatsappChange={setAuthWhatsappPhone}
-            onUniversityChange={setAuthUniversity}
-            onFacultyChange={setAuthFaculty}
-            onLevelChange={setAuthLevel}
             onSubmit={submitAuth}
             onGoogle={handleGoogleSignIn}
           />
         ) : studentSession && !isOnboardingCompleted && (!studentProfile?.skills || studentProfile.skills.length === 0) ? (
           <OnboardingScreen
-            initialName={studentProfile?.name || studentSession.user.name || 'Étudiant'}
+            initialName={studentProfile?.name || studentSession.user.name || ''}
+            initialUniversity={studentProfile?.university || ''}
+            initialFaculty={studentProfile?.faculty || ''}
+            initialLevel={studentProfile?.level || ''}
             onSkip={finishOnboarding}
             onCompleteOnboarding={async (onboardingData) => {
               await finishOnboarding();
+              // Only the study fields are collected here: name comes from sign-up,
+              // WhatsApp is asked at the first application.
               const updated: StudentProfile = {
                 ...(studentProfile || {
                   id: studentSession.user.id,
-                  name: studentSession.user.name || 'Étudiant',
+                  name: studentSession.user.name || '',
                   email: studentSession.user.email,
                   role: 'STUDENT',
-                  phone: '',
-                  whatsappPhone: '',
                 }),
-                name: onboardingData.fullName || studentProfile?.name || studentSession.user.name || 'Étudiant',
-                phone: onboardingData.phoneWhatsapp || studentProfile?.phone || '',
-                whatsappPhone: onboardingData.phoneWhatsapp || studentProfile?.whatsappPhone || '',
                 university: onboardingData.university,
-                faculty: onboardingData.major,
+                faculty: onboardingData.faculty,
                 level: onboardingData.level,
                 skills: onboardingData.skills,
               };
               setStudentProfile(updated);
               updateStudentProfile({
-                name: updated.name,
-                phone: updated.phone || '',
-                whatsappPhone: updated.whatsappPhone || '',
-                university: updated.university || '',
-                faculty: updated.faculty || '',
-                level: updated.level,
-                skills: updated.skills,
+                university: onboardingData.university,
+                faculty: onboardingData.faculty,
+                level: onboardingData.level,
+                skills: onboardingData.skills,
               }).catch((e) => console.warn('Sync profile error:', e));
-              showToast('Profil complété avec succès ! Découvre tes stages.');
+              showToast('Profil complété ! Découvre tes stages.');
             }}
           />
         ) : (
@@ -1300,11 +1219,12 @@ export function AppShell() {
                     email: studentProfile?.email || 'etudiant@campus360.app',
                     phoneWhatsapp: studentProfile?.whatsappPhone || studentProfile?.phone,
                     major: studentProfile?.faculty || '',
-                    educationLevel: studentProfile?.level || 'Licence 3',
+                    educationLevel: studentProfile?.level || '',
                     skills: studentProfile?.skills ?? [],
                     tokens: iaCredits,
                   }}
                   onOpenWallet={() => openSection('account')}
+                  onProfileSaved={applyApplicationProfilePatch}
                 />
               )}
 
@@ -1352,6 +1272,7 @@ export function AppShell() {
                   onRecharge={() => openSection('account')}
                   onStages={() => openSection('stages')}
                   onApplications={() => openSection('applications')}
+                  onProfileSaved={applyApplicationProfilePatch}
                   onDocuments={() => openSection('documents')}
                   onResources={() => openSection('resources')}
                   onProfile={() => openSection('account')}
@@ -1753,36 +1674,6 @@ export function AppShell() {
           </Pressable>
         </Modal>
 
-        {/* University Picker */}
-        <PickerModal
-          visible={universityModalVisible}
-          title="Choisis ton université"
-          options={CAMEROON_UNIVERSITIES}
-          selected={authUniversity}
-          onSelect={(v) => { setAuthUniversity(v); setUniversityModalVisible(false); }}
-          onClose={() => setUniversityModalVisible(false)}
-        />
-
-        {/* Faculty Picker */}
-        <PickerModal
-          visible={facultyModalVisible}
-          title="Choisis ta filière"
-          options={CAMEROON_FACULTIES}
-          selected={authFaculty}
-          onSelect={(v) => { setAuthFaculty(v); setFacultyModalVisible(false); }}
-          onClose={() => setFacultyModalVisible(false)}
-        />
-
-        {/* Level Picker */}
-        <PickerModal
-          visible={levelModalVisible}
-          title="Choisis ton niveau"
-          options={CAMEROON_LEVELS}
-          selected={authLevel}
-          onSelect={(v) => { setAuthLevel(v); setLevelModalVisible(false); }}
-          onClose={() => setLevelModalVisible(false)}
-        />
-
         {/* Free Pdf Selector */}
         <FreePdfSelector
           visible={freePdfSelectorVisible}
@@ -1807,10 +1698,6 @@ export function AppShell() {
             email={authEmail}
             password={authPassword}
             name={authName}
-            whatsappPhone={authWhatsappPhone}
-            university={authUniversity}
-            faculty={authFaculty}
-            level={authLevel}
             loading={authLoading}
             notice={authNotice}
             canGoogle={authCapabilities.google}
@@ -1825,10 +1712,6 @@ export function AppShell() {
             onEmailChange={setAuthEmail}
             onPasswordChange={setAuthPassword}
             onNameChange={setAuthName}
-            onWhatsappChange={setAuthWhatsappPhone}
-            onUniversityChange={setAuthUniversity}
-            onFacultyChange={setAuthFaculty}
-            onLevelChange={setAuthLevel}
             onSubmit={submitAuth}
             onGoogle={handleGoogleSignIn}
             onClose={() => setAuthVisible(false)}
@@ -1837,51 +1720,6 @@ export function AppShell() {
 
       </SafeAreaView>
     </SafeAreaProvider>
-  );
-}
-
-// ── Picker Modal ──────────────────────────────────────────────────────────────
-function PickerModal({
-  visible,
-  title,
-  options,
-  selected,
-  onSelect,
-  onClose,
-}: {
-  visible: boolean;
-  title: string;
-  options: string[];
-  selected: string;
-  onSelect: (v: string) => void;
-  onClose: () => void;
-}) {
-  return (
-    <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={[styles.dropdownModalCard, { padding: 0 }]} onPress={() => {}}>
-          <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: stitchColors.inkFaint, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontSize: 20, fontWeight: '800', color: stitchColors.inkSoft }}>{title}</Text>
-            <Pressable onPress={onClose}>
-              <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: `${stitchColors.ink}0D`, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontSize: 14, color: stitchColors.inkMuted }}>✕</Text>
-              </View>
-            </Pressable>
-          </View>
-          <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
-            {options.map((opt) => (
-              <Pressable
-                key={opt}
-                style={[styles.dropdownItem, selected === opt && styles.dropdownItemActive]}
-                onPress={() => onSelect(opt)}
-              >
-                <Text style={[styles.dropdownItemText, selected === opt && styles.dropdownItemTextActive]}>{opt}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </Pressable>
-      </Pressable>
-    </Modal>
   );
 }
 

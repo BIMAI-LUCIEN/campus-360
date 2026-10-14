@@ -1,628 +1,244 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
-  Dimensions,
-  Platform,
-  KeyboardAvoidingView,
+  View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { ArrowLeft, ArrowRight, Check, GraduationCap, Layers, Plus, Sparkles } from 'lucide-react-native';
+
 import {
-  Sparkles,
-  CheckCircle,
-  ArrowRight,
-  GraduationCap,
-  Briefcase,
-  Layers,
-  Award,
-  ChevronLeft,
-  Check,
-  Plus,
-  Compass,
-  Target,
-  User,
-  Phone,
-} from 'lucide-react-native';
+  FACULTY_NAMES,
+  LEVELS,
+  MAX_SKILLS,
+  UNIVERSITIES,
+  suggestedSkillsFor,
+} from '../../features/onboarding/academicCatalog';
+import { fontFamilies, stitchColors } from '../../theme/stitch';
+import { SelectWithOther } from '../SelectWithOther';
 
-import { stitchColors } from '../../theme/stitch';
-
-const { width } = Dimensions.get('window');
-
-// ─── DOMAINES D'ÉTUDES CAPTIVANTS & MODERNES ─────────────────────────────────
-export interface DomainItem {
-  id: string;
-  title: string;
-  icon: string;
-  badge: string;
+export interface OnboardingData {
+  university: string;
+  faculty: string;
+  level: string;
   skills: string[];
 }
 
-export const DOMAINS: DomainItem[] = [
-  {
-    id: 'ai-data',
-    title: 'Intelligence Artificielle & Data Science',
-    icon: '💻',
-    badge: 'Machine Learning, LLM & Data',
-    skills: [
-      'Python & Pandas',
-      'Machine Learning',
-      'Deep Learning & PyTorch',
-      'SQL & Data Engineering',
-      'Prompt Engineering & LLMs',
-      'Data Visualization & Power BI',
-      'Scikit-Learn',
-      'Statistiques Appliquées',
-    ],
-  },
-  {
-    id: 'software-cloud',
-    title: 'Ingénierie Logicielle, Web & Cloud',
-    icon: '🚀',
-    badge: 'Full-Stack, DevOps & Mobile',
-    skills: [
-      'React / React Native',
-      'TypeScript & Modern JS',
-      'Node.js & Backend APIs',
-      'Docker & Cloud AWS/GCP',
-      'Git & CI/CD Pipelines',
-      'Bases de données SQL & NoSQL',
-      'Architecture Microservices',
-      'Cybersécurité & Auth',
-    ],
-  },
-  {
-    id: 'finance-syscohada',
-    title: 'Finance, FinTech & Gestion SYSCOHADA',
-    icon: '💳',
-    badge: 'Comptabilité, Audit & FinTech',
-    skills: [
-      'Plan Comptable SYSCOHADA',
-      'Analyse Financière & Ratios',
-      'Excel Avancé & Modélisation',
-      'Audit & Contrôle de Gestion',
-      'FinTech & Mobile Money',
-      'Fiscalité des Entreprises',
-      'Trésorerie & Budget',
-      'Évaluation d\'Entreprise',
-    ],
-  },
-  {
-    id: 'design-product',
-    title: 'UI/UX Design & Conception Produit',
-    icon: '🎨',
-    badge: 'Figma, Design System & User Research',
-    skills: [
-      'Figma & Design Systems',
-      'Wireframing & Prototypage',
-      'Recherche Utilisateur (UX)',
-      'Design Responsive Mobile',
-      'Micro-interactions & Motion',
-      'Design Thinking & Atelier',
-      'Accessibilité Numérique',
-      'Branding & Identité Visuelle',
-    ],
-  },
-  {
-    id: 'business-law',
-    title: 'Droit des Affaires & Fiscalité Juridique',
-    icon: '⚖️',
-    badge: 'Droit OHADA, Contrats & Conseil',
-    skills: [
-      'Droit Commercial & Sociétés (OHADA)',
-      'Rédaction de Contrats',
-      'Droit du Travail & RH',
-      'Contentieux & Arbitrage',
-      'Conformité & RGPD',
-      'Fiscalité Internationale',
-      'Propriété Intellectuelle',
-      'Veille Juridique',
-    ],
-  },
-  {
-    id: 'health-biotech',
-    title: 'Santé, Pharmacie & Biotechnologies',
-    icon: '🏥',
-    badge: 'Sciences Médicales & Laboratoire',
-    skills: [
-      'Biologie Moléculaire',
-      'Pharmacologie Clinique',
-      'Santé Publique & Épidémiologie',
-      'Bio-statistiques',
-      'Gestion Hospitalière',
-      'Contrôle Qualité & Normes',
-      'Essais Cliniques',
-      'Génétique Médicale',
-    ],
-  },
-  {
-    id: 'marketing-ecommerce',
-    title: 'Marketing Digital, Com & E-Commerce',
-    icon: '📣',
-    badge: 'Growth, Ads, SEO & Social Media',
-    skills: [
-      'Stratégie de Contenu & SEO',
-      'Facebook & Google Ads',
-      'E-Commerce & Conversion',
-      'Social Media Management',
-      'Email Marketing & Automation',
-      'Copywriting & Storytelling',
-      'Google Analytics 4',
-      'Relations Publiques & Presse',
-    ],
-  },
-  {
-    id: 'engineering-civil',
-    title: 'Bâtiment, Énergie & Génie Civil',
-    icon: '🏗️',
-    badge: 'BTP, Énergies & Infrastructures',
-    skills: [
-      'AutoCAD & Plans BIM',
-      'Calcul de Structures (RDM)',
-      'Gestion de Chantiers BTP',
-      'Énergies Renouvelables & Solaire',
-      'Topographie & Géotechnique',
-      'Devis Quantitatif Estimatif',
-      'Sécurité & QHSE',
-      'Matériaux de Construction',
-    ],
-  },
-];
-
-export const POPULAR_UNIVERSITIES = [
-  'Université Félix Houphouët-Boigny (Abidjan)',
-  'INP-HB Yamoussoukro',
-  'ESATIC Abidjan',
-  'Université de Douala',
-  'Université de Yaoundé I',
-  'HEC Abidjan',
-  'ESTM Dakar',
-  'Université Virtuelle UVCI',
-  'Institut National Polytechnique',
-  'Autre Établissement',
-];
-
-export const EDUCATION_LEVELS = [
-  { id: 'bts-1', name: 'BTS 1ère Année', cycle: 'Bac+1 • Technicien', icon: '🎓' },
-  { id: 'bts-2', name: 'BTS 2ème Année', cycle: 'Bac+2 • Examen d\'État', icon: '🎓' },
-  { id: 'licence-1', name: 'Licence 1 (L1)', cycle: 'Bac+1 • Fondations', icon: '📜' },
-  { id: 'licence-2', name: 'Licence 2 (L2)', cycle: 'Bac+2 • Approfondissement', icon: '📜' },
-  { id: 'licence-3', name: 'Licence 3 (L3)', cycle: 'Bac+3 • Diplôme & Stage', icon: '📜' },
-  { id: 'master-1', name: 'Master 1 (M1)', cycle: 'Bac+4 • Spécialisation', icon: '🚀' },
-  { id: 'master-2', name: 'Master 2 / Ingénieur', cycle: 'Bac+5 • Fin d\'études', icon: '🏆' },
-  { id: 'doctorat', name: 'Doctorat / PhD', cycle: 'Bac+8 • Recherche', icon: '🔬' },
-];
-
-export const OBJECTIVE_OPTIONS = [
-  { id: 'internship', label: 'Trouver un stage ou une alternance', icon: '🎯' },
-  { id: 'exams', label: 'Réussir mes examens et partiels', icon: '📚' },
-  { id: 'skills', label: 'Valider mes compétences clés', icon: '💡' },
-  { id: 'ai-assistant', label: 'Réviser et rédiger avec l\'IA Campus', icon: '🤖' },
-];
-
-export const GENERAL_SKILLS = [
-  'Gestion de Projet Agile',
-  'Communication & Pitch',
-  'Anglais Professionnel',
-  'Esprit d\'Analyse & Synthèse',
-  'Résolution de Problèmes',
-  'Leadership & Travail d\'équipe',
-];
-
 export interface OnboardingScreenProps {
+  /** Used only for the greeting: the name was already given at sign-up. */
   initialName?: string;
-  initialPhone?: string;
-  onCompleteOnboarding: (data: {
-    fullName?: string;
-    phoneWhatsapp?: string;
-    university: string;
-    major: string;
-    level: string;
-    skills: string[];
-  }) => void;
+  initialUniversity?: string;
+  initialFaculty?: string;
+  initialLevel?: string;
+  onCompleteOnboarding: (data: OnboardingData) => void;
   onSkip?: () => void;
 }
 
+type Step = 1 | 2 | 3;
+
+const STEP_TITLES: Record<Step, string> = {
+  1: 'Ton établissement',
+  2: 'Ta filière et ton niveau',
+  3: 'Tes compétences',
+};
+
+const STEP_HINTS: Record<Step, string> = {
+  1: 'Elle nous sert à te proposer les stages et documents de ton campus.',
+  2: 'On l’utilise pour trier les offres et pré-remplir ton CV.',
+  3: 'Choisis jusqu’à 8 compétences : ton score de correspondance en dépend.',
+};
+
 export function OnboardingScreen({
-  initialName = 'Étudiant',
-  initialPhone = '',
+  initialName,
+  initialUniversity = '',
+  initialFaculty = '',
+  initialLevel = '',
   onCompleteOnboarding,
   onSkip,
 }: OnboardingScreenProps) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<Step>(1);
+  const [university, setUniversity] = useState(initialUniversity);
+  const [faculty, setFaculty] = useState(initialFaculty);
+  const [level, setLevel] = useState(initialLevel);
+  const [skills, setSkills] = useState<string[]>([]);
+  const [customSkill, setCustomSkill] = useState('');
 
-  // Form states (6 champs essentiels)
-  const [fullName, setFullName] = useState(initialName === 'Étudiant' ? '' : initialName);
-  const [phoneWhatsapp, setPhoneWhatsapp] = useState(initialPhone);
-  const [university, setUniversity] = useState('');
-  const [selectedDomainId, setSelectedDomainId] = useState<string>('ai-data');
-  const [customMajor, setCustomMajor] = useState('');
-  const [level, setLevel] = useState('Licence 3 (L3)');
-  const [objective, setObjective] = useState('internship');
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([
-    'Python & Pandas',
-    'Machine Learning',
-    'SQL & Data Engineering',
-  ]);
+  const suggestions = useMemo(() => {
+    // Keep custom skills visible next to the suggestions so they can be removed.
+    return Array.from(new Set([...suggestedSkillsFor(faculty), ...skills]));
+  }, [faculty, skills]);
 
-  const activeDomain = useMemo(() => {
-    return DOMAINS.find((d) => d.id === selectedDomainId) || DOMAINS[0];
-  }, [selectedDomainId]);
+  const canContinue =
+    step === 1 ? university.trim().length >= 2 : step === 2 ? faculty.trim().length >= 2 && level.trim().length >= 2 : skills.length > 0;
 
-  const availableSkills = useMemo(() => {
-    const domainSkills = activeDomain.skills;
-    return Array.from(new Set([...domainSkills, ...GENERAL_SKILLS]));
-  }, [activeDomain]);
-
-  const handleSelectDomain = (domain: DomainItem) => {
-    setSelectedDomainId(domain.id);
-    // Pre-populate with first 3 skills from the domain
-    setSelectedSkills(domain.skills.slice(0, 3));
-  };
+  const firstName = initialName?.trim().split(/\s+/)[0];
 
   const toggleSkill = (skill: string) => {
-    if (selectedSkills.includes(skill)) {
-      if (selectedSkills.length > 1) {
-        setSelectedSkills(selectedSkills.filter((s) => s !== skill));
-      }
-    } else {
-      if (selectedSkills.length < 6) {
-        setSelectedSkills([...selectedSkills, skill]);
-      }
-    }
+    setSkills((current) => {
+      if (current.includes(skill)) return current.filter((item) => item !== skill);
+      if (current.length >= MAX_SKILLS) return current;
+      return [...current, skill];
+    });
   };
 
-  const handleNext = () => {
-    if (step === 1) {
-      if (!university.trim()) return;
-      setStep(2);
-    } else if (step === 2) {
-      setStep(3);
-    } else if (step === 3) {
-      const finalMajor = customMajor.trim() || activeDomain.title;
-      onCompleteOnboarding({
-        fullName: fullName.trim() || initialName,
-        phoneWhatsapp: phoneWhatsapp.trim(),
-        university: university.trim(),
-        major: finalMajor,
-        level,
-        skills: selectedSkills,
-      });
+  const addCustomSkill = () => {
+    const value = customSkill.trim();
+    if (value.length < 2 || skills.length >= MAX_SKILLS) return;
+    if (!skills.some((item) => item.toLowerCase() === value.toLowerCase())) setSkills([...skills, value]);
+    setCustomSkill('');
+  };
+
+  const next = () => {
+    if (!canContinue) return;
+    if (step < 3) {
+      setStep((step + 1) as Step);
+      return;
     }
+    onCompleteOnboarding({
+      university: university.trim(),
+      faculty: faculty.trim(),
+      level: level.trim(),
+      skills,
+    });
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
-    >
-      {/* Background glow effects */}
-      <View style={styles.glowTop} />
-      <View style={styles.glowBottom} />
-
-      {/* ── Top Header ────────────────────────────────────────────── */}
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
+        <View style={styles.headerRow}>
           <View style={styles.brandBadge}>
-            <Sparkles size={14} color="#C4B5FD" />
-            <Text style={styles.brandBadgeText}>CAMPUS 360</Text>
+            <Sparkles size={13} color={stitchColors.primary} />
+            <Text style={styles.brandText}>CAMPUS 360</Text>
           </View>
-          {onSkip && (
-            <Pressable onPress={onSkip} style={styles.skipButton} hitSlop={12}>
-              <Text style={styles.skipButtonText}>Passer</Text>
+          {onSkip ? (
+            <Pressable onPress={onSkip} hitSlop={12}>
+              <Text style={styles.skip}>Plus tard</Text>
             </Pressable>
-          )}
+          ) : null}
         </View>
-
-        {/* 3-Step Neon Progress Indicator */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressTrack}>
-            <LinearGradient
-              colors={['#8B5CF6', '#7C3AED']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[styles.progressBar, { width: `${(step / 3) * 100}%` }]}
-            />
-          </View>
-          <View style={styles.stepLabelsRow}>
-            <Text style={styles.stepIndicatorText}>Étape {step} sur 3</Text>
-            <Text style={styles.stepNameText}>
-              {step === 1 ? 'Université & Domaine' : step === 2 ? 'Niveau & Objectif' : 'Tes Compétences'}
-            </Text>
-          </View>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${(step / 3) * 100}%` }]} />
         </View>
+        <Text style={styles.stepLabel}>Étape {step} sur 3</Text>
       </View>
 
-      {/* ── Scrollable Step Content ────────────────────────────────── */}
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* ── STEP 1: ÉTABLISSEMENT & DOMAINE ────────────────────────── */}
-        {step === 1 && (
-          <View style={styles.stepCard}>
-            <View style={styles.stepHeaderRow}>
-              <View style={styles.stepIconWrap}>
-                <GraduationCap size={24} color="#DDD6FE" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.stepTitle}>Bienvenue, {initialName} !</Text>
-                <Text style={styles.stepSubtitle}>
-                  Personnalisons ton espace selon ton université et tes ambitions.
-                </Text>
-              </View>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {step === 1 ? (
+          <Text style={styles.greeting}>{firstName ? `Bienvenue, ${firstName} !` : 'Bienvenue !'}</Text>
+        ) : null}
+
+        <View style={styles.card}>
+          <View style={styles.cardTitleRow}>
+            <View style={styles.iconBubble}>
+              {step === 1 ? (
+                <GraduationCap size={20} color={stitchColors.primary} />
+              ) : step === 2 ? (
+                <Layers size={20} color={stitchColors.primary} />
+              ) : (
+                <Sparkles size={20} color={stitchColors.primary} />
+              )}
             </View>
+            <View style={styles.cardTitleText}>
+              <Text style={styles.cardTitle}>{STEP_TITLES[step]}</Text>
+              <Text style={styles.cardHint}>{STEP_HINTS[step]}</Text>
+            </View>
+          </View>
 
-            {/* Full Name input */}
-            <Text style={styles.fieldLabel}>1. Ton Nom & Prénom</Text>
-            <TextInput
-              testID="onboarding-input-fullname"
-              style={styles.textInput}
-              placeholder="ex: Dave Lionel Kameni"
-              placeholderTextColor="#64748B"
-              value={fullName}
-              onChangeText={setFullName}
-            />
-
-            {/* WhatsApp input */}
-            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>2. Ton Numéro WhatsApp (Recruteurs & Alertes)</Text>
-            <TextInput
-              testID="onboarding-input-whatsapp"
-              style={styles.textInput}
-              placeholder="ex: +237 690 00 00 00"
-              placeholderTextColor="#64748B"
-              value={phoneWhatsapp}
-              onChangeText={setPhoneWhatsapp}
-              keyboardType="phone-pad"
-            />
-
-            {/* University input */}
-            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>3. Ton Université ou Établissement</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="ex: INP-HB, Université Félix Houphouët-Boigny..."
-              placeholderTextColor="#64748B"
+          {step === 1 ? (
+            <SelectWithOther
+              label="Université ou école"
               value={university}
-              onChangeText={setUniversity}
+              options={UNIVERSITIES}
+              onChange={setUniversity}
+              placeholder="Choisir mon établissement…"
+              otherPlaceholder="Nom de ton établissement"
             />
+          ) : null}
 
-            {/* Quick university suggestions */}
-            <Text style={styles.subFieldLabel}>Suggestions rapides :</Text>
-            <View style={styles.chipGrid}>
-              {POPULAR_UNIVERSITIES.slice(0, 6).map((univ) => {
-                const isSelected = university === univ;
-                return (
-                  <Pressable
-                    key={univ}
-                    style={[styles.chip, isSelected && styles.chipSelected]}
-                    onPress={() => setUniversity(univ)}
-                  >
-                    <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                      {univ}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+          {step === 2 ? (
+            <View style={styles.fields}>
+              <SelectWithOther
+                label="Filière"
+                value={faculty}
+                options={FACULTY_NAMES}
+                onChange={setFaculty}
+                placeholder="Choisir ma filière…"
+                otherPlaceholder="Nom de ta filière"
+              />
+              <SelectWithOther
+                label="Niveau d’études"
+                value={level}
+                options={LEVELS}
+                onChange={setLevel}
+                placeholder="Choisir mon niveau…"
+                otherPlaceholder="Ton niveau"
+              />
             </View>
+          ) : null}
 
-            {/* Domain Selection */}
-            <Text style={[styles.fieldLabel, { marginTop: 22 }]}>
-              Choisis ton Domaine d'études principal
-            </Text>
-            <Text style={styles.fieldHint}>
-              Ce choix adaptera directement tes recommandations de stages et de cours.
-            </Text>
-
-            <View style={styles.domainList}>
-              {DOMAINS.map((domain) => {
-                const isSelected = selectedDomainId === domain.id;
-                return (
-                  <Pressable
-                    key={domain.id}
-                    style={({ pressed }) => [
-                      styles.domainCard,
-                      isSelected && styles.domainCardSelected,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => handleSelectDomain(domain)}
-                  >
-                    <Text style={styles.domainEmoji}>{domain.icon}</Text>
-                    <View style={styles.domainContent}>
-                      <Text style={[styles.domainTitle, isSelected && styles.domainTitleSelected]}>
-                        {domain.title}
-                      </Text>
-                      <Text style={styles.domainBadge}>{domain.badge}</Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.domainCheckCircle,
-                        isSelected && styles.domainCheckCircleSelected,
-                      ]}
+          {step === 3 ? (
+            <View style={styles.fields}>
+              <View style={styles.chips}>
+                {suggestions.map((skill) => {
+                  const selected = skills.includes(skill);
+                  return (
+                    <Pressable
+                      key={skill}
+                      onPress={() => toggleSkill(skill)}
+                      style={[styles.chip, selected && styles.chipSelected]}
+                      accessibilityState={{ selected }}
                     >
-                      {isSelected ? (
-                        <Check size={14} color="#FFFFFF" strokeWidth={3} />
-                      ) : (
-                        <Plus size={14} color="#64748B" />
-                      )}
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* ── STEP 2: NIVEAU & OBJECTIF ──────────────────────────────── */}
-        {step === 2 && (
-          <View style={styles.stepCard}>
-            <View style={styles.stepHeaderRow}>
-              <View style={styles.stepIconWrap}>
-                <Layers size={24} color="#DDD6FE" />
+                      {selected ? <Check size={13} color={stitchColors.surface} /> : null}
+                      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{skill}</Text>
+                    </Pressable>
+                  );
+                })}
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.stepTitle}>Niveau & Objectif</Text>
-                <Text style={styles.stepSubtitle}>
-                  Où en es-tu dans ton parcours universitaire actuel ?
-                </Text>
-              </View>
-            </View>
-
-            {/* Academic Level */}
-            <Text style={styles.fieldLabel}>Niveau d'études actuel</Text>
-            <View style={styles.levelsGrid}>
-              {EDUCATION_LEVELS.map((lvl) => {
-                const isSelected = level === lvl.name;
-                return (
-                  <Pressable
-                    key={lvl.id}
-                    style={({ pressed }) => [
-                      styles.levelCard,
-                      isSelected && styles.levelCardSelected,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => setLevel(lvl.name)}
-                  >
-                    <Text style={styles.levelEmoji}>{lvl.icon}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.levelName, isSelected && styles.levelNameSelected]}>
-                        {lvl.name}
-                      </Text>
-                      <Text style={styles.levelCycle}>{lvl.cycle}</Text>
-                    </View>
-                    {isSelected && <Check size={16} color="#7C3AED" strokeWidth={2.8} />}
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {/* Objective */}
-            <Text style={[styles.fieldLabel, { marginTop: 22 }]}>
-              Quel est ton objectif prioritaire ce semestre ?
-            </Text>
-            <View style={styles.objectiveList}>
-              {OBJECTIVE_OPTIONS.map((obj) => {
-                const isSelected = objective === obj.id;
-                return (
-                  <Pressable
-                    key={obj.id}
-                    style={({ pressed }) => [
-                      styles.objectiveCard,
-                      isSelected && styles.objectiveCardSelected,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => setObjective(obj.id)}
-                  >
-                    <Text style={styles.objectiveEmoji}>{obj.icon}</Text>
-                    <Text
-                      style={[
-                        styles.objectiveLabel,
-                        isSelected && styles.objectiveLabelSelected,
-                      ]}
-                    >
-                      {obj.label}
-                    </Text>
-                    {isSelected && <Check size={16} color="#8B5CF6" strokeWidth={2.8} />}
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* ── STEP 3: COMPÉTENCES CLÉS ───────────────────────────────── */}
-        {step === 3 && (
-          <View style={styles.stepCard}>
-            <View style={styles.stepHeaderRow}>
-              <View style={[styles.stepIconWrap, { backgroundColor: 'rgba(52, 211, 153, 0.18)' }]}>
-                <Award size={24} color="#34D399" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.stepTitle}>Tes Super-Pouvoirs</Text>
-                <Text style={styles.stepSubtitle}>
-                  Sélectionne 2 à 5 compétences clés pour booster ton score de matching de stages.
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.skillsCountBadge}>
-              <Text style={styles.skillsCountText}>
-                {selectedSkills.length} sélectionnée{selectedSkills.length > 1 ? 's' : ''} (min. 1, max. 6)
+              <Text style={styles.counter}>
+                {skills.length}/{MAX_SKILLS} sélectionnée{skills.length > 1 ? 's' : ''}
               </Text>
+              <View style={styles.addRow}>
+                <TextInput
+                  value={customSkill}
+                  onChangeText={setCustomSkill}
+                  placeholder="Autre compétence…"
+                  placeholderTextColor={stitchColors.inkSubtle}
+                  style={styles.addInput}
+                  maxLength={60}
+                  onSubmitEditing={addCustomSkill}
+                  returnKeyType="done"
+                />
+                <Pressable
+                  onPress={addCustomSkill}
+                  style={[styles.addBtn, (customSkill.trim().length < 2 || skills.length >= MAX_SKILLS) && styles.disabled]}
+                  disabled={customSkill.trim().length < 2 || skills.length >= MAX_SKILLS}
+                  accessibilityLabel="Ajouter la compétence"
+                >
+                  <Plus size={18} color={stitchColors.surface} />
+                </Pressable>
+              </View>
             </View>
-
-            <Text style={styles.subFieldLabel}>
-              Compétences recommandées pour « {activeDomain.title} » :
-            </Text>
-            <View style={styles.skillsGrid}>
-              {availableSkills.map((skill) => {
-                const isSelected = selectedSkills.includes(skill);
-                return (
-                  <Pressable
-                    key={skill}
-                    style={({ pressed }) => [
-                      styles.skillPill,
-                      isSelected && styles.skillPillSelected,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => toggleSkill(skill)}
-                  >
-                    {isSelected ? (
-                      <CheckCircle size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
-                    ) : (
-                      <Plus size={14} color="#A78BFA" style={{ marginRight: 6 }} />
-                    )}
-                    <Text
-                      style={[
-                        styles.skillPillText,
-                        isSelected && styles.skillPillTextSelected,
-                      ]}
-                    >
-                      {skill}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        )}
+          ) : null}
+        </View>
       </ScrollView>
 
-      {/* ── Bottom Sticky Action Bar ───────────────────────────────── */}
       <View style={styles.footer}>
         {step > 1 ? (
-          <Pressable
-            style={styles.backButton}
-            onPress={() => setStep((s) => (s - 1) as any)}
-          >
-            <ChevronLeft size={18} color="#C4B5FD" />
-            <Text style={styles.backButtonText}>Retour</Text>
+          <Pressable onPress={() => setStep((step - 1) as Step)} style={styles.backBtn} accessibilityLabel="Étape précédente">
+            <ArrowLeft size={18} color={stitchColors.inkSoft} />
           </Pressable>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
-
+        ) : null}
         <Pressable
-          style={({ pressed }) => [
-            styles.continueButton,
-            ((step === 1 && !university.trim()) ||
-              (step === 3 && selectedSkills.length === 0)) &&
-              styles.continueButtonDisabled,
-            pressed && styles.pressed,
-          ]}
-          onPress={handleNext}
-          disabled={
-            (step === 1 && !university.trim()) ||
-            (step === 3 && selectedSkills.length === 0)
-          }
+          onPress={next}
+          disabled={!canContinue}
+          style={[styles.nextBtn, !canContinue && styles.disabled]}
         >
-          <Text style={styles.continueButtonText}>
-            {step === 3 ? 'Activer mon profil ✨' : 'Continuer'}
-          </Text>
-          <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.4} />
+          <Text style={styles.nextText}>{step < 3 ? 'Continuer' : 'Découvrir mes stages'}</Text>
+          <ArrowRight size={18} color={stitchColors.surface} />
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -630,421 +246,117 @@ export function OnboardingScreen({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  glowTop: {
-    position: 'absolute',
-    top: -50,
-    right: -50,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: 'rgba(124, 58, 237, 0.08)',
-  },
-  glowBottom: {
-    position: 'absolute',
-    bottom: -60,
-    left: -40,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: 'rgba(99, 102, 241, 0.06)',
-  },
-
-  // Header
+  container: { flex: 1, backgroundColor: stitchColors.background },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 56 : 42,
+    paddingTop: Platform.OS === 'ios' ? 56 : 28,
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 14,
+    backgroundColor: stitchColors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderBottomColor: stitchColors.glassBorder,
+    gap: 10,
   },
-  headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brandBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+    paddingVertical: 5,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
+  },
+  brandText: { fontFamily: fontFamilies.inter, fontSize: 11, fontWeight: '800', letterSpacing: 1.2, color: stitchColors.primary },
+  skip: { fontFamily: fontFamilies.inter, fontSize: 14, fontWeight: '600', color: stitchColors.primary },
+  progressTrack: { height: 6, borderRadius: 3, backgroundColor: stitchColors.paperSoft, overflow: 'hidden' },
+  progressFill: { height: 6, borderRadius: 3, backgroundColor: stitchColors.primary },
+  stepLabel: { fontFamily: fontFamilies.inter, fontSize: 12, fontWeight: '600', color: stitchColors.inkMuted },
+  content: { padding: 20, gap: 16, paddingBottom: 40 },
+  greeting: { fontFamily: fontFamilies.outfit, fontSize: 24, fontWeight: '800', color: stitchColors.ink },
+  card: {
+    backgroundColor: stitchColors.surface,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
-  },
-  brandBadgeText: {
-    color: '#7C3AED',
-    fontSize: 10.5,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  skipButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  skipButtonText: {
-    color: '#7C3AED',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  progressContainer: {
-    gap: 8,
-  },
-  progressTrack: {
-    height: 6,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  stepLabelsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  stepIndicatorText: {
-    color: '#7C3AED',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  stepNameText: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-
-  // Content
-  scrollContent: {
+    borderColor: stitchColors.glassBorder,
     padding: 18,
-    paddingBottom: 110,
+    gap: 18,
   },
-  stepCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 20,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  stepHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    marginBottom: 20,
-  },
-  stepIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: 'rgba(124, 58, 237, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
+  cardTitleRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  iconBubble: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
   },
-  stepTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.3,
-  },
-  stepSubtitle: {
-    fontSize: 12.5,
-    color: '#64748B',
-    lineHeight: 18,
-    marginTop: 2,
-  },
-
-  // Inputs
-  fieldLabel: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 8,
-  },
-  fieldHint: {
-    fontSize: 12,
-    color: '#64748B',
-    marginBottom: 12,
-    lineHeight: 16,
-  },
-  subFieldLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#7C3AED',
-    marginBottom: 8,
-    marginTop: 10,
-  },
-  textInput: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    color: '#0F172A',
-    fontSize: 14,
-    marginBottom: 6,
-  },
-  chipGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
+  cardTitleText: { flex: 1, gap: 4 },
+  cardTitle: { fontFamily: fontFamilies.outfit, fontSize: 18, fontWeight: '700', color: stitchColors.ink },
+  cardHint: { fontFamily: fontFamilies.inter, fontSize: 13, lineHeight: 18, color: stitchColors.inkMuted },
+  fields: { gap: 16 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
-  },
-  chipSelected: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#8B5CF6',
-  },
-  chipText: {
-    color: '#475569',
-    fontSize: 11.5,
-    fontWeight: '500',
-  },
-  chipTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-
-  // Domain Cards
-  domainList: {
-    gap: 10,
-  },
-  domainCard: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
-    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    backgroundColor: stitchColors.surface,
   },
-  domainCardSelected: {
-    borderColor: '#8B5CF6',
-    backgroundColor: 'rgba(124, 58, 237, 0.08)',
-  },
-  domainEmoji: {
-    fontSize: 24,
-  },
-  domainContent: {
+  chipSelected: { backgroundColor: stitchColors.primary, borderColor: stitchColors.primary },
+  chipText: { fontFamily: fontFamilies.inter, fontSize: 13, color: stitchColors.inkSoft },
+  chipTextSelected: { color: stitchColors.surface, fontWeight: '600' },
+  counter: { fontFamily: fontFamilies.inter, fontSize: 12, color: stitchColors.inkMuted },
+  addRow: { flexDirection: 'row', gap: 8 },
+  addInput: {
     flex: 1,
-  },
-  domainTitle: {
+    backgroundColor: stitchColors.background,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontFamily: fontFamilies.inter,
     fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
+    color: stitchColors.ink,
   },
-  domainTitleSelected: {
-    color: '#7C3AED',
-  },
-  domainBadge: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  domainCheckCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#E2E8F0',
+  addBtn: {
+    width: 46,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: stitchColors.primary,
   },
-  domainCheckCircleSelected: {
-    backgroundColor: '#7C3AED',
-  },
-
-  // Level Cards
-  levelsGrid: {
-    gap: 8,
-  },
-  levelCard: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  levelCardSelected: {
-    borderColor: '#8B5CF6',
-    backgroundColor: 'rgba(124, 58, 237, 0.08)',
-  },
-  levelEmoji: {
-    fontSize: 20,
-  },
-  levelName: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  levelNameSelected: {
-    color: '#7C3AED',
-  },
-  levelCycle: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 1,
-  },
-
-  // Objective Cards
-  objectiveList: {
-    gap: 8,
-  },
-  objectiveCard: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  objectiveCardSelected: {
-    borderColor: '#8B5CF6',
-    backgroundColor: 'rgba(124, 58, 237, 0.08)',
-  },
-  objectiveEmoji: {
-    fontSize: 20,
-  },
-  objectiveLabel: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  objectiveLabelSelected: {
-    color: '#7C3AED',
-    fontWeight: '700',
-  },
-
-  // Skills
-  skillsCountBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(52, 211, 153, 0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.3)',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginBottom: 12,
-  },
-  skillsCountText: {
-    color: '#059669',
-    fontSize: 11.5,
-    fontWeight: '700',
-  },
-  skillsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  skillPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  skillPillSelected: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#8B5CF6',
-  },
-  skillPillText: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  skillPillTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-
-  // Footer
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    gap: 10,
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    backgroundColor: stitchColors.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 4,
+    borderTopColor: stitchColors.glassBorder,
   },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  backButtonText: {
-    color: '#7C3AED',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  continueButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#7C3AED',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+  backBtn: {
+    width: 52,
     borderRadius: 14,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
   },
-  continueButtonDisabled: {
-    opacity: 0.45,
+  nextBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 15,
+    borderRadius: 14,
+    backgroundColor: stitchColors.primary,
   },
-  continueButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  pressed: {
-    opacity: 0.75,
-    transform: [{ scale: 0.98 }],
-  },
+  nextText: { fontFamily: fontFamilies.inter, fontSize: 15, fontWeight: '700', color: stitchColors.surface },
+  disabled: { opacity: 0.4 },
 });

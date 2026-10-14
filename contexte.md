@@ -702,3 +702,29 @@ Ce cadrage est **100% validé et synchronisé avec le graphe Graphify**. Le fich
   - Services pm2 en ligne, bases connectées (`/api/health`).
   - Aucune capture navigateur produite : le contrôle visuel porterait sur l'ancien code.
   - **Bloquant avant déploiement** : `deploy-vps.sh` exécute `git reset --hard origin/main` ; le VPS a des modifications non commitées (`recruiter-web/app/globals.compiled.css`) et des fichiers non suivis (`Dockerfile.*`, `docker-compose.yml`, `landing-light.tar.gz`) qui seraient perdus. La branche `fix/security-hardening-fake-sessions` n'est pas poussée, donc `origin/main` ne contient pas le lot 1.
+
+- **[Déploiement production VPS (2026-10-14 00:22–00:30 UTC)] — Verdict : DÉPLOYÉ, vérifié** :
+  - `origin/main` contient le lot 1 (`d3d316a`) et le lot sécurité (`8647291`), plus `8ed20a4` (documentation vps-deploy, auteur BIMAI-LUCIEN, non créé par cette session).
+  - VPS : modifications locales sauvegardées dans `git stash` (`stash@{0}` : `pre-deploy-20261014T002212Z`, récupérable), puis `reset --hard origin/main` sur `8ed20a4`.
+  - `mobile-api` reconstruit (`next build` exit 0) et relancé ; `recruiter-web` reconstruit (exit 0) et relancé. Landing non reconstruit (inchangé).
+  - Contrôles : `https://api.campus360b.site/api/health` → `connected` ; `auth-capabilities` → `emailOtp: true` ; `https://admin.campus360b.site/` → 200 ; `https://campus360b.site/` → 200. `pm2 save` exécuté.
+  - Interruption : `campus360-mobile-api` arrêté pendant le build (~2 min) ; `campus360-recruiter-web` arrêté pendant le build (~2 min).
+  - Note : le compteur de redémarrages de `campus360-mobile-api` est à 101 depuis avant ce déploiement (crash-loop passé, à surveiller).
+  - Non fait : `scripts/deploy-vps.sh` du VPS est l'ancienne version (le nouveau script n'est actif qu'après ce déploiement).
+  - Non fait : test de parcours complet sur les URL publiques (aucun compte créé en production).
+
+- **[Release app — découpage réinitialisation mot de passe (2026-10-14 00:49 UTC)]** :
+  - Commit `c3424de` poussé sur `origin/main` (fast-forward depuis `8ed20a4`). Fichiers : `src/AppShell.tsx`, `src/ui/screens/AuthScreen.tsx`, `src/features/auth/betterAuth.ts` (app uniquement).
+  - Serveurs : aucun fichier serveur modifié → pas de rebuild ni de redémarrage. VPS synchronisé sur `c3424de` (modifications locales du VPS mises de côté dans `git stash`). Contrôles : API `/api/health` connected, `auth-capabilities` → `emailOtp: true`, admin 200, landing 200.
+  - Mise à jour téléphone : publiée par `eas-update.yml` (déclenché par le changement de `src/`), à confirmer dans l'onglet Actions de GitHub. Dépend du secret `EXPO_TOKEN`.
+  - Vérification UI de la nouvelle étape « code seul » : typecheck OK, endpoint de contrôle du code vérifié (faux code → 400). Parcours complet à confirmer sur téléphone.
+
+- **[Lot 2 — Inscription courte + onboarding 3 étapes (2026-10-14)] — code fait, non commité** :
+  - Inscription (`AuthScreen`) : nom, email, mot de passe uniquement (WhatsApp, université, filière, niveau retirés). `AppShell` : validations, états et sélecteurs morts supprimés (`PickerModal`, `CAMEROON_*`).
+  - `src/ui/SelectWithOther.tsx` (nouveau) : liste filtrable + « Autre… » avec saisie libre. `src/features/onboarding/academicCatalog.ts` (nouveau) : universités camerounaises, 14 filières avec compétences suggérées, niveaux.
+  - Onboarding (`ui/screens/OnboardingScreen.tsx`, réécrit) : 1) établissement, 2) filière + niveau, 3) compétences (max 8, saisie libre) ; pré-remplissage des valeurs connues ; plus de nom ni de WhatsApp ; palette blanc/violet par tokens.
+  - WhatsApp au 1er « Postuler » : `StudentProfileExpressModal` réécrit (n'affiche que les blocs manquants, aucune valeur factice), déclenché aussi quand le WhatsApp manque ; sauvegarde sur le compte (`updateStudentProfile`) et remontée vers `AppShell` (`onProfileSaved` via `HomeScreen`/`StagesScreen`). Valeurs par défaut factices (« Informatique & Télécoms », « Licence 3 ») retirées.
+  - Serveur (`mobile-api` et `recruiter-web`, route `/api/mobile/account` PATCH) : mise à jour partielle (champs optionnels, vide = inchangé). `updateStudentProfile` hors ligne fusionne avec le cache au lieu d'inventer une identité.
+  - Validation : `tsc` OK (app, mobile-api, recruiter-web) ; API locale : PATCH études seules → 200, WhatsApp seul → 200 sans écraser le reste, numéro invalide → 400. UI web : onboarding 3 étapes affiché et pré-rempli (étapes 1 → 2 parcourues).
+  - Non vérifié : sélection « Autre… » dans le navigateur automatisé (le clic a ouvert le champ voisin ; captures indisponibles, fenêtre masquée) ; feuille WhatsApp au 1er « Postuler » ; parcours complet sur téléphone.
+  - Limite connue : les compétences ne sont pas stockées côté serveur (aucune colonne dans `app_users`) ; elles restent locales.

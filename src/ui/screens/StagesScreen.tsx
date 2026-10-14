@@ -38,7 +38,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import type { StageJob } from '../../types';
 import { fetchStageJobs } from '../../features/stages/stagesApi';
-import { AiApplyModal } from '../../features/stages/AiApplyModal';
+import { AiApplyModal, type ApplicationProfilePatch } from '../../features/stages/AiApplyModal';
 import { analyzeJobMatch } from '../../features/stages/aiMatchEngine';
 import { cleanPhoneNumber } from '../../features/whatsapp/whatsappService';
 import { SearchFilterBar } from '../GlassComponents';
@@ -61,6 +61,7 @@ interface StagesScreenProps {
   };
   onSelectJob?: (job: StageJob) => void;
   onOpenWallet?: () => void;
+  onProfileSaved?: (patch: ApplicationProfilePatch) => void;
 }
 
 export const BANNER_POOLS: Record<string, string[]> = {
@@ -203,6 +204,7 @@ export function StagesScreen({
   studentProfile,
   onSelectJob,
   onOpenWallet,
+  onProfileSaved,
 }: StagesScreenProps) {
   const [jobs, setJobs] = useState<StageJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1119,6 +1121,7 @@ export function StagesScreen({
         job={applyingJob}
         studentProfile={studentProfile}
         onClose={() => setApplyingJob(null)}
+        onProfileSaved={onProfileSaved}
       />
     </View>
   );

@@ -6,8 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  Modal,
-  FlatList,
   View,
 } from 'react-native';
 import {
@@ -16,10 +14,8 @@ import {
   User,
   Mail,
   Lock,
-  Phone,
   GraduationCap,
   CheckCircle2,
-  ChevronDown,
   ShieldCheck,
   X,
 } from 'lucide-react-native';
@@ -43,48 +39,6 @@ import {
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia, serif' }) as string;
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace' }) as string;
 
-const UNIVERSITIES = [
-  'Université de Douala',
-  'Université de Yaoundé I',
-  'Université de Yaoundé II',
-  'Université de Dschang',
-  'Université de Buea',
-  'Université de Bamenda',
-  'Université de Ngaoundéré',
-  'Université de Maroua',
-  'ENSP (Polytechnique)',
-  'ENAM',
-  'IUC',
-  'IUT',
-  'IUG',
-  'UCAC',
-  'Autre / Privé',
-];
-
-const FACULTIES = [
-  'Informatique et Génie Logiciel',
-  'Génie Informatique',
-  'Génie Réseaux et Télécommunications',
-  'Génie Électrique',
-  'Génie Civil',
-  'Sciences Économiques et Gestion',
-  'Droit et Sciences Politiques',
-  'Médecine et Pharmacie',
-  'Autre',
-];
-
-const LEVELS = [
-  'Licence 1',
-  'Licence 2',
-  'Licence 3',
-  'Master 1',
-  'Master 2',
-  'BTS 1ère année',
-  'BTS 2ème année',
-  'Cycle Ingénieur',
-  'Autre',
-];
-
 interface AuthScreenProps {
   mode: 'sign-in' | 'sign-up' | 'reset' | 'reset-code' | 'new-password' | 'verify-email';
   email: string;
@@ -92,10 +46,6 @@ interface AuthScreenProps {
   passwordConfirm: string;
   onPasswordConfirmChange: (v: string) => void;
   name: string;
-  whatsappPhone: string;
-  university: string;
-  faculty: string;
-  level: string;
   loading: boolean;
   notice: string;
   canGoogle: boolean;
@@ -110,10 +60,6 @@ interface AuthScreenProps {
   onEmailChange: (v: string) => void;
   onPasswordChange: (v: string) => void;
   onNameChange: (v: string) => void;
-  onWhatsappChange: (v: string) => void;
-  onUniversityChange: (v: string) => void;
-  onFacultyChange: (v: string) => void;
-  onLevelChange: (v: string) => void;
   onSubmit: () => void;
   onGoogle: () => void;
   onClose?: () => void;
@@ -126,10 +72,6 @@ export function AuthScreen({
   passwordConfirm,
   onPasswordConfirmChange,
   name,
-  whatsappPhone,
-  university,
-  faculty,
-  level,
   loading,
   notice,
   canGoogle,
@@ -142,26 +84,11 @@ export function AuthScreen({
   onEmailChange,
   onPasswordChange,
   onNameChange,
-  onWhatsappChange,
-  onUniversityChange,
-  onFacultyChange,
-  onLevelChange,
   onSubmit,
   onGoogle,
   onClose,
 }: AuthScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const [modalPicker, setModalPicker] = useState<{
-    visible: boolean;
-    title: string;
-    options: string[];
-    onSelect: (val: string) => void;
-  }>({
-    visible: false,
-    title: '',
-    options: [],
-    onSelect: () => {},
-  });
 
   const title =
     mode === 'sign-up'
@@ -257,96 +184,6 @@ export function AuthScreen({
                     />
                   </View>
 
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>WhatsApp</Text>
-                    <GlassInput
-                      value={whatsappPhone}
-                      onChangeText={onWhatsappChange}
-                      placeholder="Ex: +237680000000"
-                      keyboardType="phone-pad"
-                      leftIcon={<Phone size={17} color={stitchColors.sienna} strokeWidth={1.8} />}
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Université</Text>
-                    <Pressable
-                      style={styles.dropdownTrigger}
-                      onPress={() =>
-                        setModalPicker({
-                          visible: true,
-                          title: 'Choisir une université',
-                          options: UNIVERSITIES,
-                          onSelect: (u) => onUniversityChange(u),
-                        })
-                      }
-                    >
-                      <Text
-                        style={[
-                          styles.dropdownValue,
-                          !university && styles.dropdownPlaceholder,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {university || 'Choisir une université...'}
-                      </Text>
-                      <ChevronDown size={16} color={stitchColors.inkMuted} />
-                    </Pressable>
-                  </View>
-
-                  <View style={styles.inputRow}>
-                    <View style={[styles.inputGroup, { flex: 1 }]}>
-                      <Text style={styles.inputLabel}>Filière</Text>
-                      <Pressable
-                        style={styles.dropdownTrigger}
-                        onPress={() =>
-                          setModalPicker({
-                            visible: true,
-                            title: 'Choisir une filière',
-                            options: FACULTIES,
-                            onSelect: (f) => onFacultyChange(f),
-                          })
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.dropdownValue,
-                            !faculty && styles.dropdownPlaceholder,
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {faculty || 'Filière'}
-                        </Text>
-                        <ChevronDown size={14} color={stitchColors.inkMuted} />
-                      </Pressable>
-                    </View>
-
-                    <View style={[styles.inputGroup, { flex: 1 }]}>
-                      <Text style={styles.inputLabel}>Niveau</Text>
-                      <Pressable
-                        style={styles.dropdownTrigger}
-                        onPress={() =>
-                          setModalPicker({
-                            visible: true,
-                            title: 'Choisir un niveau',
-                            options: LEVELS,
-                            onSelect: (l) => onLevelChange(l),
-                          })
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.dropdownValue,
-                            !level && styles.dropdownPlaceholder,
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {level || 'Niveau'}
-                        </Text>
-                        <ChevronDown size={14} color={stitchColors.inkMuted} />
-                      </Pressable>
-                    </View>
-                  </View>
                 </>
               )}
 
@@ -546,51 +383,6 @@ export function AuthScreen({
           </GlassCard>
         </View>
       </ScrollView>
-
-      {/* Modal Picker for University, Faculty, Level (Smooth, no keyboard push or layout crash) */}
-      <Modal
-        visible={modalPicker.visible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalPicker((p) => ({ ...p, visible: false }))}
-      >
-        <Pressable
-          style={styles.pickerOverlay}
-          onPress={() => setModalPicker((p) => ({ ...p, visible: false }))}
-        >
-          <View style={styles.pickerModalContent} onStartShouldSetResponder={() => true}>
-            <View style={styles.pickerModalHeader}>
-              <Text style={styles.pickerModalTitle}>{modalPicker.title}</Text>
-              <Pressable
-                onPress={() => setModalPicker((p) => ({ ...p, visible: false }))}
-                hitSlop={10}
-              >
-                <X size={20} color={stitchColors.inkMuted} />
-              </Pressable>
-            </View>
-            <FlatList
-              data={modalPicker.options}
-              keyExtractor={(item) => item}
-              showsVerticalScrollIndicator={false}
-              style={{ maxHeight: 320 }}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.pickerOption,
-                    pressed && { backgroundColor: 'rgba(124, 58, 237, 0.08)' },
-                  ]}
-                  onPress={() => {
-                    modalPicker.onSelect(item);
-                    setModalPicker((p) => ({ ...p, visible: false }));
-                  }}
-                >
-                  <Text style={styles.pickerOptionText}>{item}</Text>
-                </Pressable>
-              )}
-            />
-          </View>
-        </Pressable>
-      </Modal>
     </KeyboardAvoidingView>
   );
 }

@@ -37,12 +37,13 @@ export type StudentProfile = {
   skills?: string[];
 };
 
+/** Partial update: omitted or empty fields keep their current server value. */
 export type StudentProfileUpdateInput = {
-  name: string;
-  phone: string;
-  whatsappPhone: string;
-  university: string;
-  faculty: string;
+  name?: string;
+  phone?: string;
+  whatsappPhone?: string;
+  university?: string;
+  faculty?: string;
   level?: string;
   skills?: string[];
 };
@@ -602,18 +603,19 @@ export const updateStudentProfile = async (input: StudentProfileUpdateInput): Pr
     return (await res.json()) as StudentProfile;
   } catch (err) {
     console.warn('[auth] updateStudentProfile fallback to local cache:', err);
-    const updated: StudentProfile = {
-      id: 'student-offline',
-      name: input.name,
-      email: 'dave.kameni@polytechnique.cm',
-      role: 'student',
-      phone: input.phone,
-      whatsappPhone: input.whatsappPhone,
-      university: input.university,
-      faculty: input.faculty,
-      level: input.level,
-      skills: input.skills,
-    };
+    // Offline: merge the provided fields into the cached profile. Never invent an identity.
+    let cached: StudentProfile | null = null;
+    try {
+      const raw = authStorage.getItem('campus-bordes_user');
+      cached = raw ? (JSON.parse(raw) as StudentProfile) : null;
+    } catch {
+      cached = null;
+    }
+    if (!cached) throw err;
+    const provided = Object.fromEntries(
+      Object.entries(input).filter(([, value]) => value !== undefined && value !== ''),
+    ) as Partial<StudentProfile>;
+    const updated: StudentProfile = { ...cached, ...provided };
     await authStorage.setItemAsync('campus-bordes_user', JSON.stringify(updated));
     return updated;
   }
