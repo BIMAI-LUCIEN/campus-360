@@ -54,6 +54,7 @@ import {
   signUpStudent,
   topUpStudentWallet,
   checkTopUpStatus,
+  completeStudentOnboarding,
   registerPushToken,
   type AuthCapabilities,
   type StudentProfile,
@@ -1128,6 +1129,8 @@ export function AppShell() {
                 level: onboardingData.level,
                 skills: onboardingData.skills,
               }).catch((e) => console.warn('Sync profile error:', e));
+              // Welcome message with matched internships + skills stored for new-offer alerts.
+              completeStudentOnboarding(onboardingData.skills).catch((e) => console.warn('Onboarding automation error:', e));
               showToast('Profil complété ! Découvre tes stages.');
             }}
           />

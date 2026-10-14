@@ -7,6 +7,7 @@ import {
   getInstanceName,
   normalizePhoneNumber,
 } from '@/lib/evolution-api';
+import { notifyAdmin } from '@/lib/automations';
 import {
   mobileErrorResponse,
   requireMobileUser,
@@ -196,9 +197,19 @@ export async function POST(request: NextRequest) {
 
       if (!n8nRes.ok) {
         console.warn(`[dispatch route] N8N webhook responded with HTTP ${n8nRes.status}`);
+        await notifyAdmin('Envoi de candidature échoué (n8n)', {
+          Candidature: applicationId,
+          Canal: input.channel,
+          'Statut HTTP n8n': n8nRes.status,
+        });
       }
     } catch (n8nErr) {
       console.warn('[dispatch route] N8N webhook call error (offline or timeout):', n8nErr);
+      await notifyAdmin('Envoi de candidature échoué (n8n injoignable)', {
+        Candidature: applicationId,
+        Canal: input.channel,
+        Erreur: n8nErr instanceof Error ? n8nErr.message : 'inconnue',
+      });
     }
 
     const message =
@@ -257,6 +268,13 @@ export async function PATCH(request: NextRequest) {
       parsed.data.applicationId,
       parsed.data.status,
     );
+
+    // Automation 4: admin alert when the delivery pipeline reports a failure.
+    if (parsed.data.status === 'FAILED') {
+      await notifyAdmin('Candidature non délivrée (statut FAILED)', {
+        Candidature: parsed.data.applicationId,
+      });
+    }
 
     return withCors(
       NextResponse.json({

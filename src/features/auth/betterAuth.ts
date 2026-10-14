@@ -569,6 +569,14 @@ export const updateStudentProfile = async (input: StudentProfileUpdateInput): Pr
   }
 };
 
+/** Ends the onboarding server-side: stores skills for job alerts and triggers the welcome message. */
+export const completeStudentOnboarding = async (skills: string[]) => {
+  await authFetch('/api/mobile/onboarding/complete', {
+    method: 'POST',
+    body: JSON.stringify({ skills }),
+  });
+};
+
 export const topUpStudentWallet = async (amountCoins: number, providerName: string, phoneNumber?: string) =>
   (await authFetch('/api/mobile/wallet/topup', {
     method: 'POST',

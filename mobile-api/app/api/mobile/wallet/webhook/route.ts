@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
+import { notifyAdmin, sendTopUpReceipt } from '@/lib/automations';
 import { databasePool } from '@/lib/database';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
 
 const MAX_BODY_BYTES = 64 * 1024; // 64 KB — webhooks are small
+
+/** Marks a still-pending top-up as failed so the app stops polling it. Best-effort. */
+const markTopUpFailed = async (reference: string | undefined) => {
+  if (!reference || reference.length > 200) return;
+  try {
+    await databasePool.query(
+      "update public.app_wallet_transactions set status = 'failed' where reference_id = $1 and status = 'pending'",
+      [reference],
+    );
+  } catch (error) {
+    console.error('[Webhook Wallet] Could not mark transaction as failed:', error);
+  }
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,6 +92,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Reference invalide.' }, { status: 400 });
       }
 
+      let credited: { userId: string; amountCoins: number } | null = null;
       const client = await databasePool.connect();
       try {
         await client.query('begin');
@@ -116,16 +131,32 @@ export async function POST(request: NextRequest) {
         );
 
         await client.query('commit');
+        credited = { userId: String(transaction.user_id), amountCoins: Number(transaction.amount_coins) };
         console.log(
           `[Webhook Wallet] Credited ${transaction.amount_coins} coins to user ${transaction.user_id}`,
         );
       } catch (err) {
         await client.query('rollback');
         console.error('[Webhook Wallet] DB error:', err);
+        await notifyAdmin('Recharge wallet non créditée (erreur base)', {
+          Référence: reference,
+          Erreur: err instanceof Error ? err.message : 'inconnue',
+        });
         return NextResponse.json({ error: 'Internal DB Error' }, { status: 500 });
       } finally {
         client.release();
       }
+
+      // Automation 3: receipt once the credit is committed (best-effort, after the transaction).
+      if (credited) await sendTopUpReceipt(credited.userId, credited.amountCoins, reference);
+    } else if (payload.event && /fail|cancel|expire|reject/i.test(payload.event)) {
+      // Automation 4: admin alert on a failed payment.
+      const reference = payload.data?.reference || payload.reference;
+      await markTopUpFailed(typeof reference === 'string' ? reference : undefined);
+      await notifyAdmin('Paiement Mobile Money échoué', {
+        Événement: payload.event,
+        Référence: typeof reference === 'string' ? reference : 'inconnue',
+      });
     }
 
     return NextResponse.json({ ok: true });

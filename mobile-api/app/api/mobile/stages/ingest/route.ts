@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { alertMatchingStudents } from '@/lib/automations';
 import { ingestStageJob } from '@/lib/stages-db';
 import { mobileErrorResponse, withCors } from '@/lib/mobile-access';
 
@@ -82,6 +83,18 @@ export async function POST(request: NextRequest) {
       expiresInDays: validated.expiresInDays,
     });
 
+    // Automation 2: push "new internship for you" to students whose skills match >= 70 %.
+    // Only for brand-new offers, so a refresh of an existing offer never re-notifies.
+    const alertedStudents = result.isNew
+      ? await alertMatchingStudents({
+          id: result.jobId,
+          title: validated.title,
+          description: validated.description ?? '',
+          requirements: validated.requirements,
+          companyName: validated.companyName,
+        })
+      : 0;
+
     return withCors(
       NextResponse.json(
         {
@@ -89,6 +102,7 @@ export async function POST(request: NextRequest) {
           jobId: result.jobId,
           companyId: result.companyId,
           isNew: result.isNew,
+          alertedStudents,
           message: result.isNew
             ? 'Nouvelle offre de stage ingérée avec succès.'
             : 'Offre existante identifiée et actualisée sans duplication.',

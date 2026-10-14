@@ -69,6 +69,51 @@ export const sendPasswordResetEmail = async ({ email, name, url }: SendArgs) => 
   }
 };
 
+/** Escapes user/DB-provided text before it is interpolated into an HTML email. */
+export const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+/**
+ * Generic best-effort email (receipts, welcome, admin alerts). `html` must already be escaped
+ * by the caller. Never throws: a failed email must not break the business action.
+ */
+export const sendTransactionalEmail = async ({
+  to,
+  subject,
+  text,
+  html,
+}: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}): Promise<boolean> => {
+  const resend = getClient();
+  if (!resend) {
+    // eslint-disable-next-line no-console
+    console.warn(`[mailer] Resend is not configured (RESEND_API_KEY). Email "${subject}" not sent.`);
+    return false;
+  }
+  try {
+    const { error } = await resend.emails.send({ from: defaultFrom, to, subject, text, html });
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error(`[mailer] sendTransactionalEmail "${subject}" failed:`, error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(`[mailer] sendTransactionalEmail "${subject}" threw:`, error);
+    return false;
+  }
+};
+
 /** True when a real email provider is configured (OTP delivery is possible). */
 export const isEmailDeliveryConfigured = (): boolean => getClient() !== null;
 

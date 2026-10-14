@@ -1,4 +1,6 @@
 import crypto from 'crypto';
+
+import { notifyAdmin, sendTopUpReceipt } from './automations';
 import { databasePool } from './database';
 
 export type PaymentPackType = 'recharge_500' | 'recharge_1000' | 'recharge_2000' | 'recharge_5000' | 'discovery_500' | 'monthly_2000' | string;
@@ -189,6 +191,14 @@ export async function verifyAndProcessMobilePaymentWebhook(params: {
     event === 'payment.complete';
 
   if (!isSuccess || !reference) {
+    // Automation 4: admin alert on an explicit payment failure.
+    if (/fail|cancel|expire|reject/i.test(`${status ?? ''} ${event ?? ''}`)) {
+      await notifyAdmin('Paiement Mobile Money échoué', {
+        Statut: status,
+        Événement: event,
+        Référence: reference || 'inconnue',
+      });
+    }
     return { success: false, message: 'Paiement non complété ou statut ignoré.' };
   }
 
@@ -261,6 +271,11 @@ export async function verifyAndProcessMobilePaymentWebhook(params: {
     }
 
     await client.query('commit');
+
+    // Automation 3: receipt for wallet credits (after commit, best-effort).
+    if (!isDiscovery) {
+      await sendTopUpReceipt(String(tx.user_id), Number(tx.amount_coins), reference);
+    }
 
     return {
       success: true,
