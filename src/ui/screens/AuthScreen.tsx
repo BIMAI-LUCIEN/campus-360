@@ -86,9 +86,11 @@ const LEVELS = [
 ];
 
 interface AuthScreenProps {
-  mode: 'sign-in' | 'sign-up' | 'reset' | 'new-password' | 'verify-email';
+  mode: 'sign-in' | 'sign-up' | 'reset' | 'reset-code' | 'new-password' | 'verify-email';
   email: string;
   password: string;
+  passwordConfirm: string;
+  onPasswordConfirmChange: (v: string) => void;
   name: string;
   whatsappPhone: string;
   university: string;
@@ -121,6 +123,8 @@ export function AuthScreen({
   mode,
   email,
   password,
+  passwordConfirm,
+  onPasswordConfirmChange,
   name,
   whatsappPhone,
   university,
@@ -164,13 +168,16 @@ export function AuthScreen({
       ? 'Créer un compte'
       : mode === 'reset'
         ? 'Mot de passe oublié'
-        : mode === 'new-password'
-          ? 'Nouveau mot de passe'
-          : mode === 'verify-email'
-            ? 'Confirme ton email'
-            : 'Connexion';
+        : mode === 'reset-code'
+          ? 'Vérifie ton code'
+          : mode === 'new-password'
+            ? 'Nouveau mot de passe'
+            : mode === 'verify-email'
+              ? 'Confirme ton email'
+              : 'Connexion';
 
-  const isOtpStep = mode === 'verify-email' || mode === 'new-password';
+  // Steps that ask for the 6-digit code (verify-email and reset-code).
+  const isOtpStep = mode === 'verify-email' || mode === 'reset-code';
   const showEmailInput = mode === 'sign-in' || mode === 'sign-up' || mode === 'reset';
   const showPasswordInput = mode === 'sign-in' || mode === 'sign-up' || mode === 'new-password';
 
@@ -414,6 +421,22 @@ export function AuthScreen({
                 </View>
               )}
 
+              {mode === 'new-password' && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Confirmer le mot de passe</Text>
+                  <GlassInput
+                    value={passwordConfirm}
+                    onChangeText={onPasswordConfirmChange}
+                    placeholder="Retape le mot de passe"
+                    secureTextEntry
+                    showPasswordToggle
+                    showPassword={showPassword}
+                    onTogglePassword={() => setShowPassword(!showPassword)}
+                    leftIcon={<Lock size={17} color={stitchColors.sienna} strokeWidth={1.8} />}
+                  />
+                </View>
+              )}
+
               {notice ? (
                 <Text style={styles.notice}>{notice}</Text>
               ) : null}
@@ -436,9 +459,11 @@ export function AuthScreen({
                         ? 'Inscrire mes informations'
                         : mode === 'reset'
                           ? 'Recevoir un code'
-                          : mode === 'verify-email'
-                            ? 'Confirmer mon email'
-                            : 'Modifier le mot de passe'
+                          : mode === 'reset-code'
+                            ? 'Valider le code'
+                            : mode === 'verify-email'
+                              ? 'Confirmer mon email'
+                              : 'Enregistrer le mot de passe'
                 }
                 onPress={onSubmit}
                 loading={loading}

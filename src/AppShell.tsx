@@ -44,6 +44,7 @@ import {
   getAuthCapabilities,
   getStudentAccount,
   loadStudentSession,
+  checkStudentPasswordResetOtp,
   requestStudentPasswordReset,
   resendStudentEmailOtp,
   resetStudentPassword,
@@ -366,7 +367,8 @@ export function AppShell() {
   const [insufficientVisible, setInsufficientVisible] = React.useState(false);
   const [accountVisible, setAccountVisible] = React.useState(false);
   const [authVisible, setAuthVisible] = React.useState(false);
-  const [authMode, setAuthMode] = React.useState<'sign-in' | 'sign-up' | 'reset' | 'new-password' | 'verify-email'>('sign-in');
+  const [authMode, setAuthMode] = React.useState<'sign-in' | 'sign-up' | 'reset' | 'reset-code' | 'new-password' | 'verify-email'>('sign-in');
+  const [authPasswordConfirm, setAuthPasswordConfirm] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
   const [authEmail, setAuthEmail] = React.useState('');
   const [authPassword, setAuthPassword] = React.useState('');
@@ -712,14 +714,33 @@ export function AppShell() {
       return;
     }
 
+    // Step 2 of reset: the code is checked alone, before any password is asked.
+    if (authMode === 'reset-code') {
+      if (otp.length !== 6) { Alert.alert('Code de vérification', 'Entre les 6 chiffres reçus par email.'); return; }
+      setAuthLoading(true);
+      try {
+        await checkStudentPasswordResetOtp(email, otp);
+        setAuthPassword('');
+        setAuthPasswordConfirm('');
+        setAuthMode('new-password');
+        setAuthNotice('Code validé. Choisis ton nouveau mot de passe.');
+      } catch (error) {
+        Alert.alert('Code invalide', error instanceof Error ? error.message : 'Demande un nouveau code.');
+      } finally { setAuthLoading(false); }
+      return;
+    }
+
+    // Step 3 of reset: new password + confirmation, sent together with the code.
     if (authMode === 'new-password') {
-      if (otp.length !== 6) { Alert.alert('Nouveau mot de passe', 'Entre les 6 chiffres reçus par email.'); return; }
+      if (otp.length !== 6) { Alert.alert('Code de vérification', 'Le code a expiré ou est absent. Redemande un code.'); return; }
       if (password.length < 8) { Alert.alert('Nouveau mot de passe', 'Choisis au moins 8 caractères.'); return; }
+      if (password !== authPasswordConfirm.trim()) { Alert.alert('Nouveau mot de passe', 'Les deux mots de passe ne sont pas identiques.'); return; }
       setAuthLoading(true);
       try {
         await resetStudentPassword(email, otp, password);
         setAuthOtp('');
         setAuthPassword('');
+        setAuthPasswordConfirm('');
         setAuthMode('sign-in');
         setAuthNotice('Mot de passe modifié. Tu peux te connecter.');
       } catch (error) {
@@ -743,7 +764,7 @@ export function AppShell() {
         setAuthOtp('');
         setAuthPassword('');
         setOtpCooldown(OTP_RESEND_COOLDOWN_SECONDS);
-        setAuthMode('new-password');
+        setAuthMode('reset-code');
         setAuthNotice(`Si un compte existe pour ${email}, un code à 6 chiffres vient de partir par email.`);
         return;
       }
@@ -809,7 +830,7 @@ export function AppShell() {
     if (!email || otpCooldown > 0) return;
     setAuthLoading(true);
     try {
-      if (authMode === 'new-password') await requestStudentPasswordReset(email);
+      if (authMode === 'reset-code' || authMode === 'new-password') await requestStudentPasswordReset(email);
       else await resendStudentEmailOtp(email);
       setOtpCooldown(OTP_RESEND_COOLDOWN_SECONDS);
       setAuthNotice(`Nouveau code transmis à ${email}.`);
@@ -1180,6 +1201,8 @@ export function AppShell() {
             notice={authNotice}
             canGoogle={authCapabilities.google}
             canPasswordReset={authCapabilities.passwordReset}
+            passwordConfirm={authPasswordConfirm}
+            onPasswordConfirmChange={setAuthPasswordConfirm}
             otp={authOtp}
             otpCooldown={otpCooldown}
             onOtpChange={setAuthOtp}
@@ -1792,6 +1815,8 @@ export function AppShell() {
             notice={authNotice}
             canGoogle={authCapabilities.google}
             canPasswordReset={authCapabilities.passwordReset}
+            passwordConfirm={authPasswordConfirm}
+            onPasswordConfirmChange={setAuthPasswordConfirm}
             otp={authOtp}
             otpCooldown={otpCooldown}
             onOtpChange={setAuthOtp}

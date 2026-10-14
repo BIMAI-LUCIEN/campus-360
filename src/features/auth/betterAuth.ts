@@ -500,7 +500,13 @@ export const requestStudentPasswordReset = async (email: string) => {
   if (result.error) throw new Error(otpErrorMessage(result.error));
 };
 
-/** Step 2 of password reset: code + new password. */
+/** Step 2 of password reset: checks the emailed code WITHOUT consuming it (it is needed again in step 3). */
+export const checkStudentPasswordResetOtp = async (email: string, otp: string) => {
+  const result = await authClient.emailOtp.checkVerificationOtp({ email, type: 'forget-password', otp: normalizeOtp(otp) });
+  if (result.error) throw new Error(otpErrorMessage(result.error));
+};
+
+/** Step 3 of password reset: code + new password. */
 export const resetStudentPassword = async (email: string, otp: string, newPassword: string) => {
   const result = await authClient.emailOtp.resetPassword({ email, otp: normalizeOtp(otp), password: newPassword });
   if (result.error) throw new Error(otpErrorMessage(result.error));
