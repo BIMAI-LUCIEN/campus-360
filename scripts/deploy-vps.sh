@@ -2,6 +2,15 @@
 set -e
 
 echo "=== [DEPLOY-VPS] Starting deployment on $(date) ==="
+
+# Only one deployment at a time: two concurrent `npm ci` / `next build` runs corrupt
+# node_modules and .next (incident 2026-10-14: admin down ~10 min).
+exec 9>/tmp/campus360-deploy.lock
+if ! flock -n 9; then
+  echo "Another deployment is already running (lock /tmp/campus360-deploy.lock). Aborting."
+  exit 1
+fi
+
 cd /opt/campus-360
 
 # Fetch latest changes from GitHub
