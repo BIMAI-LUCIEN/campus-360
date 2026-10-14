@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Image as ImageIcon, Plus, Trash2, X, Sparkles, CornerDownLeft } from 'lucide-react-native';
 import { authFetch } from '../auth/betterAuth';
+import { stitchColors } from '../../theme/stitch';
 
 export type DocumentImageItem = {
   id: string;
@@ -289,12 +290,12 @@ export function DocumentImagesModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
     justifyContent: 'flex-end',
   },
   sheet: {
     height: '84%',
-    backgroundColor: '#0F172A',
+    backgroundColor: stitchColors.surface,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     overflow: 'hidden',
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: stitchColors.glassBorder,
   },
   headerIcon: {
     width: 38,
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: stitchColors.paperSoft,
   },
   body: {
     flex: 1,
@@ -355,13 +356,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#1E293B',
+    backgroundColor: stitchColors.paperSoft,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: stitchColors.glassBorder,
   },
   emptyTitle: {
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -391,18 +392,18 @@ const styles = StyleSheet.create({
   },
   imageCard: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
+    backgroundColor: stitchColors.paperSoft,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
     gap: 12,
   },
   thumbnail: {
     width: 90,
     height: 90,
     borderRadius: 8,
-    backgroundColor: '#0F172A',
+    backgroundColor: stitchColors.surface,
   },
   imageCardContent: {
     flex: 1,
@@ -414,7 +415,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   imageFileName: {
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 14,
     fontWeight: '700',
     flex: 1,
@@ -478,15 +479,15 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
   },
   formContainer: {
-    backgroundColor: '#1E293B',
+    backgroundColor: stitchColors.paperSoft,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: stitchColors.glassBorder,
     gap: 10,
   },
   formHeading: {
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 4,
@@ -498,13 +499,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   textInput: {
-    backgroundColor: '#0F172A',
+    backgroundColor: stitchColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: stitchColors.glassBorder,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 13.5,
   },
   formBtnRow: {

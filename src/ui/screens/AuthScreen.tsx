@@ -337,7 +337,7 @@ export function AuthScreen({
               )}
 
               {/* Switch mode */}
-              {mode !== 'reset' && mode !== 'new-password' && mode !== 'verify-email' && (
+              {(mode === 'sign-in' || mode === 'sign-up') && (
                 <Pressable
                   style={styles.switchLink}
                   onPress={() =>
@@ -357,7 +357,8 @@ export function AuthScreen({
             </View>
 
             {/* Success Popup Dialog */}
-            {notice && (notice.toLowerCase().includes('succès') || notice.toLowerCase().includes('réussi') || notice.toLowerCase().includes('envoyé')) && (
+            {/* Boolean(...) so an empty notice never renders a bare '' text node inside a View. */}
+            {Boolean(notice) && (notice.toLowerCase().includes('succès') || notice.toLowerCase().includes('réussi') || notice.toLowerCase().includes('envoyé')) && (
               <View style={styles.successModalBackdrop}>
                 <View style={styles.successModalCard}>
                   <View style={styles.successIconCircle}>

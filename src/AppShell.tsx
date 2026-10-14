@@ -302,6 +302,10 @@ export function AppShell() {
   const [accountVisible, setAccountVisible] = React.useState(false);
   const [authVisible, setAuthVisible] = React.useState(false);
   const [authMode, setAuthMode] = React.useState<'sign-in' | 'sign-up' | 'reset' | 'reset-code' | 'new-password' | 'verify-email'>('sign-in');
+  // Latest auth step, readable after an await: a slow request must not override a step the
+  // student already left (e.g. "Retour à la connexion" tapped while the code is being sent).
+  const authModeRef = React.useRef(authMode);
+  authModeRef.current = authMode;
   const [authPasswordConfirm, setAuthPasswordConfirm] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
   const [authEmail, setAuthEmail] = React.useState('');
@@ -676,6 +680,7 @@ export function AppShell() {
     try {
       if (authMode === 'reset') {
         await requestStudentPasswordReset(email);
+        if (authModeRef.current !== 'reset') return; // The student navigated away meanwhile.
         setAuthOtp('');
         setAuthPassword('');
         setOtpCooldown(OTP_RESEND_COOLDOWN_SECONDS);

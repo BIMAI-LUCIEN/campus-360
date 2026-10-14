@@ -22,6 +22,7 @@ import {
   BookOpen,
 } from 'lucide-react-native';
 import { authFetch } from '../../features/auth/betterAuth';
+import { stitchColors } from '../../theme/stitch';
 
 interface DefenseCoachModalProps {
   visible: boolean;
@@ -259,11 +260,11 @@ export function DefenseCoachModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(5, 3, 12, 0.75)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#0F0C20',
+    backgroundColor: stitchColors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderWidth: 1,
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -292,7 +293,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   title: {
-    color: '#FFFFFF',
+    color: stitchColors.ink,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -304,14 +305,14 @@ const styles = StyleSheet.create({
   closeBtn: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: stitchColors.paperSoft,
   },
   tabRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 8,
-    backgroundColor: '#090714',
+    backgroundColor: stitchColors.background,
   },
   tab: {
     flex: 1,
@@ -356,7 +357,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   card: {
-    backgroundColor: '#16122C',
+    backgroundColor: stitchColors.surface,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
@@ -394,7 +395,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   slideTitle: {
-    color: '#FFFFFF',
+    color: stitchColors.ink,
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 8,
@@ -415,12 +416,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#8B5CF6',
   },
   bulletText: {
-    color: '#CBD5E1',
+    color: stitchColors.inkMuted,
     fontSize: 12,
     flex: 1,
   },
   notesBox: {
-    backgroundColor: 'rgba(10, 7, 24, 0.7)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
@@ -433,7 +434,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   notesText: {
-    color: '#E2E8F0',
+    color: stitchColors.inkSoft,
     fontSize: 12,
     lineHeight: 17,
   },
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   juryQuestionText: {
-    color: '#FFFFFF',
+    color: stitchColors.ink,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 18,
@@ -459,7 +460,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     gap: 8,
     borderTopWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
     paddingTop: 10,
   },
   trapBox: {
@@ -502,14 +503,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    backgroundColor: '#16122C',
+    backgroundColor: stitchColors.surface,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(253, 224, 71, 0.2)',
   },
   tipText: {
-    color: '#F1F5F9',
+    color: stitchColors.ink,
     fontSize: 13,
     lineHeight: 18,
     flex: 1,

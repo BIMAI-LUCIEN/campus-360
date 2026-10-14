@@ -576,11 +576,11 @@ export function ApplicationDetailModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 3, 10, 0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
     justifyContent: 'flex-end',
   },
   container: {
-    backgroundColor: '#0F0B1E',
+    backgroundColor: stitchColors.background,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     borderWidth: 1,
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.07)',
+    borderBottomColor: stitchColors.glassBorder,
   },
   refRow: {
     flexDirection: 'row',
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 17,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     marginBottom: 2,
   },
   companySubtitle: {
@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: stitchColors.paperSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -655,9 +655,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: 'rgba(18, 14, 34, 0.95)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: stitchColors.glassBorder,
     gap: 8,
   },
   tabBtn: {
@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: stitchColors.paperSoft,
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
   },
   tabBtnTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.primary,
     fontWeight: '700',
   },
   scroll: {
@@ -795,7 +795,7 @@ const styles = StyleSheet.create({
   urgentBannerSub: {
     fontFamily: fontFamilies.inter,
     fontSize: 11,
-    color: '#CBD5E1',
+    color: stitchColors.inkMuted,
   },
   urgentRelanceBtn: {
     backgroundColor: '#F59E0B',
@@ -810,18 +810,18 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   cardBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: stitchColors.paperSoft,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.07)',
+    borderColor: stitchColors.glassBorder,
     marginBottom: 14,
   },
   cardBoxTitle: {
     fontFamily: fontFamilies.outfit,
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.ink,
     marginBottom: 12,
   },
   pipelineRow: {
@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   cycleStatusBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: stitchColors.paperSoft,
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: 'center',
@@ -885,7 +885,7 @@ const styles = StyleSheet.create({
   infoText: {
     fontFamily: fontFamilies.inter,
     fontSize: 12.5,
-    color: '#E2E8F0',
+    color: stitchColors.inkSoft,
   },
   verifiedTag: {
     flexDirection: 'row',
@@ -911,26 +911,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: stitchColors.paperSoft,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
   },
   contactBtnText: {
     fontFamily: fontFamilies.inter,
     fontSize: 11,
-    color: '#CBD5E1',
+    color: stitchColors.inkSoft,
     fontWeight: '600',
   },
   notesInput: {
     backgroundColor: 'rgba(0, 0, 0, 0.25)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: stitchColors.glassBorder,
     padding: 10,
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontFamily: fontFamilies.inter,
     fontSize: 12,
     minHeight: 70,
@@ -973,7 +973,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.outfit,
     fontSize: 12.5,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.ink,
     marginBottom: 2,
   },
   certSub: {
@@ -1004,7 +1004,7 @@ const styles = StyleSheet.create({
   certModalText: {
     fontFamily: fontFamilies.inter,
     fontSize: 11,
-    color: '#CBD5E1',
+    color: stitchColors.inkMuted,
     lineHeight: 16,
     marginBottom: 8,
   },
@@ -1021,11 +1021,11 @@ const styles = StyleSheet.create({
   footer: {
     padding: 14,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.07)',
-    backgroundColor: 'rgba(15, 11, 30, 0.98)',
+    borderTopColor: stitchColors.glassBorder,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
   },
   footerCloseBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: stitchColors.paperSoft,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
@@ -1034,6 +1034,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.inter,
     fontSize: 13,
     fontWeight: '600',
-    color: '#E2E8F0',
+    color: stitchColors.inkSoft,
   },
 });

@@ -21,6 +21,7 @@ import {
   Copy,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { stitchColors } from '../../theme/stitch';
 
 interface WritingWorkshopModalProps {
   visible: boolean;
@@ -218,15 +219,15 @@ export function WritingWorkshopModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 7, 15, 0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
     justifyContent: 'flex-end',
   },
   container: {
-    backgroundColor: '#0F172A',
+    backgroundColor: stitchColors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: stitchColors.glassBorder,
     maxHeight: '92%',
     padding: 20,
   },
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: stitchColors.glassBorder,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: stitchColors.ink,
   },
   closeBtn: {
     padding: 6,
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#CBD5E1',
+    color: stitchColors.inkMuted,
     textTransform: 'uppercase',
     marginBottom: 10,
   },
@@ -276,9 +277,9 @@ const styles = StyleSheet.create({
   },
   typeCard: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: stitchColors.paperSoft,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
     borderRadius: 14,
     padding: 10,
     alignItems: 'center',
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   typeCardTitleSelected: {
-    color: '#FFFFFF',
+    color: stitchColors.primary,
     fontWeight: '700',
   },
   typeCardPrice: {
@@ -316,17 +317,17 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#E2E8F0',
+    color: stitchColors.inkSoft,
     marginBottom: 6,
   },
   textInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: stitchColors.paperSoft,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: stitchColors.glassBorder,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: '#FFFFFF',
+    color: stitchColors.ink,
     fontSize: 13,
   },
   textArea: {
@@ -368,13 +369,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.7)',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: stitchColors.glassBorder,
     padding: 16,
     maxHeight: 280,
     marginBottom: 14,
   },
   resultText: {
-    color: '#E2E8F0',
+    color: stitchColors.inkSoft,
     fontSize: 13,
     lineHeight: 20,
   },
@@ -388,12 +389,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: stitchColors.paperSoft,
     borderRadius: 12,
     paddingVertical: 12,
   },
   copyBtnText: {
-    color: '#FFFFFF',
+    color: stitchColors.ink,
     fontSize: 13,
     fontWeight: '600',
   },

@@ -19,6 +19,7 @@ import { DocumentImagesModal } from './DocumentImagesModal';
 import {
   Sparkles, Send, ArrowLeft, Plus, Trash2, FileText, Image as ImageIcon
 } from 'lucide-react-native';
+import { stitchColors } from '../../theme/stitch';
 
 type Document = {
   id: string;
@@ -86,9 +87,9 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
   html, body {
     margin: 0;
     padding: 0;
-    background-color: #0B0F17;
+    background-color: #F8FAFC;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    color: #F8FAFC;
+    color: #0F172A;
     height: 100%;
     overflow-x: hidden;
   }
@@ -98,8 +99,8 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
     position: sticky;
     top: 0;
     z-index: 1000;
-    background: #111622;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: #FFFFFF;
+    border-bottom: 1px solid #E2E8F0;
     padding: 8px 10px;
     display: flex;
     flex-wrap: wrap;
@@ -108,9 +109,9 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
   }
   
   .tool-btn {
-    background: #182030;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #E2E8F0;
+    background: #F1F5F9;
+    border: 1px solid #E2E8F0;
+    color: #334155;
     border-radius: 8px;
     height: 36px;
     min-width: 36px;
@@ -135,7 +136,7 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
   .tool-divider {
     width: 1px;
     height: 22px;
-    background: rgba(255, 255, 255, 0.12);
+    background: #E2E8F0;
     margin: 0 2px;
   }
 
@@ -151,14 +152,14 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
     width: 100%;
     max-width: 820px;
     min-height: 540px;
-    background: #111622;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
     border-radius: 12px;
     padding: 24px 20px;
     outline: none;
     font-size: 15.5px;
     line-height: 1.75;
-    color: #F1F5F9;
+    color: #0F172A;
     word-break: break-word;
   }
   
@@ -170,7 +171,7 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
   .document-sheet h1 {
     font-size: 24px;
     font-weight: 800;
-    color: #FFFFFF;
+    color: #0F172A;
     margin: 24px 0 12px;
     border-bottom: 2px solid rgba(99, 102, 241, 0.4);
     padding-bottom: 8px;
@@ -180,9 +181,9 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
   .document-sheet h2 {
     font-size: 20px;
     font-weight: 700;
-    color: #818CF8;
+    color: #6D28D9;
     margin: 22px 0 10px;
-    border-left: 3.5px solid #6366F1;
+    border-left: 3.5px solid #7C3AED;
     padding-left: 10px;
     line-height: 1.35;
   }
@@ -190,7 +191,7 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
   .document-sheet h3 {
     font-size: 17px;
     font-weight: 600;
-    color: #38BDF8;
+    color: #0284C7;
     margin: 18px 0 8px;
     line-height: 1.4;
   }
@@ -198,7 +199,7 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
   .document-sheet h4 {
     font-size: 15px;
     font-weight: 600;
-    color: #CBD5E1;
+    color: #475569;
     margin: 14px 0 6px;
     font-style: italic;
   }
@@ -209,12 +210,12 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
 
   .document-sheet b, .document-sheet strong {
     font-weight: 700;
-    color: #FFFFFF;
+    color: #0F172A;
   }
 
   .document-sheet i, .document-sheet em {
     font-style: italic;
-    color: #E2E8F0;
+    color: #334155;
   }
 
   .document-sheet u {
@@ -246,9 +247,9 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
     margin: 16px 0;
     padding: 12px 16px;
     background: rgba(99, 102, 241, 0.08);
-    border-left: 4px solid #4F46E5;
+    border-left: 4px solid #7C3AED;
     border-radius: 0 8px 8px 0;
-    color: #CBD5E1;
+    color: #475569;
     font-style: italic;
   }
 
@@ -261,8 +262,8 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
     max-width: 90%;
     height: auto;
     border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
   }
   .document-sheet figcaption {
     font-size: 12.5px;
@@ -283,8 +284,8 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
     user-select: none;
   }
   .document-sheet .break-tag {
-    background: #1E283C;
-    color: #818CF8;
+    background: #F1F5F9;
+    color: #6D28D9;
     font-size: 11px;
     font-weight: 700;
     padding: 3px 10px;
@@ -303,14 +304,14 @@ function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section')
   }
 
   .document-sheet th, .document-sheet td {
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid #E2E8F0;
     padding: 10px 12px;
     text-align: left;
   }
 
   .document-sheet th {
-    background: #1E283C;
-    color: #818CF8;
+    background: #F1F5F9;
+    color: #6D28D9;
     font-weight: 700;
   }
 
@@ -580,7 +581,7 @@ const EditorSurface = React.forwardRef<EditorSurfaceHandle, EditorSurfaceProps>(
           width: '100%',
           height: '100%',
           border: 0,
-          backgroundColor: '#0B0F17',
+          backgroundColor: stitchColors.background,
         },
       });
     }
@@ -952,7 +953,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Pressable style={styles.headerBtn} onPress={onClose}>
-            <ArrowLeft size={18} color="#F8FAFC" />
+            <ArrowLeft size={18} color={stitchColors.ink} />
             <Text style={styles.headerBtnText}>Retour</Text>
           </Pressable>
         </View>
@@ -973,7 +974,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
       {/* ── Top Header ──────────────────────────────────────────────── */}
       <View style={styles.header}>
         <Pressable style={styles.headerBtn} onPress={onClose}>
-          <ArrowLeft size={18} color="#F8FAFC" />
+          <ArrowLeft size={18} color={stitchColors.ink} />
           <Text style={styles.headerBtnText}>Fermer</Text>
         </Pressable>
 
@@ -1344,7 +1345,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0F17',
+    backgroundColor: stitchColors.background,
   },
   centered: {
     flex: 1,
@@ -1383,8 +1384,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
-    backgroundColor: '#0B0F17',
+    borderBottomColor: stitchColors.glassBorder,
+    backgroundColor: stitchColors.background,
   },
   headerBtn: {
     flexDirection: 'row',
@@ -1394,7 +1395,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   headerBtnText: {
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1404,7 +1405,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   headerTitle: {
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -1430,7 +1431,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   sourcesBtn: {
-    backgroundColor: '#1E283C',
+    backgroundColor: stitchColors.paperSoft,
     borderWidth: 1,
     borderColor: 'rgba(129, 140, 248, 0.3)',
   },
@@ -1440,7 +1441,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   imagesBtn: {
-    backgroundColor: '#1E283C',
+    backgroundColor: stitchColors.paperSoft,
     borderWidth: 1,
     borderColor: 'rgba(56, 189, 248, 0.3)',
   },
@@ -1450,9 +1451,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   wordBtn: {
-    backgroundColor: '#1E283C',
+    backgroundColor: stitchColors.primary,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: stitchColors.glassBorder,
   },
   pdfBtn: {
     backgroundColor: '#059669',
@@ -1466,8 +1467,8 @@ const styles = StyleSheet.create({
   // Section Tabs
   sectionTabsWrap: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
-    backgroundColor: '#0E131F',
+    borderBottomColor: stitchColors.glassBorder,
+    backgroundColor: stitchColors.surface,
   },
   sectionTabsContent: {
     flexDirection: 'row',
@@ -1483,12 +1484,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: '#111622',
+    backgroundColor: stitchColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: stitchColors.glassBorder,
   },
   tabPillActive: {
-    backgroundColor: '#1E283C',
+    backgroundColor: stitchColors.paperSoft,
     borderColor: '#4F46E5',
   },
   tabPillText: {
@@ -1498,7 +1499,7 @@ const styles = StyleSheet.create({
     maxWidth: 160,
   },
   tabPillTextActive: {
-    color: '#FFFFFF',
+    color: stitchColors.primary,
     fontWeight: '700',
   },
   tabDeleteBtn: {
@@ -1537,7 +1538,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   cardTitle: {
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 18,
     fontWeight: '800',
   },
@@ -1551,7 +1552,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   fieldLabel: {
-    color: '#CBD5E1',
+    color: stitchColors.inkMuted,
     fontSize: 12,
     fontWeight: '700',
     marginBottom: 6,
@@ -1559,13 +1560,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   fieldInput: {
-    backgroundColor: '#111622',
+    backgroundColor: stitchColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 11,
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 14,
   },
   fieldTextArea: {
@@ -1584,9 +1585,9 @@ const styles = StyleSheet.create({
   tocItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111622',
+    backgroundColor: stitchColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: stitchColors.glassBorder,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -1599,7 +1600,7 @@ const styles = StyleSheet.create({
   },
   tocItemTitle: {
     flex: 1,
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1620,12 +1621,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#0E131F',
+    backgroundColor: stitchColors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: stitchColors.glassBorder,
   },
   currentSectionTitle: {
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 14.5,
     fontWeight: '700',
   },
@@ -1635,11 +1636,11 @@ const styles = StyleSheet.create({
   },
   wysiwygContainer: {
     flex: 1,
-    backgroundColor: '#0B0F17',
+    backgroundColor: stitchColors.background,
   },
   webView: {
     flex: 1,
-    backgroundColor: '#0B0F17',
+    backgroundColor: stitchColors.background,
   },
   aiDock: {
     flexDirection: 'row',
@@ -1647,7 +1648,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginHorizontal: 12,
     marginTop: 8,
-    backgroundColor: '#111622',
+    backgroundColor: stitchColors.surface,
     borderWidth: 1,
     borderColor: 'rgba(99, 102, 241, 0.25)',
     borderRadius: 14,
@@ -1656,7 +1657,7 @@ const styles = StyleSheet.create({
   },
   aiDockInput: {
     flex: 1,
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 13,
     paddingVertical: 6,
   },
@@ -1696,34 +1697,34 @@ const styles = StyleSheet.create({
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#111622',
+    backgroundColor: stitchColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: stitchColors.glassBorder,
     borderRadius: 16,
     padding: 20,
     width: '100%',
     maxWidth: 340,
   },
   modalTitle: {
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 17,
     fontWeight: '700',
     marginBottom: 14,
   },
   modalInput: {
-    backgroundColor: '#182030',
+    backgroundColor: stitchColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 14,
     marginBottom: 16,
   },
@@ -1733,7 +1734,7 @@ const styles = StyleSheet.create({
   },
   modalBtnCancel: {
     flex: 1,
-    backgroundColor: '#1E283C',
+    backgroundColor: stitchColors.paperSoft,
     paddingVertical: 10,
     borderRadius: 10,
     alignItems: 'center',

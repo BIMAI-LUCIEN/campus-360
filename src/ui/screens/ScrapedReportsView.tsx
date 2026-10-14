@@ -29,6 +29,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { ScrapedStageReport } from '../../types';
 import { authFetch } from '../../features/auth/betterAuth';
 import { DefenseCoachModal } from './DefenseCoachModal';
+import { stitchColors } from '../../theme/stitch';
 
 const FIELDS = [
   'Tous',
@@ -298,13 +299,13 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090714',
+    backgroundColor: stitchColors.background,
   },
   searchSection: {
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 8,
-    backgroundColor: '#090714',
+    backgroundColor: stitchColors.background,
   },
   searchBar: {
     flexDirection: 'row',
@@ -318,7 +319,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 13,
   },
   refreshBtn: {
@@ -369,7 +370,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     marginTop: 12,
-    color: '#F1F5F9',
+    color: stitchColors.ink,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   card: {
-    backgroundColor: '#131024',
+    backgroundColor: stitchColors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
@@ -436,7 +437,7 @@ const styles = StyleSheet.create({
   reportTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: stitchColors.ink,
     lineHeight: 21,
     marginBottom: 8,
   },
@@ -456,16 +457,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   abstractText: {
-    color: '#CBD5E1',
+    color: stitchColors.inkMuted,
     fontSize: 12,
     lineHeight: 18,
     marginBottom: 10,
   },
   tocSection: {
-    backgroundColor: 'rgba(19, 16, 36, 0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: stitchColors.glassBorder,
     marginBottom: 12,
     overflow: 'hidden',
   },
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#818CF8',
   },
   tocItemText: {
-    color: '#E2E8F0',
+    color: stitchColors.inkSoft,
     fontSize: 12,
   },
   cardActions: {

@@ -25,6 +25,7 @@ import {
   type MobileMoneyOperator,
   initiateMobileMoneyPayment,
 } from './walletApi';
+import { stitchColors } from '../../theme/stitch';
 
 interface PaymentModalProps {
   visible: boolean;
@@ -144,7 +145,7 @@ export function PaymentModal({
               <Text style={styles.waitingTitle}>Validation USSD en cours...</Text>
               <Text style={styles.waitingText}>
                 Un message de confirmation a été envoyé sur le{' '}
-                <Text style={{ fontWeight: '700', color: '#F8FAFC' }}>{phone}</Text>.
+                <Text style={{ fontWeight: '700', color: stitchColors.ink }}>{phone}</Text>.
               </Text>
               <View style={styles.pinInstructionBox}>
                 <Text style={styles.pinInstructionText}>
@@ -292,7 +293,7 @@ export function PaymentModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 3, 10, 0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
@@ -300,10 +301,10 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 440,
-    backgroundColor: '#0D0B18',
+    backgroundColor: stitchColors.background,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: stitchColors.glassBorder,
     padding: 20,
     maxHeight: '90%',
   },
@@ -312,13 +313,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: stitchColors.glassBorder,
     paddingBottom: 14,
   },
   title: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     letterSpacing: -0.3,
   },
   subtitle: {
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     padding: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: stitchColors.paperSoft,
   },
   scrollBody: {
     paddingBottom: 8,
@@ -338,7 +339,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#CBD5E1',
+    color: stitchColors.inkMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     marginTop: 10,
@@ -349,9 +350,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   packCard: {
-    backgroundColor: '#141124',
+    backgroundColor: stitchColors.surface,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
     borderRadius: 14,
     padding: 14,
   },
@@ -372,7 +373,7 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: '700',
     color: '#94A3B8',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: stitchColors.paperSoft,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -398,13 +399,13 @@ const styles = StyleSheet.create({
   packTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     marginBottom: 2,
   },
   packPrice: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     marginBottom: 4,
   },
   packCurrency: {
@@ -426,9 +427,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#141124',
+    backgroundColor: stitchColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -450,15 +451,15 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
   },
   operatorTextActive: {
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontWeight: '700',
   },
   phoneInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#141124',
+    backgroundColor: stitchColors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: stitchColors.glassBorder,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 46,
@@ -466,7 +467,7 @@ const styles = StyleSheet.create({
   },
   phoneInput: {
     flex: 1,
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     fontSize: 14,
   },
   errorNoticeText: {
@@ -507,7 +508,7 @@ const styles = StyleSheet.create({
   waitingTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     marginBottom: 8,
   },
   waitingText: {
@@ -546,7 +547,7 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 19,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     marginBottom: 8,
   },
   successText: {

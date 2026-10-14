@@ -37,6 +37,7 @@ import {
   recordApplicationReminder,
 } from '../../features/stages/stagesApi';
 import { ApplicationDetailModal } from '../../features/stages/ApplicationDetailModal';
+import { stitchColors } from '../../theme/stitch';
 
 interface ApplicationsTimelineProps {
   studentName: string;
@@ -119,7 +120,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
       <View style={styles.header}>
         {onBack && (
           <Pressable onPress={onBack} testID="btn-timeline-back" style={styles.backBtn}>
-            <ArrowLeft size={18} color="#FFFFFF" />
+            <ArrowLeft size={18} color={stitchColors.ink} />
           </Pressable>
         )}
         <View style={{ flex: 1 }}>
@@ -330,7 +331,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090714',
+    backgroundColor: stitchColors.background,
   },
   glowTop: {
     position: 'absolute',
@@ -348,22 +349,22 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingHorizontal: 20,
     paddingBottom: 16,
-    backgroundColor: '#120E22',
+    backgroundColor: stitchColors.background,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: stitchColors.glassBorder,
   },
   backBtn: {
     width: 34,
     height: 34,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: stitchColors.paperSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#F8FAFC',
+    color: stitchColors.ink,
     letterSpacing: -0.2,
   },
   subtitle: {
@@ -380,9 +381,9 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   duoCard: {
-    backgroundColor: '#120E22',
+    backgroundColor: stitchColors.background,
     borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
     borderRadius: 12,
     padding: 14,
   },
@@ -406,7 +407,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   duoMessage: {
-    color: '#CBD5E1',
+    color: stitchColors.inkMuted,
     fontSize: 12.5,
     lineHeight: 18,
   },
@@ -414,10 +415,10 @@ const styles = StyleSheet.create({
     padding: 32,
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#120E22',
+    backgroundColor: stitchColors.background,
     borderRadius: 12,
     borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
     marginTop: 10,
   },
   emptyIconCircle: {
@@ -431,7 +432,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#F8FAFC',
+    color: stitchColors.ink,
   },
   emptySubtitle: {
     fontSize: 12.5,
@@ -442,10 +443,10 @@ const styles = StyleSheet.create({
 
   // Ticket Card (Anti-Saturation Calme)
   ticketCard: {
-    backgroundColor: '#120E22',
+    backgroundColor: stitchColors.background,
     borderRadius: 12,
     borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
     padding: 16,
   },
   ticketTopRow: {
@@ -455,17 +456,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   ticketRefBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: stitchColors.paperSoft,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: stitchColors.glassBorder,
   },
   ticketRefText: {
     fontSize: 10.5,
     fontWeight: '500',
-    color: '#CBD5E1',
+    color: stitchColors.inkMuted,
     letterSpacing: 0.4,
   },
   statusBadge: {
@@ -484,7 +485,7 @@ const styles = StyleSheet.create({
   ticketJobTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: stitchColors.ink,
     lineHeight: 21,
     marginBottom: 4,
   },
@@ -523,10 +524,10 @@ const styles = StyleSheet.create({
     height: 18,
     borderTopRightRadius: 9,
     borderBottomRightRadius: 9,
-    backgroundColor: '#090714',
+    backgroundColor: stitchColors.background,
     borderWidth: 0.5,
     borderLeftWidth: 0,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
   },
   cutoutRight: {
     position: 'absolute',
@@ -535,15 +536,15 @@ const styles = StyleSheet.create({
     height: 18,
     borderTopLeftRadius: 9,
     borderBottomLeftRadius: 9,
-    backgroundColor: '#090714',
+    backgroundColor: stitchColors.background,
     borderWidth: 0.5,
     borderRightWidth: 0,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: stitchColors.glassBorder,
   },
   dashedLine: {
     marginHorizontal: 20,
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: stitchColors.glassBorder,
     borderStyle: 'dashed',
   },
 
@@ -567,16 +568,16 @@ const styles = StyleSheet.create({
   ticketMetaValue: {
     fontSize: 12.5,
     fontWeight: '600',
-    color: '#F8FAFC',
+    color: stitchColors.ink,
   },
   qrBox: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: stitchColors.paperSoft,
     borderRadius: 8,
     padding: 5,
     borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: stitchColors.glassBorder,
   },
   qrLabel: {
     fontSize: 8.5,
@@ -586,16 +587,16 @@ const styles = StyleSheet.create({
   },
 
   notesBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: stitchColors.paperSoft,
     borderRadius: 8,
     padding: 8,
     marginBottom: 10,
     borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: stitchColors.glassBorder,
   },
   notesText: {
     fontSize: 11.5,
-    color: '#CBD5E1',
+    color: stitchColors.inkMuted,
   },
   ticketFooter: {
     flexDirection: 'row',
@@ -603,7 +604,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 10,
     borderTopWidth: 0.5,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopColor: stitchColors.glassBorder,
   },
   changeStatusPill: {
     paddingHorizontal: 12,
@@ -611,7 +612,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: 'transparent',
     borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.16)',
+    borderColor: stitchColors.glassBorder,
   },
   changeStatusPillText: {
     fontSize: 11.5,
@@ -664,7 +665,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: stitchColors.paperSoft,
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 6,
@@ -694,6 +695,6 @@ const styles = StyleSheet.create({
   viewDossierButtonText: {
     fontSize: 12.5,
     fontWeight: '600',
-    color: '#DDD6FE',
+    color: stitchColors.primary,
   },
 });
