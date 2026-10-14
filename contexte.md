@@ -394,6 +394,9 @@ flowchart TD
    - `RLg1C0eFLgRnV32v` : *Campus 360 - Moteur de Relance Automatisée J+7 (WhatsApp RH & Candidat)*.
    - `MrLODtTPWdQM7wCo` : *Campus 360 - Passerelle Webhook Paiements Mobile Money (Orange Money, MTN MoMo, Wave)*.
    - `wrvaDRtXjWgq4PgA` : *Campus 360 - Pipeline Treg (OCR, Enrichissement RH WhatsApp & Ingestion In-App)*.
+6. **Pipeline de Déploiement en Production (`/vps-deploy`) :**
+   - Orchestré par le skill dédié [vps-deploy](file:///C:/Users/DELL/.gemini/config/skills/vps-deploy/SKILL.md).
+   - Enchaîne : Pre-Flight check local (typecheck strict, git clean) ➔ Push `origin main` ➔ Git pull sur `/opt/campus-360` ➔ Build Next.js 15 en tâche supervisée ➔ Bascule PM2 (`pm2 restart` & `pm2 save`) ➔ Vérification de santé `HTTP 200` via `curl https://api.campus360b.site/api/health`.
 
 ---
 
