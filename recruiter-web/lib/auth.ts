@@ -1,7 +1,7 @@
 import { expo } from '@better-auth/expo';
 import { betterAuth } from 'better-auth';
 import { createAuthMiddleware } from 'better-auth/api';
-import { admin, bearer } from 'better-auth/plugins';
+import { admin, bearer, emailOTP } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -12,7 +12,7 @@ import {
   checkLoginThrottle,
   recordLoginFailure,
 } from './login-throttle';
-import { sendPasswordResetEmail, sendVerificationEmail } from './mailer';
+import { sendOtpEmail, sendPasswordResetEmail } from './mailer';
 
 // ────────────────────────────────────────────────────────────────────────
 // Trusted origins — production domains MUST be hardcoded so auth works
@@ -196,11 +196,16 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
     baseURL,
     secret: finalSecret,
     trustedOrigins,
+    emailVerification: {
+      // Sent as a 6-digit OTP (emailOTP.overrideDefaultEmailVerification).
+      sendOnSignUp: true,
+      autoSignInAfterVerification: true,
+    },
     emailAndPassword: {
       enabled: true,
-      // DON'T require email verification — it blocks sign-in when SMTP is
-      // misconfigured. The mobile flow handles verification separately, and
-      // admins can manually verify if needed.
+      // Not enforced here: this instance also serves the admin web login, which
+      // has no OTP screen. The mobile app enforces the OTP step itself, and
+      // mobile-api (production mobile backend) enforces it server-side.
       requireEmailVerification: false,
       autoSignIn: true,
       minPasswordLength: 8,
@@ -257,6 +262,22 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
       admin({
         defaultRole: 'student',
         adminRoles: ['admin'],
+      }),
+      emailOTP({
+        otpLength: 6,
+        expiresIn: 10 * 60,
+        allowedAttempts: 5,
+        storeOTP: 'hashed',
+        overrideDefaultEmailVerification: true,
+        disableSignUp: true,
+        rateLimit: { window: 60, max: 3 },
+        sendVerificationOTP: async ({ email, otp, type }) => {
+          try {
+            await sendOtpEmail({ email, otp, type });
+          } catch (err) {
+            console.error('[auth] sendVerificationOTP failed:', err);
+          }
+        },
       }),
       nextCookies(),
     ],
@@ -318,6 +339,24 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
                     'Retry-After': String(verdict.retryAfterSeconds),
                   },
                 },
+              );
+            }
+          }
+
+          // Mobile app only: an unverified account must confirm its email with the OTP first.
+          // Admin web sign-in (no expo-origin header) keeps its existing behaviour.
+          if (path === '/sign-in/email' && ctx.request?.headers.get('expo-origin') && email) {
+            const { rows } = await databasePool.query<{ email_verified: boolean }>(
+              'select "emailVerified" as email_verified from public."user" where lower(email) = lower($1) limit 1',
+              [email],
+            );
+            if (rows[0] && rows[0].email_verified !== true) {
+              return new Response(
+                JSON.stringify({
+                  message: 'Confirme ton adresse email avec le code reçu.',
+                  code: 'EMAIL_NOT_VERIFIED',
+                }),
+                { status: 403, headers: { 'Content-Type': 'application/json' } },
               );
             }
           }

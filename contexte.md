@@ -630,3 +630,72 @@ Ce cadrage est **100% validé et synchronisé avec le graphe Graphify**. Le fich
   - `node scripts/test-challenger-m6-adversarial.mjs` $\rightarrow$ **13/13 tests réussis (0 échec)**.
   - `node scripts/test-stage-dispatch.mjs` $\rightarrow$ **36/36 tests réussis (0 échec)**.
   - `tsc --noEmit` sur `mobile-api` et `recruiter-web` $\rightarrow$ **0 erreur (Code 0)**.
+
+---
+
+## 11. Cadrage validé : refonte UX mobile V1 (2026-10-13)
+
+> Brainstorming « Bounded » validé par le fondateur. Exécution lot par lot via `/execute`.
+
+### 11.1 Constat de départ
+- Inscription (`AuthScreen`) demande nom, WhatsApp, université, filière, niveau ; l'onboarding (`OnboardingScreen`) redemande WhatsApp, université, niveau (+ domaine ≈ filière, compétences). Le WhatsApp est encore redemandé au pairing et dans `StudentProfileExpressModal`.
+- 112 couleurs sombres / hex en dur dans 19 fichiers (pires : `DocumentEditorScreen` 22, `AiApplyModal` 16, `DocumentImagesModal` 9, `OnboardingScreen` 8, `ApplicationsTimelineScreen` 7). `app.json` en `userInterfaceStyle: "dark"`.
+- Mot de passe oublié = lien email + deep link (fragile). Aucun OTP (`requireEmailVerification: false`).
+
+### 11.2 Décisions
+1. **Parcours d'entrée (option A) :**
+   ```
+   Inscription (Nom · Email · Mot de passe) → OTP email 6 chiffres
+     → 1/3 Université ▼ (+ Autre) → 2/3 Filière ▼ · Niveau ▼ → 3/3 Compétences (chips + saisie libre)
+     → Accueil avec offres matchées (Aha moment)
+   ```
+   - Chaque information n'est demandée **qu'une seule fois**, puis pré-remplie partout (CV, candidature, éditeur, pairing).
+   - **WhatsApp** demandé au 1er clic « Postuler » (feuille courte + pairing), qui fusionne avec `StudentProfileExpressModal`.
+   - Composant unique **`SelectWithOther`** : liste filtrable + option « Autre… » ouvrant un champ libre ; valeurs « Autre » journalisées pour enrichir les listes.
+2. **OTP : email uniquement** (plugin Better Auth `emailOTP` + Resend), pour l'inscription ET le mot de passe oublié (email → code → nouveau mot de passe, sans lien ni deep link). Code 10 min, 5 essais, renvoi après 60 s. Pas de WhatsApp ni de SMS.
+3. **Abonnements supprimés** (serveur et client) : modèle 100 % wallet prépayé. Retirer `subscription/purchase`, `lib/subscriptions.ts`, `plans.ts`, `PremiumSection`, et remplacer la politique d'export par tiers par une règle wallet.
+4. **Design « Clean White & Royal Violet » partout :** tokens de `stitch.ts` uniquement (renommer `sienna` → `primary` avec alias), `app.json` → `light`, garde-fou CI qui échoue sur un hex en dur hors `src/theme/`. Ordre : Auth/Onboarding → Stages (AiApply, Timeline, ApplicationDetail) → Documents (éditeur, modales) → Paiement/Coach/Rapports.
+5. **Nettoyage :** supprimer `ui/screens/DocumentsScreen.tsx`, `DashboardScreen`, `features/home/homePriority.ts`, et le faux compte hors ligne de `betterAuth.ts` (remplacé par un vrai état « hors ligne »).
+6. **Automatisations V1 (n8n + push Expo + Resend) :**
+   - Bienvenue + 3 offres matchées à la fin de l'onboarding.
+   - Alerte « nouvelle offre pour toi » (score > 70 %) à l'ingestion d'une offre.
+   - Reçu de recharge wallet après webhook Notch validé.
+   - Alerte admin sur statut `FAILED` (paiement ou envoi de candidature).
+   - Hors V1 : relance « profil incomplet » J+1 ; la relance J+7 existante reste en l'état.
+
+### 11.3 Lots d'exécution
+| Lot | Contenu | Services |
+|---|---|---|
+| 1 | OTP email (inscription + mot de passe oublié) | mobile-api, src |
+| 2 | Inscription courte + onboarding 3 étapes + `SelectWithOther` + WhatsApp au 1er « Postuler » | src, mobile-api (`account`) |
+| 3 | Suppression des abonnements → 100 % wallet | mobile-api, recruiter-web, src |
+| 4 | Harmonisation design (4 vagues) + garde-fou CI | src, `.github` |
+| 5 | Nettoyage du code mort + faux compte hors ligne | src |
+| 6 | Automatisations V1 | n8n, mobile-api |
+
+### 11.4 Journal d'exécution
+- **[Lot 1 Validé — OTP email] (2026-10-13)** :
+  - Serveur : plugin Better Auth `emailOTP` (6 chiffres, 10 min, 5 essais, stockage haché, 3 envois/min, `disableSignUp`, `overrideDefaultEmailVerification`) dans `mobile-api/lib/auth.ts` et `recruiter-web/lib/auth.ts` ; `sendOtpEmail` dans les deux `lib/mailer.ts` (le code n'est jamais journalisé). `mobile-api` impose la vérification (`requireEmailVerification`) uniquement si Resend est configuré, avec envoi d'un code à la connexion des comptes non vérifiés ; `recruiter-web` ne l'impose pas (connexion admin web sans écran OTP). `auth-capabilities` expose `emailOtp`.
+  - Mobile : `emailOTPClient`, `verifyStudentEmailOtp`, `resendStudentEmailOtp`, mot de passe oublié en 2 étapes (email → code + nouveau mot de passe) sans deep link, `EmailVerificationRequiredError` ; `AuthScreen` (champ code avec autofill, renvoi avec compte à rebours de 60 s, retours) ; `AppShell` (`completeAuthenticatedSession` commun, suppression de l'écouteur du lien `reset-password`). `EditorialInput` accepte `maxLength` et `oneTimeCode`.
+  - Validation : `tsc` OK sur l'app, mobile-api et recruiter-web ; tests HTTP réels sur mobile-api : capacités `emailOtp: true`, demande de réinitialisation → 200 (sans révéler si le compte existe), code faux → 400 `INVALID_OTP` (vérification et réinitialisation).
+  - Non vérifié : réception réelle d'un email et écran de code dans l'app (pas de `RESEND_API_KEY` dans `recruiter-web/.env.local`).
+  - Sécurité : aucun secret ajouté, code numérique assaini avant insertion HTML, réponses identiques pour un email inconnu.
+- **[Lot 1 — Test & Verify] (2026-10-13) — Verdict : NOT VERIFIED** (motif : preuve de code réel reçu par email manquante ; un écart de sécurité est ouvert) :
+  - CLI : `tsc --noEmit` code 0 sur l'app Expo, `mobile-api`, `recruiter-web` ; `npm test` mobile-api 2/2 ; scan de secrets sur le diff : aucune clé réelle (seule une valeur factice d'affichage dans `SettingsClient.tsx:180`).
+  - API `recruiter-web` (base connectée) : `request-password-reset` inconnu → 200 ; code faux (reset et vérification) → 400 `INVALID_OTP` ; mot de passe faux → 401.
+  - UI (app Expo web) : lien « Mot de passe oublié ? » visible ; écran « code à 6 chiffres » + renvoi avec compte à rebours (48 s) + message de confirmation affichés après demande.
+  - **Écart ouvert** : sur `recruiter-web`, un compte non vérifié se connecte sans code (`/sign-in/email` → 200, `emailVerified: false`). `mobile-api` (prod) impose la vérification, mais l'app en dev utilise `recruiter-web`. À corriger par une règle distincte pour les connexions mobiles (les admins web n'ont pas d'écran de code).
+  - Non fait : envoi réel d'un code à une adresse réelle et saisie dans l'app (inscription et réinitialisation).
+- **[Lot 1 — Re-test (2026-10-13)] — Verdict : VERIFIED côté serveur, UI app à confirmer** :
+  - Envoi réel vérifié : inscription sur alias `+otptest1` → email `no-reply@campus360b.site` reçu avec un code à 6 chiffres ; `verify-email` avec ce code → 200, `emailVerified: true` ; réutilisation du même code → 400 `INVALID_OTP`.
+  - Mot de passe oublié : code reçu par email ; `reset-password` → 200 ; ancien mot de passe refusé (401), nouveau accepté (200).
+  - Écart corrigé : `recruiter-web/lib/auth.ts` (hook `before` sur `/sign-in/email`) renvoie 403 `EMAIL_NOT_VERIFIED` uniquement quand la requête vient de l'app (en-tête `expo-origin`) et que le compte n'est pas vérifié. Vérifié : compte non vérifié via app → 403 ; même compte via admin web → 200 (inchangé) ; compte vérifié via app → 200.
+  - `src/features/auth/betterAuth.ts` : sur `EMAIL_NOT_VERIFIED`, l'app renvoie un code avant d'afficher l'écran de saisie.
+  - CLI : `tsc` OK (app et recruiter-web).
+  - Reste : parcours complet dans l'app (saisie du code à l'écran, comme l'utilisateur le ferait).
+- **[Lot 1 — Test & Verify VPS (2026-10-14)] — Verdict : NOT VERIFIED** (motif : code non déployé) :
+  - VPS `/opt/campus-360` : branche `main` à `309af74`, ancien code. Aucun `emailOTP` dans `mobile-api/lib/auth.ts`, aucun `EMAIL_NOT_VERIFIED` dans `recruiter-web/lib/auth.ts`.
+  - `https://api.campus360b.site/api/mobile/auth-capabilities` → `{"passwordReset":true}` (ancien flux par lien) ; `https://admin.campus360b.site/...` → `{"passwordReset":false}` (pas de clé Resend dans `recruiter-web/.env.production`).
+  - Services pm2 en ligne, bases connectées (`/api/health`).
+  - Aucune capture navigateur produite : le contrôle visuel porterait sur l'ancien code.
+  - **Bloquant avant déploiement** : `deploy-vps.sh` exécute `git reset --hard origin/main` ; le VPS a des modifications non commitées (`recruiter-web/app/globals.compiled.css`) et des fichiers non suivis (`Dockerfile.*`, `docker-compose.yml`, `landing-light.tar.gz`) qui seraient perdus. La branche `fix/security-hardening-fake-sessions` n'est pas poussée, donc `origin/main` ne contient pas le lot 1.

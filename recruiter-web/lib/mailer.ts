@@ -69,6 +69,58 @@ export const sendPasswordResetEmail = async ({ email, name, url }: SendArgs) => 
   }
 };
 
+/** True when a real email provider is configured (OTP delivery is possible). */
+export const isEmailDeliveryConfigured = (): boolean => getClient() !== null;
+
+export type OtpPurpose = 'sign-in' | 'email-verification' | 'forget-password' | 'change-email';
+
+const OTP_SUBJECTS: Record<OtpPurpose, string> = {
+  'email-verification': 'Ton code de confirmation Campus 360',
+  'forget-password': 'Ton code pour réinitialiser ton mot de passe Campus 360',
+  'sign-in': 'Ton code de connexion Campus 360',
+  'change-email': 'Ton code de changement d’email Campus 360',
+};
+
+const OTP_INTROS: Record<OtpPurpose, string> = {
+  'email-verification': 'Voici ton code pour confirmer ton adresse email :',
+  'forget-password': 'Voici ton code pour choisir un nouveau mot de passe :',
+  'sign-in': 'Voici ton code de connexion :',
+  'change-email': 'Voici ton code pour confirmer ta nouvelle adresse email :',
+};
+
+export const sendOtpEmail = async ({ email, otp, type }: { email: string; otp: string; type: OtpPurpose }) => {
+  // Only digits are ever interpolated into the HTML (Better Auth generates numeric OTPs).
+  const safeOtp = otp.replace(/[^0-9]/g, '');
+  const resend = getClient();
+  if (!resend) {
+    // Never log the code itself.
+    // eslint-disable-next-line no-console
+    console.warn(`[mailer] Resend is not configured (RESEND_API_KEY). OTP email (${type}) not sent.`);
+    return;
+  }
+
+  const { error } = await resend.emails.send({
+    from: defaultFrom,
+    to: email,
+    subject: OTP_SUBJECTS[type],
+    text:
+      `Bonjour,\n\n${OTP_INTROS[type]}\n\n${safeOtp}\n\n` +
+      `Ce code expire dans 10 minutes. Ne le partage avec personne.\n` +
+      `Si tu n'es pas à l'origine de cette demande, ignore cet email.`,
+    html:
+      `<p>Bonjour,</p>` +
+      `<p>${OTP_INTROS[type]}</p>` +
+      `<p style="font-size:30px;font-weight:800;letter-spacing:8px;color:#7C3AED;margin:20px 0">${safeOtp}</p>` +
+      `<p>Ce code expire dans 10 minutes. Ne le partage avec personne.</p>` +
+      `<p style="color:#64748B;font-size:12px">Si tu n'es pas à l'origine de cette demande, ignore cet email.</p>`,
+  });
+
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error(`[mailer] sendOtpEmail (${type}) failed:`, error);
+  }
+};
+
 export const sendVerificationEmail = async ({ email, name, url }: SendArgs) => {
   const resend = getClient();
   if (!resend) {

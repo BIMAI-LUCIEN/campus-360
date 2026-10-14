@@ -13,7 +13,12 @@ CHANGED_FILES=$(git diff --name-only HEAD origin/main || true)
 echo "Changed files between HEAD and origin/main:"
 echo "$CHANGED_FILES"
 
-# Reset working tree to origin/main
+# Never destroy local work on the VPS: stash uncommitted and untracked changes first
+# (recoverable with `git stash list` / `git stash pop`), then reset to origin/main.
+if [ -n "$(git status --porcelain)" ]; then
+  echo "Local changes detected on VPS, stashing them before reset..."
+  git stash push --include-untracked -m "pre-deploy $(date -u +%Y%m%dT%H%M%SZ)" || true
+fi
 git reset --hard origin/main
 git lfs pull
 

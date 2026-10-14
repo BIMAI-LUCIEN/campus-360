@@ -40,11 +40,14 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-goog
 
 import {
   clearStudentSession,
+  EmailVerificationRequiredError,
   getAuthCapabilities,
   getStudentAccount,
   loadStudentSession,
   requestStudentPasswordReset,
+  resendStudentEmailOtp,
   resetStudentPassword,
+  verifyStudentEmailOtp,
   signInStudent,
   signInWithGoogle,
   signUpStudent,
@@ -53,6 +56,7 @@ import {
   purchaseSubscription,
   purchaseIaPack,
   registerPushToken,
+  type AuthCapabilities,
   type StudentProfile,
   type StudentSession,
   updateStudentProfile,
@@ -220,6 +224,9 @@ const CAMEROON_LEVELS = [
 ];
 
 type ClientCatalogTab = 'packs' | 'catalog' | 'library';
+// Matches the server-side OTP rate limit (3 codes / 60 s).
+const OTP_RESEND_COOLDOWN_SECONDS = 60;
+
 type AppSection = 'stages' | 'applications' | 'resources' | 'account' | 'home' | 'dashboard' | 'explore' | 'library' | 'documents' | 'premium';
 
 const onboardingSlides = [
@@ -371,8 +378,17 @@ export function AppShell() {
   const [authLevel, setAuthLevel] = React.useState('');
   const [authLoading, setAuthLoading] = React.useState(false);
   const [authNotice, setAuthNotice] = React.useState('');
-  const [authCapabilities, setAuthCapabilities] = React.useState({ passwordReset: false, google: false });
-  const [resetToken, setResetToken] = React.useState('');
+  const [authCapabilities, setAuthCapabilities] = React.useState<AuthCapabilities>({ passwordReset: false, emailOtp: false, google: false });
+  const [authOtp, setAuthOtp] = React.useState('');
+  const [otpCooldown, setOtpCooldown] = React.useState(0);
+  const [otpContext, setOtpContext] = React.useState<'sign-up' | 'sign-in'>('sign-up');
+
+  // Resend countdown for email OTP codes.
+  React.useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const timer = setTimeout(() => setOtpCooldown((value) => Math.max(0, value - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [otpCooldown]);
   const [onboardingVisible, setOnboardingVisible] = React.useState(false);
   const [isOnboardingCompleted, setIsOnboardingCompleted] = React.useState<boolean>(() => {
     if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
@@ -460,17 +476,6 @@ export function AppShell() {
 
   React.useEffect(() => {
     let mounted = true;
-    const handleAuthLink = (url: string | null) => {
-      if (!url || !url.startsWith('campus-bordes://reset-password')) return;
-      const token = new URL(url).searchParams.get('token');
-      if (!token) return;
-      setResetToken(token);
-      setAuthMode('new-password');
-      setAuthNotice('Choisis maintenant ton nouveau mot de passe.');
-      setAuthVisible(true);
-    };
-    const linkSub = Linking.addEventListener('url', ({ url }) => handleAuthLink(url));
-    Linking.getInitialURL().then(handleAuthLink).catch(() => undefined);
 
     const restoreSession = async () => {
       try {
@@ -533,7 +538,7 @@ export function AppShell() {
     refreshDocuments(mounted);
     getAuthCapabilities().then(setAuthCapabilities).catch(() => undefined);
 
-    return () => { mounted = false; linkSub.remove(); };
+    return () => { mounted = false; };
   }, []);
 
   React.useEffect(() => {
@@ -686,20 +691,39 @@ export function AppShell() {
     const faculty = authFaculty.trim();
     const level = authLevel.trim();
 
-    if (authMode === 'new-password') {
-      if (!resetToken || password.length < 8) {
-        Alert.alert('Nouveau mot de passe', 'Choisis au moins 8 caracteres.');
-        return;
-      }
+    const otp = authOtp.replace(/\D/g, '');
+
+    if (authMode === 'verify-email') {
+      if (otp.length !== 6) { Alert.alert('Code de confirmation', 'Entre les 6 chiffres reçus par email.'); return; }
       setAuthLoading(true);
       try {
-        await resetStudentPassword(resetToken, password);
-        setResetToken('');
+        const session = await verifyStudentEmailOtp(email, otp);
+        if (!session) {
+          // Verified, but no session was opened: let the student sign in normally.
+          setAuthOtp('');
+          setAuthMode('sign-in');
+          setAuthNotice('Email confirmé. Connecte-toi pour continuer.');
+          return;
+        }
+        await completeAuthenticatedSession(session, otpContext === 'sign-up');
+      } catch (error) {
+        Alert.alert('Code invalide', error instanceof Error ? error.message : 'Demande un nouveau code.');
+      } finally { setAuthLoading(false); }
+      return;
+    }
+
+    if (authMode === 'new-password') {
+      if (otp.length !== 6) { Alert.alert('Nouveau mot de passe', 'Entre les 6 chiffres reçus par email.'); return; }
+      if (password.length < 8) { Alert.alert('Nouveau mot de passe', 'Choisis au moins 8 caractères.'); return; }
+      setAuthLoading(true);
+      try {
+        await resetStudentPassword(email, otp, password);
+        setAuthOtp('');
         setAuthPassword('');
         setAuthMode('sign-in');
-        setAuthNotice('Mot de passe modifie. Tu peux te connecter.');
+        setAuthNotice('Mot de passe modifié. Tu peux te connecter.');
       } catch (error) {
-        Alert.alert('Lien invalide', error instanceof Error ? error.message : 'Demande un nouveau lien.');
+        Alert.alert('Code invalide', error instanceof Error ? error.message : 'Demande un nouveau code.');
       } finally { setAuthLoading(false); }
       return;
     }
@@ -716,27 +740,81 @@ export function AppShell() {
     try {
       if (authMode === 'reset') {
         await requestStudentPasswordReset(email);
-        setAuthNotice('Lien de reinitialisation envoye.');
-        Alert.alert('Email envoye', 'Ouvre le lien recu pour changer ton mot de passe.');
+        setAuthOtp('');
+        setAuthPassword('');
+        setOtpCooldown(OTP_RESEND_COOLDOWN_SECONDS);
+        setAuthMode('new-password');
+        setAuthNotice(`Si un compte existe pour ${email}, un code à 6 chiffres vient de partir par email.`);
         return;
       }
       const session =
         authMode === 'sign-in'
           ? await signInStudent(email, password)
-          : await signUpStudent(email, password, name, { phone, whatsappPhone, university, faculty, level });
-      if (!session) { setAuthMode('verify-email'); return; }
-      setStudentSession(session);
-      if (authMode === 'sign-up') {
-        const updatedProfile = await updateStudentProfile({ name, phone, whatsappPhone, university, faculty, level });
-        setStudentProfile(updatedProfile);
+          : await signUpStudent(
+              email,
+              password,
+              name,
+              { phone, whatsappPhone, university, faculty, level },
+              { requireEmailVerification: Boolean(authCapabilities.emailOtp) },
+            );
+      if (!session) {
+        openOtpStep(email, authMode === 'sign-up' ? 'sign-up' : 'sign-in');
+        return;
       }
-      await syncStudentAccount(session);
-      setAuthVisible(false);
-      setActiveSection('home');
-      if (authMode === 'sign-up') { setFreePdfSelectorVisible(true); }
-      else { Alert.alert('Connecte', 'Tes achats PDF et ton wallet sont synchronises.'); }
+      await completeAuthenticatedSession(session, authMode === 'sign-up');
     } catch (error) {
+      if (error instanceof EmailVerificationRequiredError) {
+        // Legacy/unverified account: the server already emailed a code on this sign-in attempt.
+        openOtpStep(error.email, 'sign-in');
+        return;
+      }
       Alert.alert('Connexion impossible', error instanceof Error ? error.message : 'Réessaie dans un instant.');
+    } finally { setAuthLoading(false); }
+  };
+
+  const openOtpStep = (email: string, context: 'sign-up' | 'sign-in') => {
+    setOtpContext(context);
+    setAuthOtp('');
+    setOtpCooldown(OTP_RESEND_COOLDOWN_SECONDS);
+    setAuthMode('verify-email');
+    setAuthNotice(`Nous avons transmis un code à 6 chiffres à ${email}. Il expire dans 10 minutes.`);
+  };
+
+  // Shared ending for every successful authentication (password, OTP, sign-up).
+  const completeAuthenticatedSession = async (session: StudentSession, isNewAccount: boolean) => {
+    setStudentSession(session);
+    if (isNewAccount) {
+      const whatsappPhone = authWhatsappPhone.trim();
+      const updatedProfile = await updateStudentProfile({
+        name: authName.trim(),
+        phone: whatsappPhone,
+        whatsappPhone,
+        university: authUniversity.trim(),
+        faculty: authFaculty.trim(),
+        level: authLevel.trim(),
+      });
+      setStudentProfile(updatedProfile);
+    }
+    await syncStudentAccount(session);
+    setAuthOtp('');
+    setAuthNotice('');
+    setAuthVisible(false);
+    setActiveSection('home');
+    if (isNewAccount) { setFreePdfSelectorVisible(true); }
+    else { Alert.alert('Connecté', 'Tes achats PDF et ton wallet sont synchronisés.'); }
+  };
+
+  const resendAuthOtp = async () => {
+    const email = authEmail.trim();
+    if (!email || otpCooldown > 0) return;
+    setAuthLoading(true);
+    try {
+      if (authMode === 'new-password') await requestStudentPasswordReset(email);
+      else await resendStudentEmailOtp(email);
+      setOtpCooldown(OTP_RESEND_COOLDOWN_SECONDS);
+      setAuthNotice(`Nouveau code transmis à ${email}.`);
+    } catch (error) {
+      Alert.alert('Code non transmis', error instanceof Error ? error.message : 'Réessaie dans un instant.');
     } finally { setAuthLoading(false); }
   };
 
@@ -1102,7 +1180,11 @@ export function AppShell() {
             notice={authNotice}
             canGoogle={authCapabilities.google}
             canPasswordReset={authCapabilities.passwordReset}
-            onModeChange={setAuthMode}
+            otp={authOtp}
+            otpCooldown={otpCooldown}
+            onOtpChange={setAuthOtp}
+            onResendOtp={resendAuthOtp}
+            onModeChange={(nextMode) => { setAuthNotice(''); setAuthOtp(''); setAuthMode(nextMode); }}
             onEmailChange={setAuthEmail}
             onPasswordChange={setAuthPassword}
             onNameChange={setAuthName}
@@ -1710,7 +1792,11 @@ export function AppShell() {
             notice={authNotice}
             canGoogle={authCapabilities.google}
             canPasswordReset={authCapabilities.passwordReset}
-            onModeChange={setAuthMode}
+            otp={authOtp}
+            otpCooldown={otpCooldown}
+            onOtpChange={setAuthOtp}
+            onResendOtp={resendAuthOtp}
+            onModeChange={(nextMode) => { setAuthNotice(''); setAuthOtp(''); setAuthMode(nextMode); }}
             onEmailChange={setAuthEmail}
             onPasswordChange={setAuthPassword}
             onNameChange={setAuthName}

@@ -1,4 +1,5 @@
 import { expoClient } from '@better-auth/expo/client';
+import { emailOTPClient } from 'better-auth/client/plugins';
 import { createAuthClient } from 'better-auth/react';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
@@ -66,6 +67,8 @@ export type StudentAccount = {
 
 export type AuthCapabilities = {
   passwordReset: boolean;
+  /** Email OTP verification at sign-up (only when the server can send emails). */
+  emailOtp?: boolean;
   google: boolean;
 };
 
@@ -271,6 +274,7 @@ export const authStorage = {
 export const authClient = createAuthClient({
   baseURL: authBaseUrl,
   plugins: [
+    emailOTPClient(),
     ...(Platform.OS === 'web'
       ? []
       : [
@@ -285,6 +289,32 @@ export const authClient = createAuthClient({
 
 const errorMessage = (error: { message?: string; code?: string } | null | undefined) =>
   error?.message || error?.code || 'Connexion impossible.';
+
+/** Thrown when the account exists but its email must first be confirmed with an OTP. */
+export class EmailVerificationRequiredError extends Error {
+  constructor(readonly email: string) {
+    super('Confirme ton adresse email avec le code reçu.');
+    this.name = 'EmailVerificationRequiredError';
+  }
+}
+
+const OTP_ERROR_MESSAGES: Record<string, string> = {
+  INVALID_OTP: 'Code incorrect. Vérifie les 6 chiffres reçus par email.',
+  OTP_EXPIRED: 'Ce code a expiré. Demande un nouveau code.',
+  TOO_MANY_ATTEMPTS: 'Trop de tentatives. Demande un nouveau code.',
+  USER_NOT_FOUND: 'Aucun compte ne correspond à cet email.',
+};
+
+const otpErrorMessage = (error: { message?: string; code?: string; status?: number } | null | undefined) => {
+  if (error?.status === 429) return 'Trop de demandes. Patiente une minute avant de réessayer.';
+  return (error?.code && OTP_ERROR_MESSAGES[error.code]) || errorMessage(error);
+};
+
+const persistSessionPayload = async (payload: { token?: string | null; session?: { token?: string } | null; user?: unknown }) => {
+  const token = payload.token || payload.session?.token;
+  if (token) await authStorage.setItemAsync('campus-bordes_session_token', token);
+  if (payload.user) await authStorage.setItemAsync('campus-bordes_user', JSON.stringify(payload.user));
+};
 
 export const getOfflineStudentAccount = (storedUser?: Partial<StudentProfile>): StudentAccount => ({
   user: {
@@ -358,12 +388,19 @@ export const signInStudent = async (email: string, password: string) => {
       return { user: result.data.user as StudentSession['user'] };
     }
     if (result.error) {
+      // Unverified account: the server has just emailed a fresh OTP (sendOnSignIn).
+      if (result.error.code === 'EMAIL_NOT_VERIFIED') {
+        // The server does not send a code on this blocked attempt, so request one now.
+        await authClient.emailOtp.sendVerificationOtp({ email, type: 'email-verification' }).catch(() => undefined);
+        throw new EmailVerificationRequiredError(email);
+      }
       const msg = errorMessage(result.error);
       if (!msg.toLowerCase().includes('momentan') && !msg.toLowerCase().includes('indisponible') && !msg.toLowerCase().includes('500')) {
         throw new Error(msg);
       }
     }
   } catch (err) {
+    if (err instanceof EmailVerificationRequiredError) throw err;
     const errText = err instanceof Error ? err.message : String(err);
     if (!errText.toLowerCase().includes('momentan') && !errText.toLowerCase().includes('indisponible') && !errText.toLowerCase().includes('500')) {
       throw err;
@@ -397,7 +434,8 @@ export const signUpStudent = async (
     university?: string;
     faculty?: string;
     level?: string;
-  }
+  },
+  options?: { requireEmailVerification?: boolean },
 ) => {
   try {
     const result = await authClient.signUp.email({
@@ -409,12 +447,11 @@ export const signUpStudent = async (
     } as any);
     if (!result.error && result.data?.user) {
       const payload = result.data as any;
-      if (payload.token) {
-        await authStorage.setItemAsync('campus-bordes_session_token', payload.token);
-      } else if (payload.session?.token) {
-        await authStorage.setItemAsync('campus-bordes_session_token', payload.session.token);
+      // A 6-digit code has been emailed: the session only starts once it is confirmed.
+      if (options?.requireEmailVerification && !payload.user?.emailVerified) {
+        return null;
       }
-      await authStorage.setItemAsync('campus-bordes_user', JSON.stringify(result.data.user));
+      await persistSessionPayload(payload);
       return { user: result.data.user as StudentSession['user'] };
     }
     if (result.error) {
@@ -438,23 +475,35 @@ export const signUpStudent = async (
   return { user: fallback.user as StudentSession['user'] };
 };
 
-export const requestStudentPasswordReset = async (email: string) => {
-  const capabilities = await fetch(`${authBaseUrl}/api/mobile/auth-capabilities`).then((response) => response.json()) as {
-    passwordReset?: boolean;
-  };
-  if (!capabilities.passwordReset) {
-    throw new Error('La recuperation par email sera active apres la configuration Gmail.');
-  }
-  const result = await authClient.requestPasswordReset({
-    email,
-    redirectTo: `${authBaseUrl}/api/mobile/reset-password-redirect`,
-  });
-  if (result.error) throw new Error(errorMessage(result.error));
+const normalizeOtp = (otp: string) => otp.replace(/\D/g, '').slice(0, 6);
+
+/** Confirms the email with the 6-digit code and opens the session. */
+export const verifyStudentEmailOtp = async (email: string, otp: string) => {
+  const result = await authClient.emailOtp.verifyEmail({ email, otp: normalizeOtp(otp) });
+  if (result.error) throw new Error(otpErrorMessage(result.error));
+  const payload = result.data as { token?: string | null; user?: StudentSession['user'] } | null;
+  if (payload) await persistSessionPayload(payload);
+  if (payload?.token && payload.user) return { user: payload.user };
+  // Verified but no auto sign-in: fall back to whatever session the client now holds.
+  return loadSession();
 };
 
-export const resetStudentPassword = async (token: string, newPassword: string) => {
-  const result = await authClient.resetPassword({ token, newPassword });
-  if (result.error) throw new Error(errorMessage(result.error));
+/** Sends a new email verification code. */
+export const resendStudentEmailOtp = async (email: string) => {
+  const result = await authClient.emailOtp.sendVerificationOtp({ email, type: 'email-verification' });
+  if (result.error) throw new Error(otpErrorMessage(result.error));
+};
+
+/** Step 1 of password reset: emails a 6-digit code (same response whether or not the account exists). */
+export const requestStudentPasswordReset = async (email: string) => {
+  const result = await authClient.emailOtp.requestPasswordReset({ email });
+  if (result.error) throw new Error(otpErrorMessage(result.error));
+};
+
+/** Step 2 of password reset: code + new password. */
+export const resetStudentPassword = async (email: string, otp: string, newPassword: string) => {
+  const result = await authClient.emailOtp.resetPassword({ email, otp: normalizeOtp(otp), password: newPassword });
+  if (result.error) throw new Error(otpErrorMessage(result.error));
 };
 
 export const changeStudentPassword = async (currentPassword: string, newPassword: string) => {

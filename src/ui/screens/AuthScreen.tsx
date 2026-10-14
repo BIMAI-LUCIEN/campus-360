@@ -20,6 +20,7 @@ import {
   GraduationCap,
   CheckCircle2,
   ChevronDown,
+  ShieldCheck,
   X,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -97,6 +98,12 @@ interface AuthScreenProps {
   notice: string;
   canGoogle: boolean;
   canPasswordReset: boolean;
+  /** 6-digit email code (verify-email and new-password steps). */
+  otp: string;
+  /** Seconds left before a new code can be requested. */
+  otpCooldown: number;
+  onOtpChange: (v: string) => void;
+  onResendOtp: () => void;
   onModeChange: (mode: AuthScreenProps['mode']) => void;
   onEmailChange: (v: string) => void;
   onPasswordChange: (v: string) => void;
@@ -123,6 +130,10 @@ export function AuthScreen({
   notice,
   canGoogle,
   canPasswordReset,
+  otp,
+  otpCooldown,
+  onOtpChange,
+  onResendOtp,
   onModeChange,
   onEmailChange,
   onPasswordChange,
@@ -156,8 +167,12 @@ export function AuthScreen({
         : mode === 'new-password'
           ? 'Nouveau mot de passe'
           : mode === 'verify-email'
-            ? 'Confirmation e-mail'
+            ? 'Confirme ton email'
             : 'Connexion';
+
+  const isOtpStep = mode === 'verify-email' || mode === 'new-password';
+  const showEmailInput = mode === 'sign-in' || mode === 'sign-up' || mode === 'reset';
+  const showPasswordInput = mode === 'sign-in' || mode === 'sign-up' || mode === 'new-password';
 
   return (
     <KeyboardAvoidingView
@@ -328,7 +343,42 @@ export function AuthScreen({
                 </>
               )}
 
-              {mode !== 'new-password' && mode !== 'reset' && (
+              {mode === 'reset' && (
+                <Text style={styles.helperText}>
+                  Entre l’email de ton compte : tu recevras un code à 6 chiffres pour choisir un nouveau mot de passe.
+                </Text>
+              )}
+
+              {isOtpStep && (
+                <>
+                  <Text style={styles.helperText}>
+                    Code envoyé à <Text style={styles.helperStrong}>{email}</Text>
+                  </Text>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Code à 6 chiffres</Text>
+                    <GlassInput
+                      value={otp}
+                      onChangeText={(value) => onOtpChange(value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="••••••"
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      oneTimeCode
+                      leftIcon={<ShieldCheck size={17} color={stitchColors.sienna} strokeWidth={1.8} />}
+                    />
+                  </View>
+                  <Pressable
+                    onPress={onResendOtp}
+                    disabled={otpCooldown > 0 || loading}
+                    hitSlop={8}
+                  >
+                    <Text style={[styles.forgotLink, styles.resendLink, otpCooldown > 0 && styles.resendLinkDisabled]}>
+                      {otpCooldown > 0 ? `Renvoyer le code dans ${otpCooldown} s` : 'Renvoyer le code'}
+                    </Text>
+                  </Pressable>
+                </>
+              )}
+
+              {showEmailInput && (
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Email</Text>
                   <GlassInput
@@ -342,9 +392,11 @@ export function AuthScreen({
                 </View>
               )}
 
-              {mode !== 'reset' && (
+              {showPasswordInput && (
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Mot de passe</Text>
+                  <Text style={styles.inputLabel}>
+                    {mode === 'new-password' ? 'Nouveau mot de passe' : 'Mot de passe'}
+                  </Text>
                   <GlassInput
                     value={password}
                     onChangeText={onPasswordChange}
@@ -383,8 +435,10 @@ export function AuthScreen({
                       : mode === 'sign-up'
                         ? 'Inscrire mes informations'
                         : mode === 'reset'
-                          ? 'Envoyer le lien'
-                          : 'Modifier le mot de passe'
+                          ? 'Recevoir un code'
+                          : mode === 'verify-email'
+                            ? 'Confirmer mon email'
+                            : 'Modifier le mot de passe'
                 }
                 onPress={onSubmit}
                 loading={loading}
@@ -406,6 +460,18 @@ export function AuthScreen({
                     fluid
                   />
                 </>
+              )}
+
+              {/* Back from reset / OTP steps */}
+              {(mode === 'reset' || isOtpStep) && (
+                <Pressable style={styles.switchLink} onPress={() => onModeChange(mode === 'verify-email' && name ? 'sign-up' : 'sign-in')}>
+                  <Text style={styles.switchText}>
+                    {mode === 'verify-email' ? 'Mauvais email ? ' : 'Retour à la '}
+                    <Text style={styles.switchHighlight}>
+                      {mode === 'verify-email' ? 'Le modifier' : 'connexion'}
+                    </Text>
+                  </Text>
+                </Pressable>
               )}
 
               {/* Switch mode */}
@@ -655,6 +721,23 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontWeight: '700',
     marginTop: 2,
+  },
+  helperText: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 13,
+    lineHeight: 19,
+    color: stitchColors.inkMuted,
+    textAlign: 'center',
+  },
+  helperStrong: {
+    color: stitchColors.ink,
+    fontWeight: '700',
+  },
+  resendLink: {
+    textAlign: 'center',
+  },
+  resendLinkDisabled: {
+    color: stitchColors.inkMuted,
   },
   divider: {
     flexDirection: 'row',

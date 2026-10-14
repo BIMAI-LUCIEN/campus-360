@@ -1,7 +1,7 @@
 import { expo } from '@better-auth/expo';
 import { betterAuth } from 'better-auth';
 import { createAuthMiddleware } from 'better-auth/api';
-import { admin, bearer } from 'better-auth/plugins';
+import { admin, bearer, emailOTP } from 'better-auth/plugins';
 import { nextCookies } from 'better-auth/next-js';
 
 import { databasePool } from './database';
@@ -10,7 +10,14 @@ import {
   checkLoginThrottle,
   recordLoginFailure,
 } from './login-throttle';
-import { sendPasswordResetEmail, sendVerificationEmail } from './mailer';
+import { isEmailDeliveryConfigured, sendOtpEmail, sendPasswordResetEmail } from './mailer';
+
+// OTP policy (validated product decision: email OTP for sign-up + password reset).
+export const OTP_POLICY = {
+  LENGTH: 6,
+  TTL_SECONDS: 10 * 60,
+  MAX_ATTEMPTS: 5,
+} as const;
 
 // ────────────────────────────────────────────────────────────────────────
 // Trusted origins — production domains MUST be hardcoded so auth works
@@ -162,18 +169,29 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
     );
   }
 
+  // Email verification is enforced only when an email provider is configured,
+  // otherwise nobody could ever receive their code and every account would be locked.
+  const emailDeliveryConfigured = isEmailDeliveryConfigured();
+  if (!emailDeliveryConfigured) {
+    console.warn('[auth] RESEND_API_KEY missing: email OTP verification is NOT enforced.');
+  }
+
   const config: Parameters<typeof betterAuth>[0] = {
     appName: 'Campus 360',
     database: databasePool,
     baseURL,
     secret: finalSecret,
     trustedOrigins,
+    emailVerification: {
+      // Delivered as a 6-digit OTP (emailOTP.overrideDefaultEmailVerification).
+      sendOnSignUp: true,
+      // Unverified (legacy) accounts receive a code when they try to sign in.
+      sendOnSignIn: true,
+      autoSignInAfterVerification: true,
+    },
     emailAndPassword: {
       enabled: true,
-      // DON'T require email verification — it blocks sign-in when SMTP is
-      // misconfigured. The mobile flow handles verification separately, and
-      // admins can manually verify if needed.
-      requireEmailVerification: false,
+      requireEmailVerification: emailDeliveryConfigured,
       autoSignIn: true,
       minPasswordLength: 8,
       sendResetPassword: async ({ user, url }) => {
@@ -229,6 +247,23 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
       admin({
         defaultRole: 'student',
         adminRoles: ['admin'],
+      }),
+      emailOTP({
+        otpLength: OTP_POLICY.LENGTH,
+        expiresIn: OTP_POLICY.TTL_SECONDS,
+        allowedAttempts: OTP_POLICY.MAX_ATTEMPTS,
+        storeOTP: 'hashed',
+        overrideDefaultEmailVerification: true,
+        // OTP is only used to verify/reset existing accounts, never to create one.
+        disableSignUp: true,
+        rateLimit: { window: 60, max: 3 },
+        sendVerificationOTP: async ({ email, otp, type }) => {
+          try {
+            await sendOtpEmail({ email, otp, type });
+          } catch (err) {
+            console.error('[auth] sendVerificationOTP failed:', err);
+          }
+        },
       }),
       nextCookies(),
     ],

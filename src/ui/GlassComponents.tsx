@@ -226,6 +226,8 @@ export function EditorialInput({
   style,
   leftIcon,
   rightIcon,
+  maxLength,
+  oneTimeCode,
 }: {
   label?: string;
   value: string;
@@ -235,12 +237,15 @@ export function EditorialInput({
   showPasswordToggle?: boolean;
   showPassword?: boolean;
   onTogglePassword?: () => void;
-  keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric';
+  keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric' | 'number-pad';
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   multiline?: boolean;
   style?: ViewStyle;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  maxLength?: number;
+  /** Enables OS autofill of codes received by SMS/email. */
+  oneTimeCode?: boolean;
 }) {
   const [focused, setFocused] = React.useState(false);
   return (
@@ -258,6 +263,9 @@ export function EditorialInput({
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           multiline={multiline}
+          maxLength={maxLength}
+          textContentType={oneTimeCode ? 'oneTimeCode' : undefined}
+          autoComplete={oneTimeCode ? 'one-time-code' : undefined}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
         />
