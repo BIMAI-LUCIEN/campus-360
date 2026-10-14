@@ -8,13 +8,13 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Inscription gratuite — 3 PDFs offerts à l'inscription",
+  title: "Inscription gratuite — Stage IA & CV officiel RH",
   description:
-    "Inscris-toi gratuitement à Campus 360 et reçois immédiatement 3 PDFs offerts, le catalogue complet en accès libre, et 5 requêtes IA par jour.",
+    "Inscris-toi gratuitement à Campus 360 : matching de stage par IA, CV officiel RH et ta première candidature offerte.",
   alternates: { canonical: "/inscription" },
   openGraph: {
     title: "Inscription gratuite Campus 360",
-    description: "3 PDFs offerts à l'inscription. Catalogue complet en accès libre.",
+    description: "Ta première candidature IA est offerte. Paiement à l'usage par Mobile Money.",
     url: "/inscription",
   },
 };
@@ -32,7 +32,7 @@ export default function InscriptionPage() {
                     Crée ton compte gratuit
                   </h1>
                   <p className="text-sm text-[var(--color-ink-light)]">
-                    2 minutes. 3 PDFs offerts. Aucun engagement.
+                    2 minutes. Ta première candidature est offerte. Aucun engagement.
                   </p>
                 </div>
                 <InscriptionForm />
@@ -49,12 +49,11 @@ export default function InscriptionPage() {
                 </h2>
                 <ul className="space-y-3 text-sm">
                   {[
-                    "3 PDFs offerts à choisir dans le catalogue",
-                    "Accès au catalogue complet (3 500+ PDFs)",
-                    "5 requêtes IA par jour (fiches, résumés)",
-                    "Wallet rechargeable dès 500 FCFA",
-                    "Sync multi-appareils",
-                    "Mode hors-ligne après 1er téléchargement",
+                    "Ta première candidature IA offerte",
+                    "CV officiel RH et lettre de motivation générés par l'IA",
+                    "Matching de stage avec score de correspondance",
+                    "Suivi de tes candidatures et relance à J+7",
+                    "Wallet rechargeable dès 500 FCFA (MTN MoMo, Orange Money)",
                   ].map((b) => (
                     <li key={b} className="flex items-start gap-2">
                       <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />

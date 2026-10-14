@@ -5,7 +5,7 @@ import { SiteShell } from "@/components/site-shell";
 export const metadata: Metadata = {
   title: "Tarifs Campus 360 — Orange Money & MTN MoMo",
   description:
-    "Tarifs transparents sans frais cachés : 1ère candidature offerte, Pack 5 candidatures à 500 FCFA, Pass Étudiant à 2 000 FCFA et Pass Pro à 3 500 FCFA.",
+    "Tarifs à l'usage, sans abonnement : 1ère candidature offerte, candidature à 500 FCFA, rapport de stage à 2 000 FCFA, mémoire à 5 000 FCFA.",
   alternates: { canonical: "/tarifs" },
   openGraph: {
     title: "Tarifs Campus 360",
@@ -17,15 +17,15 @@ export const metadata: Metadata = {
 const faq = [
   {
     q: "Comment fonctionne le paiement par Mobile Money ?",
-    a: "Lorsque tu recharges ou actives un pass, l'application initie une transaction sécurisée vers ton compte Orange Money ou MTN MoMo. Tu valides la transaction sur ton téléphone avec ton code PIN et ton solde est crédité instantanément.",
+    a: "Lorsque tu recharges ton wallet, l'application initie une transaction vers ton compte Orange Money ou MTN MoMo. Tu valides sur ton téléphone avec ton code PIN et ton solde est crédité.",
   },
   {
     q: "Y a-t-il un abonnement avec précompte automatique ?",
-    a: "Non. Aucun abonnement automatique ni prélèvement surprise. Tu recharges ton solde uniquement quand tu en as besoin.",
+    a: "Non. Il n'y a pas d'abonnement : ton wallet est débité seulement quand tu lances une action (candidature, rapport, mémoire, PDF).",
   },
   {
-    q: "Est-ce que mes PDFs téléchargés restent accessibles ?",
-    a: "Oui. Tous les cours, fiches et annales téléchargés restent enregistrés sur ton téléphone et sont lisibles à tout moment en mode hors-ligne, même sans solde.",
+    q: "Combien coûte une candidature ?",
+    a: "500 FCFA par candidature envoyée. Ta première candidature IA est offerte à la création de ton profil.",
   },
   {
     q: "Puis-je tester l'IA gratuitement ?",

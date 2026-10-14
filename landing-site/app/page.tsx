@@ -26,50 +26,51 @@ const APK_URL =
   process.env.NEXT_PUBLIC_APK_DOWNLOAD_URL ??
   "https://campus360b.site/downloads/campus-360.apk";
 
-const stats = [
-  { value: "12 000+", label: "Étudiants inscrits" },
-  { value: "95%", label: "Précision du matching IA" },
-  { value: "3 500+", label: "Cours & Annales PDF" },
-  { value: "< 30s", label: "Temps pour postuler" },
+// Only facts the app delivers today: no audience or accuracy figures.
+const highlights = [
+  { value: "500 FCFA", label: "Par candidature" },
+  { value: "1ère offerte", label: "Ta première candidature" },
+  { value: "Mobile Money", label: "Orange Money & MTN MoMo" },
+  { value: "Android", label: "APK gratuit, sans pub" },
 ];
 
 const pillars = [
   {
     icon: Sparkles,
-    badge: "IA & Recrutement",
-    title: "Matching de Stage IA & Score %",
-    desc: "L'intelligence artificielle analyse ton profil étudiant, filtre les opportunités adaptées à ta filière et calcule ton taux de compatibilité (ex: 🔥 95% Match) avec 2 points forts et 1 conseil stratégique.",
+    badge: "IA & Stages",
+    title: "Matching de stage par IA",
+    desc: "L'IA compare ton profil à la description de chaque offre et affiche un score de correspondance, tes points forts et un conseil pour ta candidature.",
     featured: true,
   },
   {
     icon: FileText,
-    badge: "Candidature 1-Clic",
-    title: "Template CV Officiel RH & Lettre sur-mesure",
-    desc: "Fini les candidatures rejetées. Génère en un clic un CV structuré à 2 colonnes selon le format officiel RH africain et une lettre de motivation rédigée avec la méthode VOUS-MOI-NOUS.",
+    badge: "Candidature",
+    title: "CV officiel RH & lettre de motivation",
+    desc: "Génère un CV au format attendu par les recruteurs (deux colonnes) et une lettre de motivation adaptée à l'offre, à relire et modifier avant envoi.",
   },
   {
     icon: Clock,
-    badge: "Suivi Intelligents",
-    title: "Rappel & Message de Relance à J+7",
-    desc: "Ne laisse aucune candidature sans réponse. L'application conserve ton historique et t'envoie une notification 7 jours plus tard avec un message de relance WhatsApp prêt à être transmis.",
-  },
-  {
-    icon: BookOpen,
-    badge: "Succès Académique",
-    title: "Bibliothèque de 3 500+ PDFs & Mode Hors-ligne",
-    desc: "Cours, TD, annales et sujets d'examens d'universités (Yaoundé, Douala, Dschang, UCAD, INPHB...). Télécharge en Wi-Fi et révise partout, même sans connexion Internet.",
+    badge: "Suivi",
+    title: "Suivi & relance à J+7",
+    desc: "Toutes tes candidatures sont suivies au même endroit. Campus 360 te signale quand une relance est utile, 7 jours après ton envoi.",
   },
   {
     icon: Brain,
-    badge: "Assistant IA",
-    title: "Fiches de Révision & Coach de Soutenance",
-    desc: "L'assistant IA résume n'importe quel PDF académique, génère des fiches de synthèse, structure des plans de mémoire et t'entraîne aux questions de ton jury de soutenance.",
+    badge: "Soutenance",
+    title: "Coach IA de soutenance",
+    desc: "Prépare ta soutenance : slides, ce que tu dois dire au jury, questions pièges et réponses modèles générées à partir de ton rapport.",
+  },
+  {
+    icon: BookOpen,
+    badge: "Rédaction",
+    title: "Atelier d'écriture IA",
+    desc: "Rédige ton rapport de stage, ton mémoire ou ton CV avec l'aide de l'IA. Tu gardes la main sur le contenu et tu l'exportes en PDF.",
   },
   {
     icon: Wallet,
-    badge: "Paiement Local",
+    badge: "Paiement local",
     title: "Wallet Orange Money & MTN MoMo",
-    desc: "Recharge ton solde en 10 secondes sans carte bancaire. Paye à la demande (500 FCFA les 5 candidatures) ou opte pour le Pass mensuel illimité à 2 000 FCFA.",
+    desc: "Recharge dès 500 FCFA et paye seulement ce que tu utilises : une candidature (500 FCFA), un rapport ou un mémoire généré par l'IA.",
   },
 ];
 
@@ -89,18 +90,18 @@ export default function HomePage() {
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-sienna-bg)] border border-[var(--color-sienna)]/30 rounded-full mb-6">
                   <Sparkles className="w-3.5 h-3.5 text-[var(--color-sienna-tone)]" />
                   <span className="font-mono text-xs font-semibold tracking-wide text-[var(--color-sienna-tone)]">
-                    L&apos;IA Étudiante & Carrière n°1
+                    L&apos;IA pour ton stage & ta soutenance
                   </span>
                 </div>
 
                 <h1 className="font-display text-[2.2rem] sm:text-6xl lg:text-[4.2rem] font-black leading-[1.08] sm:leading-[0.98] tracking-[-0.03em] mb-7">
                   Trouve ton stage
                   <br />
-                  & révise tes cours.
+                  & réussis ta soutenance.
                 </h1>
 
                 <p className="text-base sm:text-lg text-[var(--color-ink-muted)] max-w-lg leading-relaxed mb-9">
-                  Campus 360 analyse ton profil, trouve les stages adaptés à ta filière, génère ton CV officiel RH en 30 secondes et t&apos;ouvre l&apos;accès à 3 500+ cours d&apos;universités.
+                  Campus 360 trouve les stages adaptés à ta filière, génère ton CV officiel RH et une lettre de motivation, suit tes candidatures et t&apos;aide à rédiger ton rapport et à préparer ta soutenance.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3 mb-8">
@@ -142,9 +143,9 @@ export default function HomePage() {
         <section className="border-b border-[var(--color-ink-faint)] bg-[var(--color-paper-deep)]">
           <div className="max-w-6xl mx-auto px-6">
             <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-[var(--color-ink-faint)]">
-              {stats.map((s) => (
+              {highlights.map((s) => (
                 <div key={s.label} className="py-8 text-center px-4">
-                  <div className="font-display text-2xl sm:text-4xl font-extrabold tracking-[-0.02em] mb-1 text-gradient-brand">
+                  <div className="font-display text-2xl sm:text-3xl font-extrabold tracking-[-0.02em] mb-1 text-gradient-brand">
                     {s.value}
                   </div>
                   <div className="font-mono text-[0.6875rem] font-semibold tracking-[0.1em] uppercase text-[var(--color-ink-subtle)]">

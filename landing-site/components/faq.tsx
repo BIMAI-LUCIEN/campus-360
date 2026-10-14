@@ -6,27 +6,27 @@ import { ChevronDown } from "lucide-react";
 const faqs = [
   {
     q: "Campus 360 est gratuit ?",
-    a: "L'inscription et la prévisualisation des PDF sont 100% gratuites. Tu ne paies que les PDF que tu souhaites acheter, via ton wallet rechargeable.",
+    a: "L'inscription et ta première candidature IA sont offertes. Ensuite, tu recharges ton wallet dès 500 FCFA et tu paies uniquement ce que tu utilises.",
   },
   {
     q: "Comment fonctionne le wallet ?",
-    a: "Tu recharges ton wallet par Mobile Money, carte bancaire ou code promo. Chaque achat est débité automatiquement de ton solde. Toutes les transactions sont signées et historisées.",
+    a: "Tu recharges par MTN MoMo ou Orange Money (minimum 500 FCFA). Chaque action est débitée de ton solde, et chaque transaction reste visible dans ton historique.",
   },
   {
-    q: "Puis-je lire mes PDF hors-ligne ?",
-    a: "Oui. Les PDF achetés se téléchargent automatiquement quand tu es en Wi-Fi, et restent accessibles hors-ligne. Tes achats sont liés à ton compte et restaurables sur tout appareil.",
+    q: "Combien coûte chaque action ?",
+    a: "Candidature : 500 FCFA (la première est offerte). Rapport de stage généré par l'IA : 2 000 FCFA. Mémoire : 5 000 FCFA. Document PDF : 250 FCFA.",
   },
   {
-    q: "Comment l'assistant IA fonctionne-t-il ?",
-    a: "L'assistant IA analyse les PDF que tu achètes et génère des fiches de révision, des quiz et des résumés. Plus tu révises avec, plus il s'améliore pour t'aider.",
+    q: "Comment fonctionne le coach de soutenance ?",
+    a: "À partir de ton rapport, l'IA prépare des slides, ce que tu dois dire au jury, et des questions pièges avec une réponse modèle pour chacune.",
   },
   {
-    q: "Mes achats sont-ils remboursables ?",
-    a: "Les achats de PDF sont définitifs. Cependant, si tu rencontres un problème avec un document (fichier corrompu, mauvaise qualité), contacte le support et on trouvera une solution.",
+    q: "Comment envoyer ma candidature ?",
+    a: "Tu choisis le canal : dans l'app, par WhatsApp RH ou par e-mail RH. Ton CV et ta lettre sont joints, et la relance à J+7 est programmée automatiquement.",
   },
   {
     q: "Sur quels appareils fonctionne Campus 360 ?",
-    a: "Campus 360 fonctionne sur iOS (iPhone, iPad) et Android. Ton compte et tous tes achats sont synchronisés sur tous tes appareils.",
+    a: "Pour l'instant, l'application est disponible sur Android via l'APK gratuit. La version iOS n'est pas encore disponible.",
   },
 ];
 

@@ -42,8 +42,8 @@ const values = [
 const timeline = [
   { year: "2023", title: "L'idée", desc: "Trois amis à l'UD partagent leurs PDFs sur WhatsApp. Ils réalisent que d'autres galèrent aussi." },
   { year: "2024", title: "Premier MVP", desc: "Une app Expo + Supabase. 50 PDFs uploadés, 12 premiers étudiants payants." },
-  { year: "2025", title: "Lancement public", desc: "Catalogue de 1 500 PDFs, IA intégrée, paiement Mobile Money. 3 000 étudiants." },
-  { year: "2026", title: "Aujourd'hui", desc: "12 000+ étudiants, 28 universités couvertes, équipe de 7 personnes." },
+  { year: "2025", title: "Lancement public", desc: "IA intégrée et paiement Mobile Money à l'usage." },
+  { year: "2026", title: "Aujourd'hui", desc: "Matching de stage par IA, CV officiel RH, relance J+7, coach de soutenance et wallet Mobile Money, sur Android." },
 ];
 
 export default function AProposPage() {

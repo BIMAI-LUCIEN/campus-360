@@ -1,77 +1,69 @@
 "use client";
 
-import { Check, Crown, FileText, GraduationCap, Zap } from "lucide-react";
+import { Check, FileText, GraduationCap, Send, Zap } from "lucide-react";
 import { Button } from "./ui/button";
 
 const APK_URL =
   process.env.NEXT_PUBLIC_APK_DOWNLOAD_URL ??
   "https://campus360b.site/downloads/campus-360.apk";
 
+// Per-use prices, aligned with the constants charged by the app (src/types.ts).
 const plans = [
   {
     name: "Découverte",
     icon: GraduationCap,
     price: "0 FCFA",
-    description: "Pour explorer le catalogue et tester l'IA",
+    description: "Pour créer ton profil et tester l'IA",
     period: "",
     features: [
-      "Consultation du catalogue de 3 500+ PDFs",
-      "1ère candidature IA 100% offerte",
-      "Calcul du score de match sur les stages",
-      "Lecteur PDF intégré avec mode nuit",
+      "Compte gratuit",
+      "1ère candidature IA offerte (CV officiel RH + lettre)",
+      "Matching de stage avec score de correspondance",
     ],
     cta: "Télécharger l'APK",
     ctaVariant: "secondary" as const,
     popular: false,
   },
   {
-    name: "Pack 5 Candidatures",
-    icon: Zap,
+    name: "Candidature",
+    icon: Send,
     price: "500 FCFA",
-    description: "Achat ponctuel sans abonnement",
-    period: "/ pack",
+    description: "Par candidature envoyée",
+    period: "/ candidature",
     features: [
-      "5 candidatures IA sur-mesure",
-      "Template CV Officiel RH (2 colonnes)",
-      "Lettre de motivation personnalisée",
-      "Export PDF propre sans filigrane",
-      "Envoi 1-clic sur WhatsApp RH & Email",
+      "CV officiel RH et lettre de motivation",
+      "Envoi par WhatsApp RH, e-mail RH ou dans l'app",
+      "Relance à J+7 dans ton suivi",
     ],
-    cta: "Tester le Pack",
-    ctaVariant: "secondary" as const,
-    popular: false,
-  },
-  {
-    name: "Pass Étudiant",
-    icon: FileText,
-    price: "2 000 FCFA",
-    description: "La formule complète pour réussir son semestre",
-    period: "/ mois",
-    features: [
-      "Candidatures IA illimitées",
-      "Accès illimité aux 3 500+ PDFs d'universités",
-      "Assistant IA (résumés & fiches de révision)",
-      "Notification & relance automatique à J+7",
-      "Téléchargement & lecture 100% hors-ligne",
-    ],
-    cta: "Activer le Pass",
+    cta: "Télécharger l'APK",
     ctaVariant: "primary" as const,
     popular: true,
   },
   {
-    name: "Pass Pro & Soutenance",
-    icon: Crown,
-    price: "3 500 FCFA",
-    description: "Pour valider son stage et préparer sa soutenance",
-    period: "/ mois",
+    name: "Rapport de stage",
+    icon: FileText,
+    price: "2 000 FCFA",
+    description: "Rédaction IA d'un rapport de stage",
+    period: "/ rapport",
     features: [
-      "Toutes les fonctionnalités du Pass Étudiant",
-      "Générateur de plan de rapport & mémoire",
-      "Coach IA d'entraînement à la soutenance",
-      "Relances WhatsApp RH prioritaires",
-      "Support technique dédié",
+      "Structure académique complète",
+      "Texte modifiable dans l'éditeur",
     ],
-    cta: "Découvrir Pro",
+    cta: "Télécharger l'APK",
+    ctaVariant: "secondary" as const,
+    popular: false,
+  },
+  {
+    name: "Mémoire",
+    icon: Zap,
+    price: "5 000 FCFA",
+    description: "Rédaction IA d'un mémoire de fin d'études",
+    period: "/ mémoire",
+    features: [
+      "Problématique, revue de littérature, méthodologie",
+      "Texte modifiable dans l'éditeur",
+    ],
+    cta: "Télécharger l'APK",
     ctaVariant: "secondary" as const,
     popular: false,
   },
@@ -90,10 +82,10 @@ export function Pricing() {
             💰 Tarifs transparents en FCFA
           </div>
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[var(--color-ink)] mb-4">
-            Des tarifs adaptés aux étudiants.
+            Paye seulement ce que tu utilises.
           </h2>
           <p className="text-lg text-[var(--color-ink-muted)] max-w-2xl mx-auto">
-            Sans engagement. Paye par Orange Money ou MTN MoMo en 10 secondes.
+            Aucun abonnement. Recharge dès 500 FCFA par Orange Money ou MTN MoMo. Document PDF : 250 FCFA.
           </p>
         </div>
 

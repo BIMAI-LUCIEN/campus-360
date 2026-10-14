@@ -53,7 +53,7 @@ export default function HeroScene() {
           {/* Screen — real app screenshot */}
           <div className="relative rounded-[1.6rem] overflow-hidden bg-[var(--color-paper)] aspect-[9/19.5]">
             <Image
-              src="/images/app-home.png"
+              src="/images/screens/accueil.png"
               alt="Écran d'accueil de l'app Campus 360"
               fill
               className="object-cover object-top"

@@ -6,18 +6,18 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Campus 360 — Trouve ton stage & révise tes cours avec l'IA",
+    default: "Campus 360 — Trouve ton stage avec l'IA",
     template: "%s · Campus 360",
   },
   description:
-    "Matching de stage par IA, Générateur de CV officiel RH en 30s, rappels de relance J+7, bibliothèque de 3 500+ PDFs et Wallet Mobile Money Orange/MTN.",
+    "Matching de stage par IA, CV officiel RH, lettre de motivation, relance à J+7, coach de soutenance et wallet Mobile Money Orange/MTN.",
   keywords: [
     "Stage IA",
     "Trouver un stage",
     "Générateur CV",
     "CV officiel RH",
     "Campus 360",
-    "PDFs académiques",
+    "Coach de soutenance",
     "Mobile Money",
     "Orange Money",
     "MTN MoMo",
@@ -39,21 +39,21 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     url: siteUrl,
     siteName: "Campus 360",
-    title: "Campus 360 — Trouve ton stage & révise tes cours avec l'IA",
+    title: "Campus 360 — Trouve ton stage avec l'IA",
     description:
-      "L'IA qui trouve les stages adaptés à ta filière, génère ton CV officiel RH en 30s et t'ouvre l'accès à 3 500+ cours d'universités.",
+      "L'IA qui trouve les stages adaptés à ta filière, génère ton CV officiel RH et t'aide à préparer ta soutenance.",
     images: [
       {
         url: "/images/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Campus 360 — Trouve ton stage & révise tes cours avec l'IA",
+        alt: "Campus 360 — Trouve ton stage avec l'IA",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Campus 360 — Trouve ton stage & révise tes cours avec l'IA",
+    title: "Campus 360 — Trouve ton stage avec l'IA",
     description:
       "Trouve ton stage, génère ton CV officiel RH et révise tes examens avec l'IA.",
     images: ["/images/og-image.png"],
@@ -92,7 +92,7 @@ const jsonLd = {
       url: siteUrl,
       logo: `${siteUrl}/images/logo.png`,
       description:
-        "Bibliothèque PDF académique pour étudiants africains. Achat de PDFs via Mobile Money, lecture offline, assistant IA.",
+        "Plateforme de stage et de rédaction académique pour étudiants africains : matching IA, CV officiel RH, suivi des candidatures, coach de soutenance, paiement Mobile Money.",
       sameAs: [
         "https://twitter.com/campus360",
         "https://github.com/BIMAI-LUCIEN/campus-360",

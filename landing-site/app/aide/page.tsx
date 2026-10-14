@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Search, MessageCircle, Mail, Phone } from "lucide-react";
+import { MessageCircle, Mail, Phone } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { SearchableFAQ } from "@/components/searchable-faq";
 
 export const metadata: Metadata = {
   title: "Centre d'aide Campus 360 — FAQ, contact, WhatsApp",
   description:
-    "Trouve des réponses à tes questions sur Campus 360. Installation, catalogue et abonnements.",
+    "Réponses à tes questions sur Campus 360 : installation, candidatures, wallet Mobile Money, coach de soutenance.",
   alternates: { canonical: "/aide" },
   openGraph: {
     title: "Centre d'aide Campus 360",
@@ -23,73 +23,65 @@ const categories = [
     faqs: [
       {
         q: "Comment installer Campus 360 sur mon téléphone ?",
-        a: "Télécharge l'APK depuis la page /telecharger, autorise les sources inconnues pour ton navigateur, puis ouvre le fichier. Instructions détaillées avec captures sur la page Télécharger.",
+        a: "Télécharge l'APK depuis la page Télécharger, autorise l'installation depuis ton navigateur, puis ouvre le fichier. L'application est disponible sur Android pour le moment.",
       },
       {
         q: "L'app est gratuite ?",
-        a: "Oui. L'inscription et la prévisualisation sont gratuites. Les offres Basique, Pro et Elite ajoutent progressivement l'export PDF avec filigrane, l'export PDF sans filigrane, puis l'export Word.",
+        a: "Oui. L'inscription est gratuite et ta première candidature IA est offerte. Ensuite, tu paies à l'usage avec ton wallet.",
       },
       {
-        q: "Puis-je essayer sans créer de compte ?",
-        a: "Tu peux parcourir le catalogue et prévisualiser les PDFs sans compte. Pour acheter ou télécharger, l'inscription est nécessaire (2 minutes, email ou Google).",
+        q: "Y a-t-il une version iPhone ?",
+        a: "Pas encore. La version iOS n'est pas disponible pour le moment.",
       },
     ],
   },
   {
-    name: "Achat & paiement",
+    name: "Stages & candidatures",
+    icon: "💼",
+    faqs: [
+      {
+        q: "Comment fonctionne le score de correspondance ?",
+        a: "L'IA compare ton profil à la description de chaque offre et affiche un pourcentage, tes points forts et un conseil pour ta candidature.",
+      },
+      {
+        q: "Comment envoyer ma candidature ?",
+        a: "Ouvre une offre, génère ton CV officiel RH et ta lettre, puis choisis le canal : dans l'app, par WhatsApp RH ou par e-mail RH.",
+      },
+      {
+        q: "Comment fonctionne la relance à J+7 ?",
+        a: "Chaque candidature est enregistrée dans ton suivi. Sept jours après l'envoi, Campus 360 te signale qu'une relance est utile.",
+      },
+    ],
+  },
+  {
+    name: "Wallet & paiement",
     icon: "💳",
     faqs: [
       {
         q: "Quels moyens de paiement acceptez-vous ?",
-        a: "Orange Money, MTN Mobile Money, cartes Visa/Mastercard, paiement cash chez nos partenaires (200+ points au Cameroun).",
+        a: "MTN MoMo et Orange Money. Le paiement se fait depuis ton téléphone, sans carte bancaire.",
       },
       {
         q: "Comment recharger mon wallet ?",
-        a: "Dans l'app : Wallet → Recharger → choisis le montant (500 FCFA minimum) → choisis ton mode de paiement → valide. Le wallet est crédité en 30 secondes.",
+        a: "Dans l'app : Profil → Recharger → choisis le montant (500 FCFA minimum) et ton moyen de paiement, puis valide.",
       },
       {
-        q: "Puis-je être remboursé ?",
-        a: "Oui. Garantie 14 jours satisfait ou remboursé, sans condition. Contacte le support avec ton numéro de commande.",
-      },
-      {
-        q: "Le solde de mon wallet expire ?",
-        a: "Non. Une fois crédité, ton solde est à toi pour toujours.",
+        q: "Combien coûte chaque action ?",
+        a: "Candidature : 500 FCFA (la première est offerte). Rapport de stage IA : 2 000 FCFA. Mémoire IA : 5 000 FCFA. Document PDF : 250 FCFA.",
       },
     ],
   },
   {
-    name: "Catalogue & PDFs",
-    icon: "📚",
+    name: "Coach & rédaction",
+    icon: "🎓",
     faqs: [
       {
-        q: "Combien y a-t-il de PDFs dans le catalogue ?",
-        a: "Plus de 3 500 PDFs couvrant Licence, Master, Médecine, Pharmacie, Ingénierie, Droit, etc. pour 28 universités camerounaises.",
+        q: "Comment fonctionne le coach de soutenance ?",
+        a: "Dans l'app, à partir de ton rapport, l'IA prépare des slides, ce que tu dois dire au jury et des questions pièges avec une réponse modèle.",
       },
       {
-        q: "Je ne trouve pas mon cours ?",
-        a: "Cherche par matière, code de cours ou université. Si rien ne correspond, demande dans la communauté Discord ou contacte-nous : on ajoute les PDFs manquants en priorité.",
-      },
-      {
-        q: "Puis-je vendre mes propres PDFs sur Campus 360 ?",
-        a: "Programme créateurs disponible. Contacte creators@campus360b.site avec une preuve que tu es l'auteur du contenu.",
-      },
-    ],
-  },
-  {
-    name: "Abonnements",
-    icon: "⭐",
-    faqs: [
-      {
-        q: "Que comprennent les offres ?",
-        a: "Basique permet l'export PDF avec filigrane, Pro permet l'export PDF sans filigrane et Elite ajoute l'export Word sans filigrane. Les détails à jour sont disponibles sur la page Tarifs.",
-      },
-      {
-        q: "Comment annuler ?",
-        a: "Dans l'app : Profil → Abonnement → Annuler. Sans engagement, remboursement au prorata des jours non utilisés.",
-      },
-      {
-        q: "Puis-je partager mon compte ?",
-        a: "Non, le compte et les droits d'export sont personnels.",
+        q: "Puis-je modifier le texte généré par l'IA ?",
+        a: "Oui. Le CV, la lettre et les rapports sont modifiables dans l'éditeur avant envoi ou export.",
       },
     ],
   },
@@ -134,20 +126,20 @@ export default function AidePage() {
               <p className="text-xs text-[var(--color-ink-light)]">Réponse sous 24h</p>
             </Link>
             <a
+              href="https://wa.me/237690273500"
+              className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
+            >
+              <Phone className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
+              <h3 className="font-bold font-display mb-1">WhatsApp</h3>
+              <p className="text-xs text-[var(--color-ink-light)]">+237 690 27 35 00</p>
+            </a>
+            <a
               href="mailto:support@campus360b.site"
               className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
             >
               <Mail className="w-8 h-8 text-[var(--color-sienna)] mx-auto mb-3" />
               <h3 className="font-bold font-display mb-1">Email</h3>
               <p className="text-xs text-[var(--color-ink-light)]">support@campus360b.site</p>
-            </a>
-            <a
-              href="https://wa.me/campus360"
-              className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
-            >
-              <Phone className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
-              <h3 className="font-bold font-display mb-1">WhatsApp</h3>
-              <p className="text-xs text-[var(--color-ink-light)]">Lun-Ven 8h-20h</p>
             </a>
           </div>
         </div>

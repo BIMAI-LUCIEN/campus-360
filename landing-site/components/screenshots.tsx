@@ -5,10 +5,10 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const screenshots = [
-  { src: "/images/app-home.png", alt: "Matching Stage IA Campus 360", label: "Matching Stage IA" },
-  { src: "/images/app-explore.png", alt: "Générateur CV Officiel RH", label: "Générateur CV Officiel" },
-  { src: "/images/app-premium.png", alt: "Catalogue PDFs Académiques", label: "Catalogue PDFs" },
-  { src: "/images/packs-card.png", alt: "Wallet Mobile Money FCFA", label: "Wallet Mobile Money" },
+  { src: "/images/screens/accueil.png", alt: "Accueil de l'app Campus 360", label: "Accueil" },
+  { src: "/images/screens/stages.png", alt: "Liste des stages avec score de correspondance", label: "Stages & matching IA" },
+  { src: "/images/screens/cv-officiel.png", alt: "Créer un CV officiel RH", label: "CV officiel RH" },
+  { src: "/images/screens/wallet.png", alt: "Recharge du wallet Mobile Money", label: "Wallet Mobile Money" },
 ];
 
 export function Screenshots() {
