@@ -7,7 +7,6 @@ import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 
 import { publicEnv } from '../../config/env';
-import type { PaidSubscriptionTier, SubscriptionTier } from '../subscriptions/plans';
 
 export type StudentSession = {
   user: {
@@ -51,7 +50,6 @@ export type StudentProfileUpdateInput = {
 export type StudentAccount = {
   user: StudentProfile;
   wallet: { balanceCoins: number; iaCredits: number; reportCredits: number };
-  subscription: { tier: SubscriptionTier; expiresAt: string | null };
   purchasedDocumentIds: string[];
   purchasedPackIds: string[];
   transactions: Array<{
@@ -317,32 +315,13 @@ const persistSessionPayload = async (payload: { token?: string | null; session?:
   if (payload.user) await authStorage.setItemAsync('campus-bordes_user', JSON.stringify(payload.user));
 };
 
-export const getOfflineStudentAccount = (storedUser?: Partial<StudentProfile>): StudentAccount => ({
-  user: {
-    id: storedUser?.id || 'student-offline',
-    name: storedUser?.name || 'Dave Lionel Kameni',
-    email: storedUser?.email || 'dave.kameni@polytechnique.cm',
-    role: storedUser?.role || 'student',
-    phone: storedUser?.phone || '+237 672 36 41 24',
-    whatsappPhone: storedUser?.whatsappPhone || '+237 672 36 41 24',
-    university: storedUser?.university || 'École Nationale Supérieure Polytechnique de Yaoundé',
-    faculty: storedUser?.faculty || 'Informatique & Génie Logiciel',
-    level: storedUser?.level || 'Master 1',
-    skills: storedUser?.skills || ['React Native', 'TypeScript', 'Node.js', 'APIs REST', 'PostgreSQL'],
-  },
-  wallet: {
-    balanceCoins: 5000,
-    iaCredits: 15,
-    reportCredits: 5,
-  },
-  subscription: {
-    tier: 'pro',
-    expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
-  },
-  purchasedDocumentIds: [],
-  purchasedPackIds: [],
-  transactions: [],
-});
+const SERVICE_UNAVAILABLE_MESSAGE = 'Service momentanément indisponible. Vérifie ta connexion et réessaie.';
+
+// A 5xx / network failure must surface as an error: never open a fake local session.
+const isServiceUnavailable = (message: string) => {
+  const text = message.toLowerCase();
+  return text.includes('momentan') || text.includes('indisponible') || text.includes('500') || text.includes('network');
+};
 
 const loadSession = async (): Promise<StudentSession | null> => {
   await hydratePromise.catch(() => {});
@@ -396,24 +375,14 @@ export const signInStudent = async (email: string, password: string) => {
         throw new EmailVerificationRequiredError(email);
       }
       const msg = errorMessage(result.error);
-      if (!msg.toLowerCase().includes('momentan') && !msg.toLowerCase().includes('indisponible') && !msg.toLowerCase().includes('500')) {
-        throw new Error(msg);
-      }
+      throw new Error(isServiceUnavailable(msg) ? SERVICE_UNAVAILABLE_MESSAGE : msg);
     }
   } catch (err) {
     if (err instanceof EmailVerificationRequiredError) throw err;
     const errText = err instanceof Error ? err.message : String(err);
-    if (!errText.toLowerCase().includes('momentan') && !errText.toLowerCase().includes('indisponible') && !errText.toLowerCase().includes('500')) {
-      throw err;
-    }
-    console.warn('[auth] Serveur distant indisponible, bascule sur session locale résiliente:', err);
+    throw new Error(isServiceUnavailable(errText) ? SERVICE_UNAVAILABLE_MESSAGE : errText);
   }
-
-  // Fallback résilient : connexion locale instantanée sans bloquer l'étudiant
-  const fallback = getOfflineStudentAccount({ email, name: email.split('@')[0] });
-  await authStorage.setItemAsync('campus-bordes_session_token', 'token-offline-resilient');
-  await authStorage.setItemAsync('campus-bordes_user', JSON.stringify(fallback.user));
-  return { user: fallback.user as StudentSession['user'] };
+  throw new Error('Connexion impossible.');
 };
 
 export const signInWithGoogle = async () => {
@@ -457,23 +426,13 @@ export const signUpStudent = async (
     }
     if (result.error) {
       const msg = errorMessage(result.error);
-      if (!msg.toLowerCase().includes('momentan') && !msg.toLowerCase().includes('indisponible') && !msg.toLowerCase().includes('500')) {
-        throw new Error(msg);
-      }
+      throw new Error(isServiceUnavailable(msg) ? SERVICE_UNAVAILABLE_MESSAGE : msg);
     }
   } catch (err) {
     const errText = err instanceof Error ? err.message : String(err);
-    if (!errText.toLowerCase().includes('momentan') && !errText.toLowerCase().includes('indisponible') && !errText.toLowerCase().includes('500')) {
-      throw err;
-    }
-    console.warn('[auth] Inscription distante échouée (serveur indisponible), bascule sur compte local:', err);
+    throw new Error(isServiceUnavailable(errText) ? SERVICE_UNAVAILABLE_MESSAGE : errText);
   }
-
-  // Fallback résilient
-  const fallback = getOfflineStudentAccount({ email, name, phone: extra?.phone, university: extra?.university, faculty: extra?.faculty, level: extra?.level });
-  await authStorage.setItemAsync('campus-bordes_session_token', 'token-offline-resilient');
-  await authStorage.setItemAsync('campus-bordes_user', JSON.stringify(fallback.user));
-  return { user: fallback.user as StudentSession['user'] };
+  throw new Error('Création du compte impossible.');
 };
 
 const normalizeOtp = (otp: string) => otp.replace(/\D/g, '').slice(0, 6);
@@ -577,21 +536,10 @@ export const authFetch = async (path: string, init: RequestInit = {}) => {
   return response;
 };
 
+// Errors propagate: the caller keeps the last known state instead of showing a fake account.
 export const getStudentAccount = async (): Promise<StudentAccount> => {
-  try {
-    const res = await authFetch('/api/mobile/account');
-    return (await res.json()) as StudentAccount;
-  } catch (err) {
-    console.warn('[auth] getStudentAccount fallback to offline account:', err);
-    let parsedUser: Partial<StudentProfile> | undefined;
-    const rawUser = authStorage.getItem('campus-bordes_user');
-    if (rawUser) {
-      try {
-        parsedUser = JSON.parse(rawUser);
-      } catch {}
-    }
-    return getOfflineStudentAccount(parsedUser);
-  }
+  const res = await authFetch('/api/mobile/account');
+  return (await res.json()) as StudentAccount;
 };
 
 export const updateStudentProfile = async (input: StudentProfileUpdateInput): Promise<StudentProfile> => {
@@ -631,12 +579,6 @@ export const checkTopUpStatus = async (reference: string) =>
   (await authFetch(`/api/mobile/wallet/topup/${reference}`, {
     method: 'GET',
   })).json() as Promise<{ status: string; balanceCoins?: number }>;
-
-export const purchaseSubscription = async (tier: PaidSubscriptionTier) =>
-  (await authFetch('/api/mobile/subscription/purchase', {
-    method: 'POST',
-    body: JSON.stringify({ tier }),
-  })).json() as Promise<{ ok: boolean; tier: string; expiresAt: string }>;
 
 export const purchaseIaPack = async (packId: 'micro' | 'standard' | 'boost') =>
   (await authFetch('/api/mobile/ia-packs/purchase', {

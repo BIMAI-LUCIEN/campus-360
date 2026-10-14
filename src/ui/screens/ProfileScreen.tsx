@@ -27,7 +27,6 @@ import {
 import { TransactionRow } from '../GlassComponents';
 import type { StudentProfile } from '../../features/auth/betterAuth';
 import type { Transaction } from '../../types';
-import { getSubscriptionPlan, type SubscriptionTier } from '../../features/subscriptions/plans';
 import {
   brandGradient,
   fontFamilies,
@@ -50,7 +49,6 @@ interface ProfileScreenProps {
   studentProfile: StudentProfile | null;
   balance: number;
   iaCredits: number;
-  subscriptionTier: SubscriptionTier;
   transactions: Transaction[];
   purchasedDocumentsCount: number;
   syncingAccount: boolean;
@@ -133,7 +131,6 @@ export function ProfileScreen({
   studentProfile,
   balance = 0,
   iaCredits = 0,
-  subscriptionTier,
   transactions,
   purchasedDocumentsCount,
   syncingAccount,
@@ -149,10 +146,6 @@ export function ProfileScreen({
   onSignInPress,
   onSignOut,
 }: ProfileScreenProps) {
-  const isPremium = subscriptionTier !== 'free';
-  const tierPlan = getSubscriptionPlan(subscriptionTier);
-  const tierLabel = tierPlan.name;
-
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = React.useState(false);
   const [isWhatsAppConnected, setIsWhatsAppConnected] = React.useState(false);
 

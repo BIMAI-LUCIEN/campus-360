@@ -258,7 +258,7 @@ export function AuthScreen({
                 </View>
               )}
 
-              {mode === 'new-password' && (
+              {(mode === 'new-password' || mode === 'sign-up') && (
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Confirmer le mot de passe</Text>
                   <GlassInput

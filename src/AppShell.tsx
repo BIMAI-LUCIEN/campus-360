@@ -54,8 +54,6 @@ import {
   signUpStudent,
   topUpStudentWallet,
   checkTopUpStatus,
-  purchaseSubscription,
-  purchaseIaPack,
   registerPushToken,
   type AuthCapabilities,
   type StudentProfile,
@@ -103,14 +101,6 @@ import { DocumentsScreen } from './features/documents/DocumentsScreen';
 import { StagesScreen } from './ui/screens/StagesScreen';
 import { ApplicationsTimelineScreen } from './ui/screens/ApplicationsTimelineScreen';
 import { ResourcesScreen } from './ui/screens/ResourcesScreen';
-import { DashboardScreen } from './ui/screens/DashboardScreen';
-import {
-  SUBSCRIPTION_PLANS,
-  getSubscriptionPlan,
-  hasActiveSubscription,
-  type PaidSubscriptionTier,
-  type SubscriptionTier,
-} from './features/subscriptions/plans';
 
 const logo = require('../assets/icon.png');
 const ONBOARDING_COMPLETED_KEY = 'campus360_onboarding_completed_permanent';
@@ -177,7 +167,7 @@ type ClientCatalogTab = 'packs' | 'catalog' | 'library';
 // Matches the server-side OTP rate limit (3 codes / 60 s).
 const OTP_RESEND_COOLDOWN_SECONDS = 60;
 
-type AppSection = 'stages' | 'applications' | 'resources' | 'account' | 'home' | 'dashboard' | 'explore' | 'library' | 'documents' | 'premium';
+type AppSection = 'stages' | 'applications' | 'resources' | 'account' | 'home' | 'explore' | 'library' | 'documents' | 'premium';
 
 const onboardingSlides = [
   { title: 'Trouve le bon PDF', text: 'Recherche par université, filière, matière ou niveau.' },
@@ -295,8 +285,6 @@ export function AppShell() {
   const [supportModalVisible, setSupportModalVisible] = React.useState(false);
   const [balance, setBalance] = React.useState(0);
   const [iaCredits, setIaCredits] = React.useState(5);
-  const [subscriptionTier, setSubscriptionTier] = React.useState<SubscriptionTier>('free');
-  const [subscriptionExpiresAt, setSubscriptionExpiresAt] = React.useState<string | null>(null);
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [purchasedDocuments, setPurchasedDocuments] = React.useState<string[]>([]);
   const [purchasedPacks, setPurchasedPacks] = React.useState<string[]>([]);
@@ -307,7 +295,6 @@ export function AppShell() {
   const [purchasingDocumentId, setPurchasingDocumentId] = React.useState<string | null>(null);
   const [purchasingPackId, setPurchasingPackId] = React.useState<string | null>(null);
   const [rechargeVisible, setRechargeVisible] = React.useState(false);
-  const [subscriptionVisible, setSubscriptionVisible] = React.useState(false);
   const [rechargeAmount, setRechargeAmount] = React.useState('1000');
   const [provider, setProvider] = React.useState<'MTN MoMo' | 'Orange Money'>('MTN MoMo');
   const [insufficientVisible, setInsufficientVisible] = React.useState(false);
@@ -591,8 +578,6 @@ export function AppShell() {
       }
       setBalance(account.wallet.balanceCoins);
       setIaCredits(account.wallet.iaCredits);
-      setSubscriptionTier(account.subscription.tier);
-      setSubscriptionExpiresAt(account.subscription.expiresAt);
       setPurchasedDocuments(account.purchasedDocumentIds);
       setPurchasedPacks(account.purchasedPackIds);
       setTransactions(
@@ -683,6 +668,7 @@ export function AppShell() {
     if ((authMode === 'sign-in' || authMode === 'sign-up') && !password) { Alert.alert('Connexion', 'Entre ton mot de passe.'); return; }
     if (authMode === 'sign-up' && name.length < 2) { Alert.alert('Création du compte', 'Entre ton nom.'); return; }
     if (authMode === 'sign-up' && password.length < 8) { Alert.alert('Création du compte', 'Choisis un mot de passe d’au moins 8 caractères.'); return; }
+    if (authMode === 'sign-up' && password !== authPasswordConfirm.trim()) { Alert.alert('Création du compte', 'Les deux mots de passe ne sont pas identiques.'); return; }
 
     setAuthLoading(true);
     setAuthNotice('');
@@ -797,7 +783,6 @@ export function AppShell() {
     setStudentProfile(null);
     setPurchasedDocuments([]); setPurchasedPacks([]);
     setBalance(0); setIaCredits(0);
-    setSubscriptionTier('free'); setSubscriptionExpiresAt(null);
     setTransactions([]);
     setAccountVisible(false);
     setActiveSection('home');
@@ -829,7 +814,7 @@ export function AppShell() {
   };
 
   const buyDocument = (document: CampusDocument) => {
-    const isOwned = effectivePurchasedDocuments.includes(document.id) || document.price === 0 || hasActiveSubscription(subscriptionTier);
+    const isOwned = effectivePurchasedDocuments.includes(document.id) || document.price === 0;
     if (isOwned) {
       setReadingDocument(document);
       return;
@@ -1001,26 +986,6 @@ export function AppShell() {
     if (rechargePollRef.current) clearInterval(rechargePollRef.current);
   }, []);
 
-  const buySubscription = async (tier: PaidSubscriptionTier) => {
-    try {
-      const result = await purchaseSubscription(tier);
-      setSubscriptionTier(result.tier as PaidSubscriptionTier);
-      setSubscriptionExpiresAt(result.expiresAt);
-      Alert.alert('Abonnement activé', `Tu as souscrit au forfait ${tier}.`);
-      await syncStudentAccount(studentSession ?? undefined);
-    } catch (error) { Alert.alert('Achat impossible', error instanceof Error ? error.message : 'Solde insuffisant ou erreur.'); }
-  };
-
-  const buyIaPack = async (packId: 'micro' | 'standard' | 'boost') => {
-    try {
-      const result = await purchaseIaPack(packId);
-      setBalance(result.balanceCoins);
-      setIaCredits(result.iaCredits);
-      Alert.alert('Pack IA ajouté', 'Tes crédits IA ont été mis à jour.');
-      await syncStudentAccount(studentSession ?? undefined);
-    } catch (error) { Alert.alert('Achat impossible', error instanceof Error ? error.message : 'Solde insuffisant ou erreur.'); }
-  };
-
   const handleDownloadUpdate = async () => {
     setUpdateLoading(true);
     try {
@@ -1030,10 +995,8 @@ export function AppShell() {
   };
 
   // ── Derived state ────────────────────────────────────────────────────────
-  const hasSubscription = hasActiveSubscription(subscriptionTier);
-  const effectivePurchasedDocuments = hasSubscription
-    ? Array.from(new Set([...pdfDocuments.map((d) => d.id), ...purchasedDocuments]))
-    : purchasedDocuments;
+  // 100 % wallet: a PDF is owned only when bought (individually or via a pack).
+  const effectivePurchasedDocuments = purchasedDocuments;
   const ownedLibrary = pdfDocuments.filter((d) => effectivePurchasedDocuments.includes(d.id));
   const openSection = (section: AppSection) => {
     if (section === 'home') { setActiveSection(section); setClientTab('packs'); return; }
@@ -1046,7 +1009,7 @@ export function AppShell() {
       if (!studentSession) { setActiveSection('account'); setAuthMode('sign-in'); setAuthNotice('Connecte-toi pour rédiger tes documents.'); setAuthVisible(true); return; }
       setActiveSection(section); return;
     }
-    if (section === 'premium') { setActiveSection('account'); setRechargeVisible(true); setSubscriptionVisible(false); return; }
+    if (section === 'premium') { setActiveSection('account'); setRechargeVisible(true); return; }
     setActiveSection(section);
   };
 
@@ -1062,11 +1025,6 @@ export function AppShell() {
           <DocumentEditorScreen
             documentId={editingDocumentId}
             onClose={() => setEditingDocumentId(null)}
-            subscriptionTier={subscriptionTier}
-            onUpgrade={() => {
-              setEditingDocumentId(null);
-              setActiveSection('premium');
-            }}
           />
         </SafeAreaView>
       </SafeAreaProvider>
@@ -1279,21 +1237,6 @@ export function AppShell() {
                 />
               )}
 
-              {activeSection === 'dashboard' && (
-                <DashboardScreen
-                  studentProfile={studentProfile}
-                  balance={balance}
-                  iaCredits={iaCredits}
-                  onApplyIa={() => openSection('stages')}
-                  onApplications={() => openSection('applications')}
-                  onDocuments={() => openSection('documents')}
-                  onStages={() => openSection('stages')}
-                  onRecharge={() => { setActiveSection('account'); setRechargeVisible(true); }}
-                  onProfile={() => openSection('account')}
-                  onNotifications={() => setNotificationsSettingsVisible(true)}
-                />
-              )}
-
               {activeSection === 'explore' && (
                 <ExploreScreen
                   documents={pdfDocuments}
@@ -1328,7 +1271,6 @@ export function AppShell() {
                   studentProfile={studentProfile}
                   balance={balance}
                   iaCredits={iaCredits}
-                  subscriptionTier={subscriptionTier}
                   transactions={transactions}
                   purchasedDocumentsCount={ownedLibrary.length}
                   syncingAccount={syncingAccount}
@@ -1358,7 +1300,7 @@ export function AppShell() {
 
 
 
-              {activeSection !== 'stages' && activeSection !== 'applications' && activeSection !== 'resources' && activeSection !== 'premium' && activeSection !== 'account' && activeSection !== 'home' && activeSection !== 'dashboard' && activeSection !== 'explore' && activeSection !== 'library' && activeSection !== 'documents' ? (
+              {activeSection !== 'stages' && activeSection !== 'applications' && activeSection !== 'resources' && activeSection !== 'premium' && activeSection !== 'account' && activeSection !== 'home' && activeSection !== 'explore' && activeSection !== 'library' && activeSection !== 'documents' ? (
                 <PdfStudentSection
                   documents={pdfDocuments}
                   packs={pdfPacks}
@@ -1430,7 +1372,7 @@ export function AppShell() {
             <View style={{ marginTop: 8 }}>
               <PrimaryButtonLocal label="Recharger mon portefeuille (MoMo / OM)" fluid onPress={() => { setAccountVisible(false); setRechargeVisible(true); }} />
             </View>
-            {(subscriptionTier === 'free' || !studentProfile?.email) && (
+            {!studentProfile?.email && (
               <View style={{ marginTop: 8 }}>
                 <PrimaryButtonLocal
                   label="Se connecter avec mon compte existant"
@@ -1720,170 +1662,6 @@ export function AppShell() {
 
       </SafeAreaView>
     </SafeAreaProvider>
-  );
-}
-
-// ── Premium Section ───────────────────────────────────────────────────────────
-function PremiumSection({
-  subscriptionTier,
-  balance,
-  iaCredits,
-  onBuySubscription,
-  onBuyIaPack,
-  onRecharge,
-}: {
-  subscriptionTier: SubscriptionTier;
-  balance: number;
-  iaCredits: number;
-  onBuySubscription: (tier: PaidSubscriptionTier) => void;
-  onBuyIaPack: (packId: 'micro' | 'standard' | 'boost') => void;
-  onRecharge: () => void;
-}) {
-  const PASSES = SUBSCRIPTION_PLANS.map((plan, index) => ({
-    ...plan,
-    folio: `— 0${index + 1}`,
-    price: plan.price === 0 ? 'Gratuit' : new Intl.NumberFormat('fr-CM').format(plan.price),
-    priceUnit: plan.price === 0 ? 'toujours' : 'FCFA / mois',
-    kicker: plan.key === 'free' ? 'Pour commencer' : plan.key === 'elite' ? 'Expérience complète' : 'Pour progresser',
-    body: plan.summary,
-    bullets: [...plan.benefits],
-    isFeatured: plan.key === 'pro',
-    cta: plan.key === 'free' ? 'Tu es ici' : `Choisir ${plan.name}`,
-  }));
-
-  const IA_PACKS = [
-    { id: 'micro' as const, name: 'Micro', credits: 20, price: 250, note: 'Une soirée' },
-    { id: 'standard' as const, name: 'Standard', credits: 50, price: 500, note: 'Un weekend' },
-    { id: 'boost' as const, name: 'Boost', credits: 120, price: 1000, note: "Une session d'examen" },
-  ];
-
-  return (
-    <View style={[styles.premiumContainer, styles.premiumContent]}>
-      <View style={styles.premiumHero}>
-        <Text style={styles.premiumEyebrow}>ABONNEMENTS</Text>
-        <Text style={styles.premiumTitle}>Choisis les bons outils.</Text>
-        <Text style={styles.premiumSubtitle}>
-          Choisis ton rythme. Change ou annule à tout moment.
-        </Text>
-      </View>
-
-      <View style={styles.passStack}>
-        {PASSES.map((pass) => {
-          const isCurrent = pass.key === subscriptionTier;
-          return (
-            <View
-              key={pass.key}
-              style={[
-                styles.passCard,
-                pass.isFeatured && styles.passCardFeatured,
-                isCurrent && styles.passCardCurrent,
-              ]}
-            >
-              {pass.isFeatured ? (
-                <LinearGradient
-                  colors={brandGradient.colors}
-                  start={brandGradient.horizontal.start}
-                  end={brandGradient.horizontal.end}
-                  style={styles.passRibbon}
-                >
-                  <Text style={styles.passRibbonText}>LE PLUS CHOISI</Text>
-                </LinearGradient>
-              ) : null}
-
-              <View style={styles.passCardTop}>
-                <Text style={styles.passKicker}>{pass.kicker.toUpperCase()}</Text>
-                {isCurrent ? <Text style={styles.passCurrentTag}>EN COURS</Text> : null}
-              </View>
-
-              <Text style={styles.passName}>{pass.name}</Text>
-
-              <View style={styles.passPriceRow}>
-                <Text style={styles.passPrice}>{pass.price}</Text>
-                {pass.priceUnit ? <Text style={styles.passPriceUnit}>{pass.priceUnit}</Text> : null}
-              </View>
-
-              <Text style={styles.passBody}>{pass.body}</Text>
-
-              <View style={styles.passBullets}>
-                {pass.bullets.map((b) => (
-                  <View key={b} style={styles.passBulletRow}>
-                    <View style={[styles.passBulletIcon, pass.isFeatured && styles.passBulletIconFeatured]}>
-                      <Check size={11} color={pass.isFeatured ? '#FFFFFF' : stitchColors.emerald} strokeWidth={3} />
-                    </View>
-                    <Text style={styles.passBulletText}>{b}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {pass.isFeatured ? (
-                <Pressable
-                  onPress={() => onBuySubscription('pro')}
-                  disabled={isCurrent}
-                  style={({ pressed }) => [isCurrent && { opacity: 0.5 }, pressed && !isCurrent && { opacity: 0.9 }]}
-                >
-                  <LinearGradient
-                    colors={brandGradient.colors}
-                    start={brandGradient.horizontal.start}
-                    end={brandGradient.horizontal.end}
-                    style={styles.passCtaFeatured}
-                  >
-                    <Text style={styles.passCtaFeaturedText}>{isCurrent ? 'Tu es ici' : pass.cta}</Text>
-                  </LinearGradient>
-                </Pressable>
-              ) : (
-                <Pressable
-                  style={[styles.passCta, isCurrent && { opacity: 0.5 }]}
-                  onPress={() => { if (pass.key === 'free') return; onBuySubscription(pass.key); }}
-                  disabled={pass.key === 'free' || isCurrent}
-                >
-                  <Text style={styles.passCtaText}>{isCurrent ? 'Tu es ici' : pass.cta}</Text>
-                </Pressable>
-              )}
-            </View>
-          );
-        })}
-      </View>
-
-      {/* IA top-up — icon-tile grid (consistent with Home quick actions) */}
-      <View style={styles.iaSection}>
-        <Text style={styles.blockTitle}>Bons de recharge IA</Text>
-        <View style={styles.iaGrid}>
-          {IA_PACKS.map((pack) => (
-            <Pressable
-              key={pack.id}
-              style={({ pressed }) => [styles.iaTile, pressed && styles.iaTilePressed]}
-              onPress={() => onBuyIaPack(pack.id)}
-            >
-              <View style={styles.iaTileIcon}>
-                <Sparkles size={18} color={stitchColors.sienna} strokeWidth={2} />
-              </View>
-              <Text style={styles.iaTileCredits}>{pack.credits}</Text>
-              <Text style={styles.iaTileCreditsLabel}>CRÉDITS</Text>
-              <Text style={styles.iaTileName}>{pack.name}</Text>
-              <Text style={styles.iaTilePrice}>{pack.price} C</Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-
-      {/* Wallet callout */}
-      <View style={styles.walletCallout}>
-        <Text style={styles.walletCalloutTitle}>Besoin de Coins ?</Text>
-        <Text style={styles.walletCalloutBody}>
-          Recharge via Mobile Money (MoMo / Orange Money), puis paie ce que tu veux.
-        </Text>
-        <Pressable onPress={onRecharge} style={({ pressed }) => pressed && { opacity: 0.9 }}>
-          <LinearGradient
-            colors={brandGradient.colors}
-            start={brandGradient.horizontal.start}
-            end={brandGradient.horizontal.end}
-            style={styles.walletCalloutCta}
-          >
-            <Text style={styles.walletCalloutCtaText}>Recharger le wallet</Text>
-          </LinearGradient>
-        </Pressable>
-      </View>
-    </View>
   );
 }
 

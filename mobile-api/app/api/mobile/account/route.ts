@@ -55,10 +55,11 @@ export async function GET(request: NextRequest) {
     if (access.response || !access.user) return withCors(access.response!, request);
     const user = access.user;
 
+    // No fake balance or identity on failure: a DB error surfaces as an error response.
     const [wallet, documents, packs, transactions] = await Promise.all([
-      databasePool.query('select balance_coins, ia_credits, report_credits from public.app_wallets where user_id = $1', [user.id]).catch(() => ({ rows: [{ balance_coins: 5000, ia_credits: 50, report_credits: 5 }] })),
-      databasePool.query('select document_id from public.app_document_purchases where buyer_id = $1', [user.id]).catch(() => ({ rows: [] })),
-      databasePool.query('select pack_id, document_ids from public.app_pack_purchases where buyer_id = $1', [user.id]).catch(() => ({ rows: [] })),
+      databasePool.query('select balance_coins, ia_credits, report_credits from public.app_wallets where user_id = $1', [user.id]),
+      databasePool.query('select document_id from public.app_document_purchases where buyer_id = $1', [user.id]),
+      databasePool.query('select pack_id, document_ids from public.app_pack_purchases where buyer_id = $1', [user.id]),
       databasePool.query(
         `select
            tx.id,
@@ -75,34 +76,27 @@ export async function GET(request: NextRequest) {
          where tx.user_id = $1
          order by tx.created_at desc limit 30`,
         [user.id],
-      ).catch(() => ({ rows: [] })),
+      ),
     ]);
 
     const packDocumentIds = packs.rows.flatMap((row) => row.document_ids ?? []);
-    const safeUser = user as any;
     return withCors(
       NextResponse.json({
         user: {
           id: user.id,
-          email: safeUser.email ?? 'dave.kameni@polytechnique.cm',
-          name: safeUser.name ?? 'Dave Lionel Kameni',
-          role: safeUser.role ?? 'student',
-          phone: safeUser.phone ?? '+237 672 36 41 24',
-          whatsappPhone: safeUser.whatsappPhone ?? '+237 672 36 41 24',
-          university: safeUser.university ?? 'École Nationale Supérieure Polytechnique de Yaoundé',
-          faculty: safeUser.faculty ?? 'Informatique & Génie Logiciel',
-          level: safeUser.level ?? 'Master 1',
+          email: user.email ?? undefined,
+          name: user.name ?? '',
+          role: user.role ?? 'student',
+          phone: user.phone ?? undefined,
+          whatsappPhone: user.whatsappPhone ?? undefined,
+          university: user.university ?? undefined,
+          faculty: user.faculty ?? undefined,
+          level: user.level ?? undefined,
         },
         wallet: {
-          balanceCoins: Number(wallet.rows[0]?.balance_coins ?? 5000),
-          iaCredits: Number(wallet.rows[0]?.ia_credits ?? 50),
-          reportCredits: Number(wallet.rows[0]?.report_credits ?? 5),
-        },
-        subscription: {
-          tier: String(user.subscription_tier || 'pro'),
-          expiresAt: user.subscription_expires_at
-            ? new Date(user.subscription_expires_at).toISOString()
-            : new Date(Date.now() + 30 * 86400000).toISOString(),
+          balanceCoins: Number(wallet.rows[0]?.balance_coins ?? 0),
+          iaCredits: Number(wallet.rows[0]?.ia_credits ?? 0),
+          reportCredits: Number(wallet.rows[0]?.report_credits ?? 0),
         },
         purchasedDocumentIds: Array.from(
           new Set([
@@ -120,35 +114,7 @@ export async function GET(request: NextRequest) {
       request,
     );
   } catch (error) {
-    console.warn('[mobile-account] Error caught, returning resilient student account:', error);
-    return withCors(
-      NextResponse.json({
-        user: {
-          id: 'student-offline',
-          email: 'dave.kameni@polytechnique.cm',
-          name: 'Dave Lionel Kameni',
-          role: 'student',
-          phone: '+237 672 36 41 24',
-          whatsappPhone: '+237 672 36 41 24',
-          university: 'École Nationale Supérieure Polytechnique de Yaoundé',
-          faculty: 'Informatique & Génie Logiciel',
-          level: 'Master 1',
-        },
-        wallet: {
-          balanceCoins: 5000,
-          iaCredits: 50,
-          reportCredits: 5,
-        },
-        subscription: {
-          tier: 'pro',
-          expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
-        },
-        purchasedDocumentIds: [],
-        purchasedPackIds: [],
-        transactions: [],
-      }),
-      request,
-    );
+    return withCors(mobileErrorResponse(error, request), request);
   }
 }
 

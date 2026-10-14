@@ -158,7 +158,7 @@ export async function verifyAndProcessMobilePaymentWebhook(params: {
     amount?: number;
     customer?: { email?: string; phone?: string };
   };
-}): Promise<{ success: boolean; studentId?: string; packType?: string; message: string }> {
+}): Promise<{ success: boolean; studentId?: string; packType?: string; amountCoins?: number; message: string }> {
   const webhookSecret = process.env.NOTCHPAY_WEBHOOK_SECRET?.trim();
 
   // Fail closed: a webhook that credits wallets must always be signed and verified.
@@ -239,7 +239,6 @@ export async function verifyAndProcessMobilePaymentWebhook(params: {
     );
 
     const isDiscovery = tx.type.includes('500') || tx.amount_coins === 500;
-    const isMonthly = tx.type.includes('2000') || tx.amount_coins === 2000;
 
     if (isDiscovery) {
       // Crédit de 5 candidatures IA (+50 tokens / +5 candidatures)
@@ -249,23 +248,16 @@ export async function verifyAndProcessMobilePaymentWebhook(params: {
           where auth_id = $1 or id::text = $1 or app_user_id::text = $1`,
         [tx.user_id],
       );
-    } else if (isMonthly) {
-      // Activation du pass 30 jours illimité
+    } else {
+      // 100 % wallet model (no subscription / monthly pass): the paid amount is credited in coins.
       await client.query(
-        `update public.stage_students
-            set is_premium = true,
-                boost_ends_at = coalesce(greatest(boost_ends_at, now()), now()) + interval '30 days'
-          where auth_id = $1 or id::text = $1 or app_user_id::text = $1`,
-        [tx.user_id],
+        `insert into public.app_wallets (user_id, balance_coins)
+         values ($1, $2)
+         on conflict (user_id) do update
+           set balance_coins = public.app_wallets.balance_coins + excluded.balance_coins,
+               updated_at = now()`,
+        [tx.user_id, Number(tx.amount_coins)],
       );
-      // Mettre à jour app_users également
-      await client.query(
-        `update public.app_users
-            set subscription_tier = 'pro',
-                subscription_expires_at = coalesce(greatest(subscription_expires_at, now()), now()) + interval '30 days'
-          where id::text = $1`,
-        [tx.user_id],
-      ).catch(() => {});
     }
 
     await client.query('commit');
@@ -273,10 +265,11 @@ export async function verifyAndProcessMobilePaymentWebhook(params: {
     return {
       success: true,
       studentId: tx.user_id,
-      packType: isDiscovery ? 'discovery_500' : 'monthly_2000',
+      packType: isDiscovery ? 'discovery_500' : 'wallet_topup',
+      amountCoins: Number(tx.amount_coins),
       message: isDiscovery
         ? '5 candidatures IA créditées avec succès.'
-        : 'Pass Mensuel Illimité 30 jours activé avec succès.',
+        : `${Number(tx.amount_coins)} coins crédités sur ton wallet.`,
     };
   } catch (err) {
     await client.query('rollback');

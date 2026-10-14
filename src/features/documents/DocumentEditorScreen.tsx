@@ -43,8 +43,6 @@ type DocumentSection = {
 type DocumentEditorScreenProps = {
   documentId: string;
   onClose: () => void;
-  subscriptionTier: 'free' | 'basic' | 'premium';
-  onUpgrade: () => void;
 };
 
 const downloadBlobOnWeb = (blob: Blob, filename: string) => {
@@ -605,7 +603,7 @@ const EditorSurface = React.forwardRef<EditorSurfaceHandle, EditorSurfaceProps>(
   }
 );
 
-export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, onUpgrade }: DocumentEditorScreenProps) {
+export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScreenProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [report, setReport] = useState<Document | null>(null);
@@ -858,14 +856,6 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
   // Export PDF
   const handleExportPdf = async () => {
     if (!report || sections.length === 0) return;
-    if (subscriptionTier === 'free') {
-      Alert.alert(
-        'Export PDF',
-        'Passez à Basic pour un export PDF filigrané, ou à Premium pour un export officiel sans filigrane.',
-        [{ text: 'Plus tard', style: 'cancel' }, { text: 'Voir les offres', onPress: onUpgrade }],
-      );
-      return;
-    }
 
     setExporting(true);
     try {
@@ -905,14 +895,6 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
   // Export Word
   const handleExportDocx = async () => {
     if (!report) return;
-    if (subscriptionTier !== 'premium') {
-      Alert.alert(
-        'Export Word Premium',
-        "L'export Word (.docx) modifiable est réservé à l'abonnement Premium.",
-        [{ text: 'Plus tard', style: 'cancel' }, { text: 'Voir Premium', onPress: onUpgrade }],
-      );
-      return;
-    }
 
     setExporting(true);
     try {
@@ -1028,7 +1010,7 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
             onPress={handleExportDocx}
             disabled={exporting}
           >
-            <Text style={styles.actionBtnText}>{subscriptionTier === 'premium' ? 'Word' : 'Word 🔒'}</Text>
+            <Text style={styles.actionBtnText}>Word</Text>
           </Pressable>
           <Pressable
             style={[styles.headerActionBtn, styles.pdfBtn]}
@@ -1038,7 +1020,7 @@ export function DocumentEditorScreen({ documentId, onClose, subscriptionTier, on
             {exporting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.actionBtnText}>{subscriptionTier === 'free' ? 'PDF 🔒' : 'PDF'}</Text>
+              <Text style={styles.actionBtnText}>PDF</Text>
             )}
           </Pressable>
         </View>

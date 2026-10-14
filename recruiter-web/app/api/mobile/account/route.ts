@@ -79,30 +79,24 @@ export async function GET(request: NextRequest) {
     ]);
 
     const packDocumentIds = packs.rows.flatMap((row) => row.document_ids ?? []);
-    const safeUser = user as any;
+    // Missing values stay empty (never placeholders) so the app asks for them.
     return withCors(
       NextResponse.json({
         user: {
           id: user.id,
-          email: safeUser.email ?? 'etudiant@campus360.local',
-          name: safeUser.name ?? 'Étudiant Campus 360',
-          role: safeUser.role ?? 'student',
-          phone: safeUser.phone ?? '',
-          whatsappPhone: safeUser.whatsappPhone ?? '',
-          university: safeUser.university ?? 'Université',
-          faculty: safeUser.faculty ?? 'Général',
-          level: safeUser.level ?? 'L3',
+          email: user.email ?? undefined,
+          name: user.name ?? '',
+          role: user.role ?? 'student',
+          phone: user.phone ?? undefined,
+          whatsappPhone: user.whatsappPhone ?? undefined,
+          university: user.university ?? undefined,
+          faculty: user.faculty ?? undefined,
+          level: user.level ?? undefined,
         },
         wallet: {
           balanceCoins: Number(wallet.rows[0]?.balance_coins ?? 0),
-          iaCredits: Number(wallet.rows[0]?.ia_credits ?? 50),
-          reportCredits: Number(wallet.rows[0]?.report_credits ?? 5),
-        },
-        subscription: {
-          tier: String(user.subscription_tier || 'free'),
-          expiresAt: user.subscription_expires_at
-            ? new Date(user.subscription_expires_at).toISOString()
-            : null,
+          iaCredits: Number(wallet.rows[0]?.ia_credits ?? 0),
+          reportCredits: Number(wallet.rows[0]?.report_credits ?? 0),
         },
         purchasedDocumentIds: Array.from(
           new Set([

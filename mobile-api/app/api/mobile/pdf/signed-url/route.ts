@@ -32,13 +32,8 @@ const requireEnv = (name: string) => {
   return value;
 };
 
-const hasActiveSubscription = (user: MobileUser) =>
-  ['basic', 'pro', 'elite'].includes(user.subscription_tier ?? '') &&
-  Boolean(user.subscription_expires_at) &&
-  new Date(user.subscription_expires_at as string) > new Date();
-
 const canReadFullDocument = async (document: CatalogDocument, user: MobileUser) => {
-  if (Number(document.price_coins ?? 0) <= 0 || hasActiveSubscription(user)) return true;
+  if (Number(document.price_coins ?? 0) <= 0) return true;
 
   const allowed = await databasePool.query(
     `select 1 from public.app_document_purchases

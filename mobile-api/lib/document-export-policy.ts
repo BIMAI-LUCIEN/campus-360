@@ -1,27 +1,16 @@
-import { getActiveSubscription } from './subscriptions';
-
-export type EffectiveSubscriptionTier = 'free' | 'basic' | 'pro' | 'elite';
-
 export type DocumentExportPolicy = {
-  effectiveTier: EffectiveSubscriptionTier;
   canExportPdf: boolean;
   pdfRequiresWatermark: boolean;
   canExportDocx: boolean;
 };
 
-export const resolveDocumentExportPolicy = (
-  effectiveTier: EffectiveSubscriptionTier,
-): DocumentExportPolicy => ({
-  effectiveTier,
-  canExportPdf: effectiveTier !== 'free',
-  pdfRequiresWatermark: effectiveTier === 'basic',
-  canExportDocx: effectiveTier === 'elite',
+// 100 % prepaid wallet model (no subscription): document generation is already paid with
+// coins / IA credits, so every authenticated student exports PDF (no watermark) and DOCX.
+export const WALLET_EXPORT_POLICY: DocumentExportPolicy = Object.freeze({
+  canExportPdf: true,
+  pdfRequiresWatermark: false,
+  canExportDocx: true,
 });
 
-export const getDocumentExportPolicy = async (userId: string): Promise<DocumentExportPolicy> => {
-  const subscription = await getActiveSubscription(userId);
-  const effectiveTier: EffectiveSubscriptionTier =
-    subscription && subscription.status !== 'payment_failed' ? subscription.tier : 'free';
-
-  return resolveDocumentExportPolicy(effectiveTier);
-};
+export const getDocumentExportPolicy = async (_userId: string): Promise<DocumentExportPolicy> =>
+  WALLET_EXPORT_POLICY;
