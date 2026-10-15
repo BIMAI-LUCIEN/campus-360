@@ -930,3 +930,10 @@ Non concerné : fonctionnalité interne de l'éditeur.
 - **Décision :** toutes les fonctions payantes sont gratuites pendant le lancement V1 (candidatures, génération de rapport/mémoire, PDF/packs, coach). Les tarifs (`src/types.ts`) restent dans le code et s'appliqueront après le lancement.
 - **Interrupteur :** variable serveur `FREE_LAUNCH_MODE` (absente = gratuit ; `false` = payant), lue par `lib/free-launch.ts` dans `mobile-api` et `recruiter-web`. L'app lit `account.wallet.freeLaunch` (module `src/config/launch.ts`) : aucune nouvelle version de l'app n'est nécessaire pour rebasculer en payant.
 - **Pour être effectif en production :** redéployer `mobile-api` (backend de l'app) et publier une mise à jour OTA de l'app (`eas-update.yml`).
+
+### Release : V1 gratuite + landing immersive (commit `eab3403` sur `origin/main`)
+- **Date & Heure :** 2026-10-15 ~16:55 UTC
+- **Contenu :** 68 fichiers (landing, film de démo, icône provisoire, mode gratuit mobile-api/recruiter-web, code app). Exclus : chantiers en cours (éditeur de documents, version 1.2.0, plugin image-picker).
+- **Statut VPS :** 🟢 `deploy-vps.yml` → `/opt/campus-360` sur `eab3403`, mobile-api / recruiter-web / landing `online`, `pm2 save` exécuté.
+- **Contrôles publics :** API `/api/health` 200 (`db: connected`), admin 200, landing 200 (« Tout est gratuit »), `/motion/demo.mp4` et `.webm` 200, `/api/mobile/account` sans session 401. `FREE_LAUNCH_MODE` présent sur le VPS mais différent de `false` → gratuité active.
+- **Reste :** mise à jour OTA (`eas-update.yml`) pour les écrans « Gratuit » de l'app ; nouveau build APK (`eas-android.yml`) pour l'icône — à lancer depuis GitHub (aucune session EAS sur le poste).
