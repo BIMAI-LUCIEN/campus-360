@@ -12,6 +12,7 @@ import { DocGenChat } from './DocGenChat';
 import { OfficialCvView } from '../stages/OfficialCvView';
 import { exportOfficialCvPdf } from '../stages/pdfExportService';
 import type { OfficialCvData } from '../../types';
+import { FREE_LABEL, isFreeLaunch } from '../../config/launch';
 
 const getDocBadgeTheme = (type: string) => {
   switch (type) {
@@ -31,8 +32,8 @@ const getDocBadgeTheme = (type: string) => {
 const TYPE_TILES = [
   { key: 'cv', label: 'CV RH Officiel', Icon: FileText, color: '#60A5FA', tint: 'rgba(96,165,250,0.14)', hasAi: true, priceLabel: 'Inclus' },
   { key: 'lettre_motivation', label: 'Lettre IA', Icon: Mail, color: '#F472B6', tint: 'rgba(244,114,182,0.14)', hasAi: true, priceLabel: 'Inclus' },
-  { key: 'stage', label: 'Rapport de stage', Icon: Briefcase, color: '#FBBF24', tint: 'rgba(251,191,36,0.14)', hasAi: true, priceLabel: '2 000 FCFA' },
-  { key: 'memoire', label: 'Mémoire Complet', Icon: GraduationCap, color: '#A855F7', tint: 'rgba(168,85,247,0.14)', hasAi: true, priceLabel: '5 000 FCFA' },
+  { key: 'stage', label: 'Rapport de stage', Icon: Briefcase, color: '#FBBF24', tint: 'rgba(251,191,36,0.14)', hasAi: true, priceLabel: isFreeLaunch() ? FREE_LABEL : '2 000 FCFA' },
+  { key: 'memoire', label: 'Mémoire Complet', Icon: GraduationCap, color: '#A855F7', tint: 'rgba(168,85,247,0.14)', hasAi: true, priceLabel: isFreeLaunch() ? FREE_LABEL : '5 000 FCFA' },
 ] as const;
 
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia, serif' }) as string;
@@ -92,7 +93,7 @@ const DOCUMENT_TYPES = [
     desc: 'Rédaction assistée, plan académique structuré, remerciements et annexes.',
     voice: 'mono' as const,
     voiceStyle: { fontFamily: MONO, fontWeight: '500' as const, letterSpacing: 0.5 },
-    badge: '2 000 FCFA',
+    badge: isFreeLaunch() ? FREE_LABEL : '2 000 FCFA',
     hasAi: true,
   },
   {
@@ -102,7 +103,7 @@ const DOCUMENT_TYPES = [
     desc: 'Problématique, cadre théorique, méthodologie et bibliographie aux normes.',
     voice: 'display' as const,
     voiceStyle: { fontFamily: SERIF, fontWeight: '900' as const, letterSpacing: -1.5 },
-    badge: '5 000 FCFA',
+    badge: isFreeLaunch() ? FREE_LABEL : '5 000 FCFA',
     hasAi: true,
   },
 ] as const;
@@ -265,7 +266,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
     }
 
     if (type === 'cv' || type === 'lettre_motivation') {
-      if (iaCredits !== null && iaCredits < IA_CREDITS_PER_GEN) {
+      if (!isFreeLaunch() && iaCredits !== null && iaCredits < IA_CREDITS_PER_GEN) {
         Alert.alert(
           'Crédits IA insuffisants',
           `Il te faut ${IA_CREDITS_PER_GEN} crédits IA pour générer ce document. Tu en as ${iaCredits}.`,
@@ -361,7 +362,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       Alert.alert('Titre requis', 'Donne un titre à ton document.');
       return;
     }
-    if (iaCredits !== null && iaCredits < IA_CREDITS_PER_GEN) {
+    if (!isFreeLaunch() && iaCredits !== null && iaCredits < IA_CREDITS_PER_GEN) {
       Alert.alert(
         'Crédits IA insuffisants',
         `Il te faut ${IA_CREDITS_PER_GEN} crédits IA pour générer ce document. Tu en as ${iaCredits}.`,

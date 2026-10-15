@@ -102,6 +102,7 @@ import { DocumentsScreen } from './features/documents/DocumentsScreen';
 import { StagesScreen } from './ui/screens/StagesScreen';
 import { ApplicationsTimelineScreen } from './ui/screens/ApplicationsTimelineScreen';
 import { ResourcesScreen } from './ui/screens/ResourcesScreen';
+import { setFreeLaunch } from './config/launch';
 
 const logo = require('../assets/icon.png');
 const ONBOARDING_COMPLETED_KEY = 'campus360_onboarding_completed_permanent';
@@ -583,6 +584,7 @@ export function AppShell() {
       }
       setBalance(account.wallet.balanceCoins);
       setIaCredits(account.wallet.iaCredits);
+      setFreeLaunch(account.wallet.freeLaunch ?? false);
       setPurchasedDocuments(account.purchasedDocumentIds);
       setPurchasedPacks(account.purchasedPackIds);
       setTransactions(

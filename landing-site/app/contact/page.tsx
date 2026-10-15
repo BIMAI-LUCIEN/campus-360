@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Mail, MessageCircle, Phone, Clock } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
+import { PageHero } from "@/components/landing/page-hero";
 import { ContactForm } from "@/components/contact-form";
 
 export const metadata: Metadata = {
@@ -24,7 +25,7 @@ const channels = [
     cta: "Envoyer un message",
     href: "https://wa.me/237690273500",
     color: "text-emerald-500",
-    bg: "bg-emerald-50",
+    bg: "bg-emerald-400/10",
   },
   {
     icon: Phone,
@@ -34,7 +35,7 @@ const channels = [
     cta: "Appeler",
     href: "tel:+237690273500",
     color: "text-amber-500",
-    bg: "bg-amber-50",
+    bg: "bg-amber-400/10",
   },
   {
     icon: Mail,
@@ -51,25 +52,7 @@ const channels = [
 export default function ContactPage() {
   return (
     <SiteShell>
-      <section className="py-16 lg:py-24 border-b border-[var(--color-ink-faint)]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-100 text-brand-700 text-sm font-semibold rounded-full mb-6">
-            <MessageCircle className="w-4 h-4" />
-            On est à ton écoute
-          </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display mb-6">
-            Comment nous{" "}
-            <span className="text-[var(--color-sienna)]">
-              contacter
-            </span>{" "}
-            ?
-          </h1>
-          <p className="text-lg text-[var(--color-ink-light)] max-w-2xl mx-auto">
-            Une question, un bug, une suggestion ? Notre équipe répond en
-            moins de 24h.
-          </p>
-        </div>
-      </section>
+      <PageHero kicker="On est à ton écoute" title="Comment nous" accent="contacter ?" subtitle="Une question, un bug, une suggestion ? Écris-nous sur WhatsApp, par email ou avec le formulaire." />
 
       <section className="py-12 bg-[var(--color-paper)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -80,7 +63,7 @@ export default function ContactPage() {
                 <a
                   key={c.title}
                   href={c.href}
-                  className="group p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
+                  className="reveal group p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
                 >
                   <div className={`inline-flex w-12 h-12 ${c.bg} rounded-xl items-center justify-center mb-3`}>
                     <Icon className={`w-6 h-6 ${c.color}`} />
@@ -107,7 +90,7 @@ export default function ContactPage() {
               <ContactForm />
             </div>
 
-            <aside className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)]">
+            <aside className="reveal p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)]">
               <div className="flex items-start gap-3 mb-6">
                 <Clock className="w-5 h-5 text-[var(--color-sienna)] flex-shrink-0 mt-0.5" />
                 <div>

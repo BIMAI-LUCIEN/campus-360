@@ -1,7 +1,25 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import localFont from "next/font/local";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
+
+// Self-hosted fonts: no request to a font CDN at page load.
+const displayFont = localFont({
+  src: "./fonts/bricolage-grotesque-latin-800-normal.woff2",
+  weight: "800",
+  variable: "--font-display-face",
+  display: "swap",
+});
+const sansFont = localFont({
+  src: [
+    { path: "./fonts/inter-latin-400-normal.woff2", weight: "400" },
+    { path: "./fonts/inter-latin-500-normal.woff2", weight: "500" },
+    { path: "./fonts/inter-latin-700-normal.woff2", weight: "700" },
+  ],
+  variable: "--font-sans-face",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -145,7 +163,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className="scroll-smooth">
+    <html lang="fr" className={`scroll-smooth ${displayFont.variable} ${sansFont.variable}`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/images/icon.png" />

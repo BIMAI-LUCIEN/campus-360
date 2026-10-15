@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { SiteShell } from "./site-shell";
+import { PageHero } from "./landing/page-hero";
 
 interface LegalPageProps {
   title: string;
@@ -10,10 +11,9 @@ interface LegalPageProps {
 export function LegalPage({ title, description, children }: LegalPageProps) {
   return (
     <SiteShell hidePromo>
+      <PageHero kicker="Informations légales" title={title} subtitle={description} compact />
       <article className="py-16 lg:py-20 bg-[var(--color-paper)]">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl sm:text-4xl font-extrabold font-display mb-4">{title}</h1>
-          <p className="text-lg text-[var(--color-ink-light)] mb-8">{description}</p>
+        <div className="reveal max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="prose prose-sm max-w-none text-[var(--color-ink-light)] space-y-6">
             {children}
           </div>

@@ -49,7 +49,7 @@ export type StudentProfileUpdateInput = {
 
 export type StudentAccount = {
   user: StudentProfile;
-  wallet: { balanceCoins: number; iaCredits: number; reportCredits: number };
+  wallet: { balanceCoins: number; iaCredits: number; reportCredits: number; freeLaunch?: boolean };
   purchasedDocumentIds: string[];
   purchasedPackIds: string[];
   transactions: Array<{

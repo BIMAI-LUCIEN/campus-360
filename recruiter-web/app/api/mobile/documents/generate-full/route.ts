@@ -1,3 +1,4 @@
+import { isFreeLaunch } from '@/lib/free-launch';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -14,7 +15,8 @@ import {
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-const IA_CREDITS_PER_GENERATION = 5;
+// Free during the V1 launch (see lib/free-launch.ts).
+const IA_CREDITS_PER_GENERATION = isFreeLaunch() ? 0 : 5;
 const GENERATION_CONCURRENCY = 3;
 
 const CANDIDATE_MODELS = [

@@ -1,5 +1,5 @@
 {
-  "total": 241,
+  "total": 233,
   "files": {
     "AppShell.tsx": 1,
     "components/FormattedMarkdown.tsx": 17,
@@ -18,8 +18,8 @@
     "ui/GlassComponents.tsx": 23,
     "ui/screens/ApplicationsTimelineScreen.tsx": 16,
     "ui/screens/AuthScreen.tsx": 1,
-    "ui/screens/DefenseCoachModal.tsx": 12,
-    "ui/screens/HomeScreen.tsx": 15,
+    "ui/screens/DefenseCoachModal.tsx": 6,
+    "ui/screens/HomeScreen.tsx": 13,
     "ui/screens/ProfileScreen.tsx": 7,
     "ui/screens/ResourcesScreen.tsx": 2,
     "ui/screens/ScrapedReportsView.tsx": 11,

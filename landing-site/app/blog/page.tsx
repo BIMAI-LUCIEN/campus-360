@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Calendar, Clock, ArrowRight, BookOpen } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
+import { PageHero } from "@/components/landing/page-hero";
 import { blogPosts } from "@/lib/blog-data";
 
 export const metadata: Metadata = {
@@ -26,24 +27,7 @@ export default function BlogIndexPage() {
   const [featured, ...rest] = blogPosts;
   return (
     <SiteShell>
-      <section className="py-16 lg:py-20 border-b border-[var(--color-ink-faint)]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-100 text-brand-700 text-sm font-semibold rounded-full mb-6">
-            <BookOpen className="w-4 h-4" />
-            Le blog Campus 360
-          </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display mb-6">
-            Conseils, méthodes et PDFs{" "}
-            <span className="text-[var(--color-sienna)]">
-              pour réussir
-            </span>
-          </h1>
-          <p className="text-lg text-[var(--color-ink-light)] max-w-2xl mx-auto">
-            Notre équipe et la communauté partagent leurs meilleures pratiques
-            pour réviser efficacement, choisir tes PDFs, et réussir tes exams.
-          </p>
-        </div>
-      </section>
+      <PageHero kicker="Le blog Campus 360" title="Conseils et méthodes" accent="pour réussir." subtitle="Stages, candidatures, rédaction et soutenance : les bonnes pratiques partagées par l'équipe." />
 
       {/* Featured */}
       <section className="py-12 bg-[var(--color-paper)]">

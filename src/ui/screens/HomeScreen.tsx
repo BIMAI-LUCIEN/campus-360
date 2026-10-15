@@ -34,12 +34,14 @@ import {
   stitchSpacing,
   stitchTypography,
   stitchShadows,
+  brandGradient,
 } from '../../theme/stitch';
 import {
   CategoryGrid,
   type CategoryItem,
 } from '../GlassComponents';
 import { getRotatingJobBanner } from './StagesScreen';
+import { analyzeJobMatch } from '../../features/stages/aiMatchEngine';
 
 interface HomeScreenProps {
   studentProfile?: StudentProfile | null;
@@ -124,10 +126,28 @@ export function HomeScreen({
     };
   }, [effectiveSkills]);
 
+  // Same profile mapping as the Stages tab, so both screens show the same score.
+  const matchProfile = useMemo(
+    () => ({
+      major: studentProfile?.faculty || '',
+      educationLevel: studentProfile?.level || '',
+      skills: effectiveSkills,
+    }),
+    [studentProfile?.faculty, studentProfile?.level, effectiveSkills],
+  );
+  // Real match score per offer (same engine as the Stages tab), best first.
   const recommendedJobs = useMemo(() => {
     if (!jobs || jobs.length === 0) return [];
-    return jobs.slice(0, 6);
-  }, [jobs]);
+    return jobs
+      .map((job) => ({ ...job, matchScore: analyzeJobMatch(job, matchProfile).score }))
+      .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))
+      .slice(0, 6);
+  }, [jobs, matchProfile]);
+  const recoReason = studentProfile?.faculty
+    ? `Classées selon ta filière : ${studentProfile.faculty}`
+    : 'Classées selon ton profil et tes compétences';
+  const matchTone = (score: number) =>
+    score >= 80 ? stitchColors.emeraldDeep : score >= 60 ? stitchColors.primary : stitchColors.warning;
 
   const firstName = studentProfile?.name
     ? studentProfile.name.trim().split(' ')[0]
@@ -220,23 +240,27 @@ export function HomeScreen({
           </Pressable>
         </View>
 
-        {/* ── 5. Carrousel #RecommandéPourToi avec Bannières Photos ──────── */}
+        {/* ── 5. Carrousel « Recommandé pour toi » (score réel) ──────────── */}
         {recommendedJobs.length > 0 && (
           <View style={styles.carouselSection}>
-            <View style={styles.sectionHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.sectionTitle}>#RecommandéPourToi</Text>
-                <View style={styles.sparklePill}>
-                  <Sparkles size={11} color={stitchColors.primary} />
-                  <Text style={styles.sparklePillText}>IA</Text>
-                </View>
-              </View>
-              <Pressable onPress={onStages} hitSlop={8}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                  <Text style={styles.seeAllText}>Explorer tout</Text>
+            <View style={styles.recoHeader}>
+              <View style={styles.recoTitleRow}>
+                <LinearGradient
+                  colors={brandGradient.colors}
+                  start={brandGradient.horizontal.start}
+                  end={brandGradient.horizontal.end}
+                  style={styles.recoKickerPill}
+                >
+                  <Sparkles size={11} color={stitchColors.white} />
+                  <Text style={styles.recoKickerText}>SÉLECTION IA</Text>
+                </LinearGradient>
+                <Pressable onPress={onStages} hitSlop={8} style={styles.recoSeeAll}>
+                  <Text style={styles.seeAllText}>Tout voir</Text>
                   <ChevronRight size={14} color={stitchColors.primary} />
-                </View>
-              </Pressable>
+                </Pressable>
+              </View>
+              <Text style={styles.recoTitle}>Recommandé pour toi</Text>
+              <Text style={styles.recoSubtitle} numberOfLines={1}>{recoReason}</Text>
             </View>
 
             <ScrollView
@@ -263,9 +287,14 @@ export function HomeScreen({
                     <View style={styles.carouselBadgeTop}>
                       <Text style={styles.carouselBadgeTopText}>{job.contractType || 'Stage'}</Text>
                     </View>
-                    <View style={styles.carouselMatchBadge}>
-                      <Zap size={10} color="#FDE047" fill="#FDE047" />
-                      <Text style={styles.carouselMatchText}>95% Match IA</Text>
+                    {index === 0 && (
+                      <View style={styles.carouselTopPick}>
+                        <Text style={styles.carouselTopPickText}>★ Meilleur choix</Text>
+                      </View>
+                    )}
+                    <View style={[styles.carouselMatchBadge, { backgroundColor: matchTone(job.matchScore ?? 0) }]}>
+                      <Zap size={10} color={stitchColors.white} fill={stitchColors.white} />
+                      <Text style={styles.carouselMatchText}>{job.matchScore ?? 0}% de correspondance</Text>
                     </View>
                   </View>
 
@@ -282,19 +311,21 @@ export function HomeScreen({
                         <CheckCircle2 size={12} color={stitchColors.emeraldDeep} />
                       )}
                     </View>
-                    <View style={styles.carouselMetaRow}>
-                      <View style={styles.carouselMetaItem}>
-                        <MapPin size={11} color={stitchColors.inkMuted} />
-                        <Text style={styles.carouselMetaText} numberOfLines={1}>
-                          {job.location || 'Douala / Yaoundé'}
-                        </Text>
+                    {job.location ? (
+                      <View style={styles.carouselMetaRow}>
+                        <View style={styles.carouselMetaItem}>
+                          <MapPin size={11} color={stitchColors.inkMuted} />
+                          <Text style={styles.carouselMetaText} numberOfLines={1}>
+                            {job.location}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
+                    ) : null}
                     <View style={styles.carouselFooter}>
                       <View style={{ flex: 1, paddingRight: 6 }}>
                         <Text style={styles.carouselStipendLabel}>Indemnité</Text>
                         <Text style={styles.carouselStipend} numberOfLines={1}>
-                          {job.stipend || '65 000 FCFA'}
+                          {job.stipend || 'À préciser'}
                         </Text>
                       </View>
                       <View style={styles.carouselApplyBadge}>
@@ -525,9 +556,70 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // 4. Carrousel #RecommandéPourToi
+  // 4. Carrousel « Recommandé pour toi »
   carouselSection: {
     marginBottom: 24,
+  },
+  recoHeader: {
+    paddingHorizontal: stitchSpacing.containerMargin,
+    marginBottom: 14,
+    gap: 8,
+  },
+  recoKickerPill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  recoKickerText: {
+    fontFamily: stitchTypography.labelMd.fontFamily,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    color: stitchColors.white,
+  },
+  recoTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  recoTitle: {
+    fontFamily: stitchTypography.displayHero.fontFamily,
+    fontSize: 22,
+    fontWeight: '800',
+    color: stitchColors.ink,
+    letterSpacing: -0.6,
+  },
+  recoSubtitle: {
+    marginTop: -4,
+    fontSize: 12.5,
+    color: stitchColors.inkMuted,
+  },
+  recoSeeAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: stitchColors.primaryContainer,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  carouselTopPick: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: stitchColors.white,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  carouselTopPickText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: stitchColors.primary,
   },
   sparklePill: {
     flexDirection: 'row',

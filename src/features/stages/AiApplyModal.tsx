@@ -43,6 +43,7 @@ import { PaymentModal } from '../wallet/PaymentModal';
 import { WhatsAppPairingModal } from '../whatsapp/WhatsAppPairingModal';
 import { getStoredWhatsAppStatus, cleanPhoneNumber } from '../whatsapp/whatsappService';
 import { stitchColors, fontFamilies, stitchRadius } from '../../theme/stitch';
+import { isFreeLaunch } from '../../config/launch';
 
 interface AiApplyModalProps {
   visible: boolean;
@@ -291,7 +292,8 @@ export function AiApplyModal({
       }
 
       // If student has 0 tokens, prompt Mobile Money payment modal
-      if (currentProfile.tokens !== undefined && currentProfile.tokens <= 0) {
+      // Free during the V1 launch: no credit gate.
+      if (!isFreeLaunch() && currentProfile.tokens !== undefined && currentProfile.tokens <= 0) {
         setShowPaymentModal(true);
         return;
       }
@@ -603,13 +605,15 @@ export function AiApplyModal({
                   </View>
                 )}
 
-                <Pressable
-                  onPress={() => setShowPaymentModal(true)}
-                  style={styles.rechargeHeaderBtn}
-                  testID="btn-open-payment"
-                >
-                  <Text style={styles.rechargeHeaderBtnText}>Recharge MoMo</Text>
-                </Pressable>
+                {!isFreeLaunch() && (
+                  <Pressable
+                    onPress={() => setShowPaymentModal(true)}
+                    style={styles.rechargeHeaderBtn}
+                    testID="btn-open-payment"
+                  >
+                    <Text style={styles.rechargeHeaderBtnText}>Recharge MoMo</Text>
+                  </Pressable>
+                )}
 
                 <Pressable
                   onPress={onClose}
