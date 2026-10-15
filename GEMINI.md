@@ -1,8 +1,8 @@
 # Instructions & Contexte IA - Campus 360
 
-> **RÈGLE D'OR D'ÉCONOMIE DE TOKENS (GRAPHIFY-FIRST) :**
+> **RÈGLE D'OR D'ÉCONOMIE DE TOKENS (PIVOT-FIRST) :**
 > Ne jamais ouvrir ni relire 20 fichiers de code à l'aveugle.
-> **Avant de lire des fichiers, consulte toujours la carte (`graphify-out/graph.json` ou `graphify-out/GRAPH_REPORT.md`)** pour comprendre l'architecture exacte et ne lire que le strict minimum nécessaire.
+> **Avant de lire du code, consulter toujours `contexte-code.md`, puis le périmètre de `plan.md` et le graphe sémantique (`graphify-out/GRAPH_REPORT.md`)** pour comprendre l'architecture exacte et ne lire que le strict minimum nécessaire.
 
 ## Stack & Commandes du Projet
 
