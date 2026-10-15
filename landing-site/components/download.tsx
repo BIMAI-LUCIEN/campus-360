@@ -51,8 +51,8 @@ export function Download() {
               pour installer.
             </h2>
             <p className="text-[var(--color-ink-muted)] max-w-sm leading-relaxed">
-              Disponible sur Android. Ouvre le lien dans Expo Go ou ton navigateur mobile
-              pour installer Campus 360.
+              Disponible sur Android. Scanne le code avec ton téléphone
+              pour télécharger l&apos;APK de Campus 360.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3">
@@ -101,7 +101,7 @@ export function Download() {
                 </div>
 
                 <p className="text-xs text-[var(--color-ink-lighter)] text-center">
-                  Ouvre le lien dans Expo Go ou ton navigateur mobile
+                  Ouvre le lien dans le navigateur de ton téléphone Android
                 </p>
               </div>
             </div>

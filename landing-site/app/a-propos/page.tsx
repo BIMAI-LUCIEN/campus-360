@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Heart, Target, Users, Sparkles, ArrowRight, Mail } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
+import { PageHero } from "@/components/landing/page-hero";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -49,25 +50,7 @@ const timeline = [
 export default function AProposPage() {
   return (
     <SiteShell>
-      <section className="py-16 lg:py-24 border-b border-[var(--color-ink)]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-100 text-brand-700 text-sm font-semibold rounded-full mb-6">
-            <Heart className="w-4 h-4" />
-            Notre histoire
-          </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display mb-6">
-            On a galéré,{" "}
-            <span className="text-[var(--color-sienna)]">
-              on a construit la solution
-            </span>
-          </h1>
-          <p className="text-lg text-[var(--color-ink-light)] max-w-2xl mx-auto">
-            Campus 360 est né en 2023 d&apos;un constat simple : un étudiant
-            camerounais paie ses PDFs jusqu&apos;à 5 fois plus cher qu&apos;un
-            étudiant européen, pour un contenu souvent moins bien classé.
-          </p>
-        </div>
-      </section>
+      <PageHero kicker="Notre histoire" title="On a galéré," accent="on a construit la solution." subtitle="Campus 360 est né en 2023 d'un constat simple : trouver un stage, rédiger son rapport et préparer sa soutenance, les étudiants le font trop souvent seuls et sans outils adaptés." />
 
       <section className="py-16 bg-[var(--color-paper)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -75,7 +58,7 @@ export default function AProposPage() {
             {values.map((v) => {
               const Icon = v.icon;
               return (
-                <div key={v.title} className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)]">
+                <div key={v.title} className="reveal p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)]">
                   <div className="w-12 h-12 rounded-xl bg-brand-50 text-[var(--color-sienna)] flex items-center justify-center mb-4">
                     <Icon className="w-6 h-6" />
                   </div>
@@ -105,7 +88,7 @@ export default function AProposPage() {
                 >
                   <div className="absolute left-6 sm:left-1/2 w-3 h-3 -ml-1.5 bg-[var(--color-sienna)] rounded-full ring-4 ring-[var(--color-paper)]" />
                   <div className="ml-14 sm:ml-0 sm:w-1/2">
-                    <div className="p-5 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)]">
+                    <div className="reveal p-5 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)]">
                       <div className="text-sm font-bold text-[var(--color-sienna)] mb-1">{t.year}</div>
                       <h3 className="text-lg font-bold font-display mb-1">{t.title}</h3>
                       <p className="text-sm text-[var(--color-ink-light)] leading-relaxed">{t.desc}</p>
