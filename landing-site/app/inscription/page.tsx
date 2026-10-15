@@ -10,11 +10,11 @@ export const revalidate = 0;
 export const metadata: Metadata = {
   title: "Inscription gratuite — Stage IA & CV officiel RH",
   description:
-    "Inscris-toi gratuitement à Campus 360 : matching de stage par IA, CV officiel RH, coach de soutenance : tout est gratuit pendant le lancement.",
+    "Inscris-toi gratuitement à Campus 360 : matching de stage par IA, CV officiel RH et ta première candidature offerte.",
   alternates: { canonical: "/inscription" },
   openGraph: {
     title: "Inscription gratuite Campus 360",
-    description: "Toutes les fonctions sont gratuites pendant le lancement.",
+    description: "Ta première candidature IA est offerte. Paiement à l'usage par Mobile Money.",
     url: "/inscription",
   },
 };
@@ -32,7 +32,7 @@ export default function InscriptionPage() {
                     Crée ton compte gratuit
                   </h1>
                   <p className="text-sm text-[var(--color-ink-light)]">
-                    2 minutes. Tout est gratuit pendant le lancement. Aucun engagement.
+                    2 minutes. Ta première candidature est offerte. Aucun engagement.
                   </p>
                 </div>
                 <InscriptionForm />
@@ -40,7 +40,7 @@ export default function InscriptionPage() {
             </div>
 
             <aside className="lg:col-span-2">
-              <div className="sticky top-24 p-6 rounded-3xl text-white bg-[image:var(--gradient-brand)] ">
+              <div className="sticky top-24 p-6 bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl text-white ">
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 backdrop-blur rounded-xl mb-4">
                   <Gift className="w-6 h-6" />
                 </div>
@@ -49,11 +49,11 @@ export default function InscriptionPage() {
                 </h2>
                 <ul className="space-y-3 text-sm">
                   {[
-                    "Toutes les fonctions gratuites pendant le lancement",
+                    "Ta première candidature IA offerte",
                     "CV officiel RH et lettre de motivation générés par l'IA",
                     "Matching de stage avec score de correspondance",
                     "Suivi de tes candidatures et relance à J+7",
-                    "Coach IA de soutenance",
+                    "Wallet rechargeable dès 500 FCFA (MTN MoMo, Orange Money)",
                   ].map((b) => (
                     <li key={b} className="flex items-start gap-2">
                       <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />

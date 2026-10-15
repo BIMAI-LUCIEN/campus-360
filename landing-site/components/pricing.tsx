@@ -7,19 +7,18 @@ const APK_URL =
   process.env.NEXT_PUBLIC_APK_DOWNLOAD_URL ??
   "https://campus360b.site/downloads/campus-360.apk";
 
-// V1 launch: everything is free (FREE_LAUNCH_MODE). Prices below apply after the launch,
-// aligned with the constants of the app (src/types.ts).
+// Per-use prices, aligned with the constants charged by the app (src/types.ts).
 const plans = [
   {
     name: "Découverte",
     icon: GraduationCap,
     price: "0 FCFA",
-    description: "Pour créer ton profil et tester l'app",
+    description: "Pour créer ton profil et tester l'IA",
     period: "",
     features: [
       "Compte gratuit",
+      "1ère candidature IA offerte (CV officiel RH + lettre)",
       "Matching de stage avec score de correspondance",
-      "Coach IA de soutenance",
     ],
     cta: "Télécharger l'APK",
     ctaVariant: "secondary" as const,
@@ -83,10 +82,10 @@ export function Pricing() {
             💰 Tarifs transparents en FCFA
           </div>
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[var(--color-ink)] mb-4">
-            Tout est gratuit pendant le lancement.
+            Paye seulement ce que tu utilises.
           </h2>
           <p className="text-lg text-[var(--color-ink-muted)] max-w-2xl mx-auto">
-            Pendant la V1, candidatures, CV, lettres, rapports, mémoires, coach de soutenance et PDF sont gratuits. Ensuite : paiement à l'usage par Orange Money ou MTN MoMo, sans abonnement.
+            Aucun abonnement. Recharge dès 500 FCFA par Orange Money ou MTN MoMo. Document PDF : 250 FCFA.
           </p>
         </div>
 
@@ -97,14 +96,14 @@ export function Pricing() {
             return (
               <div
                 key={plan.name}
-                className={`reveal relative rounded-2xl p-6 lg:p-8 flex flex-col transition-all hover:-translate-y-1 ${
+                className={`relative rounded-2xl p-6 lg:p-8 flex flex-col transition-all hover:-translate-y-1 ${
                   plan.popular
                     ? "bg-[var(--color-paper-soft)] border-2 border-[var(--color-sienna)] shadow-xl shadow-[var(--color-sienna)]/10"
                     : "bg-[var(--color-paper)] border border-[var(--color-ink-faint)]"
                 }`}
               >
                 {plan.popular && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-[image:var(--gradient-brand)] text-white text-xs font-bold rounded-full uppercase tracking-wider shadow-sm">
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-[var(--gradient-brand)] text-white text-xs font-bold rounded-full uppercase tracking-wider shadow-sm">
                     Le plus populaire
                   </div>
                 )}
@@ -113,7 +112,7 @@ export function Pricing() {
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                       plan.popular
-                        ? "bg-[image:var(--gradient-brand)] text-white"
+                        ? "bg-[var(--gradient-brand)] text-white"
                         : "bg-[var(--color-sienna-bg)] text-[var(--color-sienna-tone)]"
                     }`}
                   >
@@ -132,11 +131,13 @@ export function Pricing() {
 
                 <div className="mb-6">
                   <span className="font-display text-3xl lg:text-4xl font-extrabold text-[var(--color-ink)]">
-                    Gratuit
+                    {plan.price}
                   </span>
-                  <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-                    {plan.price === "0 FCFA" ? "Toujours gratuit" : `Pendant le lancement, puis ${plan.price} ${plan.period}`}
-                  </p>
+                  {plan.period && (
+                    <span className="text-sm text-[var(--color-ink-muted)] ml-1">
+                      {plan.period}
+                    </span>
+                  )}
                 </div>
 
                 <ul className="space-y-3 mb-8 flex-1">

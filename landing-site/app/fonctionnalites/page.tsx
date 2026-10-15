@@ -14,8 +14,6 @@ import {
   PenLine,
 } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
-import { TiltCard } from "@/components/landing/tilt-card";
-import { PageHero } from "@/components/landing/page-hero";
 
 export const metadata: Metadata = {
   title: "Fonctionnalités — Stage IA, CV officiel RH & Coach de soutenance",
@@ -24,7 +22,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/fonctionnalites" },
   openGraph: {
     title: "Fonctionnalités Campus 360",
-    description: "Stage IA, CV officiel RH, suivi J+7 et coach de soutenance, gratuits pendant le lancement.",
+    description: "Stage IA, CV officiel RH, suivi J+7, coach de soutenance et paiement Mobile Money à l'usage.",
     url: "/fonctionnalites",
   },
 };
@@ -78,7 +76,7 @@ const features = [
   {
     icon: Wallet,
     title: "Wallet Mobile Money",
-    desc: "Gratuit pendant le lancement. Ensuite, recharge dès 500 FCFA via Orange Money ou MTN MoMo, sans abonnement.",
+    desc: "Recharge dès 500 FCFA via Orange Money ou MTN MoMo. Tu paies à l'usage, sans abonnement.",
   },
   {
     icon: Bell,
@@ -95,17 +93,27 @@ const features = [
 export default function FonctionnalitesPage() {
   return (
     <SiteShell>
-      <PageHero kicker="Tout ce que l'app fait pour toi" title="Trouver ton stage, rédiger ton dossier," accent="réussir ta soutenance." subtitle="Postule, suis tes candidatures et prépare ton rapport au même endroit. Paiement local par Mobile Money, à l'usage." />
+      <section className="py-20 lg:py-28 border-b border-[var(--color-ink-faint)] bg-[var(--color-paper-deep)]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="kicker justify-center flex mb-4">Tout ce que l&apos;app fait pour toi</p>
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] mb-6 leading-[1.05] text-[var(--color-ink)]">
+            Trouver ton stage, rédiger ton dossier, réussir ta soutenance.
+          </h1>
+          <p className="text-lg text-[var(--color-ink-muted)] max-w-2xl mx-auto">
+            Postule, suis tes candidatures et prépare ton rapport au même endroit. Paiement local par Mobile Money, à l&apos;usage.
+          </p>
+        </div>
+      </section>
 
       <section className="py-16 lg:py-24 bg-[var(--color-paper)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((f) => {
               const Icon = f.icon;
               return (
-                <TiltCard
+                <div
                   key={f.title}
-                  className="reveal p-7 rounded-2xl bg-[var(--color-paper-soft)] border border-[var(--color-ink-faint)] hover:border-[var(--color-sienna)]/40"
+                  className="p-7 rounded-2xl bg-[var(--color-paper-soft)] border border-[var(--color-ink-faint)] hover:border-[var(--color-sienna)]/40 transition-all duration-300 hover:-translate-y-1"
                 >
                   <div className="w-12 h-12 rounded-xl bg-[var(--color-sienna-bg)] flex items-center justify-center text-[var(--color-sienna-tone)] mb-5">
                     <Icon className="w-6 h-6" strokeWidth={1.5} />
@@ -116,7 +124,7 @@ export default function FonctionnalitesPage() {
                   <p className="text-sm text-[var(--color-ink-muted)] leading-relaxed">
                     {f.desc}
                   </p>
-                </TiltCard>
+                </div>
               );
             })}
           </div>
@@ -129,12 +137,12 @@ export default function FonctionnalitesPage() {
             Prêt à postuler ?
           </h2>
           <p className="text-[var(--color-ink-muted)] mb-8 max-w-md mx-auto">
-            Téléchargement gratuit. Toutes les fonctions sont gratuites pendant le lancement.
+            Téléchargement gratuit. Ta première candidature IA est offerte.
           </p>
           <a
             href="https://campus360b.site/downloads/campus-360.apk"
             download="campus-360.apk"
-            className="inline-flex items-center gap-2 px-7 py-3.5 bg-[image:var(--gradient-brand)] hover:opacity-90 text-white font-bold rounded-[var(--radius-editorial)] transition-opacity shadow-lg"
+            className="inline-flex items-center gap-2 px-7 py-3.5 bg-[var(--gradient-brand)] hover:opacity-90 text-white font-bold rounded-[var(--radius-editorial)] transition-opacity shadow-lg"
           >
             <BookOpen className="w-5 h-5" />
             Télécharger Campus 360 (APK)

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MessageCircle, Mail, Phone } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
-import { PageHero } from "@/components/landing/page-hero";
 import { SearchableFAQ } from "@/components/searchable-faq";
 
 export const metadata: Metadata = {
@@ -28,7 +27,7 @@ const categories = [
       },
       {
         q: "L'app est gratuite ?",
-        a: "Oui. Pendant le lancement, toutes les fonctions sont gratuites : candidatures, CV, lettres, rapports, mémoires, coach et PDF. Ensuite, le paiement se fera à l'usage avec ton wallet.",
+        a: "Oui. L'inscription est gratuite et ta première candidature IA est offerte. Ensuite, tu paies à l'usage avec ton wallet.",
       },
       {
         q: "Y a-t-il une version iPhone ?",
@@ -68,7 +67,7 @@ const categories = [
       },
       {
         q: "Combien coûte chaque action ?",
-        a: "Rien pendant le lancement : tout est gratuit. Ensuite : candidature 500 FCFA, rapport de stage IA 2 000 FCFA, mémoire IA 5 000 FCFA, document PDF 250 FCFA.",
+        a: "Candidature : 500 FCFA (la première est offerte). Rapport de stage IA : 2 000 FCFA. Mémoire IA : 5 000 FCFA. Document PDF : 250 FCFA.",
       },
     ],
   },
@@ -91,7 +90,20 @@ const categories = [
 export default function AidePage() {
   return (
     <SiteShell>
-      <PageHero kicker="Centre d'aide" title="Comment on peut" accent="t'aider ?" subtitle="Tape ta question, ou contacte-nous directement sur WhatsApp au +237 690 27 35 00." />
+      <section className="py-16 lg:py-24 border-b border-[var(--color-ink-faint)]">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold font-display mb-6">
+            Comment on peut{" "}
+            <span className="text-[var(--color-sienna)]">
+              t&apos;aider
+            </span>{" "}
+            ?
+          </h1>
+          <p className="text-lg text-[var(--color-ink-light)] mb-8">
+            Tape ta question, ou contacte-nous directement.
+          </p>
+        </div>
+      </section>
 
       <section className="py-12 bg-[var(--color-paper)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -107,7 +119,7 @@ export default function AidePage() {
           <div className="grid sm:grid-cols-3 gap-4">
             <Link
               href="/contact"
-              className="reveal p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
+              className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
             >
               <MessageCircle className="w-8 h-8 text-[var(--color-sienna)] mx-auto mb-3" />
               <h3 className="font-bold font-display mb-1">Formulaire</h3>
@@ -115,7 +127,7 @@ export default function AidePage() {
             </Link>
             <a
               href="https://wa.me/237690273500"
-              className="reveal p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
+              className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
             >
               <Phone className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
               <h3 className="font-bold font-display mb-1">WhatsApp</h3>
@@ -123,7 +135,7 @@ export default function AidePage() {
             </a>
             <a
               href="mailto:support@campus360b.site"
-              className="reveal p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
+              className="p-6 bg-[var(--color-paper)] rounded-2xl border border-[var(--color-border)] hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
             >
               <Mail className="w-8 h-8 text-[var(--color-sienna)] mx-auto mb-3" />
               <h3 className="font-bold font-display mb-1">Email</h3>

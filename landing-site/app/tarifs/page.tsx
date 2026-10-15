@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { Pricing } from "@/components/pricing";
 import { SiteShell } from "@/components/site-shell";
-import { PageHero } from "@/components/landing/page-hero";
 
 export const metadata: Metadata = {
   title: "Tarifs Campus 360 — Orange Money & MTN MoMo",
   description:
-    "Campus 360 est gratuit pendant le lancement. Ensuite : candidature à 500 FCFA, rapport de stage à 2 000 FCFA, mémoire à 5 000 FCFA, sans abonnement.",
+    "Tarifs à l'usage, sans abonnement : 1ère candidature offerte, candidature à 500 FCFA, rapport de stage à 2 000 FCFA, mémoire à 5 000 FCFA.",
   alternates: { canonical: "/tarifs" },
   openGraph: {
     title: "Tarifs Campus 360",
@@ -26,18 +25,28 @@ const faq = [
   },
   {
     q: "Combien coûte une candidature ?",
-    a: "Rien pendant le lancement. Ensuite, 500 FCFA par candidature envoyée.",
+    a: "500 FCFA par candidature envoyée. Ta première candidature IA est offerte à la création de ton profil.",
   },
   {
     q: "Puis-je tester l'IA gratuitement ?",
-    a: "Oui, et sans limite pendant le lancement : candidatures, CV officiel RH, lettres, rapports et coach de soutenance sont gratuits.",
+    a: "Absolument. Dès la création de ton profil, la 1ère candidature IA avec CV officiel RH et lettre de motivation te sont offertes à 100%.",
   },
 ];
 
 export default function TarifsPage() {
   return (
     <SiteShell>
-      <PageHero kicker="Lancement V1" title="Tout est gratuit" accent="pendant le lancement." subtitle="Candidatures, CV, lettres, rapports, mémoires, coach de soutenance et PDF : teste tout sans payer. Les tarifs à l'usage s'appliqueront ensuite, sans abonnement." />
+      <section className="py-20 lg:py-28 border-b border-[var(--color-ink-faint)] bg-[var(--color-paper-deep)]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="kicker justify-center flex mb-4">Tarification claire & équitable</p>
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] mb-6 leading-[1.05] text-[var(--color-ink)]">
+            Sans engagement, sans frais cachés.
+          </h1>
+          <p className="text-lg text-[var(--color-ink-muted)] max-w-2xl mx-auto">
+            Paye uniquement ce dont tu as besoin avec ton téléphone Orange Money ou MTN MoMo.
+          </p>
+        </div>
+      </section>
 
       <Pricing />
 
@@ -51,7 +60,7 @@ export default function TarifsPage() {
             {faq.map((item) => (
               <div
                 key={item.q}
-                className="reveal p-6 rounded-2xl bg-[var(--color-paper-soft)] border border-[var(--color-ink-faint)]"
+                className="p-6 rounded-2xl bg-[var(--color-paper-soft)] border border-[var(--color-ink-faint)]"
               >
                 <h3 className="font-display text-lg font-bold text-[var(--color-ink)] mb-2.5">
                   {item.q}

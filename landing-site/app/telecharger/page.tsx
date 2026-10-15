@@ -13,7 +13,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
-import { PageHero } from "@/components/landing/page-hero";
 import { Button } from "@/components/ui/button";
 
 const APK_URL =
@@ -23,12 +22,12 @@ const APK_URL =
 export const metadata: Metadata = {
   title: "Télécharger Campus 360 APK — Gratuit pour Android",
   description:
-    "Télécharge l'app Campus 360 pour Android. Installation en 3 étapes, paiement Mobile Money. APK gratuit, sans pub.",
+    "Télécharge l'app Campus 360 pour Android. Installation en 3 étapes, fonctionne hors-ligne, paiement Mobile Money. APK gratuit, sans pub.",
   alternates: { canonical: "/telecharger" },
   openGraph: {
     title: "Télécharger Campus 360 APK pour Android",
     description:
-      "APK gratuit, sans publicité. Installation rapide, paiement Mobile Money.",
+      "APK gratuit, sans publicité. Installation rapide, mode hors-ligne, Mobile Money.",
     url: "/telecharger",
   },
 };
@@ -36,7 +35,7 @@ export const metadata: Metadata = {
 const changelog = [
   { version: "1.1.0", date: "23 juillet 2026", changes: ["Correction de la connexion et de la synchronisation du compte", "Éditeur de rédaction (CV, lettres, rapports) fiabilisé", "Assistant IA sur PDF : affichage correct des crédits restants", "Corrections de sécurité sur le portefeuille et les paiements", "Nouveau design épuré sur tout le parcours"] },
   { version: "1.0.1", date: "2 juillet 2026", changes: ["Renommage en Campus 360", "Corrections de bugs mineurs"] },
-  { version: "1.0.0", date: "1 juillet 2026", changes: ["Version initiale", "Catalogue de PDF", "Assistant IA", "Wallet Mobile Money"] },
+  { version: "1.0.0", date: "1 juillet 2026", changes: ["Version initiale", "Catalogue de 3 500+ PDFs", "Assistant IA", "Wallet Mobile Money"] },
 ];
 
 const requirements = [
@@ -49,31 +48,42 @@ const requirements = [
 export default function TelechargerPage() {
   return (
     <SiteShell>
-      <PageHero kicker="Téléchargement direct" title="Télécharge Campus 360," accent="gratuit pour Android." subtitle="Application Android gratuite, sans publicité. Toutes les fonctions sont gratuites pendant le lancement.">
-        <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
-          <a href={APK_URL} download="campus-360.apk">
-            <Button size="lg" variant="primary" className="gap-2 w-full sm:w-auto">
-              <Download className="w-5 h-5" />
-              campus-360.apk (71,5 Mo)
-            </Button>
-          </a>
-          <Link href="/contact">
-            <Button variant="outline" size="lg" className="w-full sm:w-auto">
-              Problème d&apos;installation ?
-            </Button>
-          </Link>
-        </div>
-        <div className="flex items-center justify-center gap-6 text-sm text-[var(--color-ink-muted)]">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-[var(--color-emerald)]" />
-            <span>APK signé</span>
+      <section className="py-20 lg:py-28 border-b border-[var(--color-ink-faint)]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="kicker justify-center flex mb-6">Téléchargement direct APK</p>
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] mb-6">
+            Télécharge Campus 360
+            <span className="block text-[var(--color-sienna)]">gratuit pour Android</span>
+          </h1>
+          <p className="text-lg text-[var(--color-ink-muted)] mb-8 max-w-2xl mx-auto">
+            APK signé, sans publicité, sans tracking. Fonctionne hors-ligne
+            après le premier téléchargement des PDFs.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
+            <a href={APK_URL} download="campus-360.apk">
+              <Button size="lg" variant="primary" className="gap-2 w-full sm:w-auto">
+                <Download className="w-5 h-5" />
+                campus-360.apk (71,5 Mo)
+              </Button>
+            </a>
+            <Link href="/contact">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                Problème d&apos;installation ?
+              </Button>
+            </Link>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-[var(--color-sienna)]" />
-            <span>v1.1.0</span>
+          <div className="flex items-center justify-center gap-6 text-sm text-[var(--color-ink-muted)]">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-[var(--color-emerald)]" />
+              <span>APK vérifié</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-[var(--color-sienna)]" />
+              <span>v1.1.0</span>
+            </div>
           </div>
         </div>
-      </PageHero>
+      </section>
 
       <section className="py-16 lg:py-24 bg-[var(--color-paper)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -137,7 +147,7 @@ export default function TelechargerPage() {
           </h2>
           <div className="grid sm:grid-cols-2 gap-4">
             {requirements.map((r) => (
-              <div key={r.label} className="reveal p-5 bg-[var(--color-paper-soft)] border border-[var(--color-ink)]/10 rounded-[var(--radius-editorial)] flex items-start gap-3">
+              <div key={r.label} className="p-5 bg-[var(--color-paper-soft)] border border-[var(--color-ink)]/10 rounded-[var(--radius-editorial)] flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-[var(--color-emerald)] flex-shrink-0 mt-0.5" />
                 <div>
                   <div className="text-sm text-[var(--color-ink-subtle)]">{r.label}</div>
