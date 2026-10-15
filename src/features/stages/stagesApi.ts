@@ -1,594 +1,15 @@
-import type { StageJob, StageApplication, StageCompany, StudentProfileData, AppStatus, CompanyStatus, ApplyMethod, OfficialCvData, JobKind } from '../../types';
-import { authFetch, authFetchRaw, authBaseUrl } from '../auth/betterAuth';
+import type { StageJob, StageApplication, StudentProfileData, AppStatus, OfficialCvData, JobKind } from '../../types';
+import { authFetch, authFetchRaw } from '../auth/betterAuth';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { analyzeJobMatch } from './aiMatchEngine';
-import { publicEnv } from '../../config/env';
+import { fitSecureStoreBudget, getUtf8ByteLength, pruneBulkyApplicationFields, purgeFakeApplications } from './applicationsCache';
+import { companyEmail, companyWhatsapp } from './contactTargets';
 
-export const SEED_COMPANIES: StageCompany[] = [
-  {
-    id: 'comp-1',
-    name: 'MTN Digital Communications Cameroun',
-    industry: 'Télécoms, Cloud & Cybersécurité',
-    address: 'Douala, Akwa Boulevard de la Liberté',
-    contactEmail: 'recrutement@mtn.cm',
-    contactWhatsapp: '+237670009988',
-    kybScore: 98,
-    status: 'VERIFIED',
-    isPremium: true,
-    logoUrl: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=120&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'comp-2',
-    name: 'Communauté Urbaine de Douala (CUD)',
-    industry: 'Administration, Urbanisme & Gestion',
-    address: 'Douala, Bonanjo',
-    contactEmail: 'stages@cud.cm',
-    contactWhatsapp: '+237699001122',
-    kybScore: 96,
-    status: 'VERIFIED',
-    isPremium: true,
-    logoUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=120&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'comp-3',
-    name: 'Source du Pays (Promote 2026)',
-    industry: 'Marketing, Ventes & Événementiel',
-    address: 'Yaoundé, Quartier Bastos',
-    contactEmail: 'rh@sourcedupays.cm',
-    contactWhatsapp: '+237677112233',
-    kybScore: 94,
-    status: 'VERIFIED',
-    isPremium: true,
-    logoUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=120&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'comp-4',
-    name: 'AgroLogix & Transit Portuaire',
-    industry: 'Logistique, Transit & Supply Chain',
-    address: 'Douala, Bonanjo Zone Portuaire',
-    contactEmail: 'rh@agrologix.cm',
-    contactWhatsapp: '+237690001122',
-    kybScore: 92,
-    status: 'VERIFIED',
-    isPremium: false,
-    logoUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=120&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'comp-5',
-    name: 'Afriland First Bank Cameroun',
-    industry: 'Banque, Finance & FinTech',
-    address: 'Yaoundé, Hippodrome',
-    contactEmail: 'talents@afrilandfirstbank.com',
-    contactWhatsapp: '+237699887766',
-    kybScore: 99,
-    status: 'VERIFIED',
-    isPremium: true,
-    logoUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=120&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'comp-6',
-    name: 'IBABEAUTY CAMEROON',
-    industry: 'Cosmétique, Logistique & Distribution',
-    address: 'Douala, Akwa',
-    contactEmail: 'recrutement@ibabeauty.cm',
-    contactWhatsapp: '+237691234567',
-    kybScore: 93,
-    status: 'VERIFIED',
-    isPremium: false,
-    logoUrl: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=120&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'comp-7',
-    name: 'Orange Digital Center Cameroun',
-    industry: 'Développement Web, Mobile & IA',
-    address: 'Douala, Boulevard de la Liberté',
-    contactEmail: 'digitalcenter@orange.cm',
-    contactWhatsapp: '+237655001122',
-    kybScore: 97,
-    status: 'VERIFIED',
-    isPremium: true,
-    logoUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=120&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'comp-8',
-    name: 'Cabinet JurisConsult Cameroun & CEMAC',
-    industry: 'Droit OHADA & Fiscalité des Affaires',
-    address: 'Yaoundé, Centre Administratif',
-    contactEmail: 'stages@juriscameroun.cm',
-    contactWhatsapp: '+237678123456',
-    kybScore: 95,
-    status: 'VERIFIED',
-    isPremium: false,
-    logoUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=120&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'comp-9',
-    name: 'Laboratoires SantéPlus Cameroun',
-    industry: 'Pharmacie, Santé & Analyse Biomédicale',
-    address: 'Yaoundé, Quartier Bastos',
-    contactEmail: 'rh@santeplus.cm',
-    contactWhatsapp: '+237677112233',
-    kybScore: 91,
-    status: 'VERIFIED',
-    isPremium: false,
-    logoUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=120&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'comp-10',
-    name: 'World Service Cameroun',
-    industry: 'Services, Secrétariat & Éducation',
-    address: 'Yaoundé, Melen',
-    contactEmail: 'stages@worldservice.cm',
-    contactWhatsapp: '+237672364124',
-    kybScore: 90,
-    status: 'VERIFIED',
-    isPremium: false,
-    logoUrl: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=120&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'comp-11',
-    name: 'Camtel Télécoms & Réseaux',
-    industry: 'Fibre Optique, Réseaux & Infrastructure',
-    address: 'Yaoundé, Boulevard du 20 Mai',
-    contactEmail: 'rh@camtel.cm',
-    contactWhatsapp: '+237622334455',
-    kybScore: 94,
-    status: 'VERIFIED',
-    isPremium: true,
-    logoUrl: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=120&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'comp-12',
-    name: 'Société Générale Cameroun (SGC)',
-    industry: 'Banque, Finance & Audit',
-    address: 'Douala, Bonanjo',
-    contactEmail: 'recrutement.cameroun@socgen.com',
-    contactWhatsapp: '+237693001122',
-    kybScore: 97,
-    status: 'VERIFIED',
-    isPremium: true,
-    logoUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=120&auto=format&fit=crop&q=80',
-  },
-];
+export { fitSecureStoreBudget, getUtf8ByteLength, pruneBulkyApplicationFields, purgeFakeApplications };
 
-export const SEED_JOBS: StageJob[] = [
-  {
-    id: 'job-1',
-    companyId: 'comp-1',
-    title: 'Stagiaire Développeur Frontend React Native / Mobile',
-    description: "Intégrez la Digital Factory de MTN Cameroun. Vous participerez à l'optimisation des applications mobiles grand public (MoMo, Ayoba), à l'intégration d'APIs REST résilientes et aux tests d'expérience utilisateur.",
-    requirements: ['React Native', 'TypeScript', 'Git', 'APIs REST', 'Mobile Money'],
-    applyMethod: 'WHATSAPP',
-    isSponsored: true,
-    source: 'INTERNAL',
-    location: 'Douala, Akwa',
-    duration: '3 à 6 mois',
-    contractType: 'Stage PFE',
-    stipend: 'Rémunéré (85 000 FCFA/mois)',
-    flyerUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=900&auto=format&fit=crop&q=80',
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[0],
-  },
-  {
-    id: 'job-2',
-    companyId: 'comp-2',
-    title: 'Stagiaire Assistant Administratif & Gestion des Projets',
-    description: "Appui aux services techniques et administratifs de la Communauté Urbaine de Douala (CUD). Traitement des dossiers d'aménagement urbain, numérisation des archives et accueil des usagers.",
-    requirements: ['Administration', 'Bureautique Word/Excel', 'Organisation', 'Communication'],
-    applyMethod: 'WHATSAPP',
-    isSponsored: false,
-    source: 'SCRAPED',
-    location: 'Douala, Bonanjo',
-    duration: '3 mois',
-    contractType: 'Stage Académique',
-    stipend: 'Rémunéré (60 000 FCFA/mois)',
-    flyerUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=900&auto=format&fit=crop&q=80',
-    createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-    expiresAt: new Date(Date.now() + 25 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[1],
-  },
-  {
-    id: 'job-3',
-    companyId: 'comp-3',
-    title: 'Offre de stage professionnel à Promote 2026',
-    description: "Représentation de la marque, accueil des partenaires économiques et animation commerciale des stands pendant le salon international Promote 2026 à Yaoundé.",
-    requirements: ['Marketing', 'Communication', 'Sens Commercial', 'Dynamisme', 'Anglais'],
-    applyMethod: 'WHATSAPP',
-    isSponsored: true,
-    source: 'SCRAPED',
-    location: 'Yaoundé, Palais des Congrès',
-    duration: '2 mois',
-    contractType: 'Stage Professionnel',
-    stipend: 'Rémunéré (90 000 FCFA/mois)',
-    flyerUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=900&auto=format&fit=crop&q=80',
-    createdAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
-    expiresAt: new Date(Date.now() + 40 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[2],
-  },
-  {
-    id: 'job-4',
-    companyId: 'comp-4',
-    title: 'Assistant(e) Logistique, Transit & Supply Chain',
-    description: "Suivi des déclarations douanières en zone portuaire de Douala, contrôle des manifestes de fret et gestion informatisée des stocks en entrepôt.",
-    requirements: ['Logistique', 'Transit Douane', 'Excel', 'Gestion de stocks', 'Organisation'],
-    applyMethod: 'EMAIL',
-    isSponsored: false,
-    source: 'INTERNAL',
-    location: 'Douala, Zone Portuaire',
-    duration: '6 mois',
-    contractType: 'Stage PFE',
-    stipend: 'Rémunéré (80 000 FCFA/mois)',
-    flyerUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=900&auto=format&fit=crop&q=80',
-    createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
-    expiresAt: new Date(Date.now() + 20 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[3],
-  },
-  {
-    id: 'job-5',
-    companyId: 'comp-5',
-    title: 'Stagiaire Analyste FinTech & Conformité Réglementaire',
-    description: "Participation à l'analyse des flux de transactions de paiement, veille sur les directives COBAC/CEMAC et élaboration de synthèses pour la direction des risques.",
-    requirements: ['Banque & Finance', 'Analyse Financière', 'Réglementation CEMAC', 'Excel Avancé', 'SQL'],
-    applyMethod: 'WHATSAPP',
-    isSponsored: true,
-    source: 'INTERNAL',
-    location: 'Yaoundé, Hippodrome',
-    duration: '6 mois',
-    contractType: 'Stage PFE',
-    stipend: 'Rémunéré (100 000 FCFA/mois)',
-    flyerUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=900&auto=format&fit=crop&q=80',
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[4],
-  },
-  {
-    id: 'job-6',
-    companyId: 'comp-6',
-    title: 'Avis de recrutement des STAGIAIRES en Logistique',
-    description: "IBABEAUTY CAMEROON recherche des stagiaires motivés pour soutenir son réseau de distribution de produits de beauté à Douala et Yaoundé. Préparation de commandes et inventaires.",
-    requirements: ['Logistique', 'Rigueur', 'Distribution', 'Gestion de stocks', 'Sens du détail'],
-    applyMethod: 'WHATSAPP',
-    isSponsored: true,
-    source: 'SCRAPED',
-    location: 'Douala, Akwa',
-    duration: '3 à 6 mois',
-    contractType: 'Stage Académique',
-    stipend: 'Rémunéré (70 000 FCFA/mois)',
-    flyerUrl: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=900&auto=format&fit=crop&q=80',
-    createdAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
-    expiresAt: new Date(Date.now() + 35 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[5],
-  },
-  {
-    id: 'job-7',
-    companyId: 'comp-7',
-    title: 'Stagiaire Développeur Full-Stack Web & Mobile',
-    description: "Projets à impact au sein d'Orange Digital Center Cameroun : conception d'applications React Native et Node.js pour des start-ups incubées et des PME camerounaises.",
-    requirements: ['React Native', 'Node.js', 'TypeScript', 'PostgreSQL', 'Docker'],
-    applyMethod: 'WHATSAPP',
-    isSponsored: true,
-    source: 'INTERNAL',
-    location: 'Douala, Boulevard de la Liberté',
-    duration: '6 mois',
-    contractType: 'Stage PFE',
-    stipend: 'Rémunéré (110 000 FCFA/mois)',
-    flyerUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=900&auto=format&fit=crop&q=80',
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 28 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[6],
-  },
-  {
-    id: 'job-8',
-    companyId: 'comp-8',
-    title: 'Juriste Stagiaire Droit des Affaires & Droit OHADA',
-    description: "Recherches juridiques, rédaction d'actes sous seing privé, suivi du contentieux commercial et fiscalité d'entreprises selon les normes OHADA au Cameroun.",
-    requirements: ['Droit des Affaires OHADA', 'Rédaction Juridique', 'Fiscalité Camerounaise', 'Rigueur'],
-    applyMethod: 'EMAIL',
-    isSponsored: false,
-    source: 'INTERNAL',
-    location: 'Yaoundé, Centre Administratif',
-    duration: '3 mois',
-    contractType: 'Stage Académique',
-    stipend: 'Rémunéré (75 000 FCFA/mois)',
-    flyerUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=900&auto=format&fit=crop&q=80',
-    createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-    expiresAt: new Date(Date.now() + 20 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[7],
-  },
-  {
-    id: 'job-9',
-    companyId: 'comp-9',
-    title: 'Stagiaire Assistant Qualité Biomédicale & Pharmacie',
-    description: "Contrôle de conformité des intrants pharmaceutiques, participation à la démarche qualité ISO et mise à jour des registres d'analyses biomédicales.",
-    requirements: ['Biologie / Biochimie', 'Contrôle Qualité', 'Normes Sanitaires', 'Méthode'],
-    applyMethod: 'PHYSICAL',
-    isSponsored: false,
-    source: 'INTERNAL',
-    location: 'Yaoundé, Bastos',
-    duration: '6 mois',
-    contractType: 'Stage PFE',
-    stipend: 'Rémunéré (85 000 FCFA/mois)',
-    flyerUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=900&auto=format&fit=crop&q=80',
-    createdAt: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString(),
-    expiresAt: new Date(Date.now() + 18 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[8],
-  },
-  {
-    id: 'job-10',
-    companyId: 'comp-10',
-    title: "Stage d'été 'Vacances Utiles' & Secrétariat",
-    description: "Accueil physique et orientation, saisie informatique de dossiers étudiants, classement et gestion du courrier pour le programme Vacances Utiles à Yaoundé.",
-    requirements: ['Secrétariat', 'Saisie Rapide', 'Accueil & Courtoisie', 'Word & Excel'],
-    applyMethod: 'WHATSAPP',
-    isSponsored: false,
-    source: 'SCRAPED',
-    location: 'Yaoundé, Melen',
-    duration: '2 mois',
-    contractType: 'Stage Académique',
-    stipend: 'Rémunéré (55 000 FCFA/mois)',
-    flyerUrl: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=900&auto=format&fit=crop&q=80',
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[9],
-  },
-  {
-    id: 'job-11',
-    companyId: 'comp-11',
-    title: 'Ingénieur Stagiaire Réseaux IP & Fibre Optique',
-    description: "Participation au raccordement fibre, supervision des points d'accès haut débit et configuration des équipements réseaux de transport Camtel.",
-    requirements: ['Réseaux Télécoms', 'Fibre Optique', 'Routage IP', 'Cisco / Linux', 'Sécurité'],
-    applyMethod: 'EMAIL',
-    isSponsored: true,
-    source: 'INTERNAL',
-    location: 'Yaoundé, Boulevard du 20 Mai',
-    duration: '6 mois',
-    contractType: 'Stage PFE',
-    stipend: 'Rémunéré (95 000 FCFA/mois)',
-    flyerUrl: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=900&auto=format&fit=crop&q=80',
-    createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
-    expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[10],
-  },
-  {
-    id: 'job-12',
-    companyId: 'comp-12',
-    title: 'Assistant(e) Contrôle de Gestion & Audit Interne',
-    description: "Participation aux travaux de cadrage budgétaire, revue des procédures internes et élaboration des reportings financiers pour la direction générale Cameroun.",
-    requirements: ['Audit', 'Contrôle de Gestion', 'Comptabilité Bancaire', 'Excel Avancé', 'Analyse Financière'],
-    applyMethod: 'WHATSAPP',
-    isSponsored: true,
-    source: 'INTERNAL',
-    location: 'Douala, Bonanjo',
-    duration: '6 mois',
-    contractType: 'Stage PFE',
-    stipend: 'Rémunéré (120 000 FCFA/mois)',
-    flyerUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=900&auto=format&fit=crop&q=80',
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 45 * 24 * 3600 * 1000).toISOString(),
-    company: SEED_COMPANIES[11],
-  },
-];
-
-export function getTopThreeMatches(jobs: StageJob[]): StageJob[] {
-  return [...jobs]
-    .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0))
-    .slice(0, 3);
-}
-
-const SEED_OFFICIAL_CV_1: OfficialCvData = {
-  titrePoste: 'Développeur Frontend React Native & Web Junior',
-  photoUrl: undefined,
-  detailsPersonnels: {
-    nom: 'KAMENI',
-    prenom: 'Dave Lionel',
-    nationalite: 'Camerounaise',
-    age: '22 ans',
-    email: 'dave.kameni@polytechnique.cm',
-    telephone: '672364124',
-    adresse: 'Yaoundé, Melen',
-  },
-  experiences: [
-    {
-      poste: 'Développeur Web & Mobile Stagiaire',
-      entreprise: 'Laboratoire d’Informatique Appliquée',
-      ville: 'Yaoundé',
-      periode: '2023 - 2024',
-      missions: [
-        'Conception d’écrans d’authentification et de formulaires dynamiques avec TypeScript & React Native.',
-        'Intégration d’API RESTful et gestion du cache d’état hors-ligne.',
-        'Mise en place de tests unitaires et vérification de la compatibilité multi-plateformes.',
-      ],
-    },
-  ],
-  formations: [
-    {
-      diplome: 'Licence 3 / Master 1 en Génie Logiciel',
-      etablissement: 'École Nationale Supérieure Polytechnique de Yaoundé',
-      ville: 'Yaoundé',
-      periode: '2022 - 2025',
-    },
-  ],
-  competences: {
-    professionnelles: [
-      'React Native, Expo, React.js & TypeScript',
-      'Intégration d’APIs REST & WebSocket',
-      'Conception UI moderne et responsive',
-      'Architecture logicielle propre et composants réutilisables',
-      'Git, GitHub Actions & tests automatisés',
-    ],
-    habilitesRelationnelles: [
-      'assidu',
-      'attentif',
-      'autonome',
-      'compréhensif',
-      'conciliant',
-      'consciencieux',
-      'courtois',
-      'créatif',
-      'curieux',
-    ],
-    logiciels: [
-      {
-        categorie: 'Langages & Frameworks',
-        items: ['TypeScript', 'JavaScript ES6+', 'React Native', 'React', 'Node.js', 'TailwindCSS'],
-      },
-      {
-        categorie: 'Outils & Environnements',
-        items: ['VS Code', 'Git/GitHub', 'Postman', 'Figma', 'Expo CLI'],
-      },
-    ],
-  },
-  langues: [
-    { langue: 'Français', niveau: 'langue maternelle' },
-    { langue: 'Anglais', niveau: 'courant (B2/C1)' },
-  ],
-  loisirs: ['hackathons', 'développement open-source', 'football', 'veille technologique'],
-};
-
-const SEED_OFFICIAL_CV_2: OfficialCvData = {
-  titrePoste: 'Assistant Designer UI/UX & Brand Content',
-  photoUrl: undefined,
-  detailsPersonnels: {
-    nom: 'KAMENI',
-    prenom: 'Dave Lionel',
-    nationalite: 'Camerounaise',
-    age: '22 ans',
-    email: 'dave.kameni@polytechnique.cm',
-    telephone: '672364124',
-    adresse: 'Yaoundé, Melen',
-  },
-  experiences: [
-    {
-      poste: 'Designer Graphique & Prototype Junior',
-      entreprise: 'Studio Créatif Digital',
-      ville: 'Douala',
-      periode: '2023',
-      missions: [
-        'Création de wireframes et prototypes interactifs Figma haute fidélité.',
-        'Élaboration de chartes graphiques et guidelines de composants design system.',
-        'Réalisation de visuels promotionnels réseaux sociaux sous Figma et Illustrator.',
-      ],
-    },
-  ],
-  formations: [
-    {
-      diplome: 'Licence en Informatique & Multimédia',
-      etablissement: 'Université de Yaoundé I',
-      ville: 'Yaoundé',
-      periode: '2022 - 2024',
-    },
-  ],
-  competences: {
-    professionnelles: [
-      'Figma (Design System, Autolayout, Tokens)',
-      'Adobe XD, Illustrator & Photoshop',
-      'Recherche utilisateur et tests d’ergonomie',
-      'Storytelling visuel & Brand Content',
-    ],
-    habilitesRelationnelles: [
-      'créatif',
-      'sens de l’écoute',
-      'empathique',
-      'méthodique',
-      'force de proposition',
-    ],
-    logiciels: [
-      {
-        categorie: 'Design & Prototypage',
-        items: ['Figma', 'Adobe Creative Cloud', 'Canva Pro', 'Principle'],
-      },
-    ],
-  },
-  langues: [
-    { langue: 'Français', niveau: 'langue maternelle' },
-    { langue: 'Anglais', niveau: 'professionnel' },
-  ],
-  loisirs: ['photographie', 'arts visuels', 'cinéma'],
-};
-
-const SEED_LETTER_1 = `Madame, Monsieur le Responsable du Recrutement,
-
-Actuellement étudiant en Génie Logiciel à l’École Nationale Supérieure Polytechnique de Yaoundé, je vous soumets avec enthousiasme ma candidature pour le poste de "Développeur Frontend React Native & Web Junior" chez TechNovation Labs.
-
-Fort de mes projets académiques et personnels en TypeScript et React Native, j’ai développé une solide rigueur dans la conception d'interfaces fluides, accessibles et connectées à des APIs performantes. Votre vision de l'innovation technologique en Afrique correspond exactement à mes aspirations professionnelles.
-
-Intégrer vos équipes représente pour moi une opportunité unique d'apporter ma réactivité et mes compétences tout en contribuant activement à vos déploiements de pointe.
-
-Je me tiens à votre entière disposition pour tout entretien d'évaluation.
-
-Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.
-
-Dave Lionel KAMENI`;
-
-const SEED_LETTER_2 = `Madame, Monsieur le Responsable des Talents,
-
-Passionné par le design d’interaction et la création d’identités visuelles percutantes, je vous présente ma candidature pour le stage d’"Assistant Designer UI/UX & Brand Content" au sein d'AfriDigital Agency & Studios.
-
-Ma maîtrise de Figma et ma sensibilité pour l'expérience utilisateur mobile me permettent de concevoir des parcours utilisateurs intuitifs adaptés aux réalités du marché africain. Rejoindre votre agence me permettrait de valoriser ma créativité au service de marques d’envergure.
-
-Restant à votre disposition pour vous présenter mon portfolio interactif lors d'un prochain échange.
-
-Cordialement,
-Dave Lionel KAMENI`;
-
-let localApplications: StageApplication[] = [
-  {
-    id: 'app-seed-1',
-    studentId: 'student-current',
-    jobId: 'job-1',
-    status: 'INTERVIEW',
-    appliedAt: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString(),
-    cvFileUrl: 'https://campus360.app/storage/cv-sample.pdf',
-    letterFileUrl: 'https://campus360.app/storage/letter-sample.pdf',
-    job: SEED_JOBS[0],
-    officialCv: SEED_OFFICIAL_CV_1,
-    generatedCvText: `CURRICULUM VITAE — DAVE LIONEL KAMENI
-Développeur Frontend React Native & Web Junior
-Yaoundé, Melen | 672364124 | dave.kameni@polytechnique.cm
-
-EXPÉRIENCE :
-Développeur Web & Mobile Stagiaire (Laboratoire d’Informatique Appliquée, 2023 - 2024)
-- Développement d’applications React Native & TypeScript.
-- Intégration d’APIs REST et synchronisation hors-ligne.
-
-FORMATION :
-Licence 3 / Master 1 Génie Logiciel — École Nationale Supérieure Polytechnique de Yaoundé (2022 - 2025)
-
-COMPÉTENCES :
-React Native, Expo, TypeScript, REST API, Git, Figma.`,
-    generatedLetterText: SEED_LETTER_1,
-    notes: 'Entretien visio Google Meet prévu ce jeudi à 15h00 avec le Lead Tech.',
-  },
-  {
-    id: 'app-seed-2',
-    studentId: 'student-current',
-    jobId: 'job-3',
-    status: 'PENDING',
-    appliedAt: new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString(),
-    lastRemindedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
-    job: SEED_JOBS[2],
-    officialCv: SEED_OFFICIAL_CV_2,
-    generatedCvText: `CURRICULUM VITAE — DAVE LIONEL KAMENI
-Assistant Designer UI/UX & Brand Content
-Yaoundé | 672364124 | dave.kameni@polytechnique.cm`,
-    generatedLetterText: SEED_LETTER_2,
-    notes: 'Dossier transmis par WhatsApp au Directeur Artistique.',
-  },
-  {
-    id: 'app-seed-3',
-    studentId: 'student-current',
-    jobId: 'job-5',
-    status: 'PENDING',
-    appliedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-    job: SEED_JOBS[4],
-    officialCv: SEED_OFFICIAL_CV_1,
-    generatedCvText: `CURRICULUM VITAE — DAVE LIONEL KAMENI
-Stagiaire Analyste FinTech & Data Junior`,
-    generatedLetterText: SEED_LETTER_1,
-  },
-];
+// Applications created during this session; the server stays the source of truth.
+let localApplications: StageApplication[] = [];
 
 export function calculateMatchScore(
   userSkills: string[] = [],
@@ -657,88 +78,22 @@ export async function fetchStageJobs(params?: {
     address?: string;
   };
 }): Promise<StageJob[]> {
-  let jobsList: StageJob[] = [];
+  const search = new URLSearchParams();
+  if (params?.query?.trim()) search.set('q', params.query.trim());
+  if (params?.sector && params.sector !== 'Tous') search.set('sector', params.sector);
+  const suffix = search.toString() ? `?${search.toString()}` : '';
 
+  let response: Response;
   try {
-    const search = new URLSearchParams();
-    if (params?.query?.trim()) search.set('q', params.query.trim());
-    if (params?.sector && params.sector !== 'Tous') search.set('sector', params.sector);
-    const suffix = search.toString() ? `?${search.toString()}` : '';
-
-    // 1. Tenter avec authFetchRaw (envoie le Bearer token si présent sans bloquer)
-    let response = await authFetchRaw(`/api/mobile/stages${suffix}`).catch(() => null);
-
-    // 2. Si non-ok, tenter un fetch direct sur l'URL publique
-    if (!response || !response.ok) {
-      const directUrl = `${authBaseUrl}/api/mobile/stages${suffix}`;
-      response = await fetch(directUrl).catch(() => null);
-    }
-
-    if (response && response.ok) {
-      const payload = (await response.json()) as { jobs?: StageJob[] };
-      if (Array.isArray(payload?.jobs) && payload.jobs.length > 0) {
-        jobsList = payload.jobs;
-      }
-    }
-  } catch (err) {
-    console.warn('[stagesApi] Erreur lors de la récupération des offres distantes:', err);
+    response = await authFetchRaw(`/api/mobile/stages${suffix}`);
+  } catch {
+    throw new Error('Pas de connexion au serveur. Vérifie ta connexion et réessaie.');
   }
-
-  // 3. Fallback direct et infaillible vers Supabase REST (Cloud PostgreSQL)
-  if (!jobsList || jobsList.length === 0) {
-    if (publicEnv.supabaseUrl && publicEnv.supabaseAnonKey) {
-      const supabaseRestUrl = `${publicEnv.supabaseUrl}/rest/v1/stage_jobs?select=*,company:stage_companies(*)&status=eq.published&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&order=created_at.desc&limit=100`;
-      const sbRes = await fetch(supabaseRestUrl, {
-        headers: {
-          apikey: publicEnv.supabaseAnonKey,
-          Authorization: `Bearer ${publicEnv.supabaseAnonKey}`,
-        },
-      }).catch(() => null);
-
-      if (sbRes && sbRes.ok) {
-        const rawRows = (await sbRes.json()) as any[];
-        if (Array.isArray(rawRows) && rawRows.length > 0) {
-          jobsList = rawRows.map((r) => ({
-            id: r.id,
-            companyId: r.company_id,
-            title: r.title,
-            description: r.description || '',
-            requirements: Array.isArray(r.requirements) ? r.requirements : [],
-            applyMethod: (r.apply_method || 'WHATSAPP') as ApplyMethod,
-            isSponsored: Boolean(r.is_sponsored),
-            source: r.source || 'SCRAPED',
-            kind: r.kind === 'emploi' ? 'emploi' : 'stage',
-            location: r.location || 'Cameroun',
-            duration: r.duration || '3 à 6 mois',
-            contractType: r.contract_type || 'Stage académique / professionnel',
-            stipend: r.stipend || 'Rémunéré',
-            flyerUrl: r.flyer_url,
-            createdAt: r.created_at,
-            expiresAt: r.expires_at,
-            company: r.company
-              ? {
-                  id: r.company.id,
-                  name: r.company.name,
-                  industry: r.company.industry || 'Entreprise Partenaire',
-                  address: r.company.address || r.location || 'Cameroun',
-                  contactEmail: r.company.contact_email,
-                  contactWhatsapp: r.company.contact_whatsapp,
-                  kybScore: r.company.kyb_score || 90,
-                  status: (r.company.status === 'UNVERIFIED' || r.company.status === 'SUSPENDED' ? r.company.status : 'VERIFIED') as CompanyStatus,
-                  isPremium: Boolean(r.company.is_premium),
-                  logoUrl: r.company.logo_url,
-                }
-              : undefined,
-          }));
-        }
-      }
-    }
+  const payload = (await response.json().catch(() => ({}))) as { jobs?: StageJob[]; error?: string };
+  if (!response.ok) {
+    throw new Error(payload.error || 'Offres indisponibles pour le moment.');
   }
-
-  // 4. Si toujours vide et mode hors-ligne absolu, repli sur le catalogue Cameroun seed
-  if (!jobsList || jobsList.length === 0) {
-    jobsList = [...SEED_JOBS];
-  }
+  let jobsList: StageJob[] = Array.isArray(payload.jobs) ? payload.jobs : [];
 
   // Filtrage local par mot-clé
   if (params?.query?.trim()) {
@@ -801,21 +156,16 @@ export async function fetchStageJobs(params?: {
     });
 }
 
-export async function fetchJobById(jobId: string): Promise<StageJob | null> {
-  const jobs = await fetchStageJobs();
-  return jobs.find((job) => job.id === jobId) ?? null;
-}
-
 export type GeneratedApplicationResult = {
   applicationId: string;
   cvText: string;
   letterText: string;
   officialCv?: OfficialCvData;
   pdfDownloadUrl?: string;
-  whatsappUrl: string;
+  whatsappUrl?: string;
   emailSubject: string;
   emailBody: string;
-  recipientEmail: string;
+  recipientEmail?: string;
   recipientWhatsapp?: string;
 };
 
@@ -831,120 +181,69 @@ export async function generateIaApplication(
     portfolioUrl?: string;
   }
 ): Promise<GeneratedApplicationResult> {
-  await new Promise(r => setTimeout(r, 1800));
-
-  const companyName = job.company?.name || "L'Entreprise";
-  const matchingSkillsStr = student.skills.slice(0, 3).join(', ') || 'mes compétences techniques';
+  const companyName = job.company?.name || "l'entreprise";
+  const matchingSkillsStr = student.skills.slice(0, 3).join(', ') || 'mes compétences';
 
   const nameParts = (student.fullName || '').trim().split(/\s+/).filter(Boolean);
-  let nom = 'KAMENI';
-  let prenom = 'Dave Lionel';
-  if (nameParts.length >= 2) {
-    nom = nameParts[0].toUpperCase();
-    prenom = nameParts.slice(1).join(' ');
-  } else if (nameParts.length === 1 && nameParts[0].toLowerCase() !== 'étudiant') {
-    nom = nameParts[0].toUpperCase();
-    prenom = 'Dave Lionel';
+  if (nameParts.length === 0) {
+    throw new Error('Ajoute ton nom dans ton profil avant de préparer une candidature.');
   }
-  const ville = job.location ? job.location.split('/')[0].trim() : 'Yaoundé';
+  const nom = nameParts[0].toUpperCase();
+  const prenom = nameParts.slice(1).join(' ');
+  const level = (student.educationLevel || '').trim();
+  const major = (student.major || '').trim();
 
+  // Only what the student told us. Missing parts print as "[à compléter]" in the CV.
   const officialCv: OfficialCvData = {
     titrePoste: job.title,
     photoUrl: undefined,
     detailsPersonnels: {
       nom,
       prenom,
-      nationalite: 'Camerounaise',
-      age: '22 ans',
       email: student.email,
-      telephone: student.phoneWhatsapp || '672364124',
-      adresse: ville,
+      telephone: student.phoneWhatsapp || '',
     },
-    experiences: [
-      {
-        poste: `Stagiaire ${student.major}`,
-        entreprise: 'Projets Académiques & Travaux Pratiques',
-        ville,
-        periode: '2023 - 2024',
-        missions: [
-          `Application des méthodologies de ${student.major} sur des cas pratiques d'entreprise`,
-          `Mise en œuvre des compétences clés : ${student.skills.slice(0, 3).join(', ') || 'analyse et développement'}`,
-          `Travail collaboratif et respect des spécifications fonctionnelles formulées`,
-        ],
-      },
-    ],
-    formations: [
-      {
-        diplome: `${student.educationLevel} en ${student.major}`,
-        etablissement: 'Université / Grande École',
-        ville,
-        periode: 'En cours',
-      },
-    ],
+    experiences: [],
+    formations: level || major
+      ? [{ diplome: [level, major].filter(Boolean).join(' en '), etablissement: '', ville: '', periode: 'En cours' }]
+      : [],
     competences: {
-      professionnelles: [
-        ...job.requirements.slice(0, 3),
-        'Résolution de problèmes et analyse fonctionnelle',
-        'Gestion du temps et esprit critique',
-      ],
-      habilitesRelationnelles: [
-        'assidu',
-        'attentif',
-        'autonome',
-        'compréhensif',
-        'conciliant',
-        'consciencieux',
-        'courtois',
-        'créatif',
-        'curieux',
-      ],
-      logiciels: [
-        {
-          categorie: 'Bureautique & Outils de Gestion',
-          items: ['Suite Office (Word, Excel, PowerPoint)', 'Google Workspace', 'Git'],
-        },
-        {
-          categorie: 'Technologies & Outils Spécialisés',
-          items: student.skills.length > 0 ? student.skills : ['Outils métiers'],
-        },
-      ],
+      professionnelles: student.skills,
+      habilitesRelationnelles: [],
+      logiciels: [],
     },
-    langues: [
-      { langue: 'Français', niveau: 'expérimenté' },
-      { langue: 'Anglais', niveau: 'intermédiaire' },
-    ],
-    loisirs: ['sport', 'lecture', 'veille technologique'],
+    langues: [],
+    loisirs: [],
   };
 
+  const orTodo = (text: string) => text.trim() || '[à compléter]';
   const cvText = `CURRICULUM VITAE — ${nom} ${prenom}
 ${job.title.toUpperCase()}
 
 DÉTAILS PERSONNELS :
 Nom : ${nom} | Prénom : ${prenom}
-Nationalité : ${officialCv.detailsPersonnels.nationalite} | Âge : ${officialCv.detailsPersonnels.age}
-Email : ${student.email} | Téléphone : ${officialCv.detailsPersonnels.telephone}
-Adresse : ${officialCv.detailsPersonnels.adresse}
+Email : ${student.email || '[à compléter]'} | Téléphone : ${officialCv.detailsPersonnels.telephone || '[à compléter]'}
 
 EXPÉRIENCE PROFESSIONNELLE :
-${officialCv.experiences.map(e => `• ${e.poste} — ${e.entreprise}, ${e.ville} (${e.periode})\n  ${e.missions.map(m => '- ' + m).join('\n  ')}`).join('\n')}
+${orTodo(officialCv.experiences.map(e => `• ${e.poste} — ${e.entreprise}, ${e.ville} (${e.periode})\n  ${e.missions.map(m => '- ' + m).join('\n  ')}`).join('\n'))}
 
 FORMATION :
-${officialCv.formations.map(f => `• ${f.diplome} — ${f.etablissement}, ${f.ville} (${f.periode})`).join('\n')}
+${orTodo(officialCv.formations.map(f => `• ${[f.diplome, f.etablissement, f.ville].filter(Boolean).join(' — ')} (${f.periode})`).join('\n'))}
 
 COMPÉTENCES PROFESSIONNELLES :
-• ${officialCv.competences.professionnelles.join('\n• ')}
+${orTodo(officialCv.competences.professionnelles.map(x => '• ' + x).join('\n'))}
 
 HABILITÉS PERSONNELLES ET RELATIONNELLES :
-${officialCv.competences.habilitesRelationnelles.join(', ')}
+${orTodo(officialCv.competences.habilitesRelationnelles.join(', '))}
 
 MAÎTRISE DES LOGICIELS :
-${officialCv.competences.logiciels.map(l => `• ${l.categorie} : ${l.items.join(', ')}`).join('\n')}
+${orTodo(officialCv.competences.logiciels.map(l => `• ${l.categorie} : ${l.items.join(', ')}`).join('\n'))}
 
 LANGUES :
-${officialCv.langues.map(l => `• ${l.langue} : ${l.niveau}`).join('\n')}
+${orTodo(officialCv.langues.map(l => `• ${l.langue} : ${l.niveau}`).join('\n'))}
 
 AUTRES INFORMATIONS IMPORTANTES :
-Loisirs : ${officialCv.loisirs.join(', ')}`.trim();
+Loisirs : ${orTodo(officialCv.loisirs.join(', '))}`.trim();
 
   const letterText = `À l'attention du Responsable des Recrutements,
 ${companyName}
@@ -967,12 +266,11 @@ ${student.fullName}
 ${student.phoneWhatsapp ? 'WhatsApp : ' + student.phoneWhatsapp : ''}
 ${student.email}`.trim();
 
-  const rawPhone = (job.company?.contactWhatsapp || '').replace(/[^0-9]/g, '');
-  const cleanPhone = rawPhone || '2250708091011';
+  const companyPhone = companyWhatsapp(job.company);
   const whatsappMessage = encodeURIComponent(
-    `Bonjour ${companyName}, je suis ${student.fullName}, étudiant en ${student.major}. Je vous transmets ma candidature pour le poste de "${job.title}". Vous pouvez consulter mon dossier complet et mon CV généré ici : https://campus360.app/candidatures/${student.fullName.toLowerCase().replace(/\s+/g, '-')}`
+    `Bonjour ${companyName}, je suis ${student.fullName}, étudiant en ${student.major}. Je vous transmets ma candidature pour le poste de "${job.title}".`
   );
-  const whatsappUrl = `https://wa.me/${cleanPhone}?text=${whatsappMessage}`;
+  const whatsappUrl = companyPhone ? `https://wa.me/${companyPhone}?text=${whatsappMessage}` : undefined;
 
   const emailSubject = encodeURIComponent(`Candidature : ${job.title} — ${student.fullName}`);
   const emailBody = encodeURIComponent(letterText);
@@ -985,51 +283,43 @@ ${student.email}`.trim();
     whatsappUrl,
     emailSubject,
     emailBody,
-    recipientEmail: job.company?.contactEmail || 'rh@entreprise.com',
+    recipientEmail: companyEmail(job.company) ?? undefined,
     recipientWhatsapp: job.company?.contactWhatsapp,
   };
 }
 
 export async function submitStageApplication(
-  jobId: string,
+  job: StageJob,
   cvText: string,
   letterText: string,
   officialCv?: OfficialCvData,
 ): Promise<string> {
-  let appId = '';
+  let response: Response;
   try {
-    const response = await authFetch('/api/mobile/stages/apply', {
+    response = await authFetchRaw('/api/mobile/stages/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId, cvText, letterText }),
+      body: JSON.stringify({ jobId: job.id, cvText, letterText }),
     });
-    if (response.ok) {
-      const payload = (await response.json()) as { application?: { id: string } };
-      if (payload?.application?.id) {
-        appId = payload.application.id;
-      }
-    }
-  } catch (e) {
-    console.warn('Network submit fallback to local memory:', e);
+  } catch {
+    throw new Error('Pas de connexion au serveur. Vérifie ta connexion et réessaie.');
+  }
+  const payload = (await response.json().catch(() => ({}))) as { application?: { id?: string }; error?: string };
+  const appId = payload.application?.id;
+  if (!response.ok || !appId) {
+    throw new Error(payload.error || "Ta candidature n'a pas pu être enregistrée.");
   }
 
-  if (!appId) {
-    appId = `app-local-${Date.now()}`;
-  }
-
-  // Always keep local list updated for instantaneous UI feedback
-  const targetJob = SEED_JOBS.find((j) => j.id === jobId) || SEED_JOBS[0];
   const newApplication: StageApplication = {
     id: appId,
     studentId: 'student-current',
-    jobId,
+    jobId: job.id,
     status: 'PENDING',
     appliedAt: new Date().toISOString(),
-    job: targetJob,
+    job,
     generatedCvText: cvText,
     generatedLetterText: letterText,
     officialCv,
-    notes: 'Candidature IA générée & transmise avec succès.',
   };
 
   localApplications = [newApplication, ...localApplications.filter((a) => a.id !== appId)];
@@ -1061,7 +351,6 @@ export interface DispatchStageApplicationResult {
   status: AppStatus;
   cvUrl?: string;
   message: string;
-  offline?: boolean;
 }
 
 /**
@@ -1071,19 +360,11 @@ export interface DispatchStageApplicationResult {
 export async function dispatchStageApplication(
   params: DispatchStageApplicationParams
 ): Promise<DispatchStageApplicationResult> {
-  let appId = '';
-  let status: AppStatus = 'SENT_PENDING';
-  let cvUrl = params.cvPdfUrl;
-  let message =
-    params.channel === 'whatsapp'
-      ? 'Candidature expédiée avec succès via WhatsApp.'
-      : 'Candidature expédiée avec succès par Email.';
-  let isOffline = false;
-
   const phone = params.studentPhone || params.phoneNumber || '';
 
+  let response: Response;
   try {
-    const response = await authFetchRaw('/api/mobile/stages/dispatch', {
+    response = await authFetchRaw('/api/mobile/stages/dispatch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1100,103 +381,53 @@ export async function dispatchStageApplication(
         phoneNumber: phone?.trim() || undefined,
       }),
     });
-
-    if (response.ok) {
-      const payload = (await response.json()) as {
-        success?: boolean;
-        applicationId?: string;
-        status?: AppStatus;
-        cvUrl?: string;
-        message?: string;
-      };
-      if (payload?.applicationId) {
-        appId = payload.applicationId;
-        status = payload.status || 'SENT_PENDING';
-        if (payload.cvUrl) cvUrl = payload.cvUrl;
-        if (payload.message) message = payload.message;
-      }
-    } else {
-      console.warn('[stagesApi] Dispatch server returned status:', response.status);
-    }
-  } catch (e) {
-    console.warn('[stagesApi] Network dispatch fallback to local memory:', e);
-    isOffline = true;
+  } catch {
+    throw new Error('Pas de connexion au serveur. Vérifie ta connexion et réessaie.');
   }
 
-  if (!appId) {
-    appId = `app-dispatch-${Date.now()}`;
-    isOffline = true;
-    message = 'Candidature enregistrée en local (mode hors-ligne).';
-  }
-
-  const targetJob = params.job || SEED_JOBS.find((j) => j.id === params.jobId) || SEED_JOBS[0];
-  const newApplication: StageApplication = {
-    id: appId,
-    studentId: 'student-current',
-    jobId: params.jobId,
-    status,
-    appliedAt: new Date().toISOString(),
-    job: targetJob,
-    cvFileUrl: cvUrl,
-    generatedCvText: params.cvText,
-    generatedLetterText: params.letterText,
-    officialCv: params.officialCv,
-    notes: `Candidature 1-Clic via ${params.channel === 'whatsapp' ? 'WhatsApp' : 'Email'}.`,
+  const payload = (await response.json().catch(() => ({}))) as {
+    applicationId?: string;
+    status?: AppStatus;
+    cvUrl?: string;
+    message?: string;
+    error?: string;
   };
+  if (!response.ok || !payload.applicationId) {
+    throw new Error(payload.error || "L'envoi a échoué. Réessaie.");
+  }
 
-  localApplications = [newApplication, ...localApplications.filter((a) => a.id !== appId)];
-  persistApplicationsLocally(localApplications);
+  const appId = payload.applicationId;
+  const status: AppStatus = payload.status || 'SENT_PENDING';
+  const cvUrl = payload.cvUrl || params.cvPdfUrl;
+
+  if (params.job) {
+    const newApplication: StageApplication = {
+      id: appId,
+      studentId: 'student-current',
+      jobId: params.jobId,
+      status,
+      appliedAt: new Date().toISOString(),
+      job: params.job,
+      cvFileUrl: cvUrl,
+      generatedCvText: params.cvText,
+      generatedLetterText: params.letterText,
+      officialCv: params.officialCv,
+      notes: `Candidature 1-Clic via ${params.channel === 'whatsapp' ? 'WhatsApp' : 'Email'}.`,
+    };
+    localApplications = [newApplication, ...localApplications.filter((a) => a.id !== appId)];
+    persistApplicationsLocally(localApplications);
+  }
 
   return {
     success: true,
     applicationId: appId,
     status,
     cvUrl,
-    message,
-    offline: isOffline,
+    message: payload.message || (params.channel === 'whatsapp' ? 'Candidature envoyée par WhatsApp.' : 'Candidature envoyée par e-mail.'),
   };
 }
 
 const APPLICATIONS_STORAGE_KEY = 'campus360_student_applications';
-
-/**
- * Prunes bulky optional fields (officialCv, generatedCvText, generatedLetterText)
- * so that local persistence remains lean and fits within storage limits.
- */
-function pruneBulkyApplicationFields(app: StageApplication): StageApplication {
-  const { officialCv, generatedCvText, generatedLetterText, ...lean } = app;
-  return lean as StageApplication;
-}
-
-function getUtf8ByteLength(str: string): number {
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.byteLength(str, 'utf8');
-  }
-  let s = str.length;
-  for (let i = str.length - 1; i >= 0; i--) {
-    const code = str.charCodeAt(i);
-    if (code > 0x7f && code <= 0x7ff) s++;
-    else if (code > 0x7ff && code <= 0xffff) s += 2;
-    if (code >= 0xdc00 && code <= 0xdfff) i--;
-  }
-  return s;
-}
-
-/**
- * Trims applications array so that serialized JSON stays strictly below 1800 bytes,
- * preventing native SecureStore 2048-byte quota exceptions.
- */
-function fitSecureStoreBudget(apps: StageApplication[], maxBytes = 1800): string {
-  let list = apps.map(pruneBulkyApplicationFields);
-  while (list.length > 0) {
-    const raw = JSON.stringify(list);
-    if (getUtf8ByteLength(raw) <= maxBytes) {
-      return raw;
-    }
-    list.pop();
-  }
-  return '[]';
-}
 
 export async function getStoredApplicationsAsync(): Promise<StageApplication[]> {
   try {
@@ -1209,40 +440,17 @@ export async function getStoredApplicationsAsync(): Promise<StageApplication[]> 
       raw = await SecureStore.getItemAsync(APPLICATIONS_STORAGE_KEY).catch(() => null);
     }
     if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((app: Partial<StageApplication>) => {
-          const seedJob = SEED_JOBS.find((j) => j.id === app.jobId) || SEED_JOBS[0];
-          return {
-            ...app,
-            job: app.job || seedJob,
-          } as StageApplication;
-        });
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const stored = parsed as StageApplication[];
+        const clean = purgeFakeApplications(stored);
+        // Old builds stored sample seeds and offline placeholders: rewrite without them.
+        if (clean.length !== stored.length) persistApplicationsLocally(clean);
+        return clean;
       }
     }
   } catch (err) {
     console.warn('[stagesApi] Error reading stored applications:', err);
-  }
-  return [];
-}
-
-function getStoredApplications(): StageApplication[] {
-  if (typeof localStorage !== 'undefined') {
-    try {
-      const raw = localStorage.getItem(APPLICATIONS_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((app: Partial<StageApplication>) => {
-            const seedJob = SEED_JOBS.find((j) => j.id === app.jobId) || SEED_JOBS[0];
-            return {
-              ...app,
-              job: app.job || seedJob,
-            } as StageApplication;
-          });
-        }
-      }
-    } catch {}
   }
   return [];
 }
@@ -1265,28 +473,32 @@ export function persistApplicationsLocally(apps: StageApplication[]): void {
 }
 
 export async function fetchStudentApplications(): Promise<StageApplication[]> {
+  let response: Response;
   try {
-    const response = await authFetch('/api/mobile/stages/applications');
-    const payload = (await response.json()) as { applications?: StageApplication[] };
-    // The server is the source of truth, including when the student has no application yet.
-    if (Array.isArray(payload?.applications)) return payload.applications;
-  } catch (e) {
-    console.warn('Fetch applications fallback to local store:', e);
+    response = await authFetchRaw('/api/mobile/stages/applications');
+  } catch {
+    throw new Error('Pas de connexion au serveur. Vérifie ta connexion et réessaie.');
   }
-
-  // Offline: only the applications actually created on this device (never the sample seeds).
-  return getStoredApplicationsAsync();
+  const payload = (await response.json().catch(() => ({}))) as { applications?: StageApplication[]; error?: string };
+  if (!response.ok || !Array.isArray(payload.applications)) {
+    throw new Error(payload.error || 'Candidatures indisponibles pour le moment.');
+  }
+  // The server is the source of truth, including when the student has no application yet.
+  localApplications = payload.applications;
+  persistApplicationsLocally(localApplications);
+  return payload.applications;
 }
 
 export async function updateApplicationStatus(applicationId: string, status: AppStatus): Promise<boolean> {
   try {
-    await authFetch('/api/mobile/stages/applications', {
+    const response = await authFetchRaw('/api/mobile/stages/applications', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ applicationId, status }),
     });
-  } catch (e) {
-    console.warn('Update status fallback to local store:', e);
+    if (!response.ok) return false;
+  } catch {
+    return false;
   }
   localApplications = localApplications.map((a) =>
     a.id === applicationId ? { ...a, status } : a

@@ -7,46 +7,19 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 import { databasePool } from './database';
+import { trustedOriginList } from './origins';
 import {
   LOGIN_THROTTLE_LIMITS,
   checkLoginThrottle,
   recordLoginFailure,
 } from './login-throttle';
-import { sendOtpEmail, sendPasswordResetEmail } from './mailer';
+import { isEmailDeliveryConfigured, sendOtpEmail, sendPasswordResetEmail } from './mailer';
 
 // ────────────────────────────────────────────────────────────────────────
 // Trusted origins — production domains MUST be hardcoded so auth works
 // even when env vars point at localhost. The custom domain is the primary
 // production entry point.
 // ────────────────────────────────────────────────────────────────────────
-const PRODUCTION_ORIGINS = [
-  'https://api.campus360b.site',
-  'https://admin.campus360b.site',
-  'https://campus360b.site',
-  'https://www.campus360b.site',
-  'https://admin.campus-bordes.com',
-  'https://campus-360-hi97.vercel.app',
-  'https://campus-360-two.vercel.app',
-  'https://campus-360-bimai-s-projects.vercel.app',
-  'https://*.vercel.app',
-  'https://*.expo.dev',
-  'https://*.exp.direct',
-  'exp://*',
-  'campus-bordes://*',
-];
-
-const LOCAL_DEV_ORIGINS = [
-  'campus-bordes://',
-  'http://localhost:3001',
-  'http://127.0.0.1:3001',
-  'http://localhost:3002',
-  'http://127.0.0.1:3002',
-  'http://localhost:8081',
-  'http://127.0.0.1:8081',
-  'http://localhost:8082',
-  'http://127.0.0.1:8082',
-];
-
 // LAN IP wildcards (dev only) — a phone on the same Wi-Fi as the dev machine
 // hits the host's LAN IP (e.g. http://10.66.47.18:8081) instead of localhost,
 // so those origins need to be trusted too. Better Auth supports glob patterns
@@ -88,22 +61,16 @@ const detectBaseUrl = (): string => {
   return 'https://admin.campus360b.site';
 };
 
-// Build the trusted origins list. Production origins are ALWAYS trusted
-// regardless of env. Local dev origins are added too so developers can test.
+// Trusted origins: exact list from lib/origins.ts (no wildcard on domains we
+// do not own), LAN IPs in development, and our own public URL.
 const trustedOrigins = [
-  ...LOCAL_DEV_ORIGINS,
+  ...trustedOriginList(process.env),
   ...LAN_DEV_ORIGINS,
-  ...PRODUCTION_ORIGINS,
-  // Env var overrides — only if set to a non-localhost URL.
   process.env.BETTER_AUTH_URL && !process.env.BETTER_AUTH_URL.includes('localhost')
     ? process.env.BETTER_AUTH_URL
     : undefined,
-  process.env.EXPO_APP_ORIGIN,
-  process.env.TRUSTED_EXTRA_ORIGINS,
-]
-  .filter(Boolean)
-  .flatMap((value) => (typeof value === 'string' && value.includes(',') ? parseOriginList(value) : [value]))
-  .filter((value): value is string => typeof value === 'string' && value.length > 0);
+  ...parseOriginList(process.env.EXPO_APP_ORIGIN),
+].filter((value): value is string => typeof value === 'string' && value.length > 0);
 
 const isProd = process.env.NODE_ENV === 'production';
 const baseURL = detectBaseUrl();
@@ -190,6 +157,9 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
     return databasePool;
   };
 
+  if (isProd && !isEmailDeliveryConfigured()) {
+    throw new Error('RESEND_API_KEY est obligatoire en production (vérification des e-mails).');
+  }
   const config: Parameters<typeof betterAuth>[0] = {
     appName: 'Campus-Bordes',
     database: getAuthDatabase(),
@@ -206,7 +176,8 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
       // Not enforced here: this instance also serves the admin web login, which
       // has no OTP screen. The mobile app enforces the OTP step itself, and
       // mobile-api (production mobile backend) enforces it server-side.
-      requireEmailVerification: false,
+      // Mandatory in production, admins included (decision 10).
+      requireEmailVerification: isProd,
       autoSignIn: true,
       minPasswordLength: 8,
       sendResetPassword: async ({ user, url }) => {

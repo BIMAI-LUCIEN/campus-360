@@ -37,12 +37,15 @@ import {
 } from './stagesApi';
 import { analyzeJobMatch, type MatchAnalysis } from './aiMatchEngine';
 import { exportApplicationPdf, buildWhatsAppPitch, generateCvPdfBase64 } from './pdfExportService';
+import { missingCvFields } from './cvHtml';
 import { StudentProfileExpressModal } from './StudentProfileExpressModal';
-import { updateStudentProfile } from '../auth/betterAuth';
+import { getStudentAccount, updateStudentProfile } from '../auth/betterAuth';
 import { PaymentModal } from '../wallet/PaymentModal';
 import { WhatsAppPairingModal } from '../whatsapp/WhatsAppPairingModal';
 import { getStoredWhatsAppStatus, cleanPhoneNumber } from '../whatsapp/whatsappService';
 import { stitchColors, fontFamilies, stitchRadius } from '../../theme/stitch';
+import { isFreeLaunch } from '../../config/launch';
+import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from './contactTargets';
 
 interface AiApplyModalProps {
   visible: boolean;
@@ -274,7 +277,7 @@ export function AiApplyModal({
     if (!result || !job) throw new Error('Candidature non générée.');
     setSubmitting(true);
     try {
-      const applicationId = await submitStageApplication(job.id, editableCv, editableLetter, result.officialCv);
+      const applicationId = await submitStageApplication(job, editableCv, editableLetter, result.officialCv);
       setResult((current) => (current ? { ...current, applicationId } : current));
       return applicationId;
     } finally {
@@ -291,7 +294,8 @@ export function AiApplyModal({
       }
 
       // If student has 0 tokens, prompt Mobile Money payment modal
-      if (currentProfile.tokens !== undefined && currentProfile.tokens <= 0) {
+      // Free during the V1 launch: no credit gate.
+      if (!isFreeLaunch() && currentProfile.tokens !== undefined && currentProfile.tokens <= 0) {
         setShowPaymentModal(true);
         return;
       }
@@ -408,6 +412,13 @@ export function AiApplyModal({
 
   // 2. Action: Télécharger le PDF mis en page
   const handleDownloadPdf = async () => {
+    if (result?.officialCv) {
+      const missing = missingCvFields(result.officialCv);
+      if (missing.length > 0) {
+        Alert.alert('Profil incomplet', `Complète ton nom et ton contact (e-mail ou téléphone) dans ton profil avant d'envoyer ton CV. Manque : ${missing.join(', ')}.`);
+        return;
+      }
+    }
     setDownloadingPdf(true);
     try {
       await exportApplicationPdf({
@@ -430,7 +441,15 @@ export function AiApplyModal({
   // 3. Action: 1-Click Background Apply (WhatsApp or Email via /api/mobile/stages/dispatch)
   const handleOneClickApply = async (channel: 'whatsapp' | 'email') => {
     if (!result || !job) return;
+    if (result?.officialCv) {
+      const missing = missingCvFields(result.officialCv);
+      if (missing.length > 0) {
+        Alert.alert('Profil incomplet', `Complète ton nom et ton contact (e-mail ou téléphone) dans ton profil avant d'envoyer ton CV. Manque : ${missing.join(', ')}.`);
+        return;
+      }
+    }
     setSubmitting(true);
+    setDispatchReceipt(null);
     try {
       const studentPhone = linkedPhone || currentProfile.phoneWhatsapp || '';
       const pdfBase64 = await generateCvPdfBase64({
@@ -446,6 +465,10 @@ export function AiApplyModal({
         officialCv: result.officialCv,
       });
 
+      if (!pdfBase64 && Platform.OS === 'web') {
+        Alert.alert('CV non joint', "Sur le web, ton CV n'est pas joint automatiquement. Utilise l'app mobile pour l'envoyer avec ta candidature.");
+      }
+
       const pitch = buildWhatsAppPitch({
         studentName: currentProfile.fullName,
         major: currentProfile.major,
@@ -459,7 +482,7 @@ export function AiApplyModal({
         channel,
         whatsappPitch: pitch,
         letterText: editableLetter,
-        cvPdfBase64: pdfBase64,
+        cvPdfBase64: pdfBase64 || undefined,
         studentNotes: '',
         studentName: currentProfile.fullName,
         studentEmail: currentProfile.email,
@@ -483,7 +506,7 @@ export function AiApplyModal({
       setStep('sent');
     } catch (err) {
       console.error('[AiApplyModal] 1-Click apply error:', err);
-      Alert.alert('Erreur', "Échec de l'envoi automatique. Vous pouvez utiliser le fallback manuel.");
+      Alert.alert('Envoi impossible', err instanceof Error ? err.message : "La candidature n'a pas pu être enregistrée.");
     } finally {
       setSubmitting(false);
     }
@@ -495,8 +518,9 @@ export function AiApplyModal({
     setSubmitting(true);
     try {
       const applicationId = await persistApplication();
-      const rawTarget = (job.company?.contactWhatsapp || '').replace(/[^0-9]/g, '');
-      const cleanTarget = rawTarget ? cleanPhoneNumber(rawTarget) : '237672364124';
+      const rawTarget = companyWhatsapp(job.company);
+      if (!rawTarget) throw new Error(`${CONTACT_UNAVAILABLE} : pas de numéro WhatsApp.`);
+      const cleanTarget = cleanPhoneNumber(rawTarget);
       const pitch = buildWhatsAppPitch({
         studentName: currentProfile.fullName,
         major: currentProfile.major,
@@ -531,7 +555,7 @@ export function AiApplyModal({
       setStep('sent');
     } catch (err) {
       console.warn('[AiApplyModal] Manual WhatsApp error:', err);
-      Alert.alert('Info', 'Ouverture de WhatsApp...');
+      Alert.alert('Envoi impossible', err instanceof Error ? err.message : "La candidature n'a pas pu être enregistrée.");
     } finally {
       setSubmitting(false);
     }
@@ -541,6 +565,7 @@ export function AiApplyModal({
   const handleManualEmailApply = async () => {
     if (!result || !job) return;
     try {
+      if (!result.recipientEmail) throw new Error(`${CONTACT_UNAVAILABLE} : pas d'adresse e-mail.`);
       const applicationId = await persistApplication();
       const mailto = `mailto:${result.recipientEmail}?subject=${result.emailSubject}&body=${encodeURIComponent(
         editableLetter
@@ -556,8 +581,8 @@ export function AiApplyModal({
         jobTitle: job.title,
       });
       setStep('sent');
-    } catch (e) {
-      Alert.alert('Info', 'Ouverture de votre messagerie...');
+    } catch (err) {
+      Alert.alert('Envoi impossible', err instanceof Error ? err.message : "La candidature n'a pas pu être enregistrée.");
     }
   };
 
@@ -575,8 +600,8 @@ export function AiApplyModal({
         jobTitle: job?.title || 'Offre de stage',
       });
       setStep('sent');
-    } catch (e) {
-      Alert.alert('Erreur', 'Impossible d’enregistrer la candidature.');
+    } catch (err) {
+      Alert.alert('Erreur', err instanceof Error ? err.message : "La candidature n'a pas pu être enregistrée.");
     }
   };
 
@@ -603,13 +628,15 @@ export function AiApplyModal({
                   </View>
                 )}
 
-                <Pressable
-                  onPress={() => setShowPaymentModal(true)}
-                  style={styles.rechargeHeaderBtn}
-                  testID="btn-open-payment"
-                >
-                  <Text style={styles.rechargeHeaderBtnText}>Recharge MoMo</Text>
-                </Pressable>
+                {!isFreeLaunch() && (
+                  <Pressable
+                    onPress={() => setShowPaymentModal(true)}
+                    style={styles.rechargeHeaderBtn}
+                    testID="btn-open-payment"
+                  >
+                    <Text style={styles.rechargeHeaderBtnText}>Recharge MoMo</Text>
+                  </Pressable>
+                )}
 
                 <Pressable
                   onPress={onClose}
@@ -890,6 +917,11 @@ export function AiApplyModal({
                   </View>
 
                   {/* Dynamic Action Box based on Channel & Pairing status */}
+                  {(selectedChannel === 'whatsapp' ? !companyWhatsapp(job?.company) : !companyEmail(job?.company)) ? (
+                    <Text style={styles.subHintText}>
+                      {CONTACT_UNAVAILABLE} pour ce canal : {selectedChannel === 'whatsapp' ? 'pas de numéro WhatsApp' : "pas d'adresse e-mail"}. Tu peux enregistrer la candidature dans ton suivi.
+                    </Text>
+                  ) : null}
                   {selectedChannel === 'whatsapp' ? (
                     isWhatsAppLinked ? (
                       <View style={styles.oneClickBox}>
@@ -903,7 +935,7 @@ export function AiApplyModal({
                           testID="btn-apply-1click-whatsapp"
                           style={({ pressed }) => [styles.primaryOneClickBtn, pressed && { opacity: 0.9 }]}
                           onPress={() => handleOneClickApply('whatsapp')}
-                          disabled={submitting}
+                          disabled={submitting || !companyWhatsapp(job?.company)}
                         >
                           {submitting ? (
                             <ActivityIndicator size="small" color={stitchColors.white} />
@@ -921,7 +953,7 @@ export function AiApplyModal({
                             testID="btn-fallback-manual-whatsapp"
                             style={styles.textFallbackBtn}
                             onPress={handleManualWhatsAppApply}
-                            disabled={submitting}
+                            disabled={submitting || !companyWhatsapp(job?.company)}
                           >
                             <Text style={styles.textFallbackBtnText}>💬 Ouvrir WhatsApp Manuellement</Text>
                           </Pressable>
@@ -960,7 +992,7 @@ export function AiApplyModal({
                             testID="btn-fallback-manual-whatsapp"
                             style={styles.manualFallbackBtn}
                             onPress={handleManualWhatsAppApply}
-                            disabled={submitting}
+                            disabled={submitting || !companyWhatsapp(job?.company)}
                           >
                             <Text style={styles.manualFallbackBtnText}>💬 Ouvrir WhatsApp Manuellement</Text>
                           </Pressable>
@@ -983,7 +1015,7 @@ export function AiApplyModal({
                         testID="btn-apply-email-dispatch"
                         style={({ pressed }) => [styles.primaryEmailBtn, pressed && { opacity: 0.9 }]}
                         onPress={() => handleOneClickApply('email')}
-                        disabled={submitting}
+                        disabled={submitting || !companyEmail(job?.company)}
                       >
                         {submitting ? (
                           <ActivityIndicator size="small" color={stitchColors.white} />
@@ -1001,7 +1033,7 @@ export function AiApplyModal({
                           testID="btn-fallback-manual-email"
                           style={styles.textFallbackBtn}
                           onPress={handleManualEmailApply}
-                          disabled={submitting}
+                          disabled={submitting || !companyEmail(job?.company)}
                         >
                           <Text style={styles.textFallbackBtnText}>📧 Ouvrir ma messagerie manuellement (mailto)</Text>
                         </Pressable>
@@ -1029,9 +1061,17 @@ export function AiApplyModal({
                 <View style={styles.receiptIconCircle}>
                   <CheckCircle2 size={40} color={stitchColors.emerald} />
                 </View>
-                <Text style={styles.receiptTitle}>Candidature transmise avec succès !</Text>
+                <Text style={styles.receiptTitle}>
+                  {dispatchReceipt?.channel === 'whatsapp' || dispatchReceipt?.channel === 'email'
+                    ? 'Candidature transmise'
+                    : 'Candidature enregistrée'}
+                </Text>
                 <Text style={styles.receiptSubtitle}>
-                  Votre dossier officiel a été enregistré et expédié au recruteur.
+                  {dispatchReceipt?.channel === 'whatsapp' || dispatchReceipt?.channel === 'email'
+                    ? dispatchReceipt.status === 'DELIVERED'
+                      ? 'Ton dossier a été délivré au recruteur.'
+                      : "Ton dossier est en cours d'acheminement vers le recruteur."
+                    : 'Ta candidature est dans ton suivi. Pense à envoyer le message au recruteur.'}
                 </Text>
 
                 {/* Carte Accusé de Réception Officiel */}
@@ -1039,7 +1079,7 @@ export function AiApplyModal({
                   <View style={styles.receiptRow}>
                     <Text style={styles.receiptLabel}>Référence :</Text>
                     <Text style={styles.receiptValueBold}>
-                      CAMPUS-{dispatchReceipt?.applicationId ? dispatchReceipt.applicationId.replace(/[^a-zA-Z0-9]/g, '').slice(-7).toUpperCase() : 'APP-2026'}
+                      {dispatchReceipt?.applicationId ? `CAMPUS-${dispatchReceipt.applicationId.replace(/[^a-zA-Z0-9]/g, '').slice(-7).toUpperCase()}` : '—'}
                     </Text>
                   </View>
                   <View style={styles.receiptRow}>
@@ -1138,13 +1178,14 @@ export function AiApplyModal({
             onClose();
           }
         }}
-        onPaymentSuccess={(pack) => {
+        onPaymentSuccess={async () => {
           setShowPaymentModal(false);
-          const newTokens = (currentProfile.tokens ?? 0) + pack.tokensReward;
-          setCurrentProfile((prev) => ({
-            ...prev,
-            tokens: newTokens,
-          }));
+          try {
+            const account = await getStudentAccount();
+            setCurrentProfile((prev) => ({ ...prev, tokens: account.wallet.iaCredits }));
+          } catch {
+            Alert.alert('Paiement reçu', 'Ton solde est en cours de mise à jour.');
+          }
         }}
       />
       {/* Modal d'appairage WhatsApp en 30s si non lié */}

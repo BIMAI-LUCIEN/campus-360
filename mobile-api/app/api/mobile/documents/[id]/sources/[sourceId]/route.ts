@@ -1,27 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
-import { getDocumentById, deleteDocumentSource } from '@/lib/documents-db';
+import { deleteDocumentFile } from '@/lib/document-files-db';
+import { getDocumentById } from '@/lib/documents-db';
+import { canStoreFiles, deleteStoredFile } from '@/lib/file-storage';
+import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 
 export const runtime = 'nodejs';
 
-export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin');
-  const headers: Record<string, string> = {
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-    'Access-Control-Allow-Headers':
-      'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
-  };
-  if (origin) {
-    headers['Access-Control-Allow-Origin'] = origin;
-    headers['Access-Control-Allow-Credentials'] = 'true';
-  } else {
-    headers['Access-Control-Allow-Origin'] = '*';
-  }
-  return new NextResponse(null, { status: 204, headers });
-}
-
 type RouteContext = { params: Promise<{ id: string; sourceId: string }> };
+
+export async function OPTIONS(request: NextRequest) {
+  return withCors(new NextResponse(null, { status: 204 }), request);
+}
 
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
@@ -35,13 +25,14 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       return withCors(NextResponse.json({ error: 'Document introuvable.' }, { status: 404 }), request);
     }
 
-    const success = await deleteDocumentSource(sourceId, documentId, userId);
-    if (!success) {
+    const result = await deleteDocumentFile(sourceId, documentId, userId, 'source');
+    if (!result.deleted) {
       return withCors(NextResponse.json({ error: 'Source introuvable.' }, { status: 404 }), request);
     }
-
+    // Off the VPS the disk copy is left for the orphan purge job.
+    if (result.storageKey && canStoreFiles()) await deleteStoredFile(result.storageKey).catch(() => undefined);
     return withCors(NextResponse.json({ success: true }), request);
   } catch (error) {
-    return withCors(mobileErrorResponse(error, request), request);
+    return mobileErrorResponse(error, request);
   }
 }

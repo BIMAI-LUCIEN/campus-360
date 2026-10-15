@@ -3,21 +3,26 @@
  * Authentic Rich Text Editor with real Bold, Headings (H2, H3),
  * genuine bullet and numbered lists, tables, callouts, and native Cover Page.
  */
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   StyleSheet, View, Text, Pressable, SafeAreaView, ScrollView,
   TextInput, ActivityIndicator, Alert, Modal,
-  Platform, KeyboardAvoidingView
+  Platform, KeyboardAvoidingView, Switch
 } from 'react-native';
-import { WebView } from 'react-native-webview';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
-import { authFetch } from '../auth/betterAuth';
+import { mobileApiFetch as authFetch } from '../auth/betterAuth';
 import { EditorAiChat } from './EditorAiChat';
-import { DocumentSourcesModal } from './DocumentSourcesModal';
-import { DocumentImagesModal } from './DocumentImagesModal';
+import { DocumentSourcesPanel } from './DocumentSourcesModal';
+import { DocumentImagesModal, type InsertFigurePayload } from './DocumentImagesModal';
+import { listDocumentImages, resolveFileUrls, type DocumentFile } from './documentFilesApi';
+import { buildPreviewHtml, buildWysiwygHtml } from './editorTemplate';
+import { applyStylePatch, resolveStyle, type DocumentStylePatch } from './documentStyle';
+import { classifySection } from './documentRender';
+import { DocumentStylePanel } from './DocumentStylePanel';
+import { EditorSurface, type EditorSurfaceHandle } from './EditorSurface';
 import {
-  Sparkles, Send, ArrowLeft, Plus, Trash2, FileText, Image as ImageIcon
+  Sparkles, Send, ArrowLeft, Plus, Trash2, FileText, Image as ImageIcon, BookOpen, Eye
 } from 'lucide-react-native';
 import { stitchColors } from '../../theme/stitch';
 
@@ -30,8 +35,28 @@ type Document = {
   line_spacing: number;
   margins: string;
   cover_template: string;
-  cover_data: Record<string, string>;
+  cover_data: Record<string, string | boolean>;
+  // Raw stored style; read through resolveStyle().
+  document_style?: unknown;
 };
+
+// Cover fields. Examples are generic: nothing here is printed unless the student types it.
+const COVER_FIELDS: { key: string; label: string; placeholder: string; multiline?: boolean; stageOnly?: boolean }[] = [
+  { key: 'university', label: 'Université', placeholder: 'Ex. : Université de …' },
+  { key: 'school', label: 'École / Institut', placeholder: 'Ex. : Institut universitaire de technologie' },
+  { key: 'faculty', label: 'Faculté / Département', placeholder: 'Ex. : Département de génie informatique' },
+  { key: 'degree', label: 'Diplôme préparé', placeholder: 'Ex. : Licence professionnelle' },
+  { key: 'title', label: 'Titre (thème)', placeholder: 'Ex. : Mise en place d’un tableau de bord qualité' },
+  { key: 'subtitle', label: 'Sous-titre', placeholder: 'Ex. : Cas du service qualité de …', multiline: true },
+  { key: 'studentName', label: 'Nom et prénom', placeholder: 'Votre nom complet' },
+  { key: 'matricule', label: 'Matricule', placeholder: 'Votre matricule' },
+  { key: 'specialty', label: 'Filière / spécialité', placeholder: 'Ex. : Gestion des entreprises' },
+  { key: 'company', label: 'Entreprise d’accueil', placeholder: 'Nom de l’entreprise', stageOnly: true },
+  { key: 'period', label: 'Période du stage', placeholder: 'Ex. : juin – août 2026', stageOnly: true },
+  { key: 'tutorCorporate', label: 'Encadreur professionnel', placeholder: 'Nom et fonction', stageOnly: true },
+  { key: 'tutorAcademic', label: 'Encadreur académique', placeholder: 'Ex. : Dr …' },
+  { key: 'year', label: 'Année académique', placeholder: 'Ex. : 2025-2026' },
+];
 
 type DocumentSection = {
   id: string;
@@ -58,552 +83,6 @@ const downloadBlobOnWeb = (blob: Blob, filename: string) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 };
 
-const escapeHtml = (text: string): string => {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-};
-
-/**
- * Builds a standalone, self-contained Word-like WYSIWYG HTML document.
- * Toolbar buttons use event.preventDefault() on mousedown/touchstart
- * to ensure the editable sheet never loses text selection.
- */
-function buildWysiwygHtml(initialContentHtml: string, title: string = 'Section'): string {
-  const content = initialContentHtml && initialContentHtml.trim()
-    ? initialContentHtml
-    : `<p>Commencez à rédiger votre ${escapeHtml(title)} ici comme dans Word...</p>`;
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<style>
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    margin: 0;
-    padding: 0;
-    background-color: #F8FAFC;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    color: #0F172A;
-    height: 100%;
-    overflow-x: hidden;
-  }
-  
-  /* Word Toolbar (Sticky on Top) */
-  .toolbar-container {
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    background: #FFFFFF;
-    border-bottom: 1px solid #E2E8F0;
-    padding: 8px 10px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
-  }
-  
-  .tool-btn {
-    background: #F1F5F9;
-    border: 1px solid #E2E8F0;
-    color: #334155;
-    border-radius: 8px;
-    height: 36px;
-    min-width: 36px;
-    padding: 0 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13.5px;
-    font-weight: 600;
-    cursor: pointer;
-    user-select: none;
-    -webkit-user-select: none;
-    touch-action: manipulation;
-  }
-  
-  .tool-btn:active {
-    background: #4F46E5;
-    color: #FFFFFF;
-    border-color: #4F46E5;
-  }
-  
-  .tool-divider {
-    width: 1px;
-    height: 22px;
-    background: #E2E8F0;
-    margin: 0 2px;
-  }
-
-  /* Sheet Container */
-  .sheet-wrapper {
-    padding: 14px 10px 100px;
-    display: flex;
-    justify-content: center;
-  }
-
-  /* Authentic Word Document Page */
-  .document-sheet {
-    width: 100%;
-    max-width: 820px;
-    min-height: 540px;
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 12px;
-    padding: 24px 20px;
-    outline: none;
-    font-size: 15.5px;
-    line-height: 1.75;
-    color: #0F172A;
-    word-break: break-word;
-  }
-  
-  .document-sheet:focus {
-    border-color: rgba(99, 102, 241, 0.5);
-  }
-
-  /* Academic Headings */
-  .document-sheet h1 {
-    font-size: 24px;
-    font-weight: 800;
-    color: #0F172A;
-    margin: 24px 0 12px;
-    border-bottom: 2px solid rgba(99, 102, 241, 0.4);
-    padding-bottom: 8px;
-    line-height: 1.3;
-  }
-
-  .document-sheet h2 {
-    font-size: 20px;
-    font-weight: 700;
-    color: #6D28D9;
-    margin: 22px 0 10px;
-    border-left: 3.5px solid #7C3AED;
-    padding-left: 10px;
-    line-height: 1.35;
-  }
-
-  .document-sheet h3 {
-    font-size: 17px;
-    font-weight: 600;
-    color: #0284C7;
-    margin: 18px 0 8px;
-    line-height: 1.4;
-  }
-
-  .document-sheet h4 {
-    font-size: 15px;
-    font-weight: 600;
-    color: #475569;
-    margin: 14px 0 6px;
-    font-style: italic;
-  }
-
-  .document-sheet p {
-    margin: 0 0 14px 0;
-  }
-
-  .document-sheet b, .document-sheet strong {
-    font-weight: 700;
-    color: #0F172A;
-  }
-
-  .document-sheet i, .document-sheet em {
-    font-style: italic;
-    color: #334155;
-  }
-
-  .document-sheet u {
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-
-  /* Real Indented Lists */
-  .document-sheet ul {
-    list-style-type: disc;
-    margin: 10px 0 16px 26px;
-    padding: 0;
-  }
-
-  .document-sheet ol {
-    list-style-type: decimal;
-    margin: 10px 0 16px 26px;
-    padding: 0;
-  }
-
-  .document-sheet li {
-    margin-bottom: 6px;
-    line-height: 1.6;
-    padding-left: 4px;
-  }
-
-  /* Academic Callouts */
-  .document-sheet blockquote {
-    margin: 16px 0;
-    padding: 12px 16px;
-    background: rgba(99, 102, 241, 0.08);
-    border-left: 4px solid #7C3AED;
-    border-radius: 0 8px 8px 0;
-    color: #475569;
-    font-style: italic;
-  }
-
-  /* Figures & Images */
-  .document-sheet .academic-figure, .document-sheet figure {
-    margin: 22px 0;
-    text-align: center;
-  }
-  .document-sheet .academic-figure img, .document-sheet figure img {
-    max-width: 90%;
-    height: auto;
-    border-radius: 6px;
-    border: 1px solid #E2E8F0;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-  }
-  .document-sheet figcaption {
-    font-size: 12.5px;
-    font-style: italic;
-    color: #94A3B8;
-    margin-top: 8px;
-    text-align: center;
-  }
-
-  /* Visual Page Break */
-  .document-sheet .academic-page-break {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 28px 0;
-    border-top: 2px dashed rgba(99, 102, 241, 0.4);
-    padding-top: 8px;
-    user-select: none;
-  }
-  .document-sheet .break-tag {
-    background: #F1F5F9;
-    color: #6D28D9;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 9999px;
-    border: 1px solid rgba(129, 140, 248, 0.3);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  /* Academic Tables */
-  .document-sheet table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 18px 0;
-    font-size: 14px;
-  }
-
-  .document-sheet th, .document-sheet td {
-    border: 1px solid #E2E8F0;
-    padding: 10px 12px;
-    text-align: left;
-  }
-
-  .document-sheet th {
-    background: #F1F5F9;
-    color: #6D28D9;
-    font-weight: 700;
-  }
-
-  .document-sheet td {
-    background: rgba(255, 255, 255, 0.02);
-  }
-</style>
-</head>
-<body>
-  <div class="toolbar-container">
-    <button type="button" class="tool-btn" title="Gras" onmousedown="event.preventDefault(); execCmd('bold')" ontouchstart="event.preventDefault(); execCmd('bold')"><b>B</b></button>
-    <button type="button" class="tool-btn" title="Italique" onmousedown="event.preventDefault(); execCmd('italic')" ontouchstart="event.preventDefault(); execCmd('italic')"><i>I</i></button>
-    <button type="button" class="tool-btn" title="Souligné" onmousedown="event.preventDefault(); execCmd('underline')" ontouchstart="event.preventDefault(); execCmd('underline')"><u>U</u></button>
-    
-    <div class="tool-divider"></div>
-    
-    <button type="button" class="tool-btn" title="Titre 1" onmousedown="event.preventDefault(); formatBlock('h1')" ontouchstart="event.preventDefault(); formatBlock('h1')"><span style="font-weight:800; color:#FFFFFF;">H1</span></button>
-    <button type="button" class="tool-btn" title="Titre 2" onmousedown="event.preventDefault(); formatBlock('h2')" ontouchstart="event.preventDefault(); formatBlock('h2')"><span style="font-weight:700; color:#818CF8;">H2</span></button>
-    <button type="button" class="tool-btn" title="Titre 3" onmousedown="event.preventDefault(); formatBlock('h3')" ontouchstart="event.preventDefault(); formatBlock('h3')"><span style="font-weight:600; color:#38BDF8;">H3</span></button>
-    <button type="button" class="tool-btn" title="Titre 4" onmousedown="event.preventDefault(); formatBlock('h4')" ontouchstart="event.preventDefault(); formatBlock('h4')"><span style="font-weight:600; color:#CBD5E1;">H4</span></button>
-    <button type="button" class="tool-btn" title="Paragraphe" onmousedown="event.preventDefault(); formatBlock('p')" ontouchstart="event.preventDefault(); formatBlock('p')">¶</button>
-    
-    <div class="tool-divider"></div>
-    
-    <button type="button" class="tool-btn" title="Liste à puces" onmousedown="event.preventDefault(); execCmd('insertUnorderedList')" ontouchstart="event.preventDefault(); execCmd('insertUnorderedList')">•—</button>
-    <button type="button" class="tool-btn" title="Liste numérotée" onmousedown="event.preventDefault(); execCmd('insertOrderedList')" ontouchstart="event.preventDefault(); execCmd('insertOrderedList')">1.</button>
-    
-    <div class="tool-divider"></div>
-    
-    <button type="button" class="tool-btn" title="Insérer un tableau" onmousedown="event.preventDefault(); insertTable()" ontouchstart="event.preventDefault(); insertTable()">📊 Tableau</button>
-    <button type="button" class="tool-btn" title="Ajouter ligne" onmousedown="event.preventDefault(); tableAddRow()" ontouchstart="event.preventDefault(); tableAddRow()">+Ligne</button>
-    <button type="button" class="tool-btn" title="Ajouter colonne" onmousedown="event.preventDefault(); tableAddCol()" ontouchstart="event.preventDefault(); tableAddCol()">+Col</button>
-    <button type="button" class="tool-btn" title="Supprimer ligne" onmousedown="event.preventDefault(); tableDeleteRow()" ontouchstart="event.preventDefault(); tableDeleteRow()">-Ligne</button>
-    <button type="button" class="tool-btn" title="Supprimer colonne" onmousedown="event.preventDefault(); tableDeleteCol()" ontouchstart="event.preventDefault(); tableDeleteCol()">-Col</button>
-    
-    <div class="tool-divider"></div>
-    
-    <button type="button" class="tool-btn" title="Aligner à gauche" onmousedown="event.preventDefault(); execCmd('justifyLeft')" ontouchstart="event.preventDefault(); execCmd('justifyLeft')">⇤</button>
-    <button type="button" class="tool-btn" title="Centrer" onmousedown="event.preventDefault(); execCmd('justifyCenter')" ontouchstart="event.preventDefault(); execCmd('justifyCenter')">≡</button>
-    <button type="button" class="tool-btn" title="Aligner à droite" onmousedown="event.preventDefault(); execCmd('justifyRight')" ontouchstart="event.preventDefault(); execCmd('justifyRight')">⇥</button>
-    <button type="button" class="tool-btn" title="Justifier" onmousedown="event.preventDefault(); execCmd('justifyFull')" ontouchstart="event.preventDefault(); execCmd('justifyFull')">⇿</button>
-    
-    <div class="tool-divider"></div>
-    
-    <button type="button" class="tool-btn" title="Encadré académique" onmousedown="event.preventDefault(); insertCallout()" ontouchstart="event.preventDefault(); insertCallout()">💡 Note</button>
-    <button type="button" class="tool-btn" title="Saut de page A4" onmousedown="event.preventDefault(); insertPageBreak()" ontouchstart="event.preventDefault(); insertPageBreak()">📄 Saut</button>
-  </div>
-
-  <div class="sheet-wrapper">
-    <div id="editor" class="document-sheet" contenteditable="true" spellcheck="true">${content}</div>
-  </div>
-
-  <script>
-    const editor = document.getElementById('editor');
-    
-    function execCmd(command, value = null) {
-      document.execCommand(command, false, value);
-      editor.focus();
-      notifyChange();
-    }
-    
-    function formatBlock(tag) {
-      document.execCommand('formatBlock', false, '<' + tag + '>');
-      editor.focus();
-      notifyChange();
-    }
-    
-    function insertTable() {
-      const tableHtml = '<table><thead><tr><th>Critère / Phase</th><th>Détail & Missions</th><th>Observations</th></tr></thead><tbody><tr><td>Analyse préalable</td><td>Étude du cahier des charges et état de l\\'art</td><td>Validé</td></tr><tr><td>Mise en oeuvre</td><td>Développement et intégration technique</td><td>En cours</td></tr></tbody></table><p><br></p>';
-      document.execCommand('insertHTML', false, tableHtml);
-      editor.focus();
-      notifyChange();
-    }
-
-    function getSelectedCell() {
-      const sel = window.getSelection();
-      if (!sel || !sel.anchorNode) return null;
-      let node = sel.anchorNode;
-      while (node && node !== editor) {
-        if (node.nodeName === 'TD' || node.nodeName === 'TH') return node;
-        node = node.parentNode;
-      }
-      return null;
-    }
-
-    function tableAddRow() {
-      const cell = getSelectedCell();
-      if (!cell) {
-        insertTable();
-        return;
-      }
-      const tr = cell.closest('tr');
-      const table = tr.closest('table');
-      const colCount = tr.children.length;
-      const newTr = document.createElement('tr');
-      for (let i = 0; i < colCount; i++) {
-        const newTd = document.createElement('td');
-        newTd.innerHTML = 'Texte...';
-        newTr.appendChild(newTd);
-      }
-      tr.parentNode.insertBefore(newTr, tr.nextSibling);
-      notifyChange();
-    }
-
-    function tableAddCol() {
-      const cell = getSelectedCell();
-      if (!cell) {
-        insertTable();
-        return;
-      }
-      const table = cell.closest('table');
-      const cellIndex = cell.cellIndex;
-      const rows = table.rows;
-      for (let i = 0; i < rows.length; i++) {
-        const isHeader = rows[i].parentElement.nodeName === 'THEAD' || i === 0;
-        const newCell = document.createElement(isHeader ? 'th' : 'td');
-        newCell.innerHTML = isHeader ? 'Col ' + (cellIndex + 2) : 'Donnée';
-        if (cellIndex + 1 < rows[i].cells.length) {
-          rows[i].insertBefore(newCell, rows[i].cells[cellIndex + 1]);
-        } else {
-          rows[i].appendChild(newCell);
-        }
-      }
-      notifyChange();
-    }
-
-    function tableDeleteRow() {
-      const cell = getSelectedCell();
-      if (!cell) return;
-      const tr = cell.closest('tr');
-      const table = tr.closest('table');
-      if (table.rows.length <= 1) {
-        table.remove();
-      } else {
-        tr.remove();
-      }
-      notifyChange();
-    }
-
-    function tableDeleteCol() {
-      const cell = getSelectedCell();
-      if (!cell) return;
-      const table = cell.closest('table');
-      const cellIndex = cell.cellIndex;
-      const rows = table.rows;
-      if (rows[0].cells.length <= 1) {
-        table.remove();
-      } else {
-        for (let i = 0; i < rows.length; i++) {
-          if (rows[i].cells[cellIndex]) {
-            rows[i].deleteCell(cellIndex);
-          }
-        }
-      }
-      notifyChange();
-    }
-
-    function insertPageBreak() {
-      const breakHtml = '<div class="academic-page-break" contenteditable="false"><span class="break-tag">📄 Saut de page académique (Page suivante)</span></div><p><br></p>';
-      document.execCommand('insertHTML', false, breakHtml);
-      editor.focus();
-      notifyChange();
-    }
-
-    function insertFigure(url, caption) {
-      const figureHtml = '<figure class="academic-figure" contenteditable="false"><img src="' + url + '" alt="' + caption.replace(/"/g, '') + '" /><figcaption contenteditable="true"><strong>' + caption + '</strong></figcaption></figure><p><br></p>';
-      document.execCommand('insertHTML', false, figureHtml);
-      editor.focus();
-      notifyChange();
-    }
-    
-    function insertCallout() {
-      const calloutHtml = '<blockquote><b>Remarque académique :</b> Précisez ici votre réflexion méthodologique ou vos observations de stage.</blockquote><p><br></p>';
-      document.execCommand('insertHTML', false, calloutHtml);
-      editor.focus();
-      notifyChange();
-    }
-    
-    function insertAiContent(html) {
-      editor.focus();
-      document.execCommand('insertHTML', false, html);
-      notifyChange();
-    }
-
-    function setEditorContent(html) {
-      editor.innerHTML = html;
-      notifyChange();
-    }
-    
-    function getWordCount(text) {
-      const trimmed = text.trim();
-      if (!trimmed) return 0;
-      return trimmed.split(/\\s+/).length;
-    }
-    
-    function notifyChange() {
-      const html = editor.innerHTML;
-      const text = editor.innerText || editor.textContent || '';
-      const wordCount = getWordCount(text);
-      
-      const payload = JSON.stringify({
-        type: 'change',
-        html: html,
-        text: text,
-        wordCount: wordCount
-      });
-      
-      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-        window.ReactNativeWebView.postMessage(payload);
-      } else if (window.parent && window.parent.postMessage) {
-        window.parent.postMessage(payload, '*');
-      }
-    }
-    
-    editor.addEventListener('input', notifyChange);
-    editor.addEventListener('keyup', notifyChange);
-    editor.addEventListener('paste', () => setTimeout(notifyChange, 50));
-    
-    // Initial notify
-    setTimeout(notifyChange, 100);
-  </script>
-</body>
-</html>`;
-}
-
-type EditorSurfaceHandle = {
-  injectJavaScript: (script: string) => void;
-};
-
-type EditorSurfaceProps = {
-  html: string;
-  onMessage: (event: any) => void;
-};
-
-const EditorSurface = React.forwardRef<EditorSurfaceHandle, EditorSurfaceProps>(
-  ({ html, onMessage }, forwardedRef) => {
-    const nativeRef = useRef<any>(null);
-    const iframeRef = useRef<HTMLIFrameElement | null>(null);
-
-    useEffect(() => {
-      if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-      const handleMessage = (event: MessageEvent) => {
-        if (event.source !== iframeRef.current?.contentWindow || !event.data) return;
-        const data = typeof event.data === 'string' ? event.data : JSON.stringify(event.data);
-        onMessage({ nativeEvent: { data } });
-      };
-      window.addEventListener('message', handleMessage);
-      return () => window.removeEventListener('message', handleMessage);
-    }, [onMessage]);
-
-    React.useImperativeHandle(forwardedRef, () => ({
-      injectJavaScript(script: string) {
-        if (Platform.OS === 'web') {
-          (iframeRef.current?.contentWindow as any)?.eval(script);
-          return;
-        }
-        nativeRef.current?.injectJavaScript(script);
-      },
-    }), []);
-
-    if (Platform.OS === 'web') {
-      return React.createElement('iframe', {
-        ref: iframeRef,
-        srcDoc: html,
-        title: 'Éditeur WYSIWYG Campus 360',
-        style: {
-          width: '100%',
-          height: '100%',
-          border: 0,
-          backgroundColor: stitchColors.background,
-        },
-      });
-    }
-
-    return (
-      <WebView
-        ref={nativeRef}
-        originWhitelist={['*']}
-        source={{ html }}
-        style={styles.webView}
-        javaScriptEnabled
-        domStorageEnabled
-        onMessage={onMessage}
-        scrollEnabled
-        showsVerticalScrollIndicator={false}
-        textZoom={100}
-        keyboardDisplayRequiresUserAction={false}
-      />
-    );
-  }
-);
-
 export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScreenProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -611,23 +90,28 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
   const [sections, setSections] = useState<DocumentSection[]>([]);
   const [currentSectionId, setCurrentSectionId] = useState<string | null>(null);
 
-  // Content & word count for current section
+  // Content & word count for current section. `editorSeed` is the HTML the
+  // WebView is built from: it only changes when a section is (re)opened, never
+  // on keystrokes, otherwise the editor would reload and lose the cursor.
   const [currentHtml, setCurrentHtml] = useState('');
+  const [editorSeed, setEditorSeed] = useState('');
   const [wordCount, setWordCount] = useState(0);
+  const [editorTab, setEditorTab] = useState<'document' | 'sources' | 'assistant'>('document');
+  const [selectedSources, setSelectedSources] = useState<DocumentFile[]>([]);
 
   // Save status
-  const [saving, setSaving] = useState(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const coverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Latest unsaved text of a section; cleared once that exact content is saved.
+  const dirtyRef = useRef<{ sectionId: string; html: string } | null>(null);
 
   // AI states
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
-  const [chatVisible, setChatVisible] = useState(false);
 
-  // Sources & Images Modals
-  const [sourcesModalVisible, setSourcesModalVisible] = useState(false);
+  // Images modal
   const [imagesModalVisible, setImagesModalVisible] = useState(false);
-  const [sourcesCount, setSourcesCount] = useState(0);
   const [imagesCount, setImagesCount] = useState(0);
 
   // Section modal
@@ -635,26 +119,43 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
   const [newSectionTitle, setNewSectionTitle] = useState('');
   const [addingSection, setAddingSection] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [styleVisible, setStyleVisible] = useState(false);
+  const [coverLogoUrls, setCoverLogoUrls] = useState<{ school?: string | null; company?: string | null }>({});
+  const [exportVisible, setExportVisible] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const previewSurfaceRef = useRef<EditorSurfaceHandle | null>(null);
 
   const editorSurfaceRef = useRef<EditorSurfaceHandle | null>(null);
+  const pendingEditorScripts = useRef<string[]>([]);
 
-  const loadCounts = useCallback(async () => {
-    try {
-      authFetch(`/api/mobile/documents/${documentId}/sources`)
-        .then((r) => r.json())
-        .then((d) => {
-          if (Array.isArray(d.sources)) setSourcesCount(d.sources.length);
-        })
-        .catch(() => {});
+  // Runs the commands queued while another tab was shown, once the editor is visible again.
+  useEffect(() => {
+    if (editorTab !== 'document' || pendingEditorScripts.current.length === 0) return;
+    const timer = setTimeout(() => {
+      const scripts = pendingEditorScripts.current.splice(0);
+      scripts.forEach((script) => editorSurfaceRef.current?.injectJavaScript(script));
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [editorTab]);
 
-      authFetch(`/api/mobile/documents/${documentId}/images`)
-        .then((r) => r.json())
-        .then((d) => {
-          if (Array.isArray(d.images)) setImagesCount(d.images.length);
-        })
-        .catch(() => {});
-    } catch {}
+  // Source count comes from the Sources panel (always mounted); images are counted here.
+  const loadCounts = useCallback(() => {
+    listDocumentImages(documentId)
+      .then((images) => setImagesCount(images.length))
+      .catch(() => {});
   }, [documentId]);
+
+  // Signed URLs for the images of the open section, pushed into the editor once it is ready.
+  const resolveEditorImages = useCallback(async (html: string) => {
+    const ids = Array.from(html.matchAll(/data-file-id="([0-9a-fA-F-]{36})"/g), (m) => m[1].toLowerCase());
+    if (ids.length === 0) return;
+    try {
+      const urls = await resolveFileUrls(ids);
+      editorSurfaceRef.current?.injectJavaScript(`applyImageUrls(${JSON.stringify(urls)}); true;`);
+    } catch (e) {
+      console.warn('[editor] image URL resolution failed:', e);
+    }
+  }, []);
 
   // Load report data
   const loadReport = useCallback(async () => {
@@ -674,6 +175,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
       if (initialId) {
         const currentSec = fetchedSections.find(s => s.id === initialId);
         setCurrentHtml(currentSec?.content_html || '');
+        setEditorSeed(currentSec?.content_html || '');
       }
       loadCounts();
     } catch (err: any) {
@@ -687,32 +189,46 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
     loadReport();
   }, [loadReport]);
 
+  // Saves the pending text right away (section switch, close, retry).
+  const flushPendingSave = () => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    const pending = dirtyRef.current;
+    if (pending) return saveSectionContent(pending.sectionId, pending.html);
+    return Promise.resolve();
+  };
+
+  const handleClose = () => {
+    flushPendingSave();
+    onClose();
+  };
+
   // When switching section
   const handleSelectSection = (sectionId: string) => {
-    if (currentSectionId && currentSectionId !== sectionId) {
-      saveSectionContent(currentSectionId, currentHtml);
-    }
+    if (currentSectionId === sectionId) return;
+    flushPendingSave();
     setCurrentSectionId(sectionId);
     const sec = sections.find(s => s.id === sectionId);
     setCurrentHtml(sec?.content_html || '');
+    setEditorSeed(sec?.content_html || '');
+    setEditorTab('document');
   };
 
   // Debounced auto-save for current section text
   const saveSectionContent = async (secId: string, htmlToSave: string) => {
-    setSaving(true);
+    setSaveState('saving');
     try {
-      const res = await authFetch(`/api/mobile/documents/${documentId}/sections/${secId}`, {
+      await authFetch(`/api/mobile/documents/${documentId}/sections/${secId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content_html: htmlToSave }),
       });
-      if (res.ok) {
-        setSections(prev => prev.map(s => s.id === secId ? { ...s, content_html: htmlToSave } : s));
-      }
+      setSections(prev => prev.map(s => s.id === secId ? { ...s, content_html: htmlToSave } : s));
+      const pending = dirtyRef.current;
+      if (pending && pending.sectionId === secId && pending.html === htmlToSave) dirtyRef.current = null;
+      setSaveState(dirtyRef.current ? 'saving' : 'saved');
     } catch (e) {
       console.warn('Auto-save error:', e);
-    } finally {
-      setSaving(false);
+      setSaveState('error');
     }
   };
 
@@ -721,12 +237,22 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
     try {
       const rawData = event.nativeEvent.data;
       const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+      if (data.type === 'ready') {
+        resolveEditorImages(editorSeed);
+        return;
+      }
+      if (data.type === 'stats') {
+        setWordCount(data.wordCount || 0);
+        return;
+      }
       if (data.type === 'change') {
         const updatedHtml = data.html || '';
         setCurrentHtml(updatedHtml);
         setWordCount(data.wordCount || 0);
 
         if (!currentSectionId) return;
+        dirtyRef.current = { sectionId: currentSectionId, html: updatedHtml };
+        setSaveState('saving');
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => {
           saveSectionContent(currentSectionId, updatedHtml);
@@ -738,22 +264,23 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
   };
 
   // Debounced auto-save for cover data
-  const handleCoverDataChange = (field: string, value: string) => {
+  const handleCoverDataChange = (field: string, value: string | boolean) => {
     if (!report) return;
     const updatedCover = { ...(report.cover_data || {}), [field]: value };
     setReport(prev => prev ? { ...prev, cover_data: updatedCover } : prev);
 
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(async () => {
-      setSaving(true);
+    setSaveState('saving');
+    if (coverTimeoutRef.current) clearTimeout(coverTimeoutRef.current);
+    coverTimeoutRef.current = setTimeout(async () => {
       try {
         await authFetch(`/api/mobile/documents/${documentId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ cover_data: updatedCover }),
         });
-      } finally {
-        setSaving(false);
+        setSaveState(dirtyRef.current ? 'saving' : 'saved');
+      } catch {
+        setSaveState('error');
       }
     }, 1200);
   };
@@ -934,8 +461,92 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
 
   const currentSection = sections.find(s => s.id === currentSectionId);
   const currentTitle = currentSection?.title ?? '';
+  const style = useMemo(() => resolveStyle(report?.document_style), [report?.document_style]);
+  const styleKey = useMemo(() => JSON.stringify(style), [style]);
+  const editorHtml = useMemo(
+    () => buildWysiwygHtml(editorSeed, currentTitle, style),
+    // styleKey: rebuild only when a style value really changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editorSeed, currentTitle, styleKey],
+  );
+
+  // Cover logos shown in the preview.
+  useEffect(() => {
+    if (!previewVisible) return;
+    const ids = [style.cover.schoolLogoFileId, style.cover.companyLogoFileId].filter((v): v is string => Boolean(v));
+    if (ids.length === 0) {
+      setCoverLogoUrls({});
+      return;
+    }
+    resolveFileUrls(ids)
+      .then((urls) => setCoverLogoUrls({
+        school: style.cover.schoolLogoFileId ? urls[style.cover.schoolLogoFileId] : null,
+        company: style.cover.companyLogoFileId ? urls[style.cover.companyLogoFileId] : null,
+      }))
+      .catch(() => setCoverLogoUrls({}));
+  }, [previewVisible, style.cover.schoolLogoFileId, style.cover.companyLogoFileId]);
+
+  // Whole document, read-only, with the section being edited at its latest state.
+  const previewHtml = useMemo(() => {
+    if (!previewVisible || !report) return '';
+    return buildPreviewHtml(
+      { title: report.title, template_type: report.template_type, cover_data: report.cover_data || {} },
+      sections.map((s) => ({ title: s.title, html: s.id === currentSectionId ? currentHtml : s.content_html || '' })),
+      style,
+      coverLogoUrls,
+    );
+  }, [previewVisible, report, sections, currentSectionId, currentHtml, style, coverLogoUrls]);
+
+  // Document style: applied at once (optimistic), saved in the background.
+  const updateStyle = async (patch: DocumentStylePatch) => {
+    if (!report) return;
+    flushPendingSave();
+    setEditorSeed(currentHtml);
+    setReport({ ...report, document_style: applyStylePatch(report.document_style, patch) });
+    try {
+      await authFetch(`/api/mobile/documents/${documentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ document_style: patch }),
+      });
+    } catch (err) {
+      Alert.alert('Style du document', err instanceof Error ? err.message : 'Réglage non enregistré.');
+    }
+  };
+
+  // Editing commands need a visible editor (a hidden one cannot take focus), so
+  // commands sent from another tab are queued and run once Document is shown.
+  const runInEditor = (script: string) => {
+    if (editorTab === 'document') {
+      editorSurfaceRef.current?.injectJavaScript(script);
+      return;
+    }
+    pendingEditorScripts.current.push(script);
+    setEditorTab('document');
+  };
+
+  const insertFigure = (figure: InsertFigurePayload) =>
+    runInEditor(
+      `insertFigure(${JSON.stringify(figure.fileId)}, ${JSON.stringify(figure.displayUrl)}, ${JSON.stringify(figure.caption)}, ${JSON.stringify(figure.width)}); true;`
+    );
+
+  const replaceSectionContent = (html: string) => {
+    runInEditor(`setEditorContent(${JSON.stringify(html)}); true;`);
+    if (currentSectionId) saveSectionContent(currentSectionId, html);
+  };
+
+  const insertAtCursor = (html: string) => runInEditor(`insertAiContent(${JSON.stringify(html)}); true;`);
   const isCoverSection = currentTitle.toLowerCase().includes('page de garde');
   const isTocSection = currentTitle.toLowerCase().includes('sommaire');
+  const isListsSection = classifySection(currentTitle).kind === 'lists';
+  // Sections written through the interview: everything the student writes in
+  // prose (not the cover, the generated pages, references or appendices).
+  const interviewSectionId =
+    currentSectionId && !isCoverSection && !isTocSection && !isListsSection &&
+    (report?.template_type === 'stage' || report?.template_type === 'memoire') &&
+    !/^(bibliographie|webographie|annexe|liste des abr)/i.test(currentTitle.trim())
+      ? currentSectionId
+      : undefined;
 
   if (loading) {
     return (
@@ -973,66 +584,61 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
     <SafeAreaView style={styles.container}>
       {/* ── Top Header ──────────────────────────────────────────────── */}
       <View style={styles.header}>
-        {/* Row 1: close + title/status (never overlapped by the actions). */}
+        {/* Close + title/status, exports on the right (the title truncates first). */}
         <View style={styles.headerTopRow}>
-          <Pressable style={styles.headerBtn} onPress={onClose}>
+          <Pressable style={styles.headerBtn} onPress={handleClose} accessibilityLabel="Fermer l’éditeur">
             <ArrowLeft size={18} color={stitchColors.ink} />
-            <Text style={styles.headerBtnText}>Fermer</Text>
           </Pressable>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle} numberOfLines={1}>
               {report?.title || 'Rapport de stage'}
             </Text>
-            <Text style={styles.saveStatus}>
-              {saving ? 'Sauvegarde...' : '✓ Enregistré'}
-            </Text>
+            {saveState === 'error' ? (
+              <Pressable onPress={() => flushPendingSave()} hitSlop={8} accessibilityRole="button">
+                <Text style={[styles.saveStatus, styles.saveStatusError]}>⚠ Non enregistré · Réessayer</Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.saveStatus}>{saveState === 'saving' ? 'Enregistrement…' : '✓ Enregistré'}</Text>
+            )}
           </View>
-        </View>
 
-        {/* Row 2: actions, wrapping instead of being cut on narrow screens. */}
         <View style={styles.headerActions}>
           <Pressable
-            style={[styles.headerActionBtn, styles.sourcesBtn]}
-            onPress={() => setSourcesModalVisible(true)}
+            style={[styles.headerActionBtn, styles.layoutBtn]}
+            onPress={() => setStyleVisible(true)}
+            accessibilityLabel="Style du document"
           >
-            <FileText size={13} color={stitchColors.primary} />
-            <Text style={styles.sourcesBtnText}>
-              Sources{sourcesCount > 0 ? ` (${sourcesCount})` : ''}
-            </Text>
+            <Text style={styles.layoutBtnText}>Aa</Text>
           </Pressable>
           <Pressable
-            style={[styles.headerActionBtn, styles.imagesBtn]}
-            onPress={() => setImagesModalVisible(true)}
+            style={[styles.headerActionBtn, styles.layoutBtn]}
+            onPress={() => {
+              flushPendingSave();
+              setPreviewVisible(true);
+            }}
+            accessibilityLabel="Aperçu du document"
           >
-            <ImageIcon size={13} color={stitchColors.primary} />
-            <Text style={styles.imagesBtnText}>
-              Images{imagesCount > 0 ? ` (${imagesCount})` : ''}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.headerActionBtn, styles.wordBtn]}
-            onPress={handleExportDocx}
-            disabled={exporting}
-          >
-            <Text style={styles.actionBtnText}>Word</Text>
+            <Eye size={16} color={stitchColors.siennaDeep} />
           </Pressable>
           <Pressable
             style={[styles.headerActionBtn, styles.pdfBtn]}
-            onPress={handleExportPdf}
+            onPress={() => setExportVisible(true)}
             disabled={exporting}
+            accessibilityLabel="Exporter"
           >
             {exporting ? (
               <ActivityIndicator size="small" color={stitchColors.white} />
             ) : (
-              <Text style={styles.actionBtnText}>PDF</Text>
+              <Text style={styles.actionBtnText}>Exporter</Text>
             )}
           </Pressable>
         </View>
+        </View>
       </View>
 
-      {/* ── Horizontal Section Tabs ─────────────────────────────────── */}
-      <View style={styles.sectionTabsWrap}>
+      {/* ── Horizontal Section Tabs (Document tab only) ─────────────── */}
+      <View style={[styles.sectionTabsWrap, editorTab !== 'document' && styles.hidden]}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -1073,8 +679,10 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
       </View>
 
       {/* ── Workspace Area (Native Cover vs Native TOC vs Word-like WYSIWYG) */}
+      {/* All three tabs stay mounted (hidden when inactive) so the editor keeps
+          its cursor, the chat its conversation and the sources their state. */}
       <KeyboardAvoidingView
-        style={styles.workspace}
+        style={[styles.workspace, editorTab !== 'document' && styles.hidden]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {isCoverSection ? (
@@ -1091,108 +699,42 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
               </Text>
             </View>
 
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Établissement / Université / École</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="Ex: Institut National Polytechnique"
-                placeholderTextColor={stitchColors.inkMuted}
-                value={cover.school || ''}
-                onChangeText={v => handleCoverDataChange('school', v)}
+            {COVER_FIELDS.filter((f) => !(f.stageOnly && report?.template_type === 'memoire')).map((field) => (
+              <View key={field.key} style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>{field.label}</Text>
+                <TextInput
+                  style={[styles.fieldInput, field.multiline && styles.fieldTextArea]}
+                  multiline={field.multiline}
+                  placeholder={field.placeholder}
+                  placeholderTextColor={stitchColors.inkMuted}
+                  value={typeof cover[field.key] === 'string' ? (cover[field.key] as string) : ''}
+                  onChangeText={(v) => handleCoverDataChange(field.key, v)}
+                />
+              </View>
+            ))}
+
+            <View style={styles.coverToggle}>
+              <Text style={styles.coverToggleText}>En-tête « République du Cameroun » (modèles Classique et Institutionnel)</Text>
+              <Switch
+                value={cover.nationalHeader !== false}
+                onValueChange={(value) => handleCoverDataChange('nationalHeader', value)}
+                trackColor={{ true: stitchColors.siennaSoft, false: stitchColors.glassBorder }}
+                thumbColor={cover.nationalHeader !== false ? stitchColors.primary : stitchColors.surface}
               />
             </View>
 
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Titre du Document</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="Ex: Rapport de Stage de Fin d'Études"
-                placeholderTextColor={stitchColors.inkMuted}
-                value={cover.title || ''}
-                onChangeText={v => handleCoverDataChange('title', v)}
-              />
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Sous-titre / Thème de Recherche</Text>
-              <TextInput
-                style={[styles.fieldInput, styles.fieldTextArea]}
-                multiline
-                numberOfLines={3}
-                placeholder="Ex: Mise en place d'une architecture d'automatisation IA..."
-                placeholderTextColor={stitchColors.inkMuted}
-                value={cover.subtitle || ''}
-                onChangeText={v => handleCoverDataChange('subtitle', v)}
-              />
-            </View>
-
-            <View style={styles.twoColRow}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Nom & Prénom Étudiant</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="Ex: Jean Dupont"
-                  placeholderTextColor={stitchColors.inkMuted}
-                  value={cover.studentName || ''}
-                  onChangeText={v => handleCoverDataChange('studentName', v)}
-                />
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Entreprise d'Accueil</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="Ex: Orange / MTN"
-                  placeholderTextColor={stitchColors.inkMuted}
-                  value={cover.company || ''}
-                  onChangeText={v => handleCoverDataChange('company', v)}
-                />
-              </View>
-            </View>
-
-            <View style={styles.twoColRow}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Tuteur en Entreprise</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="Ex: M. Paul Martin"
-                  placeholderTextColor={stitchColors.inkMuted}
-                  value={cover.tutorCorporate || ''}
-                  onChangeText={v => handleCoverDataChange('tutorCorporate', v)}
-                />
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Tuteur Académique</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="Ex: Dr. Samuel Eto"
-                  placeholderTextColor={stitchColors.inkMuted}
-                  value={cover.tutorAcademic || ''}
-                  onChangeText={v => handleCoverDataChange('tutorAcademic', v)}
-                />
-              </View>
-            </View>
-
-            <View style={styles.twoColRow}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Filière / Spécialité</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="Ex: Génie Logiciel"
-                  placeholderTextColor={stitchColors.inkMuted}
-                  value={cover.specialty || ''}
-                  onChangeText={v => handleCoverDataChange('specialty', v)}
-                />
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Année Académique</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="Ex: 2024-2025"
-                  placeholderTextColor={stitchColors.inkMuted}
-                  value={cover.year || ''}
-                  onChangeText={v => handleCoverDataChange('year', v)}
-                />
-              </View>
+            <Pressable style={styles.coverStyleBtn} onPress={() => setStyleVisible(true)}>
+              <Text style={styles.coverStyleBtnText}>Modèle de page de garde, logos et lignes du jury →</Text>
+            </Pressable>
+          </ScrollView>
+        ) : isListsSection ? (
+          <ScrollView style={styles.scrollContent} contentContainerStyle={styles.formContainer}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Listes des figures et des tableaux</Text>
+              <Text style={styles.cardSubtitle}>
+                Générées automatiquement à l’export, avec les numéros de page, à partir des légendes de vos images et de vos tableaux.
+                Pour ajouter une légende à un tableau : placez le curseur dans le tableau, puis « + Légende ».
+              </Text>
             </View>
           </ScrollView>
         ) : isTocSection ? (
@@ -1233,9 +775,25 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
               <EditorSurface
                 key={currentSectionId || 'default-editor'}
                 ref={editorSurfaceRef}
-                html={buildWysiwygHtml(currentHtml, currentTitle)}
+                html={editorHtml}
                 onMessage={handleEditorMessage}
               />
+            </View>
+
+            {/* Document actions: section, image from the phone, assistant */}
+            <View style={styles.docActions}>
+              <Pressable style={styles.docActionBtn} onPress={() => setShowAddSection(true)}>
+                <Plus size={14} color={stitchColors.primary} />
+                <Text style={styles.docActionText}>Section</Text>
+              </Pressable>
+              <Pressable style={styles.docActionBtn} onPress={() => setImagesModalVisible(true)}>
+                <ImageIcon size={14} color={stitchColors.primary} />
+                <Text style={styles.docActionText}>Image{imagesCount > 0 ? ` (${imagesCount})` : ''}</Text>
+              </Pressable>
+              <Pressable style={styles.docActionBtn} onPress={() => setEditorTab('assistant')}>
+                <Sparkles size={14} color={stitchColors.primary} />
+                <Text style={styles.docActionText}>Assistant</Text>
+              </Pressable>
             </View>
 
             {/* Bottom Quick AI Action Bar */}
@@ -1263,11 +821,49 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
         )}
       </KeyboardAvoidingView>
 
-      {/* ── Floating AI Chat Assistant Trigger ──────────────────────── */}
-      <Pressable style={styles.floatingAiFab} onPress={() => setChatVisible(true)}>
-        <Sparkles size={18} color={stitchColors.white} />
-        <Text style={styles.floatingAiFabText}>Assistant IA</Text>
-      </Pressable>
+      {/* ── Sources tab ─────────────────────────────────────────────── */}
+      <View style={[styles.workspace, editorTab !== 'sources' && styles.hidden]}>
+        <DocumentSourcesPanel documentId={documentId} onSelectionChange={setSelectedSources} />
+      </View>
+
+      {/* ── Assistant tab ───────────────────────────────────────────── */}
+      <KeyboardAvoidingView
+        style={[styles.workspace, editorTab !== 'assistant' && styles.hidden]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <EditorAiChat
+          documentId={documentId}
+          currentSectionTitle={currentTitle}
+          interviewSectionId={interviewSectionId}
+          selectedSources={selectedSources}
+          onInsert={insertAtCursor}
+          onReplaceSection={isCoverSection || isTocSection ? undefined : replaceSectionContent}
+          onOpenSources={() => setEditorTab('sources')}
+        />
+      </KeyboardAvoidingView>
+
+      {/* ── Editor tabs: Document | Sources | Assistant ─────────────── */}
+      <View style={styles.editorTabBar}>
+        {([
+          { key: 'document', label: 'Document', Icon: FileText },
+          { key: 'sources', label: selectedSources.length > 0 ? `Sources (${selectedSources.length})` : 'Sources', Icon: BookOpen },
+          { key: 'assistant', label: 'Assistant', Icon: Sparkles },
+        ] as const).map(({ key, label, Icon }) => {
+          const active = editorTab === key;
+          return (
+            <Pressable
+              key={key}
+              style={[styles.editorTab, active && styles.editorTabActive]}
+              onPress={() => setEditorTab(key)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+            >
+              <Icon size={17} color={active ? stitchColors.primary : stitchColors.inkMuted} />
+              <Text style={[styles.editorTabText, active && styles.editorTabTextActive]}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       {/* ── Add Section Modal ───────────────────────────────────────── */}
       <Modal visible={showAddSection} transparent animationType="fade">
@@ -1300,46 +896,80 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
         </View>
       </Modal>
 
-      {/* ── Full Interactive AI Chat Drawer ─────────────────────────── */}
-      {chatVisible && (
-        <EditorAiChat
-          visible={chatVisible}
-          onClose={() => setChatVisible(false)}
-          documentId={documentId}
-          currentSectionTitle={currentTitle}
-          sourcesCount={sourcesCount}
-          onInsert={(html: string) => {
-            editorSurfaceRef.current?.injectJavaScript(`insertAiContent(${JSON.stringify(html)}); true;`);
-          }}
-          onReplaceSection={(html: string) => {
-            editorSurfaceRef.current?.injectJavaScript(`setEditorContent(${JSON.stringify(html)}); true;`);
-            if (currentSectionId) {
-              saveSectionContent(currentSectionId, html);
-            }
-          }}
-        />
-      )}
+      {/* ── Export: PDF or Word ─────────────────────────────────────── */}
+      <Modal visible={exportVisible} transparent animationType="slide" onRequestClose={() => setExportVisible(false)}>
+        <Pressable style={styles.layoutBackdrop} onPress={() => setExportVisible(false)}>
+          <Pressable style={styles.layoutSheet} onPress={() => undefined}>
+            <Text style={styles.layoutTitle}>Exporter le document</Text>
+            <Text style={styles.layoutHint}>Mise en page, images et sommaire inclus.</Text>
+            <Pressable
+              style={styles.layoutDone}
+              onPress={() => {
+                setExportVisible(false);
+                flushPendingSave().then(handleExportPdf);
+              }}
+            >
+              <Text style={styles.layoutDoneText}>PDF — pour imprimer ou envoyer</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.layoutDone, styles.exportSecondary]}
+              onPress={() => {
+                setExportVisible(false);
+                flushPendingSave().then(handleExportDocx);
+              }}
+            >
+              <Text style={[styles.layoutDoneText, styles.exportSecondaryText]}>Word (.docx) — pour continuer à modifier</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
-      {/* ── Sources Management Modal ─────────────────────────────────── */}
-      <DocumentSourcesModal
-        visible={sourcesModalVisible}
-        onClose={() => setSourcesModalVisible(false)}
+      {/* ── Read-only preview of the whole document ─────────────────── */}
+      <Modal visible={previewVisible} animationType="slide" onRequestClose={() => setPreviewVisible(false)}>
+        <SafeAreaView style={styles.container}>
+          <View style={styles.previewHeader}>
+            <Pressable style={styles.headerBtn} onPress={() => setPreviewVisible(false)} accessibilityLabel="Fermer l’aperçu">
+              <ArrowLeft size={18} color={stitchColors.ink} />
+            </Pressable>
+            <Text style={styles.headerTitle} numberOfLines={1}>Aperçu du document</Text>
+          </View>
+          {previewVisible ? (
+            <EditorSurface
+              ref={previewSurfaceRef}
+              html={previewHtml}
+              onMessage={(event: any) => {
+                try {
+                  const data = JSON.parse(event.nativeEvent.data);
+                  if (data.type !== 'ready') return;
+                  const ids = Array.from(previewHtml.matchAll(/data-file-id="([0-9a-fA-F-]{36})"/g), (m) => m[1].toLowerCase());
+                  if (ids.length === 0) return;
+                  resolveFileUrls(ids)
+                    .then((urls) => previewSurfaceRef.current?.injectJavaScript(`applyImageUrls(${JSON.stringify(urls)}); true;`))
+                    .catch(() => undefined);
+                } catch {
+                  // Ignored
+                }
+              }}
+            />
+          ) : null}
+        </SafeAreaView>
+      </Modal>
+
+      {/* ── Document style ──────────────────────────────────────────── */}
+      <DocumentStylePanel
+        visible={styleVisible}
+        onClose={() => setStyleVisible(false)}
         documentId={documentId}
-        onSourcesUpdated={setSourcesCount}
+        style={style}
+        onChange={updateStyle}
       />
 
-      {/* ── Images & AI Placement Modal ─────────────────────────────── */}
+      {/* ── Images from the phone ───────────────────────────────────── */}
       <DocumentImagesModal
         visible={imagesModalVisible}
         onClose={() => setImagesModalVisible(false)}
         documentId={documentId}
-        sections={sections.map(s => ({ id: s.id, title: s.title }))}
-        currentSectionId={currentSectionId ?? undefined}
-        onInsertFigure={(imageUrl: string, caption: string) => {
-          editorSurfaceRef.current?.injectJavaScript(
-            `insertFigure(${JSON.stringify(imageUrl)}, ${JSON.stringify(caption)}); true;`
-          );
-        }}
+        onInsertFigure={insertFigure}
         onImagesUpdated={setImagesCount}
       />
     </SafeAreaView>
@@ -1416,6 +1046,130 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+  layoutBtn: {
+    backgroundColor: stitchColors.siennaBg,
+    borderWidth: 1,
+    borderColor: stitchColors.siennaSoft,
+  },
+  layoutBtnText: {
+    color: stitchColors.siennaDeep,
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  layoutBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: stitchColors.glassOverlay,
+  },
+  layoutSheet: {
+    backgroundColor: stitchColors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 28,
+    gap: 8,
+  },
+  layoutTitle: {
+    color: stitchColors.ink,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  layoutHint: {
+    color: stitchColors.inkMuted,
+    fontSize: 12.5,
+    marginBottom: 6,
+  },
+  layoutLabel: {
+    color: stitchColors.inkSoft,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    marginTop: 8,
+  },
+  layoutChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  layoutChip: {
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    backgroundColor: stitchColors.paperDeep,
+  },
+  layoutChipActive: {
+    borderColor: stitchColors.primary,
+    backgroundColor: stitchColors.siennaBg,
+  },
+  layoutChipText: {
+    color: stitchColors.inkSoft,
+    fontSize: 13.5,
+    fontWeight: '600',
+  },
+  layoutChipTextActive: {
+    color: stitchColors.siennaDeep,
+    fontWeight: '800',
+  },
+  layoutDone: {
+    marginTop: 16,
+    backgroundColor: stitchColors.primary,
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+  layoutDoneText: {
+    color: stitchColors.white,
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  exportSecondary: {
+    marginTop: 10,
+    backgroundColor: stitchColors.siennaBg,
+    borderWidth: 1,
+    borderColor: stitchColors.siennaSoft,
+  },
+  exportSecondaryText: {
+    color: stitchColors.siennaDeep,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchColors.glassBorder,
+    backgroundColor: stitchColors.background,
+  },
+  coverToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  coverToggleText: {
+    flex: 1,
+    color: stitchColors.inkSoft,
+    fontSize: 13,
+  },
+  coverStyleBtn: {
+    backgroundColor: stitchColors.siennaBg,
+    borderWidth: 1,
+    borderColor: stitchColors.siennaSoft,
+    borderRadius: 10,
+    padding: 12,
+  },
+  coverStyleBtnText: {
+    color: stitchColors.siennaDeep,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  saveStatusError: {
+    color: stitchColors.error,
+  },
   saveStatus: {
     color: stitchColors.emeraldDeep,
     fontSize: 11,
@@ -1437,29 +1191,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 4,
-  },
-  sourcesBtn: {
-    backgroundColor: stitchColors.siennaBg,
-    borderWidth: 1,
-    borderColor: stitchColors.siennaSoft,
-  },
-  sourcesBtnText: {
-    color: stitchColors.primary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  imagesBtn: {
-    backgroundColor: stitchColors.siennaBg,
-    borderWidth: 1,
-    borderColor: stitchColors.siennaSoft,
-  },
-  imagesBtnText: {
-    color: stitchColors.primary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  wordBtn: {
-    backgroundColor: stitchColors.primary,
   },
   pdfBtn: {
     backgroundColor: stitchColors.siennaDeep,
@@ -1619,7 +1350,7 @@ const styles = StyleSheet.create({
   // WYSIWYG Editor
   editorFlex: {
     flex: 1,
-    paddingBottom: 85,
+    paddingBottom: 10,
   },
   editorMetaRow: {
     flexDirection: 'row',
@@ -1676,28 +1407,65 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Floating AI FAB
-  floatingAiFab: {
-    position: 'absolute',
-    right: 18,
-    bottom: 24,
+  // Inactive tabs stay mounted but take no space.
+  hidden: {
+    display: 'none',
+  },
+
+  // Document actions row (above the quick AI dock)
+  docActions: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    backgroundColor: stitchColors.background,
+  },
+  docActionBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    backgroundColor: stitchColors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: stitchColors.siennaSoft,
+    backgroundColor: stitchColors.siennaBg,
   },
-  floatingAiFabText: {
-    color: stitchColors.white,
+  docActionText: {
+    color: stitchColors.primary,
+    fontSize: 12.5,
     fontWeight: '700',
-    fontSize: 13.5,
+  },
+
+  // Editor tabs: Document | Sources | Assistant
+  editorTabBar: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: stitchColors.glassBorder,
+    backgroundColor: stitchColors.surface,
+    paddingBottom: Platform.OS === 'ios' ? 4 : 0,
+  },
+  editorTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    paddingVertical: 9,
+    borderTopWidth: 2,
+    borderTopColor: 'transparent',
+  },
+  editorTabActive: {
+    borderTopColor: stitchColors.primary,
+  },
+  editorTabText: {
+    color: stitchColors.inkMuted,
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  editorTabTextActive: {
+    color: stitchColors.primary,
+    fontWeight: '800',
   },
 
   // Modal

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { clientIpFrom } from './client-ip';
 import { databasePool } from './database';
 
 /**
@@ -48,10 +49,7 @@ const ensureTable = async () => {
 let tableEnsured = false;
 
 const keyFromRequest = (request: Request, email: string): { key: string; ip: string } => {
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    request.headers.get('x-real-ip') ??
-    'unknown';
+  const ip = clientIpFrom(request.headers, process.env);
   return { key: hashKey(email, ip), ip };
 };
 

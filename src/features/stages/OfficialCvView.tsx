@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import type { OfficialCvData } from '../../types';
+import { TO_COMPLETE } from './cvHtml';
 import { fontFamilies } from '../../theme/stitch';
 
 interface OfficialCvViewProps {
@@ -8,16 +9,17 @@ interface OfficialCvViewProps {
 }
 
 export function OfficialCvView({ cv }: OfficialCvViewProps) {
-  const nom = (cv.detailsPersonnels.nom || 'KAMENI').toUpperCase();
-  const prenom = cv.detailsPersonnels.prenom || 'Dave Lionel';
+  const nom = (cv.detailsPersonnels.nom || '').toUpperCase();
+  const prenom = cv.detailsPersonnels.prenom || '';
+  const todo = (value?: string) => (value && value.trim() ? value : TO_COMPLETE);
 
   return (
     <View style={styles.officialCvBox}>
       {/* En-tête avec nom et photo */}
       <View style={styles.officialCvHeaderRow}>
         <View style={{ flex: 1, paddingRight: 10 }}>
-          <Text style={styles.officialCvFullName}>{nom} {prenom}</Text>
-          <Text style={styles.officialCvJobTitle}>{cv.titrePoste}</Text>
+          <Text style={styles.officialCvFullName}>{`${nom} ${prenom}`.trim() || TO_COMPLETE}</Text>
+          <Text style={styles.officialCvJobTitle}>{todo(cv.titrePoste)}</Text>
         </View>
         <View style={styles.officialCvPhotoFrame}>
           <Text style={styles.officialCvPhotoInitials}>
@@ -33,33 +35,34 @@ export function OfficialCvView({ cv }: OfficialCvViewProps) {
       <View style={styles.officialCvTwoCols}>
         <View style={{ flex: 1 }}>
           <Text style={styles.officialCvField}>
-            <Text style={styles.officialCvLabel}>Nom : </Text>{cv.detailsPersonnels.nom}
+            <Text style={styles.officialCvLabel}>Nom : </Text>{todo(cv.detailsPersonnels.nom)}
           </Text>
           <Text style={styles.officialCvField}>
-            <Text style={styles.officialCvLabel}>Prénom : </Text>{cv.detailsPersonnels.prenom}
+            <Text style={styles.officialCvLabel}>Prénom : </Text>{todo(cv.detailsPersonnels.prenom)}
           </Text>
           <Text style={styles.officialCvField}>
-            <Text style={styles.officialCvLabel}>Nationalité : </Text>{cv.detailsPersonnels.nationalite}
+            <Text style={styles.officialCvLabel}>Nationalité : </Text>{todo(cv.detailsPersonnels.nationalite)}
           </Text>
           <Text style={styles.officialCvField}>
-            <Text style={styles.officialCvLabel}>Âge : </Text>{cv.detailsPersonnels.age}
+            <Text style={styles.officialCvLabel}>Âge : </Text>{todo(cv.detailsPersonnels.age)}
           </Text>
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.officialCvField} numberOfLines={1}>
-            <Text style={styles.officialCvLabel}>Email : </Text>{cv.detailsPersonnels.email}
+            <Text style={styles.officialCvLabel}>Email : </Text>{todo(cv.detailsPersonnels.email)}
           </Text>
           <Text style={styles.officialCvField}>
-            <Text style={styles.officialCvLabel}>Tél : </Text>{cv.detailsPersonnels.telephone}
+            <Text style={styles.officialCvLabel}>Tél : </Text>{todo(cv.detailsPersonnels.telephone)}
           </Text>
           <Text style={styles.officialCvField}>
-            <Text style={styles.officialCvLabel}>Adresse : </Text>{cv.detailsPersonnels.adresse}
+            <Text style={styles.officialCvLabel}>Adresse : </Text>{todo(cv.detailsPersonnels.adresse)}
           </Text>
         </View>
       </View>
 
       {/* 2. Expérience professionnelle */}
       <Text style={styles.officialCvSectionHeader}>Expérience professionnelle</Text>
+      {cv.experiences.length === 0 ? <Text style={styles.officialCvInlineText}>{TO_COMPLETE}</Text> : null}
       {cv.experiences.map((exp, idx) => (
         <View key={idx} style={styles.officialCvBlock}>
           <Text style={styles.officialCvItemTitle}>{exp.poste}</Text>
@@ -75,6 +78,7 @@ export function OfficialCvView({ cv }: OfficialCvViewProps) {
 
       {/* 3. Formation */}
       <Text style={styles.officialCvSectionHeader}>Formation</Text>
+      {cv.formations.length === 0 ? <Text style={styles.officialCvInlineText}>{TO_COMPLETE}</Text> : null}
       {cv.formations.map((form, idx) => (
         <View key={idx} style={styles.officialCvBlock}>
           <View style={styles.officialCvRowBetween}>
@@ -88,13 +92,14 @@ export function OfficialCvView({ cv }: OfficialCvViewProps) {
       {/* 4. Compétences */}
       <Text style={styles.officialCvSectionHeader}>Compétences</Text>
       <Text style={styles.officialCvSubheading}>Compétences professionnelles</Text>
+      {cv.competences.professionnelles.length === 0 ? <Text style={styles.officialCvInlineText}>{TO_COMPLETE}</Text> : null}
       {cv.competences.professionnelles.map((comp, idx) => (
         <Text key={idx} style={styles.officialCvBullet}>• {comp}</Text>
       ))}
 
       <Text style={styles.officialCvSubheading}>Habilités personnelles et relationnelles :</Text>
       <Text style={styles.officialCvInlineText}>
-        {cv.competences.habilitesRelationnelles.join(', ')}
+        {todo(cv.competences.habilitesRelationnelles.join(', '))}
       </Text>
 
       <Text style={styles.officialCvSubheading}>Maîtrise des logiciels</Text>
@@ -106,6 +111,7 @@ export function OfficialCvView({ cv }: OfficialCvViewProps) {
 
       {/* 5. Langues */}
       <Text style={styles.officialCvSectionHeader}>Langues</Text>
+      {cv.langues.length === 0 ? <Text style={styles.officialCvInlineText}>{TO_COMPLETE}</Text> : null}
       {cv.langues.map((l, idx) => (
         <Text key={idx} style={styles.officialCvInlineText}>
           {l.langue}: {l.niveau}
@@ -115,7 +121,7 @@ export function OfficialCvView({ cv }: OfficialCvViewProps) {
       {/* 6. Autres informations importantes */}
       <Text style={styles.officialCvSectionHeader}>Autres informations importantes</Text>
       <Text style={styles.officialCvInlineText}>
-        Loisirs : {cv.loisirs.join(', ')}
+        Loisirs : {todo(cv.loisirs.join(', '))}
       </Text>
 
       <Text style={styles.officialCvPageNumber}>1</Text>

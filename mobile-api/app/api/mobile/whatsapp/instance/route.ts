@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 import {
   createInstance,
-  generateFallbackPairingCode,
   getConnectionState,
   getInstanceName,
   logoutInstance,
@@ -88,6 +87,12 @@ export async function POST(request: NextRequest) {
 
     // 2. Request 8-digit pairing code
     const pairingResult = await requestPairingCode(instanceName, normalizedPhone, { forceNew: isReconnect });
+    if (!pairingResult.success) {
+      return withCors(
+        NextResponse.json({ error: "L'appairage WhatsApp est indisponible pour le moment. Réessaie plus tard." }, { status: 503 }),
+        request,
+      );
+    }
 
     // 3. Persist pending instance in Supabase
     await updateStageStudentWhatsAppStatus(normalizedPhone, instanceName, pairingResult.state === 'open');
@@ -111,19 +116,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.warn('[whatsapp/instance route POST] Caught error, returning graceful fallback:', error);
-    const fallbackCode = generateFallbackPairingCode(phoneToUse);
-    if (phoneToUse) {
-      await updateStageStudentWhatsAppStatus(phoneToUse, instanceName || 'student-fallback', false).catch(() => {});
-    }
+    console.warn('[whatsapp/instance route POST] Pairing failed:', error);
     return withCors(
-      NextResponse.json({
-        success: true,
-        pairingCode: fallbackCode,
-        instanceName: instanceName || 'student-fallback',
-        state: 'connecting',
-        offline: true,
-      }),
+      NextResponse.json({ error: "L'appairage WhatsApp est indisponible pour le moment. Réessaie plus tard." }, { status: 503 }),
       request,
     );
   }

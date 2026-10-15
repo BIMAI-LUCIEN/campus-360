@@ -1,4 +1,5 @@
-import { authFetch } from '../auth/betterAuth';
+import { authFetch, authFetchRaw } from '../auth/betterAuth';
+import { mapServerPaymentStatus, type PaymentStatus } from './paymentStatus';
 import {
   PRICE_STAGE_APPLY,
   PRICE_REPORT,
@@ -72,58 +73,45 @@ export interface InitiatePaymentResponse {
   paymentUrl?: string;
   directDebitPrompt: boolean;
   message: string;
-  mock: boolean;
 }
 
 /**
- * Déclenche l'initiation de paiement Mobile Money côté backend
+ * Starts a Mobile Money payment on the server. Any failure is an error: there is
+ * no local fallback and no fake success.
  */
 export async function initiateMobileMoneyPayment(
   payload: InitiatePaymentRequest,
 ): Promise<InitiatePaymentResponse> {
+  let res: Response;
   try {
-    const res = await authFetch('/api/mobile/payments/initiate', {
+    res = await authFetchRaw('/api/mobile/payments/initiate', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-
-    if (res.ok) {
-      return (await res.json()) as InitiatePaymentResponse;
-    }
-  } catch (err) {
-    console.warn('[walletApi] Backend API unreachable, falling back to local demo resolution:', err);
+  } catch {
+    throw new Error('Paiement impossible pour le moment. Vérifie ta connexion et réessaie.');
   }
-
-  // Repli gracieux offline / dev
-  return {
-    success: true,
-    reference: `demo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    directDebitPrompt: true,
-    message: `Notification USSD (${payload.amount} FCFA) simulée sur le ${payload.phone}. Saisissez votre code PIN pour valider.`,
-    mock: true,
-  };
+  const data = (await res.json().catch(() => ({}))) as Partial<InitiatePaymentResponse> & { error?: string };
+  if (!res.ok || !data.reference) {
+    throw new Error(data.error || 'Paiement impossible pour le moment. Réessaie.');
+  }
+  return data as InitiatePaymentResponse;
 }
 
 /**
- * Vérifie l'état de validation d'une transaction
+ * Status of a payment as stored by the server. Network trouble or a 5xx keeps it
+ * "pending"; an unknown reference is an error. Never "success" by default.
  */
-export async function checkPaymentReferenceStatus(
-  reference: string,
-): Promise<{ status: 'pending' | 'completed' | 'failed' }> {
+export async function pollPaymentStatus(reference: string): Promise<{ status: PaymentStatus; balanceCoins?: number }> {
+  let res: Response;
   try {
-    const res = await authFetch(`/api/mobile/wallet/topup/${reference}`);
-    if (res.ok) {
-      const data = (await res.json()) as { status: string };
-      return {
-        status: data.status === 'completed' || data.status === 'success' ? 'completed' : 'pending',
-      };
-    }
+    res = await authFetchRaw(`/api/mobile/wallet/topup/${encodeURIComponent(reference)}`);
   } catch {
-    // ignore
+    return { status: 'pending' };
   }
-
-  return { status: 'completed' };
+  if (res.status === 404) throw new Error('Paiement introuvable.');
+  if (!res.ok) return { status: 'pending' };
+  const data = (await res.json().catch(() => ({}))) as { status?: unknown; balanceCoins?: number };
+  return { status: mapServerPaymentStatus(data.status), balanceCoins: data.balanceCoins };
 }

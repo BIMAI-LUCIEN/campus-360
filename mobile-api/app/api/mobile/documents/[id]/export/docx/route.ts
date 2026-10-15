@@ -1,34 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Document as DocxDocument, HeadingLevel, Packer, PageBreak, Paragraph } from 'docx';
 
+import { buildDocumentDocx } from '@/lib/document-docx';
 import { getDocumentExportPolicy } from '@/lib/document-export-policy';
+import { loadDocumentImages, readImageSize } from '@/lib/document-images';
+import { resolveStyle } from '@/lib/document-style';
 import { getDocumentById, getDocumentSections } from '@/lib/documents-db';
-import { requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
+import { isEmptyEditorHtml, stripEditorPlaceholder } from '@/lib/editor-html';
+import type { DocxImage } from '@/lib/html-to-docx';
+import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 
 export const runtime = 'nodejs';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-const decodeHtml = (value: string) =>
-  value
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>|<\/li>|<\/h[1-6]>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .split('\n')
-    .map((line) => line.replace(/\s+/g, ' ').trim())
-    .filter(Boolean);
-
 const safeFilename = (value: string) =>
   value.replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 80) || 'Rapport_de_stage';
-
-const DOCX_FONTS = new Set(['Times New Roman', 'Arial', 'Georgia', 'Courier New']);
-const DOCX_MARGINS: Record<string, number> = { narrow: 680, normal: 1_134, wide: 1_700 };
 
 export async function OPTIONS(request: NextRequest) {
   return withCors(new NextResponse(null, { status: 204 }), request);
@@ -48,79 +34,40 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const exportPolicy = await getDocumentExportPolicy(access.user.id);
     if (!exportPolicy.canExportDocx) {
       return withCors(
-        NextResponse.json(
-          { error: "L'export Word est réservé à l'abonnement Elite.", code: 'ELITE_REQUIRED' },
-          { status: 403 },
-        ),
+        NextResponse.json({ error: 'L’export Word n’est pas disponible pour ce compte.', code: 'ELITE_REQUIRED' }, { status: 403 }),
         request,
       );
     }
 
-    const cover = document.cover_data || {};
-    const sections = await getDocumentSections(id);
-    const isCareerDocument = document.template_type === 'cv' || document.template_type === 'lettre_motivation';
-    const isMemoir = document.template_type === 'memoire';
-    const memoirLabel = cover.memoirKind === 'professional'
-      ? 'MÉMOIRE PROFESSIONNEL / PROJET'
-      : 'MÉMOIRE ACADÉMIQUE DE RECHERCHE';
-    const exportFont = DOCX_FONTS.has(document.font_family) ? document.font_family : 'Times New Roman';
-    const exportLineSpacing = Math.round(240 * Math.min(4, Math.max(0.5, Number(document.line_spacing) || 1.5)));
-    const exportMargin = DOCX_MARGINS[document.margins] || DOCX_MARGINS.normal;
-    const children: Paragraph[] = isCareerDocument ? [] : [
-      new Paragraph({ text: String(cover.school || 'Établissement'), heading: HeadingLevel.HEADING_2 }),
-      new Paragraph({ text: '' }),
-      ...(isMemoir ? [new Paragraph({ text: memoirLabel, heading: HeadingLevel.HEADING_2 })] : []),
-      new Paragraph({ text: String(cover.title || document.title), heading: HeadingLevel.TITLE }),
-      new Paragraph({ text: String(cover.subtitle || '') }),
-      new Paragraph({ text: '' }),
-      new Paragraph({ text: `Présenté par : ${cover.studentName || ''}` }),
-      ...(!isMemoir ? [
-        new Paragraph({ text: `Entreprise d'accueil : ${cover.company || ''}` }),
-        new Paragraph({ text: `Maître de stage : ${cover.tutorCorporate || ''}` }),
-      ] : cover.memoirKind === 'professional' && cover.company ? [
-        new Paragraph({ text: `Organisation du projet : ${cover.company}` }),
-      ] : []),
-      new Paragraph({ text: `Encadreur académique : ${cover.tutorAcademic || ''}` }),
-      new Paragraph({ text: `Année académique : ${cover.year || ''}` }),
-      new Paragraph({ children: [new PageBreak()] }),
-    ];
+    const style = resolveStyle(document.document_style);
+    const storedSections = await getDocumentSections(id);
+    const logoIds = [style.cover.schoolLogoFileId, style.cover.companyLogoFileId].filter((v): v is string => Boolean(v));
+    const loaded = await loadDocumentImages(
+      [...storedSections.map((s) => s.content_html || ''), ...logoIds.map((logoId) => `<img data-file-id="${logoId}">`)].join('\n'),
+      access.user.id,
+      id,
+      request.nextUrl.origin,
+    );
+    const images = new Map<string, DocxImage>(
+      Array.from(loaded.entries()).map(([fileId, image]) => {
+        const size = readImageSize(image.data, image.mime);
+        return [fileId, { ...image, width: size?.width, height: size?.height }];
+      }),
+    );
+    const logo = (fileId: string | null) => (fileId ? images.get(fileId) ?? null : null);
 
-    for (const section of sections) {
-      const title = section.title.toLowerCase();
-      if (title === 'page de garde') continue;
+    const buffer = await buildDocumentDocx({
+      document: { title: document.title, template_type: document.template_type, cover_data: document.cover_data || {} },
+      sections: storedSections.map((s) => ({
+        id: s.id,
+        title: s.title,
+        content_html: isEmptyEditorHtml(s.content_html || '') ? '' : stripEditorPlaceholder(s.content_html || ''),
+      })),
+      style,
+      images,
+      logos: { school: logo(style.cover.schoolLogoFileId), company: logo(style.cover.companyLogoFileId) },
+    });
 
-      if (!isCareerDocument) {
-        children.push(new Paragraph({ text: section.title, heading: HeadingLevel.HEADING_1 }));
-      }
-      if (title === 'sommaire') {
-        sections
-          .filter((item) => !['page de garde', 'sommaire'].includes(item.title.toLowerCase()))
-          .forEach((item) => children.push(new Paragraph({ text: `• ${item.title}` })));
-      } else {
-        const lines = decodeHtml(section.content_html || '');
-        (lines.length ? lines : ['...']).forEach((text) => children.push(new Paragraph({ text })));
-      }
-      if (!isCareerDocument) {
-        children.push(new Paragraph({ children: [new PageBreak()] }));
-      }
-    }
-
-    const buffer = await Packer.toBuffer(new DocxDocument({
-      styles: {
-        default: {
-          document: {
-            run: { font: exportFont, size: 23 },
-            paragraph: { spacing: { line: exportLineSpacing } },
-          },
-        },
-      },
-      sections: [{
-        properties: {
-          page: { margin: { top: exportMargin, right: exportMargin, bottom: exportMargin, left: exportMargin } },
-        },
-        children,
-      }],
-    }));
     return withCors(
       new NextResponse(new Uint8Array(buffer), {
         status: 200,
@@ -133,7 +80,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       request,
     );
   } catch (error) {
-    return withCors(mobileErrorResponse(error, request), request);
+    return mobileErrorResponse(error, request);
   }
 }
 

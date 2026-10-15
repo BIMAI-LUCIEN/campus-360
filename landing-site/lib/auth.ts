@@ -4,25 +4,17 @@ import { databasePool } from "./db";
 
 const isProd = process.env.NODE_ENV === "production";
 
+// Exact list, no wildcard on domains we do not own. One-off preview domains go
+// in TRUSTED_EXTRA_ORIGINS. Same rule as mobile-api/lib/origins.ts.
 const PRODUCTION_ORIGINS = [
   "https://campus360b.site",
   "https://www.campus360b.site",
   "https://api.campus360b.site",
   "https://admin.campus360b.site",
-  "https://campus-360-landing-ke5ahqi0c-bimai-s-projects.vercel.app",
-  "https://campus-360-landing.vercel.app",
-  "https://*.vercel.app",
-  "https://*.expo.dev",
-  "https://*.exp.direct",
-  "exp://*",
-  "campus-bordes://*",
-];
-
-const LOCAL_DEV_ORIGINS = [
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
   "campus-bordes://",
 ];
+
+const LOCAL_DEV_ORIGINS = isProd ? [] : ["http://localhost:3000", "http://127.0.0.1:3000"];
 
 const parseOriginList = (raw: string | undefined): string[] =>
   (raw ?? "")
@@ -100,6 +92,8 @@ if (databasePool && (!isProd || Boolean(authSecret))) {
       trustedOrigins,
       emailAndPassword: {
         enabled: true,
+        // The landing site sends no email: verification happens in the app, at the
+        // next sign-in (mobile-api sendOnSignIn). Unverified accounts get no legacy data.
         requireEmailVerification: false,
         autoSignIn: true,
         minPasswordLength: 8,

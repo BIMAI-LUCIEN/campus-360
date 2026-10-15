@@ -13,6 +13,8 @@ import {
   requireMobileUser,
   withCors,
 } from '@/lib/mobile-access';
+import { stageErrorStatus } from '@/lib/stages-errors';
+import { missingDispatchTarget } from '@/lib/dispatch-target';
 import {
   dispatchStageApplicationRecord,
   ensureStageStudent,
@@ -96,7 +98,13 @@ export async function POST(request: NextRequest) {
 
     const studentId = await ensureStageStudent(user);
     const studentName = input.studentName || user.name || 'Étudiant Campus 360';
-    const studentEmail = input.studentEmail || user.email || 'etudiant@campus360.cm';
+    const studentEmail = input.studentEmail || user.email || '';
+    if (!studentEmail) {
+      return withCors(
+        NextResponse.json({ error: 'Ajoute ton adresse e-mail dans ton profil avant de postuler.' }, { status: 400 }),
+        request,
+      );
+    }
     const rawStudentPhone =
       input.studentPhone ||
       input.phoneNumber ||
@@ -114,9 +122,16 @@ export async function POST(request: NextRequest) {
 
     // Resolve job and recruiter details
     const job = await getStageJob(input.jobId);
-    const companyName = job?.company.name || 'Entreprise Partenaire';
-    const targetPhone = job?.company.contactWhatsapp || undefined;
-    const targetEmail = job?.company.contactEmail || undefined;
+    if (!job) {
+      return withCors(NextResponse.json({ error: 'Offre de stage indisponible.' }, { status: 404 }), request);
+    }
+    const companyName = job.company.name;
+    const targetPhone = job.company.contactWhatsapp || undefined;
+    const targetEmail = job.company.contactEmail || undefined;
+    const missingTarget = missingDispatchTarget(input.channel, { phone: targetPhone, email: targetEmail });
+    if (missingTarget) {
+      return withCors(NextResponse.json({ error: missingTarget }, { status: 422 }), request);
+    }
 
     // Persist CV PDF to Supabase Storage if base64 provided
     let cvPdfUrl = input.cvPdfUrl;
@@ -182,6 +197,7 @@ export async function POST(request: NextRequest) {
       process.env.N8N_STAGE_WEBHOOK_URL?.trim() ||
       'https://n8n.blackcompany.site/webhook/send-stage-application';
 
+    let deliveryError: string | null = null;
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -196,6 +212,7 @@ export async function POST(request: NextRequest) {
       }).finally(() => clearTimeout(timeoutId));
 
       if (!n8nRes.ok) {
+        deliveryError = `HTTP ${n8nRes.status}`;
         console.warn(`[dispatch route] N8N webhook responded with HTTP ${n8nRes.status}`);
         await notifyAdmin('Envoi de candidature échoué (n8n)', {
           Candidature: applicationId,
@@ -204,12 +221,26 @@ export async function POST(request: NextRequest) {
         });
       }
     } catch (n8nErr) {
+      deliveryError = n8nErr instanceof Error ? n8nErr.message : 'unknown';
       console.warn('[dispatch route] N8N webhook call error (offline or timeout):', n8nErr);
       await notifyAdmin('Envoi de candidature échoué (n8n injoignable)', {
         Candidature: applicationId,
         Canal: input.channel,
         Erreur: n8nErr instanceof Error ? n8nErr.message : 'inconnue',
       });
+    }
+
+    if (deliveryError) {
+      await updateApplicationDispatchStatus(applicationId, 'FAILED').catch((statusErr) => {
+        console.warn('[dispatch route] Could not mark application FAILED:', statusErr);
+      });
+      return withCors(
+        NextResponse.json(
+          { error: "L'envoi de ta candidature a échoué. Réessaie dans quelques minutes.", applicationId, status: 'FAILED' },
+          { status: 502 },
+        ),
+        request,
+      );
     }
 
     const message =
@@ -235,7 +266,10 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error('[dispatch route] Error during application dispatch:', error);
-    return mobileErrorResponse(error, request);
+    return withCors(
+      NextResponse.json({ error: "Ta candidature n'a pas pu être envoyée. Réessaie." }, { status: stageErrorStatus(error) }),
+      request,
+    );
   }
 }
 
@@ -268,6 +302,9 @@ export async function PATCH(request: NextRequest) {
       parsed.data.applicationId,
       parsed.data.status,
     );
+    if (!updated) {
+      return withCors(NextResponse.json({ error: 'Candidature introuvable.' }, { status: 404 }), request);
+    }
 
     // Automation 4: admin alert when the delivery pipeline reports a failure.
     if (parsed.data.status === 'FAILED') {

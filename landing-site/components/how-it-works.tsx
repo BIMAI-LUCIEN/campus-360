@@ -1,25 +1,25 @@
 "use client";
 
-import { Eye, Sparkles, UserCheck, Send, BookOpen } from "lucide-react";
+import { Eye, Sparkles, UserCheck, Send } from "lucide-react";
 
 const steps = [
   {
     n: "01",
     icon: UserCheck,
     title: "Crée ton profil en 30 secondes",
-    desc: "Renseigne ton université, ta filière et tes compétences clés. L'application enregistre tes préférences sans aucun formulaire interminable.",
+    desc: "Renseigne ton université, ta filière et tes compétences. Le formulaire reste court : tu peux compléter ton profil plus tard.",
   },
   {
     n: "02",
     icon: Sparkles,
-    title: "Décroche ton stage & révise tes cours",
-    desc: "L'Agent IA sélectionne les offres de stage correspondant à ton profil avec un score de match %, génère ton CV officiel RH et t'ouvre l'accès à 3 500+ PDFs académiques.",
+    title: "Trouve ton stage & prépare ton dossier",
+    desc: "L'IA sélectionne les offres adaptées à ta filière avec un score de correspondance, et génère ton CV officiel RH et ta lettre de motivation.",
   },
   {
     n: "03",
     icon: Send,
-    title: "Postule en 1 clic & relance à J+7",
-    desc: "Transmets ton dossier directement au recruteur sur WhatsApp ou par e-mail. Reçois une notification automatique 7 jours plus tard pour faire ta relance.",
+    title: "Postule & suis tes candidatures",
+    desc: "Envoie ton dossier au recruteur via WhatsApp, par e-mail ou depuis l'app. Campus 360 te signale la relance à J+7 pour chaque candidature.",
   },
 ];
 
@@ -40,7 +40,7 @@ export function HowItWorks() {
             Comment fonctionne Campus 360 ?
           </h2>
           <p className="text-lg text-[var(--color-ink-muted)] max-w-2xl mx-auto">
-            Trois étapes directes pour valider son année et décrocher son premier stage professionnel.
+            Trois étapes pour décrocher ton stage, du profil à la relance.
           </p>
         </div>
 

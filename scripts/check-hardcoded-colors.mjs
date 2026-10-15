@@ -12,7 +12,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'src');
 const BASELINE = path.join(ROOT, 'scripts', 'hardcoded-colors-baseline.json');
 // Allowed homes for raw colors: the token source and the printable PDF / official CV templates.
-const EXCLUDED = new Set(['theme/stitch.ts', 'features/stages/pdfExportService.ts', 'features/stages/OfficialCvView.tsx']);
+// documentStyle.ts and documentRender.ts hold print colours of documents (copies of mobile-api/lib/document-style.ts and document-render.ts).
+const EXCLUDED = new Set(['theme/stitch.ts', 'features/stages/pdfExportService.ts', 'features/stages/cvHtml.ts', 'features/stages/OfficialCvView.tsx', 'features/documents/documentStyle.ts', 'features/documents/documentRender.ts']);
 const HEX = /#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b/g;
 
 const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

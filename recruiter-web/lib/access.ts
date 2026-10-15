@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 
 import { auth } from './auth';
 import { getPool } from './supabase-pdf';
+import { resolveStartingCoins } from './free-launch';
 import { databasePool } from './database';
 
 export type SessionUser = {
@@ -56,7 +57,7 @@ export const syncProfile = async (user: SessionUser) => {
         );
         await pool.query(
           'insert into public.wallets (user_id, balance_coins) values ($1, $2) on conflict (user_id) do nothing',
-          [inserted.rows[0].id, role === 'admin' ? 0 : 5000]
+          [inserted.rows[0].id, role === 'admin' ? 0 : resolveStartingCoins(process.env)]
         );
       }
     } catch (err) {

@@ -1,40 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const ALLOWED_ORIGINS = [
-  // Expo / mobile app deep links
-  'campus-bordes://',
-  // Vercel preview deployments (for testing)
-  'https://campus-360-hi97.vercel.app',
-  'https://campus-360.vercel.app',
-  'https://campus-360-bimai-s-projects.vercel.app',
-  // Custom domains
-  'https://admin.campus360b.site',
-  'https://api.campus360b.site',
-  // Local development
-  'http://localhost:3001',
-  'http://127.0.0.1:3001',
-  'http://localhost:8081',
-  'http://127.0.0.1:8081',
-];
+import { isTrustedOrigin } from './lib/origins';
 
-// Private LAN IPs (192.168.x.x, 10.x.x.x, 172.16-31.x.x) — needed so a phone
-// on the same Wi-Fi as the dev machine (Expo Go / web dev client hitting the
-// host's LAN IP instead of localhost) can reach this server in development.
-const LAN_ORIGIN_PATTERN =
-  /^http:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}):\d+$/;
-
-const extraOrigins = (process.env.TRUSTED_EXTRA_ORIGINS || '')
-  .split(',')
-  .map((value) => value.trim())
-  .filter(Boolean);
-
-const isAllowedOrigin = (origin: string) => {
-  if (origin.startsWith('exp://') || origin.startsWith('campus-bordes://')) return true;
-  if (ALLOWED_ORIGINS.includes(origin)) return true;
-  if (extraOrigins.includes(origin)) return true;
-  if (LAN_ORIGIN_PATTERN.test(origin) && process.env.NODE_ENV !== 'production') return true;
-  return false;
-};
+const isAllowedOrigin = (origin: string) => isTrustedOrigin(origin, process.env);
 
 export function middleware(request: NextRequest) {
   const origin = request.headers.get('origin');

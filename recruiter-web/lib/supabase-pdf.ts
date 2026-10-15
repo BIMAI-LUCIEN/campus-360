@@ -1,6 +1,8 @@
 import { Pool } from 'pg';
+import { readFileSync } from 'node:fs';
 import { unlink } from 'node:fs/promises';
 import path from 'node:path';
+import { resolveDbSsl } from './db-ssl';
 import { pdfUploadDir } from './paths';
 
 import type { PdfDocument, PdfPack } from './course-db';
@@ -94,7 +96,7 @@ export const getPool = () => {
   if (!process.env.DATABASE_URL) return null;
   pool ??= new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: resolveDbSsl(process.env, process.env.DATABASE_URL, (file) => readFileSync(file, 'utf8')) || undefined,
     max: 3,
   });
   return pool;

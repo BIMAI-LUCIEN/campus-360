@@ -41,6 +41,8 @@ import {
   updateApplicationStatus,
 } from './stagesApi';
 import { exportOfficialCvToPdf } from './pdfExportService';
+import { missingCvFields } from './cvHtml';
+import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from './contactTargets';
 
 interface ApplicationDetailModalProps {
   visible: boolean;
@@ -75,7 +77,7 @@ const PIPELINE_STEPS: { key: AppStatus; label: string; desc: string }[] = [
 export function ApplicationDetailModal({
   visible,
   application,
-  studentName = 'Dave Lionel Kameni',
+  studentName = '',
   onClose,
   onStatusUpdated,
   onNotesUpdated,
@@ -85,14 +87,12 @@ export function ApplicationDetailModal({
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [notes, setNotes] = useState(application?.notes || '');
   const [savingNotes, setSavingNotes] = useState(false);
-  const [showCertificate, setShowCertificate] = useState(false);
 
   React.useEffect(() => {
     if (application) {
       setNotes(application.notes || '');
       setCopied(false);
       setActiveTab('cv');
-      setShowCertificate(false);
     }
   }, [application]);
 
@@ -105,83 +105,23 @@ export function ApplicationDetailModal({
   const eligibleReminder = isEligibleForFollowup(application);
   const currentStatusConf = STATUS_CONFIG[application.status] || STATUS_CONFIG.PENDING;
 
-  // Construct fallback OfficialCvData if not stored
-  const officialCv: OfficialCvData = application.officialCv || {
-    titrePoste: job?.title || 'Stage Professionnel',
-    photoUrl: undefined,
-    detailsPersonnels: {
-      nom: studentName.split(' ')[0] || 'KAMENI',
-      prenom: studentName.split(' ').slice(1).join(' ') || 'Dave Lionel',
-      nationalite: 'Camerounaise',
-      age: '22 ans',
-      email: 'etudiant@campus360.app',
-      telephone: '+237 690 12 34 56',
-      adresse: job?.location ? job.location.split('/')[0].trim() : 'Yaoundé',
-    },
-    experiences: [
-      {
-        poste: 'Stagiaire Informatique & Génie Logiciel',
-        entreprise: 'Projets Académiques & Travaux Pratiques',
-        ville: job?.location ? job.location.split('/')[0].trim() : 'Yaoundé',
-        periode: '2023 - 2024',
-        missions: [
-          `Application des méthodologies logicielles sur les exigences du poste : ${job?.title}`,
-          `Mise en œuvre des compétences clés requises : ${job?.requirements?.slice(0, 3).join(', ') || 'Analyse & Développement'}`,
-          'Travail collaboratif et respect des spécifications fonctionnelles formulées',
-        ],
-      },
-    ],
-    formations: [
-      {
-        diplome: 'Licence 3 en Informatique & Génie Logiciel',
-        etablissement: 'Université de Yaoundé I',
-        ville: 'Yaoundé',
-        periode: 'En cours',
-      },
-    ],
-    competences: {
-      professionnelles: [
-        ...(job?.requirements?.slice(0, 3) || ['React', 'TypeScript', 'Node.js']),
-        'Résolution de problèmes et analyse fonctionnelle',
-        'Gestion du temps et esprit critique',
-      ],
-      habilitesRelationnelles: [
-        'assidu',
-        'attentif',
-        'autonome',
-        'compréhensif',
-        'consciencieux',
-        'courtois',
-      ],
-      logiciels: [
-        {
-          categorie: 'Bureautique & Gestion',
-          items: ['Suite Office', 'Google Workspace', 'Git'],
-        },
-        {
-          categorie: 'Outils Spécialisés',
-          items: job?.requirements || ['React Native', 'SQL', 'PostgreSQL'],
-        },
-      ],
-    },
-    langues: [
-      { langue: 'Français', niveau: 'expérimenté' },
-      { langue: 'Anglais', niveau: 'intermédiaire' },
-    ],
-    loisirs: ['sport', 'lecture', 'veille technologique'],
-  };
-
-  const letterText =
-    application.generatedLetterText ||
-    `Madame, Monsieur le Responsable du Recrutement,\n\nActuellement étudiant en Licence 3 d'Informatique & Génie Logiciel à l'Université de Yaoundé I, je vous adresse avec un grand enthousiasme ma candidature pour le poste de "${job?.title || 'Stagiaire'}" au sein de votre entreprise ${company?.name || 'partenaire'}.\n\nFormé aux technologies modernes et au travail en équipe, j'ai acquis une solide maîtrise de compétences clés directement alignées avec vos exigences. Rigoureux, adaptable et animé d'une forte volonté d'apprendre, je suis convaincu de pouvoir m'intégrer rapidement à vos équipes et apporter une réelle valeur ajoutée à vos projets.\n\nJe reste à votre entière disposition pour tout entretien à votre convenance.\n\nVeuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\n\n${studentName}`;
+  // Only what was really saved with this application: nothing is rebuilt or invented.
+  const officialCv: OfficialCvData | null = application.officialCv ?? null;
+  const letterText = application.generatedLetterText || '';
 
   const handleDownloadPdf = async () => {
+    if (!officialCv) return;
+    const missing = missingCvFields(officialCv);
+    if (missing.length > 0) {
+      Alert.alert('Profil incomplet', `Complète ton nom et ton contact avant d'exporter ce CV. Manque : ${missing.join(', ')}.`);
+      return;
+    }
     try {
       setDownloadingPdf(true);
       await exportOfficialCvToPdf(officialCv);
     } catch (e) {
       console.warn('PDF export error:', e);
-      Alert.alert('Information', 'Aperçu du PDF généré. Utilisez la fonction Imprimer/Enregistrer de votre navigateur.');
+      Alert.alert('Export impossible', "Le PDF n'a pas pu être créé. Réessaie.");
     } finally {
       setDownloadingPdf(false);
     }
@@ -211,7 +151,11 @@ export function ApplicationDetailModal({
 
   const handleSendReminderWhatsapp = () => {
     const msg = generateFollowupReminderMessage(application, studentName);
-    const rawPhone = (company?.contactWhatsapp || '').replace(/[^0-9]/g, '') || '237690123456';
+    const rawPhone = companyWhatsapp(company);
+    if (!rawPhone) {
+      Alert.alert('Relance impossible', `${CONTACT_UNAVAILABLE} : pas de numéro WhatsApp. Copie le message et envoie-le par un autre moyen.`);
+      return;
+    }
     const waUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(msg)}`;
     if (Platform.OS === 'web') {
       window.open(waUrl, '_blank');
@@ -221,7 +165,11 @@ export function ApplicationDetailModal({
   };
 
   const handleSendEmail = () => {
-    const email = company?.contactEmail || 'contact@recrutement.org';
+    const email = companyEmail(company);
+    if (!email) {
+      Alert.alert('Envoi impossible', `${CONTACT_UNAVAILABLE} : pas d'adresse e-mail.`);
+      return;
+    }
     const subject = encodeURIComponent(`Candidature ${job?.title} — ${studentName}`);
     const body = encodeURIComponent(letterText);
     const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`;
@@ -236,7 +184,11 @@ export function ApplicationDetailModal({
     const statuses: AppStatus[] = ['PENDING', 'REVIEWING', 'INTERVIEW', 'ACCEPTED', 'REJECTED'];
     const nextIdx = (statuses.indexOf(application.status) + 1) % statuses.length;
     const nextStatus = statuses[nextIdx];
-    await updateApplicationStatus(application.id, nextStatus);
+    const saved = await updateApplicationStatus(application.id, nextStatus);
+    if (!saved) {
+      Alert.alert('Erreur', "Le statut n'a pas pu être enregistré.");
+      return;
+    }
     if (onStatusUpdated) {
       onStatusUpdated(application.id, nextStatus);
     }
@@ -327,7 +279,7 @@ export function ApplicationDetailModal({
                     testID="btn-detail-download-pdf"
                     style={({ pressed }) => [styles.primaryActionBtn, pressed && { opacity: 0.85 }]}
                     onPress={handleDownloadPdf}
-                    disabled={downloadingPdf}
+                    disabled={downloadingPdf || !officialCv}
                   >
                     {downloadingPdf ? (
                       <ActivityIndicator size="small" color={stitchColors.white} />
@@ -339,7 +291,8 @@ export function ApplicationDetailModal({
 
                   <Pressable
                     style={({ pressed }) => [styles.secondaryActionBtn, pressed && { opacity: 0.85 }]}
-                    onPress={() => handleCopyText(application.generatedCvText || JSON.stringify(officialCv))}
+                    onPress={() => handleCopyText(application.generatedCvText || '')}
+                    disabled={!application.generatedCvText}
                   >
                     <Copy size={13} color="#A78BFA" />
                     <Text style={styles.secondaryActionBtnText}>
@@ -348,8 +301,11 @@ export function ApplicationDetailModal({
                   </Pressable>
                 </View>
 
-                {/* Render Official CV View Component */}
-                <OfficialCvView cv={officialCv} />
+                {officialCv ? (
+                  <OfficialCvView cv={officialCv} />
+                ) : (
+                  <Text style={styles.letterText}>CV non disponible pour cette candidature.</Text>
+                )}
               </View>
             )}
 
@@ -386,7 +342,7 @@ export function ApplicationDetailModal({
 
                 {/* Letter Paper Container */}
                 <View style={styles.letterPaper}>
-                  <Text style={styles.letterText}>{letterText}</Text>
+                  <Text style={styles.letterText}>{letterText || 'Lettre non disponible pour cette candidature.'}</Text>
                 </View>
               </View>
             )}
@@ -465,7 +421,7 @@ export function ApplicationDetailModal({
                   <Text style={styles.cardBoxTitle}>Coordonnées de l'Entreprise</Text>
                   <View style={styles.infoRow}>
                     <Building2 size={14} color={stitchColors.inkSubtle} />
-                    <Text style={styles.infoText}>{company?.name || 'Entreprise Partenaire'}</Text>
+                    <Text style={styles.infoText}>{company?.name || 'Entreprise'}</Text>
                     {company?.status === 'VERIFIED' && (
                       <View style={styles.verifiedTag}>
                         <ShieldCheck size={11} color={stitchColors.emeraldDeep} />
@@ -476,7 +432,7 @@ export function ApplicationDetailModal({
 
                   <View style={styles.infoRow}>
                     <MapPin size={14} color={stitchColors.inkSubtle} />
-                    <Text style={styles.infoText}>{company?.address || job?.location || 'Douala / Yaoundé'}</Text>
+                    <Text style={styles.infoText}>{company?.address || job?.location || 'Adresse non renseignée'}</Text>
                   </View>
 
                   <View style={styles.contactsRow}>
@@ -525,38 +481,14 @@ export function ApplicationDetailModal({
                   </Pressable>
                 </View>
 
-                {/* QR Code & Certificate Badge */}
-                <Pressable
-                  style={styles.certificateCard}
-                  onPress={() => setShowCertificate(!showCertificate)}
-                >
-                  <View style={styles.certIconWrap}>
-                    <QrCode size={24} color="#A78BFA" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.certTitle}>Certificat de Candidature Officiel</Text>
-                    <Text style={styles.certSub}>
-                      Code intégrité {refCode} • Vérifiable en ligne par le recruteur
-                    </Text>
-                  </View>
-                  <ChevronRight size={16} color={stitchColors.inkSubtle} />
-                </Pressable>
-
-                {showCertificate && (
-                  <View style={styles.certModalBox}>
-                    <View style={styles.certHeader}>
-                      <ShieldCheck size={20} color={stitchColors.emeraldDeep} />
-                      <Text style={styles.certModalTitle}>Attestation de Dépôt Institutionnel</Text>
-                    </View>
-                    <Text style={styles.certModalText}>
-                      Cette candidature a été générée et transmise selon les protocoles certifiés de Campus 360 pour le compte de l'étudiant {studentName}.
-                    </Text>
-                    <View style={styles.certMetaRow}>
-                      <Text style={styles.certMetaItem}>Dépôt : {new Date(application.appliedAt).toLocaleDateString('fr-FR')}</Text>
-                      <Text style={styles.certMetaItem}>Réf : {refCode}</Text>
-                    </View>
-                  </View>
-                )}
+                {/* Application summary (real data only) */}
+                <View style={styles.cardBox}>
+                  <Text style={styles.cardBoxTitle}>Récapitulatif de la candidature</Text>
+                  <Text style={styles.infoText}>Référence : {refCode}</Text>
+                  <Text style={styles.infoText}>Déposée le {new Date(application.appliedAt).toLocaleDateString('fr-FR')}</Text>
+                  <Text style={styles.infoText}>Entreprise : {company?.name || 'Entreprise'}</Text>
+                  <Text style={styles.infoText}>Statut : {currentStatusConf.label}</Text>
+                </View>
               </View>
             )}
           </ScrollView>
@@ -950,73 +882,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#A78BFA',
-  },
-  certificateCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(139, 92, 246, 0.08)',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.2)',
-  },
-  certIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: 'rgba(139, 92, 246, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  certTitle: {
-    fontFamily: fontFamilies.outfit,
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: stitchColors.ink,
-    marginBottom: 2,
-  },
-  certSub: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 10.5,
-    color: stitchColors.inkSubtle,
-  },
-  certModalBox: {
-    marginTop: 8,
-    backgroundColor: 'rgba(16, 185, 129, 0.06)',
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
-  },
-  certHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
-  },
-  certModalTitle: {
-    fontFamily: fontFamilies.outfit,
-    fontSize: 12,
-    fontWeight: '700',
-    color: stitchColors.emeraldDeep,
-  },
-  certModalText: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 11,
-    color: stitchColors.inkMuted,
-    lineHeight: 16,
-    marginBottom: 8,
-  },
-  certMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  certMetaItem: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 10,
-    color: stitchColors.inkSubtle,
-    fontWeight: '600',
   },
   footer: {
     padding: 14,

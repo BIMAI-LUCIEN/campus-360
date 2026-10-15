@@ -13,11 +13,11 @@ export async function GET() {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.warn('Health check DB warning (resilient offline active):', error);
+    console.warn('Health check: database unreachable:', error);
     return NextResponse.json({
-      status: 'ok',
-      db: 'offline_resilient',
+      status: 'error',
+      db: 'unreachable',
       timestamp: new Date().toISOString(),
-    }, { status: 200 });
+    }, { status: 503 });
   }
 }

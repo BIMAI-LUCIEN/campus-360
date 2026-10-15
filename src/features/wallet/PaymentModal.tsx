@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Modal,
   View,
@@ -24,13 +24,14 @@ import {
   type PaymentPack,
   type MobileMoneyOperator,
   initiateMobileMoneyPayment,
+  pollPaymentStatus,
 } from './walletApi';
 import { stitchColors } from '../../theme/stitch';
 
 interface PaymentModalProps {
   visible: boolean;
   onClose: () => void;
-  onPaymentSuccess?: (pack: PaymentPack) => void;
+  onPaymentSuccess?: () => void;
   defaultPhone?: string;
   reasonMessage?: string;
 }
@@ -44,11 +45,25 @@ export function PaymentModal({
 }: PaymentModalProps) {
   const [selectedPack, setSelectedPack] = useState<PaymentPack>(PAYMENT_PACKS[0]);
   const [operator, setOperator] = useState<MobileMoneyOperator>('mtn');
-  const [phone, setPhone] = useState(defaultPhone || '+237 690 12 34 56');
+  const [phone, setPhone] = useState(defaultPhone);
   const [loading, setLoading] = useState(false);
   const [waitingUssd, setWaitingUssd] = useState(false);
   const [success, setSuccess] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  };
+
+  // Polling never outlives the modal.
+  useEffect(() => stopPolling, []);
+  useEffect(() => {
+    if (!visible) stopPolling();
+  }, [visible]);
 
   const handleInitiate = async () => {
     const cleanPhone = phone.trim();
@@ -71,18 +86,40 @@ export function PaymentModal({
       setLoading(false);
       setWaitingUssd(true);
 
-      // Simulation du délai de validation USSD (2.5 secondes en mock/local)
-      setTimeout(() => {
-        setWaitingUssd(false);
-        setSuccess(true);
-      }, 2500);
-    } catch {
+      // The server is the only source of truth: poll every 3 s, 20 attempts.
+      let attempts = 0;
+      stopPolling();
+      pollRef.current = setInterval(async () => {
+        attempts += 1;
+        try {
+          const { status } = await pollPaymentStatus(response.reference);
+          if (status === 'success') {
+            stopPolling();
+            setWaitingUssd(false);
+            setSuccess(true);
+          } else if (status === 'failed') {
+            stopPolling();
+            setWaitingUssd(false);
+            setNoticeMessage('Le paiement a été refusé ou annulé.');
+          } else if (attempts >= 20) {
+            stopPolling();
+            setWaitingUssd(false);
+            setNoticeMessage("Paiement en attente. Ton solde sera mis à jour dès que l'opérateur confirme.");
+          }
+        } catch (pollError) {
+          stopPolling();
+          setWaitingUssd(false);
+          setNoticeMessage(pollError instanceof Error ? pollError.message : 'Paiement introuvable.');
+        }
+      }, 3000);
+    } catch (error) {
       setLoading(false);
-      setNoticeMessage('Une erreur est survenue lors de l’initiation. Veuillez réessayer.');
+      setNoticeMessage(error instanceof Error ? error.message : 'Paiement impossible pour le moment. Réessaie.');
     }
   };
 
   const handleResetAndClose = () => {
+    stopPolling();
     setWaitingUssd(false);
     setSuccess(false);
     setNoticeMessage(null);
@@ -94,7 +131,7 @@ export function PaymentModal({
     setSuccess(false);
     setNoticeMessage(null);
     if (onPaymentSuccess) {
-      onPaymentSuccess(selectedPack);
+      onPaymentSuccess();
     } else {
       onClose();
     }
@@ -131,9 +168,9 @@ export function PaymentModal({
               <View style={styles.successIconCircle}>
                 <CheckCircle2 size={44} color={stitchColors.emerald} />
               </View>
-              <Text style={styles.successTitle}>Paiement Confirmé !</Text>
+              <Text style={styles.successTitle}>Recharge confirmée</Text>
               <Text style={styles.successText}>
-                {`Votre portefeuille Campus 360 a été rechargé de ${selectedPack.priceFcfa.toLocaleString()} FCFA avec succès.`}
+                {`L'opérateur a confirmé ton paiement de ${selectedPack.priceFcfa.toLocaleString()} FCFA.`}
               </Text>
               <Pressable style={styles.actionBtn} onPress={handleSuccessContinue}>
                 <Text style={styles.actionBtnText}>Continuer</Text>
@@ -240,7 +277,7 @@ export function PaymentModal({
                 <Smartphone size={18} color={stitchColors.inkSubtle} style={{ marginRight: 10 }} />
                 <TextInput
                   style={styles.phoneInput}
-                  placeholder="Ex: 672364124 ou +237690123456"
+                  placeholder="Ex. 6XX XX XX XX"
                   placeholderTextColor={stitchColors.inkMuted}
                   value={phone}
                   onChangeText={setPhone}

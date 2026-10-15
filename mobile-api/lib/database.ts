@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { Pool, type PoolConfig } from 'pg';
+
+import { resolveDbSsl } from './db-ssl';
 
 declare global {
   // eslint-disable-next-line no-var
@@ -10,13 +13,6 @@ const createPool = (): Pool => {
     throw new Error('DATABASE_URL is required.');
   }
 
-  // Force the ssl block to be present even when env var is missing — many
-  // Supabase pooler connections fail TLS verification with default certs.
-  // We default to relaxed (rejectUnauthorized=false) so the app boots; the
-  // user can opt into strict via DATABASE_SSL_REJECT_UNAUTHORIZED=true.
-  const rejectUnauthorized =
-    (process.env.DATABASE_SSL_REJECT_UNAUTHORIZED ?? 'false').toLowerCase() === 'true';
-
   const config: PoolConfig = {
     connectionString: process.env.DATABASE_URL,
     max: 5,
@@ -25,13 +21,9 @@ const createPool = (): Pool => {
     keepAlive: true,
   };
 
-  // Always attach ssl for non-localhost connections — but use relaxed
-  // verification by default so Supabase shared pooler certs don't break us.
-  // Localhost (`localhost` / `127.0.0.1`) is never SSL-protected anyway.
-  const isLocal = /localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL);
-  if (!isLocal) {
-    config.ssl = { rejectUnauthorized };
-  }
+  // TLS verified in production by default (lib/db-ssl.ts); localhost has no TLS.
+  const ssl = resolveDbSsl(process.env, process.env.DATABASE_URL, (path) => readFileSync(path, 'utf8'));
+  if (ssl) config.ssl = ssl;
 
   return new Pool(config);
 };

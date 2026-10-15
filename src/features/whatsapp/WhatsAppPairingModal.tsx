@@ -263,7 +263,7 @@ export function WhatsAppPairingModal({
 
                 <Text style={styles.connectedCardTitle}>Compte WhatsApp prêt pour l'envoi</Text>
                 <Text style={styles.connectedCardDesc}>
-                  Vos candidatures aux offres de stage et votre CV officiel certifié seront envoyés
+                  Vos candidatures aux offres de stage et votre CV seront envoyés
                   directement en arrière-plan via ce compte sans ouvrir d'application externe.
                 </Text>
 

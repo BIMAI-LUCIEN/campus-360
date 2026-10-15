@@ -38,6 +38,7 @@ import {
 } from '../../features/stages/stagesApi';
 import { ApplicationDetailModal } from '../../features/stages/ApplicationDetailModal';
 import { stitchColors } from '../../theme/stitch';
+import { companyWhatsapp } from '../../features/stages/contactTargets';
 
 interface ApplicationsTimelineProps {
   studentName: string;
@@ -62,11 +63,18 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
   const [applications, setApplications] = useState<StageApplication[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedApp, setSelectedApp] = useState<StageApplication | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadData = async () => {
-    const data = await fetchStudentApplications();
-    setApplications(data);
-    setRefreshing(false);
+    setLoadError(null);
+    try {
+      const data = await fetchStudentApplications();
+      setApplications(data);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Candidatures indisponibles pour le moment.');
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => {
@@ -81,7 +89,11 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
   const handleStatusChange = async (appId: string, currentStatus: AppStatus) => {
     const options: AppStatus[] = ['PENDING', 'INTERVIEW', 'ACCEPTED', 'REJECTED'];
     const nextStatus = options[(options.indexOf(currentStatus) + 1) % options.length];
-    await updateApplicationStatus(appId, nextStatus);
+    const saved = await updateApplicationStatus(appId, nextStatus);
+    if (!saved) {
+      Alert.alert('Erreur', "Le statut n'a pas pu être enregistré.");
+      return;
+    }
     if (nextStatus === 'ACCEPTED') {
       Alert.alert('Félicitations !', 'Votre candidature a été acceptée par l’entreprise.');
     }
@@ -90,7 +102,11 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
   const handleSendReminder = async (app: StageApplication) => {
     const reminderMsg = generateFollowupReminderMessage(app, studentName || 'Étudiant');
-    const rawPhone = (app.job?.company?.contactWhatsapp || '').replace(/[^0-9]/g, '') || '237670009988';
+    const rawPhone = companyWhatsapp(app.job?.company);
+    if (!rawPhone) {
+      Alert.alert('Relance impossible', "Cette entreprise n'a pas de numéro WhatsApp. Copie le message et envoie-le par un autre moyen.");
+      return;
+    }
     const waUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(reminderMsg)}`;
 
     await recordApplicationReminder(app.id);
@@ -152,7 +168,15 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
           </Text>
         </View>
 
-        {applications.length === 0 ? (
+        {loadError ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyTitle}>Impossible de charger tes candidatures</Text>
+            <Text style={styles.emptySubtitle}>{loadError}</Text>
+            <Pressable style={styles.retryButton} onPress={onRefresh} accessibilityRole="button">
+              <Text style={styles.retryText}>Réessayer</Text>
+            </Pressable>
+          </View>
+        ) : applications.length === 0 ? (
           <View style={styles.emptyBox}>
             <View style={styles.emptyIconCircle}>
               <Clock size={36} color="#A78BFA" />
@@ -439,6 +463,18 @@ const styles = StyleSheet.create({
     color: stitchColors.inkSubtle,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  retryButton: {
+    marginTop: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    backgroundColor: stitchColors.primary,
+  },
+  retryText: {
+    color: stitchColors.white,
+    fontSize: 13.5,
+    fontWeight: '700',
   },
 
   // Ticket Card (Anti-Saturation Calme)

@@ -197,35 +197,10 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
 
   if (!document) return null;
 
-  // Synthesize rich study plan if none in DB
-  const effectiveStudyPlan = (document.studyPlan && document.studyPlan.length > 0)
-    ? document.studyPlan
-    : [
-        `1. Notions clés et fondamentaux de ${document.subject}`,
-        `2. Définitions essentielles et méthodologie du cours`,
-        `3. Cas pratiques, exercices types et applications`,
-        `4. Fiche récapitulative pour les examens et partiels`,
-      ];
-
-  // Synthesize rich quiz if none in DB
-  const effectiveQuiz = (document.quiz && document.quiz.length > 0)
-    ? document.quiz
-    : [
-        {
-          question: `Quel est l'objectif principal du cours "${document.title}" ?`,
-          answer: `Maîtriser les concepts fondamentaux de ${document.subject} et savoir les appliquer aux examens.`,
-        },
-        {
-          question: `Quels sont les prérequis recommandés pour ce niveau (${document.level}) ?`,
-          answer: `Une bonne maîtrise des bases académiques antérieures et une révision régulière des chapitres.`,
-        },
-        {
-          question: `Comment maximiser sa rétention des notions présentées dans ce PDF ?`,
-          answer: `Relire les fiches de synthèse, poser des questions à l'IA Campus 360 et s'auto-évaluer avec les quiz.`,
-        },
-      ];
-
-  const effectiveSummary = document.aiSummary || document.description || `Ce cours complet de ${document.subject} (${document.level}) délivré à ${document.university} permet d'acquérir l'ensemble des compétences requises pour réussir les évaluations et examens.`;
+  // Only what the document really has; empty means "not available", never invented.
+  const effectiveStudyPlan = document.studyPlan ?? [];
+  const effectiveQuiz = document.quiz ?? [];
+  const effectiveSummary = document.aiSummary || document.description || 'Résumé non disponible pour ce document.';
 
   return (
     <Modal animationType="slide" visible={Boolean(document)} onRequestClose={onClose}>
@@ -446,6 +421,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
               </Text>
 
               <View style={styles.timelineContainer}>
+                {effectiveStudyPlan.length === 0 ? <Text style={styles.subtitle}>Plan d'étude non disponible pour ce document.</Text> : null}
                 {effectiveStudyPlan.map((step, index) => (
                   <View key={`plan-${index}`} style={styles.timelineItem}>
                     <View style={styles.timelineNumberBadge}>
@@ -472,6 +448,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
               </Text>
 
               <View style={styles.quizList}>
+                {effectiveQuiz.length === 0 ? <Text style={styles.subtitle}>Quiz non disponible pour ce document.</Text> : null}
                 {effectiveQuiz.map((item, index) => {
                   const isRevealed = Boolean(revealedQuiz[index]);
                   return (

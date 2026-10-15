@@ -1,564 +1,516 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
-  StyleSheet,
-  View,
-  Text,
-  Modal,
-  Pressable,
-  ScrollView,
-  TextInput,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { FileText, Plus, Trash2, X, Upload, CheckCircle2 } from 'lucide-react-native';
-import { authFetch } from '../auth/betterAuth';
+  AlertCircle,
+  CheckSquare,
+  FileText,
+  Globe,
+  Link2,
+  RotateCcw,
+  Square,
+  StickyNote,
+  Trash2,
+  Upload,
+} from 'lucide-react-native';
+
+import { authStorage } from '../auth/betterAuth';
 import { stitchColors } from '../../theme/stitch';
+import {
+  addTextSource,
+  addUrlSource,
+  deleteSource,
+  formatBytes,
+  listDocumentSources,
+  pickSourceFromPhone,
+  uploadDocumentFile,
+  type DocumentFile,
+  type PickedFile,
+} from './documentFilesApi';
 
-export type DocumentSourceItem = {
-  id: string;
-  document_id: string;
-  file_name: string;
-  file_type: string;
-  file_size: number;
-  file_url: string;
-  extracted_text: string;
-  summary?: string;
-  created_at: string;
+// Sources tab of the editor: files from the phone, web pages and pasted notes.
+// Ticked sources are the only ones the assistant reads; the choice is kept per
+// document on the device (new sources are ticked by default).
+
+const EXCLUDED_KEY = (documentId: string) => `campus360_doc_sources_excluded_v1_${documentId}`;
+
+const loadExcluded = async (documentId: string): Promise<string[]> => {
+  try {
+    const raw = await authStorage.getItemAsync(EXCLUDED_KEY(documentId));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
 };
 
-type DocumentSourcesModalProps = {
-  visible: boolean;
-  onClose: () => void;
+const saveExcluded = (documentId: string, ids: string[]) =>
+  authStorage.setItemAsync(EXCLUDED_KEY(documentId), JSON.stringify(ids)).catch(() => undefined);
+
+const kindLabel = (source: DocumentFile) => {
+  if (source.origin === 'url') return 'Page web';
+  if (source.origin === 'text') return 'Note';
+  if (source.mime === 'application/pdf') return 'PDF';
+  if (source.mime === 'text/plain') return 'Texte';
+  return 'Word';
+};
+
+const SourceIcon = ({ source }: { source: DocumentFile }) => {
+  const color = stitchColors.primary;
+  if (source.origin === 'url') return <Globe size={16} color={color} />;
+  if (source.origin === 'text') return <StickyNote size={16} color={color} />;
+  return <FileText size={16} color={color} />;
+};
+
+type PendingFile = { picked: PickedFile; progress: number; error: string | null };
+type AddMode = 'none' | 'url' | 'text';
+
+export type DocumentSourcesPanelProps = {
   documentId: string;
-  onSourcesUpdated?: (count: number) => void;
+  // Ready + ticked sources, in display order (labels "Source 1, 2…" follow this order).
+  onSelectionChange: (selected: DocumentFile[]) => void;
 };
 
-export function DocumentSourcesModal({
-  visible,
-  onClose,
-  documentId,
-  onSourcesUpdated,
-}: DocumentSourcesModalProps) {
-  const [sources, setSources] = useState<DocumentSourceItem[]>([]);
+export function DocumentSourcesPanel({ documentId, onSelectionChange }: DocumentSourcesPanelProps) {
+  const [sources, setSources] = useState<DocumentFile[]>([]);
+  const [excluded, setExcluded] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingFile | null>(null);
+  const [mode, setMode] = useState<AddMode>('none');
+  const [url, setUrl] = useState('');
+  const [noteTitle, setNoteTitle] = useState('');
+  const [noteText, setNoteText] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
-  // Form state
-  const [fileName, setFileName] = useState('');
-  const [fileType, setFileType] = useState('pdf');
-  const [textContent, setTextContent] = useState('');
-  const [fileUrl, setFileUrl] = useState('');
-
-  const loadSources = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const res = await authFetch(`/api/mobile/documents/${documentId}/sources`);
-      if (res.ok) {
-        const data = await res.json();
-        const list = data.sources || [];
-        setSources(list);
-        onSourcesUpdated?.(list.length);
-      }
-    } catch (e) {
-      console.warn('Load sources error:', e);
+      const [list, ex] = await Promise.all([listDocumentSources(documentId), loadExcluded(documentId)]);
+      setSources(list);
+      setExcluded(ex);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Chargement impossible.');
     } finally {
       setLoading(false);
     }
-  }, [documentId, onSourcesUpdated]);
+  }, [documentId]);
 
   useEffect(() => {
-    if (visible) {
-      loadSources();
-    }
-  }, [visible, loadSources]);
+    load();
+  }, [load]);
 
-  const handleAddSource = async () => {
-    if (!fileName.trim()) {
-      Alert.alert('Nom requis', 'Donnez un nom à votre source (ex: Rapport_Entreprise.pdf).');
-      return;
-    }
-    if (!textContent.trim() && !fileUrl.trim()) {
-      Alert.alert('Contenu requis', 'Renseignez un extrait de texte ou un lien vers le document.');
-      return;
-    }
+  // Oldest first so labels stay stable as sources are added.
+  const ordered = useMemo(
+    () => [...sources].sort((a, b) => a.created_at.localeCompare(b.created_at)),
+    [sources],
+  );
+  const selected = useMemo(
+    () => ordered.filter((s) => s.status === 'ready' && !excluded.includes(s.id)),
+    [ordered, excluded],
+  );
 
-    setSubmitting(true);
+  useEffect(() => {
+    onSelectionChange(selected);
+  }, [selected, onSelectionChange]);
+
+  const toggle = (id: string) => {
+    setExcluded((prev) => {
+      const next = prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id];
+      saveExcluded(documentId, next);
+      return next;
+    });
+  };
+
+  const upsert = (source: DocumentFile) =>
+    setSources((prev) => [source, ...prev.filter((s) => s.id !== source.id)]);
+
+  const upload = async (picked: PickedFile) => {
+    setPending({ picked, progress: 0, error: null });
     try {
-      const res = await authFetch(`/api/mobile/documents/${documentId}/sources`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileName: fileName.trim(),
-          fileType,
-          fileUrl: fileUrl.trim() || 'https://campus360b.site/documents/source',
-          extractedText: textContent.trim(),
-          fileSize: textContent.length,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Échec de l'ajout.");
-      }
-
-      setFileName('');
-      setTextContent('');
-      setFileUrl('');
-      setShowAddForm(false);
-      await loadSources();
-      Alert.alert('✅ Source ajoutée', "L'IA utilisera cette source pour rédiger et contextualiser votre rapport.");
-    } catch (err: any) {
-      Alert.alert('Erreur', err.message || "Impossible d'ajouter la source.");
-    } finally {
-      setSubmitting(false);
+      const file = await uploadDocumentFile(documentId, picked, 'source', (progress) =>
+        setPending((current) => (current ? { ...current, progress } : current)),
+      );
+      upsert(file);
+      setPending(null);
+    } catch (error) {
+      setPending({ picked, progress: 0, error: error instanceof Error ? error.message : 'Envoi impossible.' });
     }
   };
 
-  const handleDeleteSource = async (sourceId: string, name: string) => {
-    Alert.alert(
-      'Supprimer la source',
-      `Voulez-vous retirer "${name}" ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const res = await authFetch(`/api/mobile/documents/${documentId}/sources/${sourceId}`, {
-                method: 'DELETE',
-              });
-              if (res.ok) {
-                const next = sources.filter((s) => s.id !== sourceId);
-                setSources(next);
-                onSourcesUpdated?.(next.length);
-              }
-            } catch {
-              Alert.alert('Erreur', 'Suppression impossible.');
-            }
-          },
-        },
-      ]
-    );
+  const handlePickFile = async () => {
+    try {
+      const picked = await pickSourceFromPhone();
+      if (picked) await upload(picked);
+    } catch (error) {
+      Alert.alert('Source', error instanceof Error ? error.message : 'Impossible d’ouvrir vos fichiers.');
+    }
   };
+
+  const handleAddUrl = async (value = url) => {
+    const target = value.trim();
+    if (!/^https?:\/\//i.test(target)) {
+      setAddError('Collez une adresse complète qui commence par https://');
+      return;
+    }
+    setAdding(true);
+    setAddError(null);
+    try {
+      upsert(await addUrlSource(documentId, target));
+      setUrl('');
+      setMode('none');
+    } catch (error) {
+      setAddError(error instanceof Error ? error.message : 'Ajout impossible.');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!noteTitle.trim() || !noteText.trim()) {
+      setAddError('Donnez un titre et collez le texte de la note.');
+      return;
+    }
+    setAdding(true);
+    setAddError(null);
+    try {
+      upsert(await addTextSource(documentId, noteTitle, noteText));
+      setNoteTitle('');
+      setNoteText('');
+      setMode('none');
+    } catch (error) {
+      setAddError(error instanceof Error ? error.message : 'Ajout impossible.');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  // A failed web page is fetched again; the failed row is then removed.
+  const retryUrl = async (source: DocumentFile) => {
+    if (!source.source_url) return;
+    setAdding(true);
+    try {
+      const fresh = await addUrlSource(documentId, source.source_url);
+      await deleteSource(documentId, source).catch(() => undefined);
+      setSources((prev) => [fresh, ...prev.filter((s) => s.id !== source.id && s.id !== fresh.id)]);
+    } catch (error) {
+      Alert.alert('Page web', error instanceof Error ? error.message : 'Nouvel essai impossible.');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDelete = (source: DocumentFile) => {
+    Alert.alert('Retirer la source', `« ${source.title} » ne sera plus utilisée par l’assistant.`, [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Retirer',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteSource(documentId, source);
+            setSources((prev) => prev.filter((s) => s.id !== source.id));
+          } catch (error) {
+            Alert.alert('Erreur', error instanceof Error ? error.message : 'Suppression impossible.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const uploading = Boolean(pending && !pending.error);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerIcon}>
-              <FileText size={18} color={stitchColors.secondary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.headerTitle}>Sources & Documents de référence</Text>
-              <Text style={styles.headerSub}>
-                {sources.length} document{sources.length > 1 ? 's' : ''} injecté{sources.length > 1 ? 's' : ''} dans la mémoire de l&apos;IA
-              </Text>
-            </View>
-            <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
-              <X size={18} color={stitchColors.inkSubtle} />
-            </Pressable>
-          </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <Text style={styles.intro}>
+        Ajoutez vos documents de stage, pages web et notes. L’assistant répond à partir des sources cochées et cite la page
+        utilisée.
+      </Text>
 
-          <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
-            {/* Callout information */}
-            <View style={styles.infoBanner}>
-              <CheckCircle2 size={16} color={stitchColors.emeraldDeep} />
-              <Text style={styles.infoText}>
-                Tous les documents téléversés ici (livret d&apos;accueil, notes de stage, cahier des charges) sont analysés et alimentent les suggestions de l&apos;IA.
-              </Text>
-            </View>
+      <View style={styles.addRow}>
+        <Pressable style={[styles.addBtn, uploading && styles.disabled]} onPress={handlePickFile} disabled={uploading}>
+          <Upload size={15} color={stitchColors.white} />
+          <Text style={styles.addBtnText}>Fichier</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.addBtnOutline, mode === 'url' && styles.addBtnOutlineActive]}
+          onPress={() => {
+            setMode(mode === 'url' ? 'none' : 'url');
+            setAddError(null);
+          }}
+        >
+          <Link2 size={15} color={stitchColors.primary} />
+          <Text style={styles.addBtnOutlineText}>Lien web</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.addBtnOutline, mode === 'text' && styles.addBtnOutlineActive]}
+          onPress={() => {
+            setMode(mode === 'text' ? 'none' : 'text');
+            setAddError(null);
+          }}
+        >
+          <StickyNote size={15} color={stitchColors.primary} />
+          <Text style={styles.addBtnOutlineText}>Note</Text>
+        </Pressable>
+      </View>
+      <Text style={styles.hint}>PDF, Word (.docx) ou texte, 20 Mo maximum.</Text>
 
-            {/* List of existing sources */}
-            {loading ? (
-              <View style={styles.centerBox}>
-                <ActivityIndicator size="small" color={stitchColors.secondary} />
-                <Text style={styles.loadingText}>Chargement des sources...</Text>
-              </View>
-            ) : sources.length === 0 && !showAddForm ? (
-              <View style={styles.emptyBox}>
-                <FileText size={36} color="#475569" />
-                <Text style={styles.emptyTitle}>Aucune source ajoutée</Text>
-                <Text style={styles.emptyDesc}>
-                  Importez vos notes de stage, documents PDF ou rapports de réunion pour que l&apos;IA écrive avec les vraies données de votre stage.
+      {mode === 'url' ? (
+        <View style={styles.form}>
+          <TextInput
+            style={styles.input}
+            value={url}
+            onChangeText={setUrl}
+            placeholder="https://exemple.com/article"
+            placeholderTextColor={stitchColors.inkMuted}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            onSubmitEditing={() => handleAddUrl()}
+          />
+          <Pressable style={[styles.formBtn, adding && styles.disabled]} onPress={() => handleAddUrl()} disabled={adding}>
+            {adding ? <ActivityIndicator size="small" color={stitchColors.white} /> : <Text style={styles.formBtnText}>Ajouter la page</Text>}
+          </Pressable>
+        </View>
+      ) : null}
+
+      {mode === 'text' ? (
+        <View style={styles.form}>
+          <TextInput
+            style={styles.input}
+            value={noteTitle}
+            onChangeText={setNoteTitle}
+            placeholder="Titre (ex. Notes de réunion avec le tuteur)"
+            placeholderTextColor={stitchColors.inkMuted}
+            maxLength={200}
+          />
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={noteText}
+            onChangeText={setNoteText}
+            placeholder="Collez ou saisissez le texte"
+            placeholderTextColor={stitchColors.inkMuted}
+            multiline
+            textAlignVertical="top"
+          />
+          <Pressable style={[styles.formBtn, adding && styles.disabled]} onPress={handleAddNote} disabled={adding}>
+            {adding ? <ActivityIndicator size="small" color={stitchColors.white} /> : <Text style={styles.formBtnText}>Ajouter la note</Text>}
+          </Pressable>
+        </View>
+      ) : null}
+
+      {addError ? <Text style={styles.errorText}>{addError}</Text> : null}
+
+      {pending ? (
+        <View style={[styles.card, pending.error ? styles.cardError : null]}>
+          <FileText size={16} color={stitchColors.primary} />
+          <View style={styles.cardBody}>
+            <Text style={styles.cardTitle} numberOfLines={1}>{pending.picked.name}</Text>
+            {pending.error ? (
+              <>
+                <Text style={styles.errorText}>{pending.error}</Text>
+                <View style={styles.inlineRow}>
+                  <Pressable style={styles.linkBtn} onPress={() => upload(pending.picked)}>
+                    <RotateCcw size={13} color={stitchColors.primary} />
+                    <Text style={styles.linkBtnText}>Réessayer</Text>
+                  </Pressable>
+                  <Pressable style={styles.linkBtn} onPress={() => setPending(null)}>
+                    <Text style={styles.linkBtnText}>Retirer</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.meta}>
+                  {pending.progress < 1 ? `Envoi… ${Math.round(pending.progress * 100)} %` : 'Lecture du document…'}
                 </Text>
-                <Pressable style={styles.primaryBtn} onPress={() => setShowAddForm(true)}>
-                  <Plus size={16} color={stitchColors.white} />
-                  <Text style={styles.primaryBtnText}>Ajouter une première source</Text>
+                <View style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: `${Math.max(4, pending.progress * 100)}%` }]} />
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      ) : null}
+
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="small" color={stitchColors.primary} />
+        </View>
+      ) : loadError ? (
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{loadError}</Text>
+          <Pressable style={styles.linkBtn} onPress={load}>
+            <Text style={styles.linkBtnText}>Réessayer</Text>
+          </Pressable>
+        </View>
+      ) : ordered.length === 0 && !pending ? (
+        <View style={styles.empty}>
+          <FileText size={28} color={stitchColors.inkSubtle} />
+          <Text style={styles.emptyTitle}>Aucune source</Text>
+          <Text style={styles.emptyText}>
+            Sans source, l’assistant rédige à partir du plan de votre document. Avec des sources, il s’appuie sur vos documents
+            et indique d’où vient chaque information.
+          </Text>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.sectionLabel}>
+            {selected.length} source{selected.length > 1 ? 's' : ''} utilisée{selected.length > 1 ? 's' : ''} par l’assistant
+          </Text>
+          {ordered.map((source) => {
+            const ready = source.status === 'ready';
+            const checked = ready && !excluded.includes(source.id);
+            const label = ready ? selected.findIndex((s) => s.id === source.id) + 1 : 0;
+            return (
+              <View key={source.id} style={[styles.card, source.status === 'failed' && styles.cardError]}>
+                <Pressable
+                  onPress={() => ready && toggle(source.id)}
+                  disabled={!ready}
+                  hitSlop={8}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked, disabled: !ready }}
+                  accessibilityLabel={`Utiliser ${source.title}`}
+                >
+                  {source.status === 'pending' ? (
+                    <ActivityIndicator size="small" color={stitchColors.primary} />
+                  ) : source.status === 'failed' ? (
+                    <AlertCircle size={18} color={stitchColors.error} />
+                  ) : checked ? (
+                    <CheckSquare size={18} color={stitchColors.primary} />
+                  ) : (
+                    <Square size={18} color={stitchColors.inkSubtle} />
+                  )}
+                </Pressable>
+                <View style={styles.cardBody}>
+                  <View style={styles.inlineRow}>
+                    <SourceIcon source={source} />
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                      {label > 0 ? `${label}. ` : ''}
+                      {source.title}
+                    </Text>
+                  </View>
+                  <Text style={styles.meta} numberOfLines={1}>
+                    {kindLabel(source)}
+                    {source.page_count > 0 ? ` · ${source.page_count} p.` : ''}
+                    {source.origin === 'upload' && source.bytes > 0 ? ` · ${formatBytes(source.bytes)}` : ''}
+                    {source.origin === 'url' && source.source_url ? ` · ${source.source_url.replace(/^https?:\/\//, '')}` : ''}
+                  </Text>
+                  {source.status === 'failed' ? (
+                    <>
+                      <Text style={styles.errorText}>{source.error || 'Lecture impossible.'}</Text>
+                      {source.origin === 'url' ? (
+                        <Pressable style={styles.linkBtn} onPress={() => retryUrl(source)} disabled={adding}>
+                          <RotateCcw size={13} color={stitchColors.primary} />
+                          <Text style={styles.linkBtnText}>Réessayer</Text>
+                        </Pressable>
+                      ) : null}
+                    </>
+                  ) : null}
+                </View>
+                <Pressable onPress={() => handleDelete(source)} hitSlop={8} accessibilityLabel={`Retirer ${source.title}`}>
+                  <Trash2 size={15} color={stitchColors.error} />
                 </Pressable>
               </View>
-            ) : (
-              <View style={styles.sourcesList}>
-                {sources.map((s) => (
-                  <View key={s.id} style={styles.sourceCard}>
-                    <View style={styles.sourceIconBox}>
-                      <FileText size={20} color={stitchColors.secondary} />
-                    </View>
-                    <View style={{ flex: 1, paddingRight: 8 }}>
-                      <Text style={styles.sourceName} numberOfLines={1}>
-                        {s.file_name}
-                      </Text>
-                      <Text style={styles.sourceMeta}>
-                        {s.file_type.toUpperCase()} • {s.extracted_text ? `${s.extracted_text.length} caractères indexés` : 'Lien de référence'}
-                      </Text>
-                      {s.summary ? (
-                        <Text style={styles.sourceSummary} numberOfLines={2}>
-                          {s.summary}
-                        </Text>
-                      ) : null}
-                    </View>
-                    <Pressable
-                      style={styles.deleteIconBtn}
-                      onPress={() => handleDeleteSource(s.id, s.file_name)}
-                    >
-                      <Trash2 size={16} color="#F87171" />
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {/* Add Source Form */}
-            {showAddForm ? (
-              <View style={styles.formContainer}>
-                <Text style={styles.formHeading}>Ajouter un document de stage</Text>
-
-                <Text style={styles.inputLabel}>Nom du fichier / Référence</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Ex: Livret_Entreprise_2026.pdf ou Notes_Semaine1"
-                  placeholderTextColor={stitchColors.inkMuted}
-                  value={fileName}
-                  onChangeText={setFileName}
-                />
-
-                <Text style={styles.inputLabel}>Type de source</Text>
-                <View style={styles.typeRow}>
-                  {['pdf', 'notes', 'specifications'].map((t) => (
-                    <Pressable
-                      key={t}
-                      style={[styles.typePill, fileType === t && styles.typePillActive]}
-                      onPress={() => setFileType(t)}
-                    >
-                      <Text style={[styles.typePillText, fileType === t && styles.typePillTextActive]}>
-                        {t === 'pdf' ? '📄 Document PDF' : t === 'notes' ? '📝 Notes de stage' : '📋 Spécification'}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-
-                <Text style={styles.inputLabel}>Extrait de texte ou contenu clé</Text>
-                <TextInput
-                  style={[styles.textInput, styles.textArea]}
-                  multiline
-                  numberOfLines={5}
-                  placeholder="Copiez-collez ici le texte du document, les chiffres clés, missions, ou notes..."
-                  placeholderTextColor={stitchColors.inkMuted}
-                  value={textContent}
-                  onChangeText={setTextContent}
-                />
-
-                <View style={styles.formBtnRow}>
-                  <Pressable
-                    style={styles.cancelBtn}
-                    onPress={() => setShowAddForm(false)}
-                    disabled={submitting}
-                  >
-                    <Text style={styles.cancelBtnText}>Annuler</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.saveBtn, submitting && { opacity: 0.6 }]}
-                    onPress={handleAddSource}
-                    disabled={submitting}
-                  >
-                    {submitting ? (
-                      <ActivityIndicator size="small" color={stitchColors.white} />
-                    ) : (
-                      <>
-                        <Upload size={15} color={stitchColors.white} />
-                        <Text style={styles.saveBtnText}>Enregistrer la source</Text>
-                      </>
-                    )}
-                  </Pressable>
-                </View>
-              </View>
-            ) : sources.length > 0 ? (
-              <Pressable style={styles.outlineBtn} onPress={() => setShowAddForm(true)}>
-                <Plus size={16} color={stitchColors.secondary} />
-                <Text style={styles.outlineBtnText}>Ajouter une autre source</Text>
-              </Pressable>
-            ) : null}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+            );
+          })}
+        </>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.55)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    height: '84%',
-    backgroundColor: stitchColors.surface,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: stitchColors.glassBorder,
-  },
-  headerIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: 'rgba(124, 58, 237, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    color: stitchColors.ink,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  headerSub: {
-    color: stitchColors.inkSubtle,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: stitchColors.paperSoft,
-  },
-  body: {
-    flex: 1,
-  },
-  bodyContent: {
-    padding: 16,
-    gap: 14,
-  },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
-  },
-  infoText: {
-    flex: 1,
-    color: stitchColors.inkSoft,
-    fontSize: 12.5,
-    lineHeight: 18,
-  },
-  centerBox: {
-    padding: 40,
-    alignItems: 'center',
-    gap: 12,
-  },
-  loadingText: {
-    color: stitchColors.inkSubtle,
-    fontSize: 13,
-  },
-  emptyBox: {
-    paddingVertical: 36,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: stitchColors.paperSoft,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
-  },
-  emptyTitle: {
-    color: stitchColors.ink,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  emptyDesc: {
-    color: stitchColors.inkSubtle,
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 6,
-  },
-  primaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: stitchColors.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-  },
-  primaryBtnText: {
-    color: stitchColors.white,
-    fontWeight: '700',
-    fontSize: 13.5,
-  },
-  sourcesList: {
-    gap: 10,
-  },
-  sourceCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: stitchColors.paperSoft,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
-  },
-  sourceIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: 'rgba(124, 58, 237, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  sourceName: {
-    color: stitchColors.ink,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  sourceMeta: {
-    color: stitchColors.inkSubtle,
-    fontSize: 11.5,
-    marginTop: 2,
-  },
-  sourceSummary: {
-    color: stitchColors.inkMuted,
-    fontSize: 12,
-    marginTop: 4,
-    lineHeight: 16,
-  },
-  deleteIconBtn: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(248, 113, 113, 0.1)',
-  },
-  outlineBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderWidth: 1.5,
-    borderColor: 'rgba(124, 58, 237, 0.4)',
-    borderRadius: 12,
-    paddingVertical: 12,
-    borderStyle: 'dashed',
-  },
-  outlineBtnText: {
-    color: stitchColors.secondary,
-    fontWeight: '700',
-    fontSize: 13.5,
-  },
-  formContainer: {
-    backgroundColor: stitchColors.paperSoft,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
-    gap: 10,
-  },
-  formHeading: {
-    color: stitchColors.ink,
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  inputLabel: {
-    color: stitchColors.inkSubtle,
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  textInput: {
-    backgroundColor: stitchColors.surface,
-    borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: stitchColors.ink,
-    fontSize: 13.5,
-  },
-  textArea: {
-    minHeight: 110,
-    textAlignVertical: 'top',
-  },
-  typeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  typePill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: stitchColors.surface,
-    borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
-  },
-  typePillActive: {
-    backgroundColor: stitchColors.primary,
-    borderColor: stitchColors.primary,
-  },
-  typePillText: {
-    color: stitchColors.inkSubtle,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  typePillTextActive: {
-    color: stitchColors.white,
-  },
-  formBtnRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 8,
-  },
-  cancelBtn: {
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-  },
-  cancelBtnText: {
-    color: stitchColors.inkSubtle,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  saveBtn: {
+  container: { flex: 1, backgroundColor: stitchColors.background },
+  content: { padding: 16, gap: 10, paddingBottom: 32 },
+  intro: { color: stitchColors.inkSoft, fontSize: 13, lineHeight: 19 },
+  addRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     backgroundColor: stitchColors.primary,
-    paddingVertical: 9,
-    paddingHorizontal: 16,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  addBtnText: { color: stitchColors.white, fontWeight: '700', fontSize: 13 },
+  addBtnOutline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    backgroundColor: stitchColors.surface,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  addBtnOutlineActive: { borderColor: stitchColors.primary, backgroundColor: stitchColors.siennaBg },
+  addBtnOutlineText: { color: stitchColors.primary, fontWeight: '700', fontSize: 13 },
+  disabled: { opacity: 0.5 },
+  hint: { color: stitchColors.inkMuted, fontSize: 12 },
+  form: {
+    gap: 8,
+    backgroundColor: stitchColors.surface,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    borderRadius: 12,
+    padding: 12,
+  },
+  input: {
+    backgroundColor: stitchColors.paperDeep,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
     borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    color: stitchColors.ink,
+    fontSize: 13.5,
   },
-  saveBtnText: {
-    color: stitchColors.white,
-    fontSize: 13,
-    fontWeight: '700',
+  textArea: { minHeight: 110 },
+  formBtn: {
+    alignSelf: 'flex-end',
+    backgroundColor: stitchColors.primary,
+    borderRadius: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    minWidth: 120,
+    alignItems: 'center',
   },
+  formBtnText: { color: stitchColors.white, fontWeight: '700', fontSize: 13 },
+  center: { padding: 24, alignItems: 'center', gap: 8 },
+  empty: {
+    alignItems: 'center',
+    gap: 8,
+    padding: 24,
+    backgroundColor: stitchColors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+  },
+  emptyTitle: { color: stitchColors.ink, fontWeight: '700', fontSize: 15 },
+  emptyText: { color: stitchColors.inkMuted, fontSize: 13, textAlign: 'center', lineHeight: 19 },
+  sectionLabel: { color: stitchColors.inkMuted, fontSize: 12, fontWeight: '700', marginTop: 4 },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: stitchColors.surface,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    borderRadius: 12,
+    padding: 12,
+  },
+  cardError: { borderColor: stitchColors.error, backgroundColor: stitchColors.errorBg },
+  cardBody: { flex: 1, gap: 4 },
+  cardTitle: { color: stitchColors.ink, fontWeight: '700', fontSize: 13.5, flexShrink: 1 },
+  meta: { color: stitchColors.inkMuted, fontSize: 12 },
+  errorText: { color: stitchColors.onErrorContainer, fontSize: 12.5, lineHeight: 17 },
+  inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  linkBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4 },
+  linkBtnText: { color: stitchColors.primary, fontWeight: '700', fontSize: 12.5 },
+  progressTrack: { height: 6, borderRadius: 3, backgroundColor: stitchColors.glassBorder, overflow: 'hidden' },
+  progressFill: { height: 6, borderRadius: 3, backgroundColor: stitchColors.primary },
 });

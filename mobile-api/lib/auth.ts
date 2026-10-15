@@ -11,6 +11,7 @@ import {
   recordLoginFailure,
 } from './login-throttle';
 import { isEmailDeliveryConfigured, sendOtpEmail, sendPasswordResetEmail } from './mailer';
+import { trustedOriginList } from './origins';
 
 // OTP policy (validated product decision: email OTP for sign-up + password reset).
 export const OTP_POLICY = {
@@ -18,39 +19,6 @@ export const OTP_POLICY = {
   TTL_SECONDS: 10 * 60,
   MAX_ATTEMPTS: 5,
 } as const;
-
-// ────────────────────────────────────────────────────────────────────────
-// Trusted origins — production domains MUST be hardcoded so auth works
-// even when env vars point at localhost. The custom domain is the primary
-// production entry point.
-// ────────────────────────────────────────────────────────────────────────
-const PRODUCTION_ORIGINS = [
-  'https://api.campus360b.site',
-  'https://admin.campus360b.site',
-  'https://campus360b.site',
-  'https://www.campus360b.site',
-  'https://admin.campus-bordes.com',
-  'https://campus-360-hi97.vercel.app',
-  'https://campus-360-two.vercel.app',
-  'https://campus-360-bimai-s-projects.vercel.app',
-  'https://*.vercel.app',
-  'https://*.expo.dev',
-  'https://*.exp.direct',
-  'exp://*',
-  'campus-bordes://*',
-];
-
-const LOCAL_DEV_ORIGINS = [
-  'campus-bordes://',
-  'http://localhost:3001',
-  'http://127.0.0.1:3001',
-  'http://localhost:3002',
-  'http://127.0.0.1:3002',
-  'http://localhost:8081',
-  'http://127.0.0.1:8081',
-  'http://localhost:8082',
-  'http://127.0.0.1:8082',
-];
 
 // LAN IP wildcards (dev only) — a phone on the same Wi-Fi as the dev machine
 // hits the host's LAN IP (e.g. http://10.66.47.18:8081) instead of localhost,
@@ -86,22 +54,16 @@ const detectBaseUrl = (): string => {
   return 'https://api.campus360b.site';
 };
 
-// Build the trusted origins list. Production origins are ALWAYS trusted
-// regardless of env. Local dev origins are added too so developers can test.
+// Trusted origins: exact list from lib/origins.ts (no wildcard on domains we
+// do not own), LAN IPs in development, and our own public URL.
 const trustedOrigins = [
-  ...LOCAL_DEV_ORIGINS,
+  ...trustedOriginList(process.env),
   ...LAN_DEV_ORIGINS,
-  ...PRODUCTION_ORIGINS,
-  // Env var overrides — only if set to a non-localhost URL.
   process.env.BETTER_AUTH_URL && !process.env.BETTER_AUTH_URL.includes('localhost')
     ? process.env.BETTER_AUTH_URL
     : undefined,
-  process.env.EXPO_APP_ORIGIN,
-  process.env.TRUSTED_EXTRA_ORIGINS,
-]
-  .filter(Boolean)
-  .flatMap((value) => (typeof value === 'string' && value.includes(',') ? parseOriginList(value) : [value]))
-  .filter((value): value is string => typeof value === 'string' && value.length > 0);
+  ...parseOriginList(process.env.EXPO_APP_ORIGIN),
+].filter((value): value is string => typeof value === 'string' && value.length > 0);
 
 const isProd = process.env.NODE_ENV === 'production';
 const baseURL = detectBaseUrl();
@@ -169,9 +131,12 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
     );
   }
 
-  // Email verification is enforced only when an email provider is configured,
-  // otherwise nobody could ever receive their code and every account would be locked.
+  // Email verification is mandatory in production (an unverified address must not
+  // inherit a legacy wallet). Outside production it follows the email provider.
   const emailDeliveryConfigured = isEmailDeliveryConfigured();
+  if (isProd && !emailDeliveryConfigured) {
+    throw new Error('RESEND_API_KEY est obligatoire en production (vérification des e-mails).');
+  }
   if (!emailDeliveryConfigured) {
     console.warn('[auth] RESEND_API_KEY missing: email OTP verification is NOT enforced.');
   }
@@ -191,7 +156,7 @@ const buildBetterAuthConfig = (): Parameters<typeof betterAuth>[0] => {
     },
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: emailDeliveryConfigured,
+      requireEmailVerification: isProd ? true : emailDeliveryConfigured,
       autoSignIn: true,
       minPasswordLength: 8,
       sendResetPassword: async ({ user, url }) => {

@@ -1,2 +1,5 @@
 .vercel
 .env*
+
+# Local uploads (dev); on the VPS UPLOAD_ROOT points outside the app
+.uploads/

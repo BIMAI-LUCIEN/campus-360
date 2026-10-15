@@ -1,3 +1,4 @@
+import { isFreeLaunch } from '@/lib/free-launch';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -7,7 +8,8 @@ import { requireMobileUser, mobileErrorResponse, MobileApiError, withCors } from
 
 export const runtime = 'nodejs';
 
-const IA_CREDITS_PER_GENERATION = 5;
+// Free during the V1 launch (see lib/free-launch.ts).
+const IA_CREDITS_PER_GENERATION = isFreeLaunch() ? 0 : 5;
 
 const CANDIDATE_MODELS = [
   'openai/gpt-4o-mini',

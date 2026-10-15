@@ -47,6 +47,7 @@ import {
   stitchRadius,
   stitchShadows,
 } from '../../theme/stitch';
+import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from '../../features/stages/contactTargets';
 
 interface StagesScreenProps {
   studentProfile: {
@@ -218,8 +219,10 @@ export function StagesScreen({
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
   const [selectedPreviewPhoto, setSelectedPreviewPhoto] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadData = async () => {
+    setLoadError(null);
     try {
       const data = await fetchStageJobs({
         query: searchQuery,
@@ -230,7 +233,9 @@ export function StagesScreen({
       });
       setJobs(data);
     } catch (e) {
-      console.error(e);
+      console.warn('[StagesScreen] loading jobs failed:', e);
+      setJobs([]);
+      setLoadError(e instanceof Error ? e.message : 'Offres indisponibles pour le moment.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -280,8 +285,9 @@ export function StagesScreen({
 
   const handleRecruiterWhatsapp = () => {
     if (!selectedDetailJob) return;
-    const rawPhone = selectedDetailJob.company?.contactWhatsapp || '237690123456';
-    const clean = cleanPhoneNumber(rawPhone);
+    const phone = companyWhatsapp(selectedDetailJob.company);
+    if (!phone) return;
+    const clean = cleanPhoneNumber(phone);
     const textMsg = encodeURIComponent(
       `Bonjour, je suis candidat sur Campus 360 pour l'offre "${selectedDetailJob.title}" au sein de ${selectedDetailJob.company?.name || 'votre structure'}.`
     );
@@ -293,7 +299,8 @@ export function StagesScreen({
 
   const handleRecruiterEmail = () => {
     if (!selectedDetailJob) return;
-    const email = selectedDetailJob.company?.contactEmail || 'recrutement@campus360.app';
+    const email = companyEmail(selectedDetailJob.company);
+    if (!email) return;
     const subject = encodeURIComponent(`Candidature Stage : ${selectedDetailJob.title}`);
     const body = encodeURIComponent(
       `Bonjour,\n\nJe souhaite postuler au poste de ${selectedDetailJob.title} publié sur Campus 360.\n\nCordialement,\n${studentProfile.fullName}`
@@ -470,26 +477,49 @@ export function StagesScreen({
             <ActivityIndicator size="large" color={stitchColors.sienna} />
             <Text style={styles.loadingText}>Calcul des meilleures affinités de stage...</Text>
           </View>
+        ) : loadError ? (
+          <View style={styles.emptyBox}>
+            <View style={styles.emptyIconCircle}>
+              <Building2 size={36} color={stitchColors.sienna} />
+            </View>
+            <Text style={styles.emptyTitle}>Impossible de charger les offres</Text>
+            <Text style={styles.emptySubtitle}>{loadError}</Text>
+            <Pressable
+              style={styles.resetFiltersBtn}
+              onPress={() => {
+                setLoading(true);
+                loadData();
+              }}
+            >
+              <Text style={styles.resetFiltersBtnText}>Réessayer</Text>
+            </Pressable>
+          </View>
         ) : displayedJobs.length === 0 ? (
           <View style={styles.emptyBox}>
             <View style={styles.emptyIconCircle}>
               <Building2 size={36} color={stitchColors.sienna} />
             </View>
-            <Text style={styles.emptyTitle}>Aucune offre trouvée</Text>
-            <Text style={styles.emptySubtitle}>
-              Essaie de réinitialiser la recherche ou de changer les filtres de secteur.
-            </Text>
-            <Pressable
-              style={styles.resetFiltersBtn}
-              onPress={() => {
-                setSearchQuery('');
-                setActiveSector('Tous');
-                setActiveKind('Tous');
-                setShowTopThreeOnly(false);
-              }}
-            >
-              <Text style={styles.resetFiltersBtnText}>Réinitialiser les filtres</Text>
-            </Pressable>
+            {searchQuery.trim() || activeSector !== 'Tous' || activeKind !== 'Tous' || showTopThreeOnly ? (
+              <>
+                <Text style={styles.emptyTitle}>Aucune offre trouvée</Text>
+                <Text style={styles.emptySubtitle}>
+                  Essaie de réinitialiser la recherche ou de changer les filtres de secteur.
+                </Text>
+                <Pressable
+                  style={styles.resetFiltersBtn}
+                  onPress={() => {
+                    setSearchQuery('');
+                    setActiveSector('Tous');
+                    setActiveKind('Tous');
+                    setShowTopThreeOnly(false);
+                  }}
+                >
+                  <Text style={styles.resetFiltersBtnText}>Réinitialiser les filtres</Text>
+                </Pressable>
+              </>
+            ) : (
+              <Text style={styles.emptyTitle}>Aucune offre publiée pour le moment.</Text>
+            )}
           </View>
         ) : (
           displayedJobs.map((job, index) => {
@@ -590,7 +620,7 @@ export function StagesScreen({
                     <View style={styles.stipendCol}>
                       <Text style={styles.stipendLabel}>Indemnité mensuelle</Text>
                       <Text style={styles.stipendAmount}>
-                        {job.stipend ? job.stipend.replace(/\(.*\)/, '').trim() : 'Gratification'}
+                        {job.stipend ? job.stipend.replace(/\(.*\)/, '').trim() : 'Rémunération non précisée'}
                       </Text>
                     </View>
 
@@ -1027,32 +1057,37 @@ export function StagesScreen({
                     </View>
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={styles.recruiterTitle}>Service Recrutement &amp; RH</Text>
-                        <CheckCircle2 size={13} color={stitchColors.emeraldTone} />
+                        <Text style={styles.recruiterTitle}>{selectedDetailJob.company?.name || 'Recruteur'}</Text>
                       </View>
-                      <Text style={styles.recruiterSubtitle}>
-                        {selectedDetailJob.company?.name || 'Entreprise Partenaire'} · Réponse rapide garantie
-                      </Text>
+                      {!companyWhatsapp(selectedDetailJob.company) && !companyEmail(selectedDetailJob.company) ? (
+                        <Text style={styles.recruiterSubtitle}>{CONTACT_UNAVAILABLE}</Text>
+                      ) : null}
                     </View>
                   </View>
 
                   <View style={styles.recruiterActionsRow}>
                     <Pressable
                       testID="btn-contact-whatsapp"
-                      style={styles.recruiterWhatsAppBtn}
+                      style={[styles.recruiterWhatsAppBtn, !companyWhatsapp(selectedDetailJob.company) && { opacity: 0.4 }]}
                       onPress={handleRecruiterWhatsapp}
+                      disabled={!companyWhatsapp(selectedDetailJob.company)}
                     >
                       <MessageCircle size={16} color={stitchColors.emeraldDeep} />
-                      <Text style={styles.recruiterWhatsAppText}>WhatsApp RH</Text>
+                      <Text style={styles.recruiterWhatsAppText}>
+                        {companyWhatsapp(selectedDetailJob.company) ? 'WhatsApp RH' : 'WhatsApp indisponible'}
+                      </Text>
                     </Pressable>
 
                     <Pressable
                       testID="btn-contact-email"
-                      style={styles.recruiterEmailBtn}
+                      style={[styles.recruiterEmailBtn, !companyEmail(selectedDetailJob.company) && { opacity: 0.4 }]}
                       onPress={handleRecruiterEmail}
+                      disabled={!companyEmail(selectedDetailJob.company)}
                     >
                       <Mail size={16} color={stitchColors.sienna} />
-                      <Text style={styles.recruiterEmailText}>Email RH</Text>
+                      <Text style={styles.recruiterEmailText}>
+                        {companyEmail(selectedDetailJob.company) ? 'Email RH' : 'E-mail indisponible'}
+                      </Text>
                     </Pressable>
                   </View>
                 </View>
@@ -1065,12 +1100,12 @@ export function StagesScreen({
             {/* Feature 9: Fixed Sticky Bottom Bar (Rendered Outside ScrollView) */}
             <View style={styles.stickyBottomBar}>
               <View style={styles.stipendCol}>
-                <Text style={styles.stipendLabel}>INDEMNITÉ ESTIMÉE</Text>
+                <Text style={styles.stipendLabel}>INDEMNITÉ</Text>
                 <View style={styles.stipendValueRow}>
                   <Text style={styles.stipendAmount}>
-                    {selectedDetailJob.stipend ? selectedDetailJob.stipend.replace(/\(.*\)/, '').trim() : '75 000 FCFA'}
+                    {selectedDetailJob.stipend ? selectedDetailJob.stipend.replace(/\(.*\)/, '').trim() : 'Non précisée'}
                   </Text>
-                  <Text style={styles.stipendPeriod}> /mois</Text>
+                  {selectedDetailJob.stipend ? <Text style={styles.stipendPeriod}> /mois</Text> : null}
                 </View>
               </View>
 

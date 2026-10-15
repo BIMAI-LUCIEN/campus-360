@@ -1,0 +1,114 @@
+{
+  "baseUrl": "http://localhost:8081",
+  "startedAt": "2026-10-14T06:41:59.777Z",
+  "steps": [
+    {
+      "name": "01-auth-sign-in",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-01-auth-sign-in.png"
+    },
+    {
+      "name": "02-auth-sign-up-confirm-password",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-02-auth-sign-up-confirm-password.png"
+    },
+    {
+      "name": "03-reset-email-step",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-03-reset-email-step.png"
+    },
+    {
+      "name": "04-reset-code-step",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-04-reset-code-step.png"
+    },
+    {
+      "name": "05-signed-in-first-screen",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-05-signed-in-first-screen.png"
+    },
+    {
+      "name": "06-onboarding-or-home",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-06-onboarding-or-home.png"
+    },
+    {
+      "name": "07-tab-stages",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-07-tab-stages.png"
+    },
+    {
+      "name": "08-tab-creer",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-08-tab-creer.png"
+    },
+    {
+      "name": "09-tab-ressources",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-09-tab-ressources.png"
+    },
+    {
+      "name": "10-tab-profil",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-10-tab-profil.png"
+    },
+    {
+      "name": "11-applications-timeline",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-11-applications-timeline.png"
+    },
+    {
+      "name": "12-ressources-rapports-de-stage",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-12-ressources-rapports-de-stage.png"
+    },
+    {
+      "name": "13-atelier-ia",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-13-atelier-ia.png"
+    },
+    {
+      "name": "14-recharge-wallet",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-14-recharge-wallet.png"
+    },
+    {
+      "name": "15-editeur-document",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-15-editeur-document.png"
+    },
+    {
+      "name": "16-editeur-images",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-16-editeur-images.png"
+    },
+    {
+      "name": "17-editeur-sources",
+      "ok": true,
+      "screenshot": ".agent/screenshots/e2e-17-editeur-sources.png"
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failedRequests": [
+    "404 GET http://localhost:3001/api/mobile/documents/scraped-reports",
+    "404 GET http://localhost:3001/api/mobile/documents/a211d477-5cb9-40c1-b944-d48d044183fe/sources",
+    "404 GET http://localhost:3001/api/mobile/documents/a211d477-5cb9-40c1-b944-d48d044183fe/images",
+    "404 GET http://localhost:3001/api/mobile/documents/a211d477-5cb9-40c1-b944-d48d044183fe/sources",
+    "404 GET http://localhost:3001/api/mobile/documents/a211d477-5cb9-40c1-b944-d48d044183fe/images",
+    "404 GET http://localhost:3001/api/mobile/documents/a211d477-5cb9-40c1-b944-d48d044183fe/images",
+    "404 GET http://localhost:3001/api/mobile/documents/a211d477-5cb9-40c1-b944-d48d044183fe/sources",
+    "404 GET http://localhost:3001/api/mobile/documents/a211d477-5cb9-40c1-b944-d48d044183fe/images",
+    "404 GET http://localhost:3001/api/mobile/documents/a211d477-5cb9-40c1-b944-d48d044183fe/sources"
+  ],
+  "finishedAt": "2026-10-14T06:43:52.896Z"
+}

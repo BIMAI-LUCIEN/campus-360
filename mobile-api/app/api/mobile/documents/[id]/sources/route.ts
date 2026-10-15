@@ -1,56 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
-import { getDocumentById, getDocumentSources, addDocumentSource } from '@/lib/documents-db';
+import { listDocumentFiles, toPublicFile } from '@/lib/document-files-db';
+import { getDocumentById } from '@/lib/documents-db';
+import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
+import { enforceRateLimit } from '@/lib/route-rate-limit';
+import { parsePublicUrl, SafeFetchError } from '@/lib/safe-fetch';
+import { ingestTextSource, ingestUrlSource } from '@/lib/source-ingest';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
-export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin');
-  const headers: Record<string, string> = {
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-    'Access-Control-Allow-Headers':
-      'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
-  };
-  if (origin) {
-    headers['Access-Control-Allow-Origin'] = origin;
-    headers['Access-Control-Allow-Credentials'] = 'true';
-  } else {
-    headers['Access-Control-Allow-Origin'] = '*';
-  }
-  return new NextResponse(null, { status: 204, headers });
-}
+// Sources of a document. Files (PDF, DOCX, TXT) are uploaded to the files host
+// via /documents/[id]/files; this route lists every source and adds the two
+// kinds that need no upload: a web page (fetched server-side) and pasted text.
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+const json = (request: NextRequest, body: unknown, status = 200) =>
+  withCors(NextResponse.json(body, { status }), request);
+
+export async function OPTIONS(request: NextRequest) {
+  return withCors(new NextResponse(null, { status: 204 }), request);
+}
 
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const { id: documentId } = await context.params;
     const access = await requireMobileUser(request);
     if (access.response || !access.user) return withCors(access.response!, request);
-    const userId = access.user.id;
 
-    const document = await getDocumentById(documentId, userId);
-    if (!document) {
-      return withCors(NextResponse.json({ error: 'Document introuvable.' }, { status: 404 }), request);
-    }
+    const document = await getDocumentById(documentId, access.user.id);
+    if (!document) return json(request, { error: 'Document introuvable.' }, 404);
 
-    const sources = await getDocumentSources(documentId, userId);
-    return withCors(NextResponse.json({ sources }), request);
+    const sources = await listDocumentFiles(documentId, access.user.id, 'source');
+    return json(request, { sources: sources.map(toPublicFile) });
   } catch (error) {
-    return withCors(mobileErrorResponse(error, request), request);
+    return mobileErrorResponse(error, request);
   }
 }
 
-const addSourceSchema = z.object({
-  fileName: z.string().min(1).max(255),
-  fileType: z.string().default('pdf'),
-  fileSize: z.number().optional().default(0),
-  fileUrl: z.string().min(1),
-  extractedText: z.string().optional().default(''),
-  summary: z.string().optional().default(''),
-});
+const addSourceSchema = z.union([
+  z.object({
+    url: z.string().trim().min(1).max(2048),
+    title: z.string().trim().max(200).optional(),
+  }),
+  z.object({
+    text: z.string().trim().min(1).max(200_000),
+    title: z.string().trim().min(1).max(200),
+  }),
+]);
 
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
@@ -59,38 +58,30 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (access.response || !access.user) return withCors(access.response!, request);
     const userId = access.user.id;
 
+    await enforceRateLimit(request, { bucket: 'document-sources-add', max: 20, windowMs: 10 * 60_000, userId });
+
     const document = await getDocumentById(documentId, userId);
-    if (!document) {
-      return withCors(NextResponse.json({ error: 'Document introuvable.' }, { status: 404 }), request);
-    }
+    if (!document) return json(request, { error: 'Document introuvable.' }, 404);
 
-    const body = await request.json().catch(() => null);
-    const parsed = addSourceSchema.safeParse(body);
+    const parsed = addSourceSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
-      return withCors(NextResponse.json({ error: 'Données invalides.', details: parsed.error.issues }, { status: 400 }), request);
+      return json(request, { error: 'Indiquez une adresse web ou un texte avec un titre.' }, 400);
     }
 
-    let extractedText = parsed.data.extractedText;
-    let summary = parsed.data.summary;
-
-    // If summary is empty but we have text, generate a quick 2-line summary
-    if (!summary && extractedText && extractedText.length > 50) {
-      summary = extractedText.slice(0, 240).replace(/\s+/g, ' ').trim() + '...';
+    if ('url' in parsed.data) {
+      try {
+        parsePublicUrl(parsed.data.url);
+      } catch (error) {
+        if (error instanceof SafeFetchError) return json(request, { error: error.message, code: error.code }, 400);
+        throw error;
+      }
+      const file = await ingestUrlSource({ documentId, userId, url: parsed.data.url, title: parsed.data.title });
+      return json(request, { source: toPublicFile(file) });
     }
 
-    const source = await addDocumentSource({
-      documentId,
-      userId,
-      fileName: parsed.data.fileName,
-      fileType: parsed.data.fileType,
-      fileSize: parsed.data.fileSize,
-      fileUrl: parsed.data.fileUrl,
-      extractedText,
-      summary,
-    });
-
-    return withCors(NextResponse.json({ source }), request);
+    const file = await ingestTextSource({ documentId, userId, title: parsed.data.title, text: parsed.data.text });
+    return json(request, { source: toPublicFile(file) });
   } catch (error) {
-    return withCors(mobileErrorResponse(error, request), request);
+    return mobileErrorResponse(error, request);
   }
 }

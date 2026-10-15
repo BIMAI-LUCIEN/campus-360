@@ -4,6 +4,9 @@ import { z } from 'zod';
 import { databasePool } from '@/lib/database';
 import { requireMobileUser, mobileErrorResponse, MobileApiError, withCors } from '@/lib/mobile-access';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
+import { escapeHtml, normalizeHeadings } from '@/lib/document-render';
+import { llmRewrite } from '@/lib/llm';
+import { HTML_FORMAT_RULE, polishAiTics, stripRepeatedTitle, studentVoiceRules } from '@/lib/writing-rules';
 
 export const runtime = 'nodejs';
 
@@ -147,24 +150,22 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.OPENROUTER_API_KEY;
 
     const systemPrompt = [
-      `Tu es le Rédacteur Académique et Professionnel d'Élite de Campus 360.`,
-      `Tu rédiges ou améliores le contenu pour la section : "${sectionTitle.replace(/"/g, '')}".`,
-      `Ton : universitaire, rigoureux, convaincant, fluide et élégant en français.`,
+      `Tu aides un étudiant à écrire la section « ${sectionTitle.replace(/["«»]/g, '')} » de son document.`,
+      `Tu pars uniquement de sa consigne et de son texte : le résultat doit pouvoir passer pour le sien.`,
       '',
-      `DIRECTIVES DE RÉDACTION :`,
-      `- Rédige un contenu riche, détaillé et hautement qualitatif avec des arguments structurés et des paragraphes soignés.`,
-      `- Formate EXCLUSIVEMENT avec les balises HTML TipTap : <p>, <strong>, <em>, <h2>, <h3>, <ul>, <ol>, <li>, <blockquote>, <br>.`,
-      `- N'inclus JAMAIS de balises <html>, <body>, <head>, <script>, ni de blocs de code markdown (\`\`\`html ou \`\`\`).`,
-      `- Retourne directement le fragment HTML prêt à être inséré.`,
+      studentVoiceRules('je'),
+      '',
+      HTML_FORMAT_RULE,
+      `- Pas de balise <head>, <script>, ni de bloc de code markdown. Renvoie directement le fragment HTML.`,
     ].join('\n');
 
     const userPrompt =
       action === 'improve' && text
-        ? `Consigne de réécriture / amélioration :\n${prompt}\n\nTexte original à sublimer et enrichir :\n${text}`
+        ? `Consigne de réécriture / amélioration :\n${prompt}\n\nTexte de l'étudiant à améliorer (garde ses faits et ses chiffres, corrige la langue, clarifie, n'ajoute rien d'inventé) :\n${text}`
         : `Consigne de rédaction :\n${prompt}`;
 
     if (!apiKey) {
-      const fallbackHtml = `<p><strong>${sectionTitle}</strong></p><p>${prompt}</p><p><em>(Contenu rédigé avec succès pour ${sectionTitle}.)</em></p>`;
+      const fallbackHtml = `<p>${escapeHtml(prompt)}</p>`;
       return withCors(
         NextResponse.json({
           html: fallbackHtml,
@@ -219,7 +220,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (!safeHtml) {
-      safeHtml = `<p><strong>${sectionTitle}</strong></p><p>${prompt}</p>`;
+      safeHtml = `<p>${escapeHtml(prompt)}</p>`;
+    } else {
+      safeHtml = sanitizeHtmlFragment(normalizeHeadings(stripRepeatedTitle((await polishAiTics(safeHtml, llmRewrite)).html, sectionTitle))) || safeHtml;
     }
 
     return withCors(

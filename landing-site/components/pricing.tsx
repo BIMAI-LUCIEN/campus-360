@@ -1,77 +1,70 @@
 "use client";
 
-import { Check, Crown, FileText, GraduationCap, Zap } from "lucide-react";
+import { Check, FileText, GraduationCap, Send, Zap } from "lucide-react";
 import { Button } from "./ui/button";
 
 const APK_URL =
   process.env.NEXT_PUBLIC_APK_DOWNLOAD_URL ??
   "https://campus360b.site/downloads/campus-360.apk";
 
+// V1 launch: everything is free (FREE_LAUNCH_MODE). Prices below apply after the launch,
+// aligned with the constants of the app (src/types.ts).
 const plans = [
   {
     name: "Découverte",
     icon: GraduationCap,
     price: "0 FCFA",
-    description: "Pour explorer le catalogue et tester l'IA",
+    description: "Pour créer ton profil et tester l'app",
     period: "",
     features: [
-      "Consultation du catalogue de 3 500+ PDFs",
-      "1ère candidature IA 100% offerte",
-      "Calcul du score de match sur les stages",
-      "Lecteur PDF intégré avec mode nuit",
+      "Compte gratuit",
+      "Matching de stage avec score de correspondance",
+      "Coach IA de soutenance",
     ],
     cta: "Télécharger l'APK",
     ctaVariant: "secondary" as const,
     popular: false,
   },
   {
-    name: "Pack 5 Candidatures",
-    icon: Zap,
+    name: "Candidature",
+    icon: Send,
     price: "500 FCFA",
-    description: "Achat ponctuel sans abonnement",
-    period: "/ pack",
+    description: "Par candidature envoyée",
+    period: "/ candidature",
     features: [
-      "5 candidatures IA sur-mesure",
-      "Template CV Officiel RH (2 colonnes)",
-      "Lettre de motivation personnalisée",
-      "Export PDF propre sans filigrane",
-      "Envoi 1-clic sur WhatsApp RH & Email",
+      "CV officiel RH et lettre de motivation",
+      "Envoi par WhatsApp RH, e-mail RH ou dans l'app",
+      "Relance à J+7 dans ton suivi",
     ],
-    cta: "Tester le Pack",
-    ctaVariant: "secondary" as const,
-    popular: false,
-  },
-  {
-    name: "Pass Étudiant",
-    icon: FileText,
-    price: "2 000 FCFA",
-    description: "La formule complète pour réussir son semestre",
-    period: "/ mois",
-    features: [
-      "Candidatures IA illimitées",
-      "Accès illimité aux 3 500+ PDFs d'universités",
-      "Assistant IA (résumés & fiches de révision)",
-      "Notification & relance automatique à J+7",
-      "Téléchargement & lecture 100% hors-ligne",
-    ],
-    cta: "Activer le Pass",
+    cta: "Télécharger l'APK",
     ctaVariant: "primary" as const,
     popular: true,
   },
   {
-    name: "Pass Pro & Soutenance",
-    icon: Crown,
-    price: "3 500 FCFA",
-    description: "Pour valider son stage et préparer sa soutenance",
-    period: "/ mois",
+    name: "Rapport de stage",
+    icon: FileText,
+    price: "2 000 FCFA",
+    description: "Rédaction IA d'un rapport de stage",
+    period: "/ rapport",
     features: [
-      "Toutes les fonctionnalités du Pass Étudiant",
-      "Générateur de plan de rapport & mémoire",
-      "Coach IA d'entraînement à la soutenance",
-      "Relances WhatsApp RH prioritaires",
-      "Support technique dédié",
+      "Structure académique complète",
+      "Texte modifiable dans l'éditeur",
     ],
-    cta: "Découvrir Pro",
+    cta: "Télécharger l'APK",
+    ctaVariant: "secondary" as const,
+    popular: false,
+  },
+  {
+    name: "Mémoire",
+    icon: Zap,
+    price: "5 000 FCFA",
+    description: "Rédaction IA d'un mémoire de fin d'études",
+    period: "/ mémoire",
+    features: [
+      "Problématique, revue de littérature, méthodologie",
+      "Texte modifiable dans l'éditeur",
+    ],
+    cta: "Télécharger l'APK",
     ctaVariant: "secondary" as const,
     popular: false,
   },
@@ -90,10 +83,10 @@ export function Pricing() {
             💰 Tarifs transparents en FCFA
           </div>
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[var(--color-ink)] mb-4">
-            Des tarifs adaptés aux étudiants.
+            Tout est gratuit pendant le lancement.
           </h2>
           <p className="text-lg text-[var(--color-ink-muted)] max-w-2xl mx-auto">
-            Sans engagement. Paye par Orange Money ou MTN MoMo en 10 secondes.
+            Pendant la V1, candidatures, CV, lettres, rapports, mémoires, coach de soutenance et PDF sont gratuits. Ensuite : paiement à l'usage par Orange Money ou MTN MoMo, sans abonnement.
           </p>
         </div>
 
@@ -104,14 +97,14 @@ export function Pricing() {
             return (
               <div
                 key={plan.name}
-                className={`relative rounded-2xl p-6 lg:p-8 flex flex-col transition-all hover:-translate-y-1 ${
+                className={`reveal relative rounded-2xl p-6 lg:p-8 flex flex-col transition-all hover:-translate-y-1 ${
                   plan.popular
                     ? "bg-[var(--color-paper-soft)] border-2 border-[var(--color-sienna)] shadow-xl shadow-[var(--color-sienna)]/10"
                     : "bg-[var(--color-paper)] border border-[var(--color-ink-faint)]"
                 }`}
               >
                 {plan.popular && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-[var(--gradient-brand)] text-white text-xs font-bold rounded-full uppercase tracking-wider shadow-sm">
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-[image:var(--gradient-brand)] text-white text-xs font-bold rounded-full uppercase tracking-wider shadow-sm">
                     Le plus populaire
                   </div>
                 )}
@@ -120,7 +113,7 @@ export function Pricing() {
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                       plan.popular
-                        ? "bg-[var(--gradient-brand)] text-white"
+                        ? "bg-[image:var(--gradient-brand)] text-white"
                         : "bg-[var(--color-sienna-bg)] text-[var(--color-sienna-tone)]"
                     }`}
                   >
@@ -139,13 +132,11 @@ export function Pricing() {
 
                 <div className="mb-6">
                   <span className="font-display text-3xl lg:text-4xl font-extrabold text-[var(--color-ink)]">
-                    {plan.price}
+                    Gratuit
                   </span>
-                  {plan.period && (
-                    <span className="text-sm text-[var(--color-ink-muted)] ml-1">
-                      {plan.period}
-                    </span>
-                  )}
+                  <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
+                    {plan.price === "0 FCFA" ? "Toujours gratuit" : `Pendant le lancement, puis ${plan.price} ${plan.period}`}
+                  </p>
                 </div>
 
                 <ul className="space-y-3 mb-8 flex-1">

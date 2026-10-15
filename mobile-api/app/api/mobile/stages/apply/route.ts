@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { createStageApplication, ensureStageStudent, getStageJob } from '@/lib/stages-db';
 import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
+import { stageErrorStatus } from '@/lib/stages-errors';
 
 const applySchema = z.object({
   jobId: z.string().min(1),
@@ -26,17 +27,12 @@ export async function POST(request: NextRequest) {
     const application = await createStageApplication({ ...input, studentId });
     return withCors(NextResponse.json({ success: true, application }), request);
   } catch (error) {
-    console.warn('[apply route] Caught error in stage application, returning offline success:', error);
+    if (error instanceof z.ZodError) {
+      return withCors(NextResponse.json({ error: 'Requête invalide.' }, { status: 400 }), request);
+    }
+    console.warn('[apply route] Stage application failed:', error);
     return withCors(
-      NextResponse.json({
-        success: true,
-        offline: true,
-        application: {
-          id: 'app-offline-' + Date.now(),
-          status: 'PENDING',
-          appliedAt: new Date().toISOString(),
-        },
-      }),
+      NextResponse.json({ error: "Ta candidature n'a pas pu être enregistrée. Réessaie." }, { status: stageErrorStatus(error) }),
       request,
     );
   }

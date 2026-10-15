@@ -416,7 +416,24 @@ Ce cadrage est **100% validé et synchronisé avec le graphe Graphify**. Le fich
 - **[Tâche 12.1 Validée — Suivi & Relance J+7]** : `src/features/stages/stagesApi.ts`, `src/ui/screens/ApplicationsTimelineScreen.tsx` — Validation CLI : `node scripts/test-modules-11-12.mjs` (Code 0) — Preuve Browser : `.agent/screenshots/03_timeline_j7_relance_verified.png`.
 - **[Tâche 13.1 & 13.2 Validées — Certification E2E Playwright & DevSecOps]** : `scripts/verify_mvp_complete_flow.js` — Validation E2E complète (Code 0) — TypeScript strict sans erreur sur app mobile & backend (0 erreur).
 - **[Tâche 14.1 à 14.5 Validées — Dashboard Administrateur Unifié Campus 360]** : `recruiter-web/app/admin/AdminShell.tsx`, `recruiter-web/app/admin/stages/`, `recruiter-web/app/admin/companies/`, `recruiter-web/app/admin/payments/`, `recruiter-web/app/admin/applications/`, `recruiter-web/app/admin/_components/DashboardOverview.tsx`, `recruiter-web/lib/admin-platform-service.ts` — Validation CLI : `npm run typecheck` (Code 0), `npm run css:build` (Code 0) — Graphe sémantique : 2619 nœuds et 5645 arêtes (`graphify-out/graph.json`).
+- **[Module 19 — Éditeur : images locales, sources & assistant cité (2026-10-14) — 16/26 validées, 10 en cours]** :
+  - **Serveur (`mobile-api/`)** : migration `sql/0006_document_files.sql` (appliquée) ; `lib/file-storage.ts`, `file-validation.ts`, `file-signing.ts`, `file-urls.ts`, `chunking.ts`, `safe-fetch.ts`, `html-text.ts`, `source-extraction.ts` (pdfjs-dist 5.4.54, mammoth), `source-ingest.ts`, `document-files-db.ts`, `html-images.ts`, `document-images.ts` ; routes `documents/[id]/files`, `files/[fileId]/url`, `files/sign`, `api/files/[fileId]` ; réécrites : `documents/[id]/sources` (+ `[sourceId]`), `documents/[id]/chat` (citations), `documents/[id]/images` (par `fileId`), exports PDF (images en base64) et DOCX (`ImageRun`), suppression de document (purge disque) ; `sanitize-html.ts` garde `data-file-id` et retire le `src` signé.
+  - **App (`src/`)** : `features/documents/documentFilesApi.ts` ; `DocumentImagesModal` (galerie du téléphone, progression, réessai) ; `DocumentSourcesModal` → `DocumentSourcesPanel` (fichier, lien web, note, cases « utiliser ») ; `EditorAiChat` en onglet (sources cochées, citations cliquables) ; `DocumentEditorScreen` : onglets Document | Sources | Assistant, insertion d'image par `data-file-id`, commandes différées vers l'éditeur visible ; `betterAuth.ts` : `mobileApiBaseUrl`, `filesBaseUrl`, `authFetchRawAt`, `mobileApiFetch` ; `env.ts` : `filesUrl` ; `app.json` : plugin `expo-image-picker`, version **1.2.0**.
+  - **Bugs corrigés en passant** : WebView de l'éditeur rechargée à chaque frappe ; réponses HTML de l'assistant insérées échappées (balises visibles) ; insertion depuis un autre onglet perdue ; fuite inter-utilisateurs dans le chat (plan d'un document tiers injecté) ; messages du chat non bornés ; repli `allowDirectUserIdentityFallback` (email = jeton) supprimé ; `getDocumentById` sans filtre propriétaire pour un id non-UUID ; légende de figure concaténée dans le HTML.
+  - **Validation CLI** : `npm test` (mobile-api) 45 tests, 44 réussis, 1 ignoré ; `npx tsc --noEmit` code 0 (app et mobile-api) ; `npm run lint:colors` 236 (référence abaissée de 241).
+  - **Preuves navigateur** : `.agent/screenshots/e2e-doc-01-document-figure.jpg`, `e2e-doc-02-sources.jpg`, `e2e-doc-03-assistant-citations.jpg` ; export DOCX réel avec `word/media/` ; données de test supprimées (disque et base vérifiés).
+  - **Sécurité** : uploads authentifiés sans repli, type réel vérifié, clés UUID hors dossier public, URLs HMAC 10 min, anti-SSRF (IP validée puis épinglée), chunks filtrés par `user_id`, aucun secret en dur.
+  - **Reste ouvert** : identifiants E2E pour le scénario authentifié et l'isolation à deux comptes ; vérification sur appareil réel (nouvel APK requis : modules natifs) ; mise en service de `files.campus360b.site` (DNS, Nginx, certificat, `UPLOAD_ROOT`, `FILES_PUBLIC_URL`) ; moteur PDF local (Chrome CLI) en échec ; doublon `recruiter-web` (routes `/api/mobile/documents/*` sans ces évolutions).
+- **[Module 19 bis — Éditeur « comme Word » & exports fidèles (2026-10-15)]** :
+  - **Éditeur** (`src/features/documents/editorTemplate.ts`, extrait de `DocumentEditorScreen.tsx`) : page fidèle au document imprimé (police, interligne, marges du document ; titres, tableaux, encadrés identiques au PDF) ; barre d'outils sur une ligne défilante (annuler/rétablir, G/I/S, Titre 1-3, Texte, listes, alignements, tableau, encadré, saut de page, effacer) avec état actif ; barre « Tableau » contextuelle ; tableaux insérés vides ; vrai texte d'aide (plus enregistré) et nettoyage de l'ancien ; collage Word/Docs/web nettoyé ; styles parasites retirés ; texte aligné à gauche sur téléphone (exports justifiés).
+  - **Écran** : panneau « Mise en page » (police, interligne, marges → PATCH document) ; « Aperçu » lecture seule du document entier (titre, sommaire, sections, images) ; bouton unique « Exporter » (PDF ou Word) ; état de sauvegarde réel (« Enregistrement… », « ⚠ Non enregistré · Réessayer ») et sauvegarde immédiate au changement de section ou à la fermeture ; plus de sauvegarde inutile à l'ouverture d'une section.
+  - **Export Word** : `mobile-api/lib/html-to-docx.ts` (titres, gras/italique/souligné, listes imbriquées avec numérotation qui repart, tableaux, alignements, encadrés, sauts de page, figures + légendes) ; page de garde centrée, sommaire, numéros de page, styles de titres ; plus de « ... » dans les sections vides.
+  - **Export PDF** : `mobile-api/lib/pdf-render.ts` (Puppeteer, non bloquant, réseau coupé ; Chrome CLI asynchrone en secours) ; styles ajoutés (tableaux, encadrés, H1/H4) ; police `Lora` imprimée en Georgia comme dans Word ; plus de « Contenu en cours de rédaction… ».
+  - **Validation** : `npm test` (mobile-api) 50 tests : 47 réussis, 0 échec, 3 ignorés sans serveur (tests HTTP ; les 2 tests sans session passaient avec le serveur lancé, le scénario connecté attend des identifiants E2E) ; `tsc` code 0 (app et mobile-api) ; `lint:colors` 201 (référence abaissée de 236) ; rendu PDF réel en 1,5 s avec image ; éditeur et aperçu testés dans le navigateur (`.agent/screenshots/e2e-doc-04-editeur-mise-en-forme.jpg`, `e2e-doc-05-apercu.jpg`).
 
+- **[Tâches 20.1 à 20.3 validées — Socle du style du document (2026-10-15)]** : `mobile-api/sql/0007_document_style.sql` (appliquée, 21 documents migrés) ; `mobile-api/lib/document-style.ts` et sa copie identique `src/features/documents/documentStyle.ts` (modèle, 4 styles prêts, `resolveStyle`, `applyStylePatch`, synchronisation des anciennes colonnes) ; `mobile-api/lib/document-style-schema.ts` (Zod strict) ; route `documents/[id]` (GET renvoie le style complet, PATCH accepte `document_style` et reporte les anciens réglages dans le style) ; `tests/helpers/load-ts.mjs` (dépendances locales) ; `scripts/check-hardcoded-colors.mjs` (couleurs d'impression exclues). Validation : `npm test` 54 réussis, 0 échec, 3 ignorés ; `tsc` code 0 (app et mobile-api) ; aller-retour JSON en base dans une transaction annulée. Sécurité : polices, couleurs, identifiants de logo et clés validés strictement ; un style stocké invalide retombe sur le style prêt.
+- **[Tâches 20.4 à 20.16 validées — Mise en page académique (2026-10-15)]** : rendu partagé `lib/document-render.ts` = `src/features/documents/documentRender.ts` (CSS du style, types de sections, 4 pages de garde, `normalizeHeadings`) ; `lib/document-numbering.ts` (titres 1.1 / 1.1.1 ou A. / 1., légendes « Figure 2.1 » / « Tableau 2.1 », sommaire) ; PDF : `lib/document-pdf.ts` + `lib/pdf-pagination.ts` (deux passes Puppeteer, marqueurs invisibles, pages réelles via pdfjs, tampon pdf-lib : garde sans numéro, préliminaires i/ii, corps 1…n, en-têtes, pieds, bordures) ; Word : `lib/document-docx.ts` (3 sections, romain puis arabe, champs TOC et listes, STYLEREF du chapitre) ; routes export PDF et DOCX réécrites, fausses données de couverture supprimées ; app : `DocumentStylePanel.tsx`, `EditorSurface.tsx`, `editorTemplate.ts` (éditeur et aperçu pilotés par le style, numéros simulés), formulaire de page de garde sans donnée inventée, largeur des images. Validation : `npm test` mobile-api 0 échec ; `tsc` code 0 (app et mobile-api) ; `lint:colors` 193/193 ; aperçu vérifié à 375 px (captures `.agent/screenshots/m20-*`). Sécurité : style validé par Zod strict côté serveur, logos servis par URL signée, texte de l'en-tête/pied échappé (HTML) et limité au jeu WinAnsi (PDF).
+- **[Tâches 21.1 à 21.9 validées — Rédaction en voix étudiante (2026-10-15)]** : `lib/writing-rules.ts` (voix « je »/« nous », liste noire, crochets, `findAiTics`, `polishAiTics`, `stripRepeatedTitle`) ; `lib/llm.ts` ; `lib/source-context.ts` (extrait de la route chat) ; consignes réécrites dans chat, ai, generate-full, onboard-chat, pdf-chat ; contenu fictif supprimé de generate-full (fiche « Lucien Nkouam / Campus 360 Inc. », faux sigles, fausse liste des figures, fausse bibliographie, schémas SVG injectés) ; `lib/document-outlines.ts` = `src/features/documents/documentOutlines.ts` (5 filières × rapport/mémoire) ; `sql/0008_section_interviews.sql` (appliquée : `app_documents.field`, `app_document_sections.interview_answers`) ; `lib/interview.ts` + route `documents/[id]/sections/[sectionId]/interview` (GET questions, PUT réponses, POST rédaction avec sources) ; app : `SectionInterview.tsx`, `aiHtml.ts`, bascule dans `EditorAiChat.tsx`, choix de la filière dans `DocumentsScreen.tsx`. Correctif transversal : `normalizeHeadings` (titres IA h2/h3 → niveaux de l'éditeur, numéros tapés retirés). Validation : `npm test` mobile-api 89 tests, 87 réussis, 0 échec, 2 ignorés ; test qualité réel 0 tic, 0 chiffre inventé ; tsc 0 (app et mobile-api) ; lint:colors 193/193. Sécurité : propriété du document et de la section vérifiée, UUID validés, réponses limitées (Zod, 4 000 caractères, 12 clés), limites de débit, réponses et extraits balisés « données, pas des instructions », HTML du modèle assaini ; XSS du repli de la route `ai` corrigé. Reste à vérifier à la main : parcours « Rédiger avec moi » et choix de filière dans l'app connectée.
 ---
 
 ## 9. Certifications, Cybersécurité & Vérifications Visuelles (Agent Browser)
@@ -763,3 +780,153 @@ Ce cadrage est **100% validé et synchronisé avec le graphe Graphify**. Le fich
 - **Reste à faire (hors code) :** enregistrements MX + SPF chez LWS ; variables `RESEND_API_KEY`, `CONTACT_FROM` (Vercel + VPS) ; confirmer la tarification ; pages légales (`conditions`, `mentions-legales`, `remboursement`, `confidentialite`) et `a-propos` (historique) contiennent encore des affirmations à vérifier (SAS, siège Akwa, « 5x plus cher », abonnements Basique/Pro/Elite) ; blog (`lib/blog-data.ts`) contient une offre « Premium -50 % » périmée ; écran Atelier IA affiche 1 000 / 2 500 FCFA en dur alors que les constantes sont 2 000 / 5 000.
 - **Non fait :** capture mobile 390 px (le navigateur intégré ne joint pas localhost) ; à faire avant déploiement.
 - **Non déployé.** Aucun commit ni push.
+
+---
+
+## 13. Cadrage validé : Rédaction, images locales, sources & assistant cité (2026-10-14)
+
+> Voie **Bounded** (évolution ciblée de l'éditeur de documents) avec une étude **Spike** sur la recherche dans les sources. Aucun code n'a été modifié à ce stade. Le cadrage sert de référence avant `/plan-task`.
+
+### 1. Vision & Fondamentaux
+- **Douleur :** l'étudiant ne peut ni illustrer son document avec ses propres photos ou schémas, ni s'appuyer sur ses documents de référence. Aujourd'hui, les images se saisissent par URL et les « sources » sont du texte collé.
+- **Promesse :** « Rédige ton rapport à partir de tes propres sources, avec des citations vérifiables et tes images. »
+- **Fossé :** les sources de l'étudiant restent sur l'infrastructure Campus 360, et chaque affirmation renvoie à une page précise.
+
+### 2. Découpage fonctionnel
+- 🟢 **V1**
+  - Images : sélection depuis la galerie (`expo-image-picker`), upload sur le VPS, insertion au curseur, présentes dans les exports PDF **et** DOCX.
+  - Sources fichiers : PDF, DOCX et TXT. Upload, extraction, découpage, statut (en cours, prête, échec).
+  - Sources URL : récupération côté serveur avec garde-fous SSRF, timeout 10 s, 5 Mo maximum.
+  - Assistant : réponses avec citations `[Source n, p.x]` cliquables, limitées aux sources cochées.
+  - Upload en ligne uniquement, avec échec explicite et bouton « réessayer ».
+- 🟡 **V1.5** : réordonnancement des sections, historique des versions, file d'attente hors ligne.
+- 🔴 **V2** : RAG vectoriel (pgvector), recherche web par l'IA, liaison rapport de stage et candidatures.
+- **Hors V1 :** le pré-remplissage du rapport depuis le profil stage ou les candidatures. Le rapport de stage est en rédaction seule.
+
+### 3. UX & parcours
+1. **Ajouter** une image ou une source (galerie ou sélecteur de fichiers, progression visible).
+2. **Préparer** : une source passe de « en cours » à « prête » (pages, résumé) ou « échec » (raison et réessai). Une section se génère uniquement à partir des sources cochées.
+3. **Vérifier et exporter** : les citations ouvrent l'extrait source. L'export inclut les images.
+
+Éditeur à 3 onglets : **Document | Sources | Assistant**, avec la barre basse `[+ Section] [🖼 Image] [IA]`.
+
+### 4. Économie
+- Monétisation inchangée en V1 (wallet et abonnements).
+- Coût variable : extraction serveur et tokens LLM. Les tokens sont bornés en envoyant seulement les chunks les plus pertinents (top-k), jamais les sources entières.
+
+### 5. Outils
+- Extraction PDF : `pdfjs-dist` (déjà utilisé dans `admin-app`), à prototyper. DOCX : `mammoth`. TXT : lecture directe.
+- Recherche : index `tsvector` Postgres en configuration française. Pas de nouveau service.
+- Stockage : disque du VPS, derrière Nginx en HTTPS sur `files.campus360b.site`, avec URLs signées.
+- LLM : OpenRouter, déjà en place.
+
+### 6. Architecture
+- **Upload :** route multipart sur le VPS. Sans session valide, réponse 401 (aucun repli `guest-student`). Limites : 10 Mo pour les images, 20 Mo pour les documents. Type réel vérifié par les octets d'en-tête. Nom de fichier remplacé par un UUID. Stockage hors du dossier public.
+- **Schéma :** migration idempotente `mobile-api/sql/0006_document_files.sql`. Ajoute une table de fichiers (type, clé de stockage, MIME, taille, statut, texte extrait, nombre de pages) et une table de chunks avec `tsvector`. `app_document_sources` et `app_document_images` sont conservées.
+- **Périmètre de code :** `mobile-api` uniquement. `recruiter-web/lib/documents-db.ts` diverge et reste hors périmètre (dette à traiter séparément).
+- **Flux :**
+  - App → `files.campus360b.site` (upload, session Bearer)
+  - `files.campus360b.site` → disque VPS et Postgres partagé
+  - `api.campus360b.site` (Vercel) → Postgres, URLs signées, OpenRouter
+  - Export PDF/DOCX → lit les images via URL signée
+
+### 7. Go-to-market
+Non concerné : fonctionnalité interne de l'éditeur.
+
+### 8. Risques & mitigations
+- **SSRF sur les URL :** vérifier l'IP après résolution DNS, refuser les plages privées, revalider chaque redirection, timeout et taille max.
+- **Fichiers malveillants :** contrôle du type réel, taille limitée, nom aléatoire, aucune exécution côté serveur.
+- **Authentification :** les uploads dépendent du correctif « fausses sessions » (branche `fix/security-hardening-fake-sessions`, non commité). Ce correctif doit être déployé avant la mise en production de cette fonctionnalité.
+- **RGPD :** les fichiers sont supprimés en cascade avec le document, et une purge des fichiers orphelins est planifiée.
+- **Dette :** `documents-db` dupliqué et divergent, et working tree chargé (43 fichiers modifiés).
+
+### Journal de décisions (2026-10-14)
+- Stockage sur le VPS, hors options initiales Supabase ou Cloudinary.
+- Sources en recherche lexicale avec citations en V1, sans RAG vectoriel.
+- Rapport de stage en rédaction seule en V1.
+- URL récupérées côté serveur, avec garde-fous SSRF.
+- Upload en ligne uniquement en V1.
+- Hôte dédié `files.campus360b.site` sur le VPS, et non un relais depuis Vercel.
+
+**Prochaine étape :** `/plan-task` pour découper en tâches atomiques, puis `/execute`.
+
+## 10bis. Release : landing publique (2026-10-14)
+### Release : refonte landing (commit `5f6fda8` sur `origin/main`)
+- **Date & Heure :** 2026-10-14 ~14:18 UTC
+- **Commit :** `5f6fda8` sur `origin/main` (23 fichiers `landing-site/`, base `11c07cb`).
+- **Statut GitHub Actions :** 🟢 `Deploy to VPS` (SSH) réussi. 🔴 `Deploy Landing Site to Vercel` échoué à l'étape `Pull Vercel Environment`, avant le build : cause probable = secret CI (`VERCEL_TOKEN`, `VERCEL_ORG_ID` ou `VERCEL_LANDING_PROJECT_ID`) absent ou expiré. Échec déjà vu en septembre 2026 sur ce workflow. Logs non lisibles depuis l'environnement (pas de `gh`, logs protégés).
+- **Statut Vercel :** 🟡 aucune production créée pour `5f6fda8` ; dernière production READY = `5cc7b97`.
+- **URL de Production :** `https://campus360b.site` (servie par le VPS).
+- **Contrôle des Logs / HTTP :** home 200 ; `/contact` affiche `+237 690 27 35 00` ; `/mot-de-passe-oublie` 200 ; `POST /api/contact` : 400 si invalide, 503 sans `RESEND_API_KEY` ; aucun lien recruteur ; aucun bandeau promo ; `/images/screens/accueil.png` 200.
+- **Reste ouvert :** secrets Vercel à vérifier dans GitHub ; `RESEND_API_KEY` et `CONTACT_FROM` à poser sur le VPS (et Vercel) ; enregistrements MX + SPF chez LWS (tâche 18.7).
+
+
+---
+
+## 14. Cadrage validé : Style du document & rédaction en voix étudiante — rapport de stage et mémoire (2026-10-15)
+
+> Voie **Bounded**. Le rapport de stage et le mémoire partagent le même moteur de style et la même logique de rédaction. Le CV le réutilisera plus tard (V2). Aucun code n'a été modifié pendant ce cadrage.
+
+### 1. Constats (vérifiés dans le code)
+- **Texte « trop IA »** : consignes pompeuses (« Rédacteur Universitaire d'Élite », « paragraphes denses, soutenus et élégants », « arguments percutants ») ; contenu inventé codé en dur dans la génération complète (fausse liste des figures sur « l'architecture 3-Tiers du système Campus 360 », `generate-full/route.ts`) ; plan imposé très informatique, inadapté aux autres filières.
+- **Mise en page incomplète** : pas d'en-tête ni de pied de page dans le PDF ; numéros de page du sommaire estimés (faux) ; pas de numérotation romaine des pages préliminaires ; listes des figures et tableaux non tirées des vraies légendes.
+- **Personnalisation limitée** : police, interligne, marges, 3 modèles de page de garde et 2 couleurs existent en base, sans bordures, sans style de titres, sans logos, sans style de tableaux.
+
+### 2. Découpage fonctionnel
+- 🟢 **Lot 1 — Mise en page (prioritaire)**
+  - **Style du document** : 4 styles prêts à l'emploi, puis réglage fin de chaque élément avec aperçu immédiat.
+    - *Classique universitaire* : Times 12, interligne 1,5, titres 1. / 1.1, sans couleur.
+    - *Moderne* : titres en Calibri, texte en Georgia, couleur d'accent, filet sous les chapitres.
+    - *Sobre* : Arial, sans décoration, aéré.
+    - *Institutionnel* : bordure double sur la page de garde, couleur de l'établissement, logo en en-tête.
+  - **Réglages** : police des titres et du texte, taille, interligne ; numérotation des titres (1. / 1.1 / I. / A.), majuscules, couleur, filet ; marges et bordure de page (aucune, simple, double, page de garde seule).
+  - **Pagination à la norme académique** : page de garde sans numéro ; pages préliminaires (dédicace, remerciements, résumé, sigles, sommaire) en i, ii, iii ; corps repartant à 1.
+  - **En-tête / pied de page** : titre du document ou chapitre courant, nom, établissement, logo ; numéro au format « 3 », « Page 3 » ou « 3 / 42 », position au choix.
+  - **Sommaire, liste des figures, liste des tableaux** générés depuis le vrai document, avec les vrais numéros de page (PDF : rendu en deux passes ; Word : sommaire natif mis à jour par Word).
+  - **Page de garde** : 4 modèles, logos de l'établissement et de l'entreprise envoyés depuis le téléphone, champs libres.
+  - **Tableaux** : 3 styles (grille, lignes alternées, sobre), couleur de l'en-tête, légende « Tableau 2.1 » numérotée automatiquement.
+  - **Images** : largeur pleine, moitié ou petite ; légende « Figure 2.1 » numérotée automatiquement.
+  - **Pages préliminaires mises en forme selon l'usage** (dédicace en italique calée en bas à droite, remerciements, résumé, liste des sigles).
+- 🟢 **Lot 2 — Rédaction en voix étudiante**
+  - **Mode entretien** : 5 à 6 questions courtes par chapitre (missions, outils, difficulté, apprentissages), puis rédaction à partir des réponses et des sources cochées.
+  - **Consignes réécrites** : « je » ou « nous », voix active, rythme varié, registre académique sans familiarités.
+  - **Liste noire des tics d'IA** (règles `idiomaticite-fr`) : « dans un monde en constante évolution », « il est important de souligner / noter que », « plongeons dans le vif du sujet », « sans plus tarder », « en somme », « révolutionnaire », « paysage », « crucial », « incontournable », listes à puces de longueur identique. Les tournures familières de ce skill (« franchement », « résultat des courses ») sont exclues du rapport : registre académique.
+  - **Rien d'inventé** : chiffre ou nom manquant signalé entre crochets, ex. [préciser l'effectif du service].
+  - **Plans par filière** : informatique ; gestion et comptabilité ; marketing et commerce ; BTP et génie ; droit et sciences sociales.
+  - **Suppression du contenu fictif codé en dur.**
+- 🔴 **V2** : styles officiels par université (ex. « Norme Université de Douala ») ; CV sur le même moteur de style ; style propre à chaque section.
+
+### 3. UX
+- Panneau **Style du document** : choix d'un style, puis sections repliables (Typographie, Titres, Page, En-tête / pied, Page de garde, Tableaux) avec aperçu.
+- Un style s'applique à tout le document, à l'écran, dans l'aperçu et dans les deux exports (PDF et Word).
+
+### 4. Architecture (orientation)
+- Un objet **`document_style`** (JSON versionné) stocké sur `app_documents`, lu par l'éditeur (`editorTemplate.ts`), l'aperçu, l'export PDF (`pdf-render.ts`) et l'export Word (`html-to-docx.ts`) : une seule source de vérité.
+- Les 4 styles prêts sont des valeurs par défaut de cet objet ; les colonnes existantes (police, interligne, marges, couleurs, modèle de page de garde) y sont reprises.
+- PDF : en-têtes et pieds via le gabarit d'impression de Puppeteer ; vrais numéros du sommaire par rendu en deux passes.
+- Word : sections distinctes pour les pages préliminaires (numérotation romaine) et le corps ; sommaire et listes en champs Word natifs.
+
+### 5. Risques
+- **Rendu identique PDF / Word** : Word ne reproduit pas tout le CSS ; on vise la même structure et les mêmes réglages, pas un pixel près.
+- **Polices** : seules des polices disponibles sur le serveur et dans Word sont proposées (Times New Roman, Georgia, Arial, Calibri, Garamond, Cambria).
+- **Temps d'export** : le rendu PDF en deux passes double le temps (≈ 3 s), acceptable.
+
+### Journal de décisions (2026-10-15)
+- Styles prêts + réglages fins (pas de style par section en V1).
+- Pagination à la norme académique.
+- Rédaction : mode entretien et voix étudiante ; règles `idiomaticite-fr` adaptées au registre académique.
+- Ordre : Lot 1 (mise en page) puis Lot 2 (rédaction).
+- 4 styles retenus : Classique universitaire, Moderne, Sobre, Institutionnel.
+
+**Prochaine étape :** `/plan-task` pour découper les deux lots en tâches.
+
+## 13. Refonte visuelle de la landing (2026-10-15) — local, non déployé
+- **Film de démo** (18 s, muet) fait avec HyperFrames : source `../motion-design-claude-code/campus360-demo/index.html`, master `renders/campus360-demo.mp4`. Versions web dans `landing-site/public/motion/` (`demo.webm` 627 Ko, `demo.mp4` 685 Ko, `demo-poster.jpg`).
+- **Landing** : polices auto-hébergées (`app/fonts/`, Bricolage Grotesque + Inter via `next/font/local`), hero avec téléphone en 3D CSS (inclinaison au pointeur, cartes en profondeur), défilement des filières, section film (lecture muette seulement à l'écran, rien n'est téléchargé en mode économie de données / 2G / mouvement réduit), parcours au scroll avec écran qui pivote, grille de fonctionnalités inclinables (Coach de soutenance mis en avant). Aucune librairie 3D.
+- Composants : `components/landing/{hero-phone,demo-film,scroll-story,tilt-card,reveal-root}.tsx`. Supprimés : `hero-scene.tsx`, `screenshots.tsx`, `hero.tsx` (inutilisés).
+- **Mesures** : `next build` exit 0, JS accueil 127 Ko (inchangé), premier chargement mobile ≈ 380 Ko (la vidéo ne se charge qu'en arrivant sur la section), 0 erreur console.
+
+## 14. V1 gratuite (2026-10-15)
+- **Décision :** toutes les fonctions payantes sont gratuites pendant le lancement V1 (candidatures, génération de rapport/mémoire, PDF/packs, coach). Les tarifs (`src/types.ts`) restent dans le code et s'appliqueront après le lancement.
+- **Interrupteur :** variable serveur `FREE_LAUNCH_MODE` (absente = gratuit ; `false` = payant), lue par `lib/free-launch.ts` dans `mobile-api` et `recruiter-web`. L'app lit `account.wallet.freeLaunch` (module `src/config/launch.ts`) : aucune nouvelle version de l'app n'est nécessaire pour rebasculer en payant.
+- **Pour être effectif en production :** redéployer `mobile-api` (backend de l'app) et publier une mise à jour OTA de l'app (`eas-update.yml`).

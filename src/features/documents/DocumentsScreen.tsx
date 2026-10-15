@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { DEFAULT_FIELD, fieldFromProfile, STUDY_FIELDS, STUDY_FIELD_LABELS, type StudyField } from './documentOutlines';
 import {
   StyleSheet, View, Text, Pressable, ScrollView,
   ActivityIndicator, Alert, Modal, TextInput, Linking, KeyboardAvoidingView, Platform
@@ -11,7 +12,9 @@ import { GradientText } from '../../ui/GlassComponents';
 import { DocGenChat } from './DocGenChat';
 import { OfficialCvView } from '../stages/OfficialCvView';
 import { exportOfficialCvPdf } from '../stages/pdfExportService';
+import { missingCvFields } from '../stages/cvHtml';
 import type { OfficialCvData } from '../../types';
+import { freeLabel, isFreeLaunch } from '../../config/launch';
 
 const getDocBadgeTheme = (type: string) => {
   switch (type) {
@@ -29,10 +32,10 @@ const getDocBadgeTheme = (type: string) => {
 };
 
 const TYPE_TILES = [
-  { key: 'cv', label: 'CV RH Officiel', Icon: FileText, color: '#60A5FA', tint: 'rgba(96,165,250,0.14)', hasAi: true, priceLabel: 'Inclus' },
+  { key: 'cv', label: 'CV', Icon: FileText, color: '#60A5FA', tint: 'rgba(96,165,250,0.14)', hasAi: true, priceLabel: 'Inclus' },
   { key: 'lettre_motivation', label: 'Lettre IA', Icon: Mail, color: '#F472B6', tint: 'rgba(244,114,182,0.14)', hasAi: true, priceLabel: 'Inclus' },
-  { key: 'stage', label: 'Rapport de stage', Icon: Briefcase, color: '#FBBF24', tint: 'rgba(251,191,36,0.14)', hasAi: true, priceLabel: '2 000 FCFA' },
-  { key: 'memoire', label: 'Mémoire Complet', Icon: GraduationCap, color: '#A855F7', tint: 'rgba(168,85,247,0.14)', hasAi: true, priceLabel: '5 000 FCFA' },
+  { key: 'stage', label: 'Rapport de stage', Icon: Briefcase, color: '#FBBF24', tint: 'rgba(251,191,36,0.14)', hasAi: true, get priceLabel() { return isFreeLaunch() ? freeLabel() : '2 000 FCFA'; } },
+  { key: 'memoire', label: 'Mémoire Complet', Icon: GraduationCap, color: '#A855F7', tint: 'rgba(168,85,247,0.14)', hasAi: true, get priceLabel() { return isFreeLaunch() ? freeLabel() : '5 000 FCFA'; } },
 ] as const;
 
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia, serif' }) as string;
@@ -92,7 +95,7 @@ const DOCUMENT_TYPES = [
     desc: 'Rédaction assistée, plan académique structuré, remerciements et annexes.',
     voice: 'mono' as const,
     voiceStyle: { fontFamily: MONO, fontWeight: '500' as const, letterSpacing: 0.5 },
-    badge: '2 000 FCFA',
+    get badge() { return isFreeLaunch() ? freeLabel() : '2 000 FCFA'; },
     hasAi: true,
   },
   {
@@ -102,7 +105,7 @@ const DOCUMENT_TYPES = [
     desc: 'Problématique, cadre théorique, méthodologie et bibliographie aux normes.',
     voice: 'display' as const,
     voiceStyle: { fontFamily: SERIF, fontWeight: '900' as const, letterSpacing: -1.5 },
-    badge: '5 000 FCFA',
+    get badge() { return isFreeLaunch() ? freeLabel() : '5 000 FCFA'; },
     hasAi: true,
   },
 ] as const;
@@ -129,6 +132,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   // Form state — shared
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [studyField, setStudyField] = useState<StudyField | null>(null);
   const [creating, setCreating] = useState(false);
   const [iaCredits, setIaCredits] = useState<number | null>(null);
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
@@ -156,59 +160,40 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   const [generatingFull, setGeneratingFull] = useState(false);
   const [cvPreviewVisible, setCvPreviewVisible] = useState(false);
 
+  // Only what the profile really knows: missing fields print "[à compléter]".
   const officialCvData: OfficialCvData = useMemo(() => {
-    const nameParts = (studentProfile?.name || 'KAMENI Dave Lionel').trim().split(' ');
-    const nom = nameParts[0] || 'KAMENI';
-    const prenom = nameParts.slice(1).join(' ') || 'Dave Lionel';
+    const nameParts = (studentProfile?.name || '').trim().split(/\s+/).filter(Boolean);
+    const level = studentProfile?.level?.trim() || '';
+    const faculty = studentProfile?.faculty?.trim() || '';
     return {
-      titrePoste: studentProfile?.faculty ? `Étudiant en ${studentProfile.faculty}` : 'Développeur Junior',
+      titrePoste: faculty ? `Étudiant en ${faculty}` : '',
       photoUrl: undefined,
       detailsPersonnels: {
-        nom,
-        prenom,
-        nationalite: 'Camerounaise',
-        age: '22 ans',
-        email: studentProfile?.email || 'etudiant@campus360.org',
-        telephone: studentProfile?.whatsappPhone || studentProfile?.phone || '690123456',
-        adresse: studentProfile?.university || 'Yaoundé, Cameroun',
+        nom: nameParts[0] || '',
+        prenom: nameParts.slice(1).join(' '),
+        email: studentProfile?.email || '',
+        telephone: studentProfile?.whatsappPhone || studentProfile?.phone || '',
       },
-      experiences: [
-        {
-          poste: 'Stagiaire Académique',
-          entreprise: 'Campus 360 & Projets Étudiants',
-          ville: 'Yaoundé',
-          periode: '2023 - 2024',
-          missions: [
-            'Conception et réalisation de projets d’application pratique.',
-            'Travail collaboratif et respect des spécifications de stage.',
-          ],
-        },
-      ],
-      formations: [
-        {
-          diplome: studentProfile?.level || 'Licence 3',
-          etablissement: studentProfile?.university || '',
-          ville: 'Yaoundé',
-          periode: 'En cours',
-        },
-      ],
+      experiences: [],
+      formations: level || studentProfile?.university
+        ? [{ diplome: [level, faculty].filter(Boolean).join(' en '), etablissement: studentProfile?.university || '', ville: '', periode: 'En cours' }]
+        : [],
       competences: {
-        professionnelles: studentProfile?.skills?.length ? studentProfile.skills : ['Organisation', 'Informatique', 'Communication'],
-        habilitesRelationnelles: ['Autonome', 'Rigoureux', 'Esprit d’équipe', 'Ponctuel'],
-        logiciels: [
-          {
-            categorie: 'Outils Bureautiques & Collaboration',
-            items: ['Suite Office', 'Google Workspace', 'Git'],
-          },
-        ],
+        professionnelles: studentProfile?.skills?.length ? studentProfile.skills : [],
+        habilitesRelationnelles: [],
+        logiciels: [],
       },
-      langues: [
-        { langue: 'Français', niveau: 'Langue maternelle / Courant' },
-        { langue: 'Anglais', niveau: 'Professionnel' },
-      ],
-      loisirs: ['Veille technologique', 'Lecture scientifique', 'Sports collectifs'],
+      langues: [],
+      loisirs: [],
     };
   }, [studentProfile]);
+
+  const guessedField = useMemo(
+    () => fieldFromProfile(studentProfile?.faculty, studentProfile?.level, studentProfile?.university),
+    [studentProfile],
+  );
+  const effectiveField: StudyField = studyField ?? guessedField ?? DEFAULT_FIELD;
+  const isAcademicType = selectedType === 'stage' || selectedType === 'memoire';
 
   // ─── Fetch ────────────────────────────────────────────────────────────────────
   const fetchDocuments = async () => {
@@ -251,6 +236,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
     setLettrePosition(''); setLettreCompany(''); setLettreSector('');
     setLettreMotivation('');
     setSelectedType(null);
+    setStudyField(null);
     setCreateStep(null);
   };
 
@@ -265,7 +251,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
     }
 
     if (type === 'cv' || type === 'lettre_motivation') {
-      if (iaCredits !== null && iaCredits < IA_CREDITS_PER_GEN) {
+      if (!isFreeLaunch() && iaCredits !== null && iaCredits < IA_CREDITS_PER_GEN) {
         Alert.alert(
           'Crédits IA insuffisants',
           `Il te faut ${IA_CREDITS_PER_GEN} crédits IA pour générer ce document. Tu en as ${iaCredits}.`,
@@ -286,6 +272,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
           title: newTitle.trim(),
           description: newDesc.trim(),
           templateType: type,
+          field: type === 'stage' || type === 'memoire' ? effectiveField : undefined,
         }),
       });
 
@@ -361,7 +348,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       Alert.alert('Titre requis', 'Donne un titre à ton document.');
       return;
     }
-    if (iaCredits !== null && iaCredits < IA_CREDITS_PER_GEN) {
+    if (!isFreeLaunch() && iaCredits !== null && iaCredits < IA_CREDITS_PER_GEN) {
       Alert.alert(
         'Crédits IA insuffisants',
         `Il te faut ${IA_CREDITS_PER_GEN} crédits IA pour générer ce document. Tu en as ${iaCredits}.`,
@@ -383,6 +370,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
           title: newTitle.trim(),
           description: newDesc.trim(),
           templateType: selectedType,
+          field: isAcademicType ? effectiveField : undefined,
         }),
       });
       if (!createRes.ok) {
@@ -454,6 +442,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
           title: newTitle.trim(),
           description: newDesc.trim(),
           templateType: selectedType,
+          field: isAcademicType ? effectiveField : undefined,
         }),
       });
 
@@ -540,13 +529,13 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         <View style={styles.cvShowcaseHeader}>
           <View style={styles.cvShowcaseBadge}>
             <Sparkles size={11} color={stitchColors.primary} />
-            <Text style={styles.cvShowcaseBadgeText}>Gabarit Officiel RH</Text>
+            <Text style={styles.cvShowcaseBadgeText}>Modèle 2 colonnes</Text>
           </View>
           <Text style={styles.cvShowcaseFormat}>Format 2 Colonnes</Text>
         </View>
-        <Text style={styles.cvShowcaseTitle}>Curriculum Vitae Certifié Campus 360</Text>
+        <Text style={styles.cvShowcaseTitle}>Curriculum vitae</Text>
         <Text style={styles.cvShowcaseDesc}>
-          Gabarit officiel adapté aux normes des recruteurs au Cameroun et en zone CEMAC.
+          Ton CV en deux colonnes, rempli à partir de ton profil. Ce qui manque reste marqué [à compléter].
         </Text>
         <View style={styles.cvShowcaseActions}>
           <Pressable
@@ -776,6 +765,35 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                   onChangeText={setNewTitle}
                 />
 
+                {isAcademicType && (
+                  <>
+                    <Text style={styles.fieldLabel}>TA FILIÈRE</Text>
+                    <View style={styles.fieldChips}>
+                      {STUDY_FIELDS.map((key) => {
+                        const active = effectiveField === key;
+                        return (
+                          <Pressable
+                            key={key}
+                            style={[styles.fieldChip, active && styles.fieldChipActive]}
+                            onPress={() => setStudyField(key)}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected: active }}
+                          >
+                            <Text style={[styles.fieldChipText, active && styles.fieldChipTextActive]}>
+                              {STUDY_FIELD_LABELS[key]}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                    <Text style={styles.fieldHelp}>
+                      {studyField === null && guessedField
+                        ? 'Proposée d’après ton profil. Le plan des chapitres et les questions de rédaction suivent ta filière.'
+                        : 'Le plan des chapitres et les questions de rédaction suivent ta filière.'}
+                    </Text>
+                  </>
+                )}
+
                 {(selectedType === 'cv' || selectedType === 'lettre_motivation') && (
                   <View style={styles.creditsInfo}>
                     <Text style={styles.creditsInfoText}>
@@ -819,7 +837,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                         {creating ? (
                           <ActivityIndicator size="small" color={stitchColors.ink} />
                         ) : (
-                          <Text style={styles.cancelBtnText}>Vierge</Text>
+                          <Text style={styles.cancelBtnText}>Plan vide</Text>
                         )}
                       </Pressable>
                       <Pressable
@@ -867,8 +885,8 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
           <View style={styles.officialCvModalSheet}>
             <View style={styles.officialCvModalHeader}>
               <View>
-                <Text style={styles.officialCvModalTitle}>CV Officiel RH</Text>
-                <Text style={styles.officialCvModalSub}>Gabarit 2 Colonnes Homologué</Text>
+                <Text style={styles.officialCvModalTitle}>Ton CV</Text>
+                <Text style={styles.officialCvModalSub}>Modèle 2 colonnes</Text>
               </View>
               <Pressable
                 style={({ pressed }) => [styles.officialCvCloseBtn, pressed && { opacity: 0.8 }]}
@@ -890,16 +908,21 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
               <Pressable
                 style={({ pressed }) => [styles.officialCvDownloadBtn, pressed && { opacity: 0.88 }]}
                 onPress={async () => {
+                  const missing = missingCvFields(officialCvData);
+                  if (missing.length > 0) {
+                    Alert.alert('Profil incomplet', `Complète ton nom et ton contact (e-mail ou téléphone) dans ton profil avant d'exporter ton CV. Manque : ${missing.join(', ')}.`);
+                    return;
+                  }
                   try {
-                    await exportOfficialCvPdf(officialCvData);
-                    Alert.alert('Succès', 'Le CV officiel a été exporté en PDF.');
+                    const done = await exportOfficialCvPdf(officialCvData);
+                    if (done) Alert.alert('CV exporté', 'Ton CV a été exporté en PDF.');
                   } catch {
                     Alert.alert('Erreur', 'Impossible d’exporter le CV.');
                   }
                 }}
               >
                 <Download size={15} color={stitchColors.white} strokeWidth={2.2} />
-                <Text style={styles.officialCvDownloadBtnText}>Télécharger le PDF Officiel</Text>
+                <Text style={styles.officialCvDownloadBtnText}>Télécharger le PDF</Text>
               </Pressable>
             </View>
           </View>
@@ -1342,6 +1365,19 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
 
   tagGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  fieldChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 },
+  fieldChip: {
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    backgroundColor: stitchColors.surface,
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  fieldChipActive: { backgroundColor: stitchColors.siennaBg, borderColor: stitchColors.sienna },
+  fieldChipText: { fontSize: 13, color: stitchColors.inkSoft, fontWeight: '600' },
+  fieldChipTextActive: { color: stitchColors.siennaDeep },
+  fieldHelp: { fontSize: 12, color: stitchColors.inkMuted, lineHeight: 17, marginBottom: 12 },
   tagChip: {
     paddingHorizontal: 10,
     paddingVertical: 6,

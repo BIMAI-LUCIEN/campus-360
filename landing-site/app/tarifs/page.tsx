@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { Pricing } from "@/components/pricing";
 import { SiteShell } from "@/components/site-shell";
+import { PageHero } from "@/components/landing/page-hero";
 
 export const metadata: Metadata = {
   title: "Tarifs Campus 360 — Orange Money & MTN MoMo",
   description:
-    "Tarifs transparents sans frais cachés : 1ère candidature offerte, Pack 5 candidatures à 500 FCFA, Pass Étudiant à 2 000 FCFA et Pass Pro à 3 500 FCFA.",
+    "Campus 360 est gratuit pendant le lancement. Ensuite : candidature à 500 FCFA, rapport de stage à 2 000 FCFA, mémoire à 5 000 FCFA, sans abonnement.",
   alternates: { canonical: "/tarifs" },
   openGraph: {
     title: "Tarifs Campus 360",
@@ -17,36 +18,26 @@ export const metadata: Metadata = {
 const faq = [
   {
     q: "Comment fonctionne le paiement par Mobile Money ?",
-    a: "Lorsque tu recharges ou actives un pass, l'application initie une transaction sécurisée vers ton compte Orange Money ou MTN MoMo. Tu valides la transaction sur ton téléphone avec ton code PIN et ton solde est crédité instantanément.",
+    a: "Lorsque tu recharges ton wallet, l'application initie une transaction vers ton compte Orange Money ou MTN MoMo. Tu valides sur ton téléphone avec ton code PIN et ton solde est crédité.",
   },
   {
     q: "Y a-t-il un abonnement avec précompte automatique ?",
-    a: "Non. Aucun abonnement automatique ni prélèvement surprise. Tu recharges ton solde uniquement quand tu en as besoin.",
+    a: "Non. Il n'y a pas d'abonnement : ton wallet est débité seulement quand tu lances une action (candidature, rapport, mémoire, PDF).",
   },
   {
-    q: "Est-ce que mes PDFs téléchargés restent accessibles ?",
-    a: "Oui. Tous les cours, fiches et annales téléchargés restent enregistrés sur ton téléphone et sont lisibles à tout moment en mode hors-ligne, même sans solde.",
+    q: "Combien coûte une candidature ?",
+    a: "Rien pendant le lancement. Ensuite, 500 FCFA par candidature envoyée.",
   },
   {
     q: "Puis-je tester l'IA gratuitement ?",
-    a: "Absolument. Dès la création de ton profil, la 1ère candidature IA avec CV officiel RH et lettre de motivation te sont offertes à 100%.",
+    a: "Oui, et sans limite pendant le lancement : candidatures, CV officiel RH, lettres, rapports et coach de soutenance sont gratuits.",
   },
 ];
 
 export default function TarifsPage() {
   return (
     <SiteShell>
-      <section className="py-20 lg:py-28 border-b border-[var(--color-ink-faint)] bg-[var(--color-paper-deep)]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="kicker justify-center flex mb-4">Tarification claire & équitable</p>
-          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] mb-6 leading-[1.05] text-[var(--color-ink)]">
-            Sans engagement, sans frais cachés.
-          </h1>
-          <p className="text-lg text-[var(--color-ink-muted)] max-w-2xl mx-auto">
-            Paye uniquement ce dont tu as besoin avec ton téléphone Orange Money ou MTN MoMo.
-          </p>
-        </div>
-      </section>
+      <PageHero kicker="Lancement V1" title="Tout est gratuit" accent="pendant le lancement." subtitle="Candidatures, CV, lettres, rapports, mémoires, coach de soutenance et PDF : teste tout sans payer. Les tarifs à l'usage s'appliqueront ensuite, sans abonnement." />
 
       <Pricing />
 
@@ -60,7 +51,7 @@ export default function TarifsPage() {
             {faq.map((item) => (
               <div
                 key={item.q}
-                className="p-6 rounded-2xl bg-[var(--color-paper-soft)] border border-[var(--color-ink-faint)]"
+                className="reveal p-6 rounded-2xl bg-[var(--color-paper-soft)] border border-[var(--color-ink-faint)]"
               >
                 <h3 className="font-display text-lg font-bold text-[var(--color-ink)] mb-2.5">
                   {item.q}

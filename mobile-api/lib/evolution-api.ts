@@ -58,9 +58,9 @@ export function getEvolutionConfig(): EvolutionConfig {
 /**
  * Normalizes phone numbers to standard international format (digits only).
  * Examples:
- *   "+237 672 36 41 24" -> "237672364124"
- *   "00237 672 36 41 24" -> "237672364124"
- *   "672364124" (Cameroon 9-digit starting with 6) -> "237672364124"
+ *   "+237 600 00 00 00" -> "237600000000"
+ *   "00237 600 00 00 00" -> "237600000000"
+ *   "600000000" (Cameroon 9-digit starting with 6) -> "237600000000"
  */
 export function normalizePhoneNumber(rawPhone: string): string {
   if (!rawPhone) return '';
@@ -102,25 +102,6 @@ export function formatPairingCode(code: string): string {
     return `${clean.slice(0, 4)} - ${clean.slice(4)}`;
   }
   return code;
-}
-
-/**
- * Generates a realistic 8-digit fallback pairing code (formatted XXXX - XXXX).
- * Used when Evolution API is unreachable or unconfigured so mobile UI remains functional.
- */
-export function generateFallbackPairingCode(phone?: string): string {
-  if (phone) {
-    const digits = phone.replace(/\D/g, '');
-    let hash = 0;
-    for (let i = 0; i < digits.length; i++) {
-      hash = (hash * 31 + digits.charCodeAt(i)) >>> 0;
-    }
-    const num = (hash % 90000000) + 10000000;
-    const s = String(num);
-    return `${s.slice(0, 4)} - ${s.slice(4)}`;
-  }
-  const rand = Math.floor(10000000 + Math.random() * 90000000).toString();
-  return `${rand.slice(0, 4)} - ${rand.slice(4)}`;
 }
 
 /**
@@ -256,11 +237,11 @@ export async function requestPairingCode(
 
   if (!isConfigured) {
     return {
-      success: true,
-      pairingCode: generateFallbackPairingCode(normalizedPhone),
+      success: false,
+      pairingCode: '',
       instanceName: cleanInstanceName,
-      state: 'connecting',
-      offline: true,
+      state: 'close',
+      error: 'Appairage WhatsApp indisponible.',
     };
   }
 
@@ -357,22 +338,22 @@ export async function requestPairingCode(
       }
     }
 
-    console.warn('[evolution-api] Could not extract pairingCode from response, falling back:', data);
+    console.warn('[evolution-api] Could not extract pairingCode from response:', data);
     return {
-      success: true,
-      pairingCode: generateFallbackPairingCode(normalizedPhone),
+      success: false,
+      pairingCode: '',
       instanceName: cleanInstanceName,
-      state: 'connecting',
-      offline: true,
+      state: 'close',
+      error: 'Appairage WhatsApp indisponible.',
     };
   } catch (error) {
-    console.warn('[evolution-api] Error during requestPairingCode, using fallback code:', error);
+    console.warn('[evolution-api] Error during requestPairingCode:', error);
     return {
-      success: true,
-      pairingCode: generateFallbackPairingCode(normalizedPhone),
+      success: false,
+      pairingCode: '',
       instanceName: cleanInstanceName,
-      state: 'connecting',
-      offline: true,
+      state: 'close',
+      error: 'Appairage WhatsApp indisponible.',
     };
   }
 }
@@ -482,7 +463,6 @@ export const evolutionApi = {
   normalizePhoneNumber,
   getInstanceName,
   formatPairingCode,
-  generateFallbackPairingCode,
   createInstance,
   requestPairingCode,
   getConnectionState,

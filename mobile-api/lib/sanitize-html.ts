@@ -106,6 +106,8 @@ export function sanitizeHtml(rawHtml: string): string {
 
     // Process attributes for opening tag
     const safeAttrs: string[] = [];
+    // Uploaded images are stored by id; their (short-lived signed) src is resolved at display time.
+    let fileId: string | null = null;
     const attrRegex = /([a-zA-Z0-9_-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g;
     let attrMatch: RegExpExecArray | null;
 
@@ -125,6 +127,12 @@ export function sanitizeHtml(rawHtml: string): string {
       } else if (attrName === 'style') {
         const safeStyle = sanitizeCssStyle(attrVal);
         if (safeStyle) safeAttrs.push(`style="${safeStyle}"`);
+      } else if (lowerTag === 'img' && attrName === 'data-file-id') {
+        const candidate = attrVal.trim().toLowerCase();
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(candidate)) {
+          fileId = candidate;
+          safeAttrs.push(`data-file-id="${candidate}"`);
+        }
       } else if (lowerTag === 'img' && attrName === 'src') {
         const safeSrc = sanitizeUrl(attrVal, true);
         if (safeSrc) safeAttrs.push(`src="${safeSrc}"`);
@@ -155,8 +163,9 @@ export function sanitizeHtml(rawHtml: string): string {
       }
     }
 
+    const keptAttrs = fileId ? safeAttrs.filter((attr) => !attr.startsWith('src=')) : safeAttrs;
     const selfClosing = match.endsWith('/>') ? ' /' : '';
-    const attrString = safeAttrs.length > 0 ? ' ' + safeAttrs.join(' ') : '';
+    const attrString = keptAttrs.length > 0 ? ' ' + keptAttrs.join(' ') : '';
     return `<${lowerTag}${attrString}${selfClosing}>`;
   });
 

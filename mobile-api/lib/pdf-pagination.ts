@@ -1,0 +1,145 @@
+import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFImage, type PDFPage } from 'pdf-lib';
+
+// Second half of the PDF pipeline: find on which page each invisible marker
+// landed, then stamp page numbers, headers, footers and borders with pdf-lib.
+
+// ── Marker pages (pdfjs) ────────────────────────────────────────────────────
+
+export const findMarkerPages = async (pdf: Buffer): Promise<{ pages: Map<string, number>; pageCount: number }> => {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(pdf), isEvalSupported: false, disableFontFace: true, verbosity: 0 }).promise;
+  const pages = new Map<string, number>();
+  try {
+    for (let n = 1; n <= doc.numPages; n += 1) {
+      const page = await doc.getPage(n);
+      const content = await page.getTextContent();
+      // Letter-spaced titles split glyphs with spaces: compare without whitespace.
+      const text = content.items.map((item) => ('str' in item ? item.str : '')).join('').replace(/\s+/g, '');
+      for (const match of text.matchAll(/MKR\d+Q/g)) {
+        if (!pages.has(match[0])) pages.set(match[0], n - 1);
+      }
+      page.cleanup();
+    }
+    return { pages, pageCount: doc.numPages };
+  } finally {
+    await doc.destroy();
+  }
+};
+
+// ── Stamping (pdf-lib) ──────────────────────────────────────────────────────
+
+export type PageStamp = {
+  header?: { left?: string; right?: string };
+  footer?: { left?: string; center?: string; right?: string };
+  border?: 'none' | 'single' | 'double';
+  headerRule?: boolean;
+  logo?: boolean;
+};
+
+export type StampOptions = {
+  marginPt: number;
+  serif: boolean;
+  accentColor: string; // #RRGGBB
+  logo?: { data: Buffer; mime: string } | null;
+};
+
+const toRgb = (hex: string) => {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+};
+
+// Standard PDF fonts only cover WinAnsi; anything else is replaced, never thrown.
+const safeText = (font: PDFFont, text: string) => {
+  try {
+    font.encodeText(text);
+    return text;
+  } catch {
+    return Array.from(text)
+      .map((ch) => {
+        try {
+          font.encodeText(ch);
+          return ch;
+        } catch {
+          return '?';
+        }
+      })
+      .join('');
+  }
+};
+
+const fit = (font: PDFFont, text: string, size: number, maxWidth: number) => {
+  let value = safeText(font, text.trim());
+  if (font.widthOfTextAtSize(value, size) <= maxWidth) return value;
+  while (value.length > 1 && font.widthOfTextAtSize(`${value}…`, size) > maxWidth) value = value.slice(0, -1);
+  return `${value.trimEnd()}…`;
+};
+
+const drawBorder = (page: PDFPage, kind: 'single' | 'double', inset: number, color: ReturnType<typeof rgb>) => {
+  const { width, height } = page.getSize();
+  const rect = (d: number, thickness: number) =>
+    page.drawRectangle({ x: d, y: d, width: width - 2 * d, height: height - 2 * d, borderColor: color, borderWidth: thickness });
+  if (kind === 'single') rect(inset, 0.8);
+  else {
+    rect(inset, 1.6);
+    rect(inset + 3.5, 0.6);
+  }
+};
+
+export const stampPdf = async (pdf: Buffer, stamps: PageStamp[], options: StampOptions): Promise<Buffer> => {
+  const doc = await PDFDocument.load(pdf);
+  const font = await doc.embedFont(options.serif ? StandardFonts.TimesRoman : StandardFonts.Helvetica);
+  const color = rgb(0.33, 0.33, 0.33);
+  const accent = toRgb(options.accentColor);
+  let logo: PDFImage | null = null;
+  if (options.logo) {
+    try {
+      logo = options.logo.mime === 'image/png' ? await doc.embedPng(options.logo.data) : options.logo.mime === 'image/jpeg' ? await doc.embedJpg(options.logo.data) : null;
+    } catch {
+      logo = null;
+    }
+  }
+  const size = 9;
+  const m = options.marginPt;
+
+  doc.getPages().forEach((page, index) => {
+    const stamp = stamps[index];
+    if (!stamp) return;
+    const { width, height } = page.getSize();
+    const half = (width - 2 * m) / 2 - 6;
+
+    if (stamp.border && stamp.border !== 'none') drawBorder(page, stamp.border, Math.max(12, m * 0.45), accent);
+
+    const headerY = height - m / 2 - 2;
+    let leftX = m;
+    if (stamp.logo && logo) {
+      const h = 16;
+      const w = (logo.width / logo.height) * h;
+      page.drawImage(logo, { x: m, y: headerY - 4, width: w, height: h });
+      leftX = m + w + 6;
+    }
+    if (stamp.header?.left) {
+      page.drawText(fit(font, stamp.header.left, size, half - (leftX - m)), { x: leftX, y: headerY, size, font, color });
+    }
+    if (stamp.header?.right) {
+      const text = fit(font, stamp.header.right, size, half);
+      page.drawText(text, { x: width - m - font.widthOfTextAtSize(text, size), y: headerY, size, font, color });
+    }
+    if (stamp.headerRule && (stamp.header?.left || stamp.header?.right || stamp.logo)) {
+      page.drawLine({ start: { x: m, y: headerY - 6 }, end: { x: width - m, y: headerY - 6 }, thickness: 0.5, color: accent });
+    }
+
+    const footerY = m / 2 - 4;
+    const third = (width - 2 * m) / 3;
+    if (stamp.footer?.left) page.drawText(fit(font, stamp.footer.left, size, third), { x: m, y: footerY, size, font, color });
+    if (stamp.footer?.center) {
+      const text = fit(font, stamp.footer.center, size, third);
+      page.drawText(text, { x: (width - font.widthOfTextAtSize(text, size)) / 2, y: footerY, size, font, color });
+    }
+    if (stamp.footer?.right) {
+      const text = fit(font, stamp.footer.right, size, third);
+      page.drawText(text, { x: width - m - font.widthOfTextAtSize(text, size), y: footerY, size, font, color });
+    }
+  });
+
+  return Buffer.from(await doc.save());
+};

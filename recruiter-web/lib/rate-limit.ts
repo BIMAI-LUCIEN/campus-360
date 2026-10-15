@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 
+import { clientIpFrom } from './client-ip';
 import { databasePool } from './database';
 
 // Lightweight sliding-window rate limiter, backed by a small Postgres table.
@@ -24,16 +25,7 @@ export type RateLimitOptions = {
   key?: string;
 };
 
-const getClientIp = (request: NextRequest) => {
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) {
-    const first = forwarded.split(',')[0]?.trim();
-    if (first) return first;
-  }
-  const real = request.headers.get('x-real-ip');
-  if (real) return real;
-  return 'unknown';
-};
+const getClientIp = (request: NextRequest) => clientIpFrom(request.headers, process.env);
 
 export class RateLimitError extends Error {
   constructor(

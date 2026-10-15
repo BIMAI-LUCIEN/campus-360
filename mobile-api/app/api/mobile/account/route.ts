@@ -1,3 +1,4 @@
+import { freeLaunchState } from '@/lib/free-launch';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -97,6 +98,8 @@ export async function GET(request: NextRequest) {
           balanceCoins: Number(wallet.rows[0]?.balance_coins ?? 0),
           iaCredits: Number(wallet.rows[0]?.ia_credits ?? 0),
           reportCredits: Number(wallet.rows[0]?.report_credits ?? 0),
+          freeLaunch: freeLaunchState().active,
+          freeLaunchUntil: freeLaunchState().until,
         },
         purchasedDocumentIds: Array.from(
           new Set([

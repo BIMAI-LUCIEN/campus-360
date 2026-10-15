@@ -7,6 +7,7 @@ import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 
 import { publicEnv } from '../../config/env';
+import { mapServerPaymentStatus, type PaymentStatus } from '../wallet/paymentStatus';
 
 export type StudentSession = {
   user: {
@@ -49,7 +50,7 @@ export type StudentProfileUpdateInput = {
 
 export type StudentAccount = {
   user: StudentProfile;
-  wallet: { balanceCoins: number; iaCredits: number; reportCredits: number };
+  wallet: { balanceCoins: number; iaCredits: number; reportCredits: number; freeLaunch?: boolean; freeLaunchUntil?: string | null };
   purchasedDocumentIds: string[];
   purchasedPackIds: string[];
   transactions: Array<{
@@ -188,6 +189,35 @@ const getAuthWebBaseUrl = () => {
 };
 
 export const authWebBaseUrl = getAuthWebBaseUrl();
+
+// The document files, sources and cited-assistant routes only exist in mobile-api.
+// In development the default backend is recruiter-web (:3001), so these calls go
+// to the local mobile-api (:3002); in production api.campus360b.site is mobile-api.
+const getMobileApiBaseUrl = () => {
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    const devUrl = Platform.OS === 'web' ? authBaseUrl : getDevBackendUrl();
+    if (devUrl) {
+      try {
+        const url = new URL(devUrl);
+        if (url.port === '3001') {
+          url.port = '3002';
+          return url.toString().replace(/\/$/, '');
+        }
+      } catch {
+        // Fall through to production.
+      }
+    }
+  }
+  return publicEnv.authUrl.replace(/\/$/, '');
+};
+
+export const mobileApiBaseUrl = getMobileApiBaseUrl();
+
+// Uploads go to the files host (the VPS). In development, the local mobile-api stores them.
+export const filesBaseUrl =
+  typeof __DEV__ !== 'undefined' && __DEV__ && mobileApiBaseUrl !== publicEnv.authUrl.replace(/\/$/, '')
+    ? mobileApiBaseUrl
+    : publicEnv.filesUrl.replace(/\/$/, '');
 
 const memoryStore: Record<string, string> = {};
 
@@ -495,9 +525,10 @@ export const clearStudentSession = async () => {
 // Raw variant that never throws on a non-2xx response — callers that need to
 // branch on the actual status code (e.g. 403 CREDITS_EXHAUSTED vs a generic
 // failure) should use this instead of `authFetch`, which always throws.
-export const authFetchRaw = async (path: string, init: RequestInit = {}) => {
-  const headers = new Headers(init.headers);
-  headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json');
+// Session headers (Bearer + cookie) for any backend that shares the auth database.
+const buildAuthHeaders = async (base?: HeadersInit, json = true): Promise<Headers> => {
+  const headers = new Headers(base);
+  if (json) headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json');
 
   let token = authStorage.getItem('campus-bordes_session_token');
   if (!token && Platform.OS !== 'web') {
@@ -519,12 +550,38 @@ export const authFetchRaw = async (path: string, init: RequestInit = {}) => {
   } else if (token) {
     headers.set('Cookie', `better-auth.session_token=${token}; __Secure-better-auth.session_token=${token}`);
   }
+  return headers;
+};
 
-  return fetch(`${authBaseUrl}${path}`, {
+export const getAuthHeaders = async (): Promise<Record<string, string>> => {
+  const record: Record<string, string> = {};
+  (await buildAuthHeaders(undefined, false)).forEach((value, key) => {
+    record[key] = value;
+  });
+  return record;
+};
+
+// Like authFetchRaw, against an explicit backend. Multipart bodies keep their own content type.
+export const authFetchRawAt = async (baseUrl: string, path: string, init: RequestInit = {}) => {
+  const isMultipart = typeof FormData !== 'undefined' && init.body instanceof FormData;
+  return fetch(`${baseUrl}${path}`, {
     ...init,
-    headers,
+    headers: await buildAuthHeaders(init.headers, !isMultipart),
     credentials: 'include',
   });
+};
+
+export const authFetchRaw = async (path: string, init: RequestInit = {}) =>
+  authFetchRawAt(authBaseUrl, path, init);
+
+// authFetch against mobile-api (documents editor: sections, exports, files, sources).
+export const mobileApiFetch = async (path: string, init: RequestInit = {}) => {
+  const response = await authFetchRawAt(mobileApiBaseUrl, path, init);
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { error?: string } | null;
+    throw new Error(payload?.error || `Erreur serveur (${response.status}).`);
+  }
+  return response;
 };
 
 export const authFetch = async (path: string, init: RequestInit = {}) => {
@@ -581,12 +638,14 @@ export const topUpStudentWallet = async (amountCoins: number, providerName: stri
   (await authFetch('/api/mobile/wallet/topup', {
     method: 'POST',
     body: JSON.stringify({ amountCoins, providerName, phoneNumber }),
-  })).json() as Promise<{ reference: string; status: string; mock?: boolean }>;
+  })).json() as Promise<{ reference: string; status: string }>;
 
-export const checkTopUpStatus = async (reference: string) =>
-  (await authFetch(`/api/mobile/wallet/topup/${reference}`, {
+export const checkTopUpStatus = async (reference: string): Promise<{ status: PaymentStatus; balanceCoins?: number }> => {
+  const data = (await (await authFetch(`/api/mobile/wallet/topup/${encodeURIComponent(reference)}`, {
     method: 'GET',
-  })).json() as Promise<{ status: string; balanceCoins?: number }>;
+  })).json()) as { status?: unknown; balanceCoins?: number };
+  return { status: mapServerPaymentStatus(data.status), balanceCoins: data.balanceCoins };
+};
 
 export const purchaseIaPack = async (packId: 'micro' | 'standard' | 'boost') =>
   (await authFetch('/api/mobile/ia-packs/purchase', {

@@ -13,9 +13,11 @@ export type PublicEnv = {
   supabaseUrl: string;
   supabaseAnonKey: string;
   aiProxyUrl: string;
+  supportWhatsapp: string;
   authUrl: string;
   authWebUrl: string;
   adminUrl: string;
+  filesUrl: string;
 };
 
 // Production fallbacks below are intentional. EXPO_PUBLIC_* vars are inlined at
@@ -32,9 +34,12 @@ export const publicEnv: PublicEnv = {
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL || SUPABASE_URL_FALLBACK,
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY_FALLBACK,
   aiProxyUrl: process.env.EXPO_PUBLIC_AI_PROXY_URL || 'https://api.campus360b.site/api/ai/pdf-chat',
+  supportWhatsapp: (process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP || '').replace(/[^0-9]/g, ''),
   authUrl: process.env.EXPO_PUBLIC_AUTH_URL || 'https://api.campus360b.site',
   authWebUrl: process.env.EXPO_PUBLIC_AUTH_WEB_URL || 'https://admin.campus360b.site',
   adminUrl: process.env.EXPO_PUBLIC_ADMIN_URL || 'https://admin.campus360b.site',
+  // Files host (VPS) receiving document images and sources.
+  filesUrl: process.env.EXPO_PUBLIC_FILES_URL || 'https://files.campus360b.site',
 };
 
 export const isSupabaseConfigured = () =>

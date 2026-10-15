@@ -31,7 +31,7 @@ export interface StoredWhatsAppStatus {
 const STORAGE_KEY = 'campus360_whatsapp_status';
 
 /**
- * Normalizes phone numbers to standard format (e.g. 237690123456).
+ * Normalizes phone numbers to standard format (e.g. 237600000000).
  */
 export function cleanPhoneNumber(rawPhone: string): string {
   const digits = (rawPhone || '').replace(/\D/g, '');
@@ -52,19 +52,6 @@ export function formatPairingCode(code: string): string {
     return `${clean.slice(0, 4)} - ${clean.slice(4)}`;
   }
   return code;
-}
-
-/**
- * Generates a deterministic 8-digit pairing code for testing or offline dev resilience.
- */
-export function generateDeterministicPairingCode(phone: string): string {
-  const digits = cleanPhoneNumber(phone);
-  let hash = 0;
-  for (let i = 0; i < digits.length; i++) {
-    hash = (hash * 31 + digits.charCodeAt(i)) >>> 0;
-  }
-  const codeNum = (hash % 90000000) + 10000000;
-  return String(codeNum);
 }
 
 /**
@@ -205,7 +192,7 @@ export async function requestPairingCode(
     return {
       success: false,
       pairingCode: '',
-      error: 'Veuillez saisir un numéro de téléphone valide (ex: +237 690 12 34 56).',
+      error: 'Veuillez saisir un numéro de téléphone valide (ex. 6XX XX XX XX).',
     };
   }
 
@@ -299,21 +286,10 @@ export async function checkConnectionStatus(phone: string): Promise<ConnectionSt
     console.warn('[whatsappService] Network error during checkConnectionStatus:', networkErr);
   }
 
-  // Check stored status as fallback
-  const stored = await getStoredWhatsAppStatus();
-  if (stored.phone === cleanPhone && stored.connected) {
-    return {
-      success: true,
-      connected: true,
-      state: 'open',
-      instanceName: stored.instanceName,
-      offline: true,
-    };
-  }
-
   return {
-    success: true,
+    success: false,
     connected: false,
     state: 'close',
+    error: 'Statut WhatsApp indisponible pour le moment. Réessaie dans un instant.',
   };
 }

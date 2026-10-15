@@ -86,6 +86,7 @@ import {
   glassCard,
   brandGradient,
 } from './theme/stitch';
+import { publicEnv } from './config/env';
 
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia, serif' }) as string;
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace' }) as string;
@@ -102,6 +103,7 @@ import { DocumentsScreen } from './features/documents/DocumentsScreen';
 import { StagesScreen } from './ui/screens/StagesScreen';
 import { ApplicationsTimelineScreen } from './ui/screens/ApplicationsTimelineScreen';
 import { ResourcesScreen } from './ui/screens/ResourcesScreen';
+import { setFreeLaunch } from './config/launch';
 
 const logo = require('../assets/icon.png');
 const ONBOARDING_COMPLETED_KEY = 'campus360_onboarding_completed_permanent';
@@ -240,7 +242,7 @@ function PrimaryButtonLocal({
 }
 
 export function AppShell() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Outfit_600SemiBold,
     Outfit_700Bold,
     Inter_400Regular,
@@ -280,9 +282,13 @@ export function AppShell() {
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [updatingPassword, setUpdatingPassword] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
-  const [notifNewPdf, setNotifNewPdf] = React.useState(true);
-  const [notifPromos, setNotifPromos] = React.useState(false);
-  const [notifAlerts, setNotifAlerts] = React.useState(true);
+  // Real permission state of the phone; there are no per-topic preferences on the server.
+  const [notifPermission, setNotifPermission] = React.useState<'granted' | 'denied' | 'unknown'>('unknown');
+  const [fontTimeout, setFontTimeout] = React.useState(false);
+  React.useEffect(() => {
+    const timer = setTimeout(() => setFontTimeout(true), 4000);
+    return () => clearTimeout(timer);
+  }, []);
   const [supportModalVisible, setSupportModalVisible] = React.useState(false);
   const [balance, setBalance] = React.useState(0);
   const [iaCredits, setIaCredits] = React.useState(5);
@@ -583,6 +589,7 @@ export function AppShell() {
       }
       setBalance(account.wallet.balanceCoins);
       setIaCredits(account.wallet.iaCredits);
+      setFreeLaunch(account.wallet.freeLaunch === true, account.wallet.freeLaunchUntil ?? null);
       setPurchasedDocuments(account.purchasedDocumentIds);
       setPurchasedPacks(account.purchasedPackIds);
       setTransactions(
@@ -952,7 +959,6 @@ export function AppShell() {
             setPollingMessage('');
             setRechargeVisible(false);
             if (statusRes.balanceCoins !== undefined) setBalance(statusRes.balanceCoins);
-            setTransactions((current) => [makeTransaction(`Recharge ${provider}`, amount, 'topup'), ...current]);
             await syncStudentAccount(studentSession);
             Alert.alert('Recharge réussie', `${formatCoins(amount)} Coins ajoutés via ${provider}.`);
           } else if (statusRes.status === 'failed') {
@@ -1020,7 +1026,13 @@ export function AppShell() {
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded && !fontError && !fontTimeout) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: stitchColors.background }}>
+        <ActivityIndicator size="large" color={stitchColors.primary} />
+      </View>
+    );
+  }
 
   if (editingDocumentId) {
     const { DocumentEditorScreen } = require('./features/documents/DocumentEditorScreen');
@@ -1286,13 +1298,12 @@ export function AppShell() {
                   transactions={transactions}
                   purchasedDocumentsCount={ownedLibrary.length}
                   syncingAccount={syncingAccount}
-                  notifNewPdf={notifNewPdf}
-                  notifPromos={notifPromos}
-                  notifAlerts={notifAlerts}
-                  onToggleNotifNewPdf={setNotifNewPdf}
-                  onToggleNotifPromos={setNotifPromos}
-                  onToggleNotifAlerts={setNotifAlerts}
-                  onOpenNotificationsSettings={() => setNotificationsSettingsVisible(true)}
+                  onOpenNotificationsSettings={() => {
+                    Notifications.getPermissionsAsync()
+                      .then((perm) => setNotifPermission(perm.granted ? 'granted' : 'denied'))
+                      .catch(() => setNotifPermission('unknown'));
+                    setNotificationsSettingsVisible(true);
+                  }}
                   onOpenSecuritySettings={() => setSecuritySettingsVisible(true)}
                   onOpenSupport={() => setSupportModalVisible(true)}
                   onSync={() => syncStudentAccount(studentSession ?? undefined)}
@@ -1547,21 +1558,19 @@ export function AppShell() {
                   </View>
                 </Pressable>
               </View>
-              <ScrollView style={{ flex: 1, padding: 20 }}>
-                {[
-                  { label: 'Nouveaux PDF et Packs', desc: 'Sois alerté dès qu\'on ajoute de nouveaux sujets pour ta filière.', value: notifNewPdf, onChange: setNotifNewPdf },
-                  { label: 'Promotions et Offres', desc: 'Reçois des codes promos et réductions sur les recharges.', value: notifPromos, onChange: setNotifPromos },
-                  { label: 'Alertes Comptes', desc: 'Informations sur tes achats et recharges de coins.', value: notifAlerts, onChange: setNotifAlerts },
-                ].map(({ label, desc, value, onChange }) => (
-                  <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                    <View style={{ flex: 1, paddingRight: 16 }}>
-                      <Text style={{ fontSize: 16, fontWeight: '600', color: stitchColors.inkSoft }}>{label}</Text>
-                      <Text style={{ fontSize: 13, color: stitchColors.inkMuted, marginTop: 4 }}>{desc}</Text>
-                    </View>
-                    <Switch value={value} onValueChange={onChange} trackColor={{ false: stitchColors.inkFaint, true: stitchColors.emeraldTone }} thumbColor={stitchColors.white} />
-                  </View>
-                ))}
-              </ScrollView>
+              <View style={{ flex: 1, padding: 20, gap: 16 }}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: stitchColors.inkSoft }}>
+                  {notifPermission === 'granted'
+                    ? 'Notifications activées'
+                    : notifPermission === 'denied'
+                      ? 'Notifications désactivées'
+                      : 'État des notifications inconnu'}
+                </Text>
+                <Text style={{ fontSize: 13, color: stitchColors.inkMuted, lineHeight: 19 }}>
+                  Campus 360 t'envoie les alertes de tes candidatures, achats et recharges. Pour les activer ou les couper, passe par les réglages de ton téléphone.
+                </Text>
+                <PrimaryButtonLocal label="Ouvrir les réglages" onPress={() => { Linking.openSettings().catch(() => {}); }} />
+              </View>
             </Pressable>
           </Pressable>
         </Modal>
@@ -1590,17 +1599,6 @@ export function AppShell() {
                   ))}
                   <PrimaryButtonLocal label={updatingPassword ? 'Mise à jour...' : 'Mettre à jour'} onPress={handleUpdatePassword} disabled={updatingPassword} loading={updatingPassword} />
                 </View>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: stitchColors.inkMuted, marginBottom: 16 }}>SESSIONS ACTIVES</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: stitchColors.surface, borderRadius: 12, borderWidth: 1, borderColor: stitchColors.inkFaint }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: `${stitchColors.ink}12`, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                    <Smartphone size={20} color={stitchColors.ink} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '600', color: stitchColors.inkSoft }}>Appareil Actuel (Web)</Text>
-                    <Text style={{ fontSize: 13, color: stitchColors.inkMuted }}>Connecté depuis Yaoundé</Text>
-                  </View>
-                  <Text style={{ fontSize: 12, color: stitchColors.emeraldTone, fontWeight: '700' }}>Actif</Text>
-                </View>
               </ScrollView>
             </Pressable>
           </Pressable>
@@ -1624,10 +1622,14 @@ export function AppShell() {
                 </View>
                 <Text style={{ fontSize: 18, fontWeight: '700', color: stitchColors.inkSoft, textAlign: 'center', marginBottom: 8 }}>Besoin d'aide ?</Text>
                 <Text style={{ fontSize: 14, color: stitchColors.inkMuted, textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>Notre équipe est disponible sur WhatsApp pour t'aider avec tes recharges, tes PDF ou tout autre problème.</Text>
-                <Pressable style={{ backgroundColor: '#25D366', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 24, width: '100%', justifyContent: 'center' }} onPress={() => Linking.openURL('https://wa.me/237690273500')}>
-                  <Text style={{ fontSize: 20, marginRight: 8 }}>📱</Text>
-                  <Text style={{ color: stitchColors.white, fontSize: 16, fontWeight: '700' }}>Discuter sur WhatsApp</Text>
-                </Pressable>
+                {publicEnv.supportWhatsapp ? (
+                  <Pressable style={{ backgroundColor: '#25D366', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 24, width: '100%', justifyContent: 'center' }} onPress={() => Linking.openURL(`https://wa.me/${publicEnv.supportWhatsapp}`)}>
+                    <Text style={{ fontSize: 20, marginRight: 8 }}>📱</Text>
+                    <Text style={{ color: stitchColors.white, fontSize: 16, fontWeight: '700' }}>Discuter sur WhatsApp</Text>
+                  </Pressable>
+                ) : (
+                  <Text style={{ fontSize: 14, color: stitchColors.inkMuted, textAlign: 'center' }}>Support WhatsApp indisponible pour le moment.</Text>
+                )}
               </View>
             </Pressable>
           </Pressable>

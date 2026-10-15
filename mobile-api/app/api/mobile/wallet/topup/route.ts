@@ -149,21 +149,19 @@ export async function POST(request: NextRequest) {
       reference = `mock_pay_${crypto.randomUUID().replace(/-/g, '')}`;
     }
 
-    if (user.id !== 'guest-student') {
+    try {
+      const client = await databasePool.connect();
       try {
-        const client = await databasePool.connect();
-        try {
-          await client.query(
-            `insert into public.app_wallet_transactions (user_id, type, amount_coins, reference_id, status)
-             values ($1, 'topup', $2, $3, $4)`,
-            [user.id, input.amountCoins, reference, status],
-          );
-        } finally {
-          client.release();
-        }
-      } catch (dbErr) {
-        console.warn('[topup] Transaction record skipped:', dbErr);
+        await client.query(
+          `insert into public.app_wallet_transactions (user_id, type, amount_coins, reference_id, status)
+           values ($1, 'topup', $2, $3, $4)`,
+          [user.id, input.amountCoins, reference, status],
+        );
+      } finally {
+        client.release();
       }
+    } catch (dbErr) {
+      console.warn('[topup] Transaction record skipped:', dbErr);
     }
 
     return withCors(NextResponse.json({ reference, status, mock: !isRealPayment }), request);

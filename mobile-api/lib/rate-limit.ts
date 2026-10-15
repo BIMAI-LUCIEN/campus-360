@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 
+import { clientIpFrom } from './client-ip';
 import { databasePool } from './database';
 
 // Lightweight sliding-window rate limiter, backed by a small Postgres table.
@@ -22,18 +23,12 @@ export type RateLimitOptions = {
   windowMs: number;
   // Override key derivation (defaults to user-id || ip).
   key?: string;
+  // 'closed': refuse the request when the limiter's database fails (money and AI
+  // routes); 'open' (default): let it through and log.
+  failMode?: 'open' | 'closed';
 };
 
-const getClientIp = (request: NextRequest) => {
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) {
-    const first = forwarded.split(',')[0]?.trim();
-    if (first) return first;
-  }
-  const real = request.headers.get('x-real-ip');
-  if (real) return real;
-  return 'unknown';
-};
+const getClientIp = (request: NextRequest) => clientIpFrom(request.headers, process.env);
 
 export class RateLimitError extends Error {
   constructor(
@@ -120,6 +115,9 @@ export const rateLimit = async (
     ).catch(() => undefined);
   } catch (err) {
     if (err instanceof RateLimitError) throw err;
+    if (options.failMode === 'closed') {
+      throw new RateLimitError('Service momentanément indisponible. Réessaie dans un instant.', 30);
+    }
     console.warn('[rate-limit] Database rate limiter bypassed due to connection failure:', (err as any)?.message);
   }
 };

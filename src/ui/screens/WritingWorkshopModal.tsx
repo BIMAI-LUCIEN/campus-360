@@ -22,6 +22,7 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { stitchColors } from '../../theme/stitch';
+import { freeLabel, isFreeLaunch } from '../../config/launch';
 
 interface WritingWorkshopModalProps {
   visible: boolean;
@@ -46,9 +47,9 @@ export function WritingWorkshopModal({
   const [generatedDoc, setGeneratedDoc] = useState<string | null>(null);
 
   const pricing = {
-    REPORT: { price: '1 000 FCFA', title: 'Rapport de Stage', icon: FileText, desc: 'Structure académique complète (Intro, Missions, Bilan, Recommandations)' },
-    THESIS: { price: '2 500 FCFA', title: 'Mémoire / Soutenance', icon: GraduationCap, desc: 'Problématique, Revue de littérature, Méthodologie et Conclusion' },
-    CV: { price: '500 FCFA', title: 'CV & Bio Professionnelle', icon: Sparkles, desc: 'CV percutant ATS-compatible avec accroche personnalisée' },
+    REPORT: { get price() { return isFreeLaunch() ? freeLabel() : '2 000 FCFA'; }, title: 'Rapport de Stage', icon: FileText, desc: 'Structure académique complète (Intro, Missions, Bilan, Recommandations)' },
+    THESIS: { get price() { return isFreeLaunch() ? freeLabel() : '5 000 FCFA'; }, title: 'Mémoire / Soutenance', icon: GraduationCap, desc: 'Problématique, Revue de littérature, Méthodologie et Conclusion' },
+    CV: { get price() { return isFreeLaunch() ? freeLabel() : '500 FCFA'; }, title: 'CV & Bio Professionnelle', icon: Sparkles, desc: 'CV percutant ATS-compatible avec accroche personnalisée' },
   };
 
   const handleGenerate = () => {

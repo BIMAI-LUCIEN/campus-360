@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isDatabaseUnavailable } from './db-errors';
+import { resolveStartingCoins } from './free-launch';
 import type { PoolClient } from 'pg';
 import { ZodError } from 'zod';
 
 import { auth } from './auth';
 import { databasePool } from './database';
+import { isTrustedOrigin } from './origins';
 import { RateLimitError, rateLimit } from './rate-limit';
 
 export type MobileUser = {
@@ -31,6 +34,7 @@ type AuthSessionUser = {
   university?: string;
   faculty?: string;
   level?: string;
+  emailVerified?: boolean;
 };
 
 const adminEmails = () =>
@@ -92,7 +96,9 @@ export const ensureMobileUser = async (authUser: AuthSessionUser): Promise<Mobil
     try {
       await client.query('begin');
       const email = authUser.email.trim().toLowerCase();
-      const legacy = await client.query(
+      // Legacy data (wallet, purchases) is matched by email only: never hand it
+      // to an account whose email is not verified.
+      const legacy = authUser.emailVerified !== true ? { rows: [] } : await client.query(
         `select p.*, w.balance_coins
          from public.profiles p
          left join public.wallets w on w.user_id = p.id
@@ -117,6 +123,8 @@ export const ensureMobileUser = async (authUser: AuthSessionUser): Promise<Mobil
            faculty = coalesce(excluded.faculty, public.app_users.faculty),
            level = coalesce(excluded.level, public.app_users.level),
            updated_at = now()
+         where public.app_users.better_auth_user_id is null
+            or public.app_users.better_auth_user_id = excluded.better_auth_user_id
          returning *`,
         [
           legacyRow?.id ?? null,
@@ -131,13 +139,16 @@ export const ensureMobileUser = async (authUser: AuthSessionUser): Promise<Mobil
           authUser.level || legacyRow?.level || null,
         ],
       );
+      if (!inserted.rows[0]) {
+        throw new MobileApiError('Cette adresse e-mail est déjà liée à un autre compte.', 409);
+      }
       const appUser = mapUser(inserted.rows[0]);
 
       await client.query(
         `insert into public.app_wallets (user_id, balance_coins)
          values ($1, $2)
          on conflict (user_id) do nothing`,
-        [appUser.id, Number(legacyRow?.balance_coins ?? 5000)],
+        [appUser.id, Number(legacyRow?.balance_coins ?? resolveStartingCoins(process.env))],
       );
       if (legacyRow?.id) await copyLegacyData(client, appUser.id, String(legacyRow.id));
 
@@ -150,6 +161,7 @@ export const ensureMobileUser = async (authUser: AuthSessionUser): Promise<Mobil
       client.release();
     }
   } catch (err) {
+    if (err instanceof MobileApiError) throw err;
     // Never fabricate an identity or a paid tier when the DB is unavailable.
     console.error('[mobile-access] Database query failed in ensureMobileUser:', err);
     throw new MobileApiError('Service temporairement indisponible.', 503);
@@ -163,23 +175,15 @@ const DEFAULT_USER_READ_LIMIT_PER_MIN = 120;
 // Mutations are tighter. Wallet operations especially need hard caps.
 export type MobileAccessOptions = {
   readBudgetPerMinute?: number;
-  allowDirectUserIdentityFallback?: boolean;
 };
 
 export const requireMobileUser = async (
   request: NextRequest,
   options: MobileAccessOptions = {},
 ) => {
-  let headers = request.headers;
-  
-  // Support session token in query parameter for Linking.openURL on mobile PDF exports
-  const { searchParams } = new URL(request.url);
-  const token = searchParams.get('token');
-  if (token) {
-    const newHeaders = new Headers(request.headers);
-    newHeaders.set('Authorization', `Bearer ${token}`);
-    headers = newHeaders;
-  }
+  // The session comes from the cookie or the Authorization header only: a token
+  // in the URL would end up in logs and browser history.
+  const headers = request.headers;
 
   let session = await auth.api.getSession({ headers }).catch(() => null);
 
@@ -199,10 +203,10 @@ export const requireMobileUser = async (
       const rawToken = sessionToken.split('.')[0];
       try {
         const dbSession = await databasePool.query(
-          `select s."userId", s."expiresAt", u.id, u.email, u.name, u.role
+          `select s."userId", s."expiresAt", u.id, u.email, u.name, u.role, u."emailVerified"
            from public."session" s
            join public."user" u on u.id = s."userId"
-           where (s.token = $1 or s.token = $2 or s.id = $1 or s.id = $2) and s."expiresAt" > now()
+           where (s.token = $1 or s.token = $2) and s."expiresAt" > now()
            order by s."expiresAt" desc
            limit 1`,
           [sessionToken, rawToken],
@@ -215,6 +219,7 @@ export const requireMobileUser = async (
               email: String(row.email),
               name: String(row.name),
               role: String(row.role || 'student'),
+              emailVerified: row.emailVerified === true,
             },
             session: {
               id: String(row.id),
@@ -222,31 +227,6 @@ export const requireMobileUser = async (
               expiresAt: row.expiresAt,
             },
           } as any;
-        } else if (options.allowDirectUserIdentityFallback) {
-          // If token matches user ID or email directly
-          const dbUser = await databasePool.query(
-            `select u.id, u.email, u.name, u.role
-             from public."user" u
-             where u.id = $1 or lower(u.email) = lower($1)
-             limit 1`,
-            [sessionToken],
-          );
-          if (dbUser.rows[0]) {
-            const uRow = dbUser.rows[0];
-            session = {
-              user: {
-                id: String(uRow.id),
-                email: String(uRow.email),
-                name: String(uRow.name),
-                role: String(uRow.role || 'student'),
-              },
-              session: {
-                id: String(uRow.id),
-                userId: String(uRow.id),
-                expiresAt: new Date(Date.now() + 86400000),
-              },
-            } as any;
-          }
         }
       } catch (err) {
         console.warn('[mobile-access] Direct DB session fallback check error:', err);
@@ -300,35 +280,12 @@ export class MobileApiError extends Error {
   }
 }
 
-const isTrustedOrigin = (origin: string): boolean => {
-  try {
-    const extraAllowed = (process.env.CORS_ALLOWED_ORIGINS ?? '')
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (extraAllowed.includes(origin)) return true;
-
-    const url = new URL(origin);
-    const host = url.hostname.toLowerCase();
-    return (
-      host === 'localhost' ||
-      host === '127.0.0.1' ||
-      host === 'campus360b.site' ||
-      host.endsWith('.campus360b.site') ||
-      host.endsWith('.vercel.app') ||
-      host.endsWith('.expo.dev')
-    );
-  } catch {
-    return false;
-  }
-};
-
 export const withCors = (
   response: NextResponse,
   request?: NextRequest | Request | null,
 ): NextResponse => {
   const origin = request?.headers?.get('origin');
-  if (origin && isTrustedOrigin(origin)) {
+  if (origin && isTrustedOrigin(origin, process.env)) {
     response.headers.set('Access-Control-Allow-Origin', origin);
     response.headers.set('Access-Control-Allow-Credentials', 'true');
     response.headers.set('Vary', 'Origin');
@@ -372,23 +329,13 @@ export const mobileErrorResponse = (error: unknown, request?: NextRequest | Requ
     return withCors(NextResponse.json({ error: 'Cet achat a deja ete effectue.' }, { status: 409 }), request);
   }
   console.error('Mobile API error', error);
-  const errMsg = String((error as any)?.message || '');
-  const errCode = String((error as any)?.code || '');
-  const isDbDown =
-    errCode === 'ENOTFOUND' ||
-    errCode === 'ECONNREFUSED' ||
-    errCode === 'ETIMEDOUT' ||
-    errMsg.includes('tenant/user') ||
-    errMsg.includes('DATABASE_URL is required') ||
-    errMsg.includes('fetch failed');
-
+  const isDbDown = isDatabaseUnavailable(error);
   return withCors(
     NextResponse.json(
-      {
-        error: isDbDown ? 'Mode hors-ligne temporaire.' : 'Service momentanement indisponible.',
-        offline: isDbDown,
-      },
-      { status: isDbDown ? 200 : 500 },
+      isDbDown
+        ? { error: 'Service momentanément indisponible. Réessaie dans un instant.', offline: true }
+        : { error: 'Service momentanement indisponible.' },
+      { status: isDbDown ? 503 : 500 },
     ),
     request,
   );

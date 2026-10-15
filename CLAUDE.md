@@ -2,6 +2,15 @@
 
 Ce fichier documente l'architecture du dépôt pour éviter de devoir ré-analyser le codebase à chaque tâche. À maintenir à jour si l'architecture change significativement (nouveau service, migration de schéma majeure, changement d'auth, etc.).
 
+> **Graphify-first :** avant de lire des fichiers, consulte `graphify-out/GRAPH_REPORT.md` / `graphify-out/graph.json` et `docs/ARCHITECTURE_MAP.md` (cartographie du 2026-10-13) pour ne lire que le strict nécessaire. Après un refactor : `graphify update .`
+>
+> ⚠️ **Corrections vérifiées le 2026-10-13 (prioritaires sur le reste de ce fichier) :**
+> - Le dossier `admin-app/` **n'existe pas** : partout où ce fichier dit `admin-app/`, lire **`recruiter-web/`** (package `campus-360-admin`, port 3001). `recruiter-web/next.config.ts` n'a **aucun** rewrite vers mobile-api ; il contient ses propres routes `/api/mobile/*`, dupliquées et divergentes.
+> - Il existe un 4e service, `landing-site/` (Next 15, port 3000, Better Auth propre).
+> - Abonnements réels : `free`/`basic`/`pro`/`elite` (pas `premium`). Paiements via Notch Pay.
+> - Thème `src/theme/stitch.ts` : mêmes noms de tokens, mais valeurs « Clean White & Royal Violet » (`sienna` = #7C3AED).
+> - Stages/candidatures/WhatsApp (Evolution API + n8n) constituent désormais le cœur produit (voir `docs/ARCHITECTURE_MAP.md`).
+
 ## Vue d'ensemble
 
 Monorepo à **3 services** + 1 dossier de maquettes de design :
@@ -48,7 +57,7 @@ Monorepo à **3 services** + 1 dossier de maquettes de design :
 ## Structure des dossiers
 
 ### `src/` (app mobile)
-- `AppShell.tsx` — composant racine (~1669 lignes), toute la logique métier + état + navigation (pas de react-navigation, navigation "maison" par état `activeSection`)
+- `AppShell.tsx` — composant racine, toute la logique métier + état + navigation (pas de react-navigation, navigation "maison" par état `activeSection`)
 - `config/env.ts` — variables d'env publiques (`EXPO_PUBLIC_*`), `isSupabaseConfigured()`
 - `types.ts` — types partagés : `Transaction`, `CampusDocument`, `CampusPdfPack`
 - `theme/stitch.ts` — design system éditorial (voir section Thème)
@@ -57,28 +66,14 @@ Monorepo à **3 services** + 1 dossier de maquettes de design :
 - `features/auth/betterAuth.ts` — client Better Auth, auto-détection IP dev, fonctions auth/API
 - `features/pdf/pdfApi.ts` — catalogue PDF/packs (REST Supabase direct en lecture publique + `authFetch` pour achats)
 - `features/pdf/pdfAssistant.ts` — assistant IA chat contextualisé sur un PDF, fallback local si API indispo
-- `features/pdf/PdfStudentSection.tsx` — catalogue/bibliothèque étudiant (~2352 lignes)
-- `features/documents/DocumentEditorScreen.tsx` — éditeur natif (WebView HTML bundlé + toolbar), ~1262 lignes
-- `features/documents/DocumentsScreen.tsx` — liste/gestion documents (CV, lettre, stage, mémoire), ~1262 lignes
+- `features/pdf/PdfStudentSection.tsx` — catalogue/bibliothèque étudiant
+- `features/documents/DocumentEditorScreen.tsx` — éditeur natif (WebView HTML bundlé + toolbar)
+- `features/documents/DocumentsScreen.tsx` — liste/gestion documents (CV, lettre, stage, mémoire)
 - `features/onboarding/OnboardingScreen.tsx`, `FreePdfSelector.tsx`
 
 ### `mobile-api/`
 - `app/api/auth/[...all]/route.ts` — instance Better Auth (catch-all)
-- `app/api/health/route.ts`
-- `app/api/mobile/account/route.ts` — GET/PATCH profil + wallet + abonnement + achats + transactions
-- `app/api/mobile/auth-capabilities/route.ts` — expose `{ passwordReset, google }`
-- `app/api/mobile/documents/route.ts`, `[id]/route.ts`, `[id]/sections/route.ts`, `[id]/sections/[sectionId]/route.ts` — CRUD documents/sections
-- `app/api/mobile/documents/[id]/export/pdf/route.ts` — export PDF (puppeteer)
-- `app/api/mobile/documents/ai/route.ts`, `generate/route.ts`, `generate-full/route.ts` — génération IA
-- `app/api/mobile/documents/onboard-chat/route.ts`
-- `app/api/mobile/events/route.ts` — analytics
-- `app/api/mobile/ia-packs/purchase/route.ts`
-- `app/api/mobile/notifications/register/route.ts`
-- `app/api/mobile/pdf/signed-url/route.ts`
-- `app/api/mobile/purchase/document/route.ts`, `purchase/pack/route.ts` — achats atomiques (transaction SQL)
-- `app/api/mobile/reset-password-redirect/route.ts`
-- `app/api/mobile/subscription/purchase/route.ts`
-- `app/api/mobile/wallet/topup/route.ts`, `[reference]/route.ts`, `wallet/webhook/route.ts`
+- `app/api/mobile/*` — routes du mobile (compte, documents, achats, wallet, IA, notifications). Source de vérité : le dossier `app/api/mobile/`
 - `lib/auth.ts` — config Better Auth complète (voir Auth)
 - `lib/database.ts` — pool `pg` partagé (Proxy défensif si `DATABASE_URL` absent → throw seulement à l'usage, jamais au build)
 - `lib/documents-db.ts` — accès `app_documents`/`app_document_sections` (voir DB)
@@ -94,19 +89,16 @@ Monorepo à **3 services** + 1 dossier de maquettes de design :
 - `app/admin/layout.tsx`, `AdminShell.tsx` — shell dashboard (nav, guard rôle)
 - `app/admin/login/` — `LoginClient.tsx`, `page.tsx`
 - `app/admin/page.tsx`, `_components/DashboardOverview.tsx`
-- `app/admin/pdf/PdfDashboardClient.tsx` (~1054 lignes) — CRUD catalogue PDF, upload, analyse IA, prix suggéré, statut (`draft`→`analyzing`→`needs_review`→`published`→`archived`)
+- `app/admin/pdf/PdfDashboardClient.tsx` — CRUD catalogue PDF, upload, analyse IA, prix suggéré, statut (`draft`→`analyzing`→`needs_review`→`published`→`archived`)
 - `app/admin/packs/PacksDashboardClient.tsx`
 - `app/admin/users/UsersDashboardClient.tsx`
 - `app/admin/analytics/AnalyticsDashboard.tsx`, `DashboardCharts.tsx` (recharts)
 - `app/admin/settings/SettingsClient.tsx`
 - `app/admin/documents/DocumentsListClient.tsx`, `new/NewDocumentClient.tsx`
 - `app/documents/[id]/page.tsx`, `lib/html-to-docx.ts`, `extensions/ImagePlaceholder.ts` — éditeur riche Tiptap web + export docx
-- `app/api/admin/analytics/route.ts`, `users/route.ts`
+- `app/api/*` — routes admin (analytics, users, packs, pdf, IA). Source de vérité : le dossier `app/api/`
 - `app/api/ai/pdf-chat/route.ts` — proxy IA consommé par `pdfAssistant.ts` mobile
-- `app/api/auth/[...all]/route.ts`, `auth/diagnostic/route.ts` — instance Better Auth propre à admin-app
-- `app/api/bootstrap-admin/route.ts`
-- `app/api/packs/route.ts`, `[id]/route.ts`, `[id]/status/route.ts`
-- `app/api/pdf/route.ts`, `[id]/route.ts`, `[id]/analyze/route.ts`, `[id]/price/route.ts`, `[id]/status/route.ts`
+- `app/api/auth/[...all]/route.ts` — instance Better Auth propre à admin-app
 - `lib/auth.ts`, `auth-client.ts`, `auth-schema.ts`
 - `lib/course-db.ts`, `documents-db.ts`, `database.ts`
 - `lib/pdf-intelligence.ts`, `pdf-preview.ts`, `supabase-pdf.ts` — analyse IA PDF, preview, upload Storage
@@ -136,23 +128,17 @@ Monorepo à **3 services** + 1 dossier de maquettes de design :
 
 ## Base de données (Postgres, accès via `pg` direct)
 
-Tables identifiées (pas de schéma SQL unique — migrations incrémentales) :
-- `app_users` — liés à Better Auth via `better_auth_user_id`, `legacy_supabase_user_id` (migration ancien schéma), `email, name, role, phone, whatsapp_phone, university, faculty, level, subscription_tier, subscription_expires_at`
-- `app_wallets` — `user_id, balance_coins, ia_credits, report_credits, updated_at`
-- `app_wallet_transactions` — `type ('purchase'|'ai_generation'|'topup'|'withdrawal'|'commission'|'report'), amount_coins, reference_id, status`
-- `app_document_purchases` — `document_id, buyer_id, amount_coins` (unique document_id+buyer_id)
-- `app_pack_purchases` — `pack_id, buyer_id, amount_coins, document_ids[]`
-- `documents` — catalogue PDF public : `title, description, university, faculty, subject, teacher, level, academic_year, price_coins, page_count, file_path, preview_path, status, commission_rate, rating, sales_count, ai_summary, ai_tags, ai_difficulty, suggested_price_coins, quality_score, ai_study_plan, ai_quiz`
-- `pdf_packs` — `title, university, faculty, level, semester, pack_type, price_coins, discount_percent, status, sales_count, revenue_coins`
-- `pdf_pack_items` — `pack_id, document_id, sort_order`
-- `app_documents` (rédaction) — `user_id, title, template_type, font_family, line_spacing, margins, cover_template, cover_data (jsonb), primary_color, secondary_color`
-- `app_document_sections` — `document_id, title, content_html, content_json (jsonb), sort_order, is_system`
-- `app_ia_usage_logs` — `user_id, tokens_used`
-- Tables legacy : `profiles`, `wallets`, `document_purchases`, `pack_purchases`, `wallet_transactions` — copiées vers `app_*` à la première connexion (`copyLegacyData` dans `mobile-access.ts`)
+Tables principales (pas de schéma SQL unique, migrations incrémentales ; les colonnes se lisent dans les migrations et le code) :
+- `app_users` (lié à Better Auth), `app_wallets`, `app_wallet_transactions`
+- `app_document_purchases`, `app_pack_purchases`
+- `documents` (catalogue PDF public), `pdf_packs`, `pdf_pack_items`
+- `app_documents` et `app_document_sections` (rédaction)
+- `app_ia_usage_logs`
+- Tables legacy `profiles`, `wallets`, `document_purchases`, `pack_purchases`, `wallet_transactions` : copiées vers `app_*` à la première connexion (`copyLegacyData` dans `mobile-access.ts`)
 
 Migration clé : `mobile-api/sql/0004_add_document_editor_columns.sql` — idempotente (`IF NOT EXISTS`), ajoute `content_json`, colonnes thème/layout (defaults `#2563EB`/`#0D9488`/`Lora`/`1.5`/`normal`/`classic`), `ia_credits` (default 10), crée `app_ia_usage_logs`/`app_wallet_transactions`.
 
-`mobile-api/lib/documents-db.ts` expose : `listUserDocuments`, `getDocumentById`, `getDocumentSections`, `createDocument` (transaction insert document + sections via `TEMPLATE_SECTIONS`), `updateDocumentSettings`, `deleteDocument`, `updateDocumentSection`, `addDocumentSection`, `deleteDocumentSection` (protège sections système), `reorderDocumentSections`.
+`mobile-api/lib/documents-db.ts` regroupe les opérations CRUD sur les documents et sections (`TEMPLATE_SECTIONS` pour la création, sections système protégées à la suppression).
 
 ## Authentification
 

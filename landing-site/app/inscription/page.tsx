@@ -8,13 +8,13 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Inscription gratuite — 3 PDFs offerts à l'inscription",
+  title: "Inscription gratuite — Stage IA & CV officiel RH",
   description:
-    "Inscris-toi gratuitement à Campus 360 et reçois immédiatement 3 PDFs offerts, le catalogue complet en accès libre, et 5 requêtes IA par jour.",
+    "Inscris-toi gratuitement à Campus 360 : matching de stage par IA, CV officiel RH, coach de soutenance : tout est gratuit pendant le lancement.",
   alternates: { canonical: "/inscription" },
   openGraph: {
     title: "Inscription gratuite Campus 360",
-    description: "3 PDFs offerts à l'inscription. Catalogue complet en accès libre.",
+    description: "Toutes les fonctions sont gratuites pendant le lancement.",
     url: "/inscription",
   },
 };
@@ -32,7 +32,7 @@ export default function InscriptionPage() {
                     Crée ton compte gratuit
                   </h1>
                   <p className="text-sm text-[var(--color-ink-light)]">
-                    2 minutes. 3 PDFs offerts. Aucun engagement.
+                    2 minutes. Tout est gratuit pendant le lancement. Aucun engagement.
                   </p>
                 </div>
                 <InscriptionForm />
@@ -40,7 +40,7 @@ export default function InscriptionPage() {
             </div>
 
             <aside className="lg:col-span-2">
-              <div className="sticky top-24 p-6 bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl text-white ">
+              <div className="sticky top-24 p-6 rounded-3xl text-white bg-[image:var(--gradient-brand)] ">
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 backdrop-blur rounded-xl mb-4">
                   <Gift className="w-6 h-6" />
                 </div>
@@ -49,12 +49,11 @@ export default function InscriptionPage() {
                 </h2>
                 <ul className="space-y-3 text-sm">
                   {[
-                    "3 PDFs offerts à choisir dans le catalogue",
-                    "Accès au catalogue complet (3 500+ PDFs)",
-                    "5 requêtes IA par jour (fiches, résumés)",
-                    "Wallet rechargeable dès 500 FCFA",
-                    "Sync multi-appareils",
-                    "Mode hors-ligne après 1er téléchargement",
+                    "Toutes les fonctions gratuites pendant le lancement",
+                    "CV officiel RH et lettre de motivation générés par l'IA",
+                    "Matching de stage avec score de correspondance",
+                    "Suivi de tes candidatures et relance à J+7",
+                    "Coach IA de soutenance",
                   ].map((b) => (
                     <li key={b} className="flex items-start gap-2">
                       <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />

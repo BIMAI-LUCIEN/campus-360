@@ -1,3 +1,4 @@
+import { aiCost } from '@/lib/free-launch';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -7,7 +8,7 @@ import { requireMobileUser, mobileErrorResponse, MobileApiError, withCors } from
 
 export const runtime = 'nodejs';
 
-const IA_CREDITS_PER_GENERATION = 5;
+// Free during the V1 launch (see lib/free-launch.ts).
 
 const CANDIDATE_MODELS = [
   'openai/gpt-4o-mini',
@@ -140,6 +141,7 @@ const generateSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const creditCost = aiCost('careerDoc');
     const access = await requireMobileUser(request);
     if (access.response || !access.user) return withCors(access.response!, request);
     const user = access.user;
@@ -188,7 +190,7 @@ export async function POST(request: NextRequest) {
       [user.id],
     );
     const availableCredits = Number(walletCheck.rows[0]?.ia_credits ?? 0);
-    if (availableCredits < IA_CREDITS_PER_GENERATION) {
+    if (availableCredits < creditCost) {
       return withCors(
         NextResponse.json(
           { error: 'Crédits IA insuffisants.', code: 'INSUFFICIENT_AI_CREDITS' },
@@ -284,10 +286,10 @@ export async function POST(request: NextRequest) {
       );
 
       if (replay.rows.length === 0) {
-        if (walletCredits < IA_CREDITS_PER_GENERATION) {
+        if (walletCredits < creditCost) {
           throw new MobileApiError('Crédits IA insuffisants.', 402);
         }
-        remainingCredits = walletCredits - IA_CREDITS_PER_GENERATION;
+        remainingCredits = walletCredits - creditCost;
         await client.query(
           'update public.app_wallets set ia_credits = $2, updated_at = now() where user_id = $1',
           [user.id, remainingCredits],
@@ -338,7 +340,7 @@ export async function POST(request: NextRequest) {
       NextResponse.json({
         html: safeHtml,
         remainingCredits,
-        creditsUsed: IA_CREDITS_PER_GENERATION,
+        creditsUsed: creditCost,
       }),
       request,
     );

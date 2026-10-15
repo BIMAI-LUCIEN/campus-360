@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
+import { DEFAULT_FIELD, fieldFromProfile, STUDY_FIELDS } from '@/lib/document-outlines';
 import { listUserDocuments, createDocument } from '@/lib/documents-db';
 
 export const runtime = 'nodejs';
@@ -27,6 +28,8 @@ const createDocumentSchema = z.object({
   description: z.string().trim().max(1000).optional().default(''),
   templateType: z.enum(['stage', 'memoire', 'cv', 'lettre_motivation', 'blank']).optional(),
   type: z.enum(['stage', 'memoire', 'cv', 'lettre_motivation', 'blank']).optional(),
+  // Field of study (reports and theses). Absent: guessed from the profile.
+  field: z.enum(STUDY_FIELDS).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -56,7 +59,11 @@ export async function POST(request: NextRequest) {
 
     const { title, description } = parsed.data;
     const templateType = parsed.data.templateType || parsed.data.type || 'stage';
-    const document = await createDocument(userId, title, description || '', templateType);
+    const academic = templateType === 'stage' || templateType === 'memoire';
+    const field = academic
+      ? parsed.data.field ?? fieldFromProfile(access.user.faculty, access.user.level) ?? DEFAULT_FIELD
+      : null;
+    const document = await createDocument(userId, title, description || '', templateType, field);
 
     return withCors(NextResponse.json({ document, id: document.id }), request);
   } catch (error) {

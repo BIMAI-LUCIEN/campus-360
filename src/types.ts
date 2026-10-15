@@ -2,7 +2,7 @@
 export const PRICE_STAGE_APPLY = 500; // Candidature 1-clic RH (1ère offerte)
 export const PRICE_REPORT = 2000;      // Rédaction Rapport de stage IA (25-45 pages)
 export const PRICE_THESIS = 5000;      // Rédaction Mémoire de fin d'études IA (50-100 pages)
-export const PRICE_PDF = 250;          // Document / épreuve certifiée (Annales 100% gratuites)
+export const PRICE_PDF = 250;          // Document / épreuve (annales gratuites)
 export const MIN_WALLET_RECHARGE = 500;// Seuil de recharge minimum Mobile Money
 
 export type Transaction = {
@@ -183,11 +183,11 @@ export type ScrapedStageReport = {
 export type CvPersonalDetails = {
   nom: string;
   prenom: string;
-  nationalite: string;
-  age: string;
+  nationalite?: string;
+  age?: string;
   email: string;
   telephone: string;
-  adresse: string;
+  adresse?: string;
 };
 
 export type CvExperience = {

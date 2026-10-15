@@ -1,4 +1,5 @@
 import { databasePool } from './database';
+import { outlineFor, type StudyField } from './document-outlines';
 
 export type Document = {
   id: string;
@@ -16,6 +17,9 @@ export type Document = {
   // predate the migration; the UI falls back to its own defaults.
   primary_color?: string | null;
   secondary_color?: string | null;
+  // Module 20: raw stored style (resolve with `resolveStyle` before use).
+  document_style?: unknown;
+  field?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -32,26 +36,14 @@ export type DocumentSection = {
   updated_at: string;
 };
 
-export type DocumentSource = {
-  id: string;
-  document_id: string;
-  user_id: string;
-  file_name: string;
-  file_type: string;
-  file_size: number;
-  file_url: string;
-  extracted_text: string;
-  summary?: string;
-  created_at: string;
-  updated_at: string;
-};
-
 export type DocumentImage = {
   id: string;
   document_id: string;
   user_id: string;
   file_name: string;
+  // Legacy rows hold a raw URL; new rows hold `file:<fileId>` and set file_id.
   image_url: string;
+  file_id?: string | null;
   ai_description: string;
   suggested_caption: string;
   suggested_section_id?: string | null;
@@ -166,19 +158,13 @@ export async function listUserDocuments(userId: string): Promise<Document[]> {
 
 export async function getDocumentById(documentId: string, userId: string): Promise<Document | null> {
   try {
-    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
-    let res;
-    if (!isUuid || userId === 'guest-student') {
-      res = await databasePool.query(
-        'select * from public.app_documents where id = $1 limit 1',
-        [documentId]
-      );
-    } else {
-      res = await databasePool.query(
-        'select * from public.app_documents where id = $1 and user_id = $2 limit 1',
-        [documentId, userId]
-      );
-    }
+    // Ownership is always enforced: a document is only ever returned to its owner.
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!isUuid.test(userId) || !isUuid.test(documentId)) return null;
+    const res = await databasePool.query(
+      'select * from public.app_documents where id = $1 and user_id = $2 limit 1',
+      [documentId, userId]
+    );
     if (res.rows.length === 0) return null;
     return {
       ...res.rows[0],
@@ -207,7 +193,8 @@ export async function createDocument(
   userId: string,
   title: string,
   description: string,
-  templateType: string
+  templateType: string,
+  field: StudyField | null = null
 ): Promise<Document> {
   const targetUserId = await resolveDbUserId(userId);
   const client = await databasePool.connect();
@@ -216,16 +203,19 @@ export async function createDocument(
 
     // 1. Insert document
     const documentRes = await client.query(
-      `insert into public.app_documents (user_id, title, description, template_type)
-       values ($1, $2, $3, $4)
+      `insert into public.app_documents (user_id, title, description, template_type, field)
+       values ($1, $2, $3, $4, $5)
        returning *`,
-      [targetUserId, title, description || null, templateType]
+      [targetUserId, title, description || null, templateType, field]
     );
 
     const document = documentRes.rows[0];
 
     // 2. Generate sections based on template
-    const sectionNames = TEMPLATE_SECTIONS[templateType] || TEMPLATE_SECTIONS.blank;
+    // Reports and theses follow the outline of the student's field.
+    const sectionNames = (templateType === 'stage' || templateType === 'memoire') && field
+      ? outlineFor(templateType, field)
+      : TEMPLATE_SECTIONS[templateType] || TEMPLATE_SECTIONS.blank;
     for (let i = 0; i < sectionNames.length; i++) {
       const isSystem = i === 0 || sectionNames[i] === 'Sommaire';
       await client.query(
@@ -261,6 +251,7 @@ export async function updateDocumentSettings(
     cover_data?: Record<string, any>;
     primary_color?: string | null;
     secondary_color?: string | null;
+    document_style?: object;
   }
 ): Promise<Document> {
   const fields: string[] = [];
@@ -470,65 +461,6 @@ export async function ensureDocumentAuxiliaryTables(): Promise<void> {
   }
 }
 
-export async function getDocumentSources(documentId: string, userId: string): Promise<DocumentSource[]> {
-  await ensureDocumentAuxiliaryTables();
-  const res = await databasePool.query(
-    `SELECT * FROM public.app_document_sources
-     WHERE document_id = $1 AND user_id = $2
-     ORDER BY created_at DESC`,
-    [documentId, userId]
-  );
-  return res.rows.map((r: any) => ({
-    ...r,
-    file_size: Number(r.file_size || 0),
-  }));
-}
-
-export async function addDocumentSource(data: {
-  documentId: string;
-  userId: string;
-  fileName: string;
-  fileType: string;
-  fileSize?: number;
-  fileUrl: string;
-  extractedText?: string;
-  summary?: string;
-}): Promise<DocumentSource> {
-  await ensureDocumentAuxiliaryTables();
-  const res = await databasePool.query(
-    `INSERT INTO public.app_document_sources (
-       document_id, user_id, file_name, file_type, file_size, file_url, extracted_text, summary
-     )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-     RETURNING *`,
-    [
-      data.documentId,
-      data.userId,
-      data.fileName,
-      data.fileType,
-      data.fileSize || 0,
-      data.fileUrl,
-      data.extractedText || '',
-      data.summary || '',
-    ]
-  );
-  return {
-    ...res.rows[0],
-    file_size: Number(res.rows[0].file_size || 0),
-  };
-}
-
-export async function deleteDocumentSource(sourceId: string, documentId: string, userId: string): Promise<boolean> {
-  await ensureDocumentAuxiliaryTables();
-  const res = await databasePool.query(
-    `DELETE FROM public.app_document_sources
-     WHERE id = $1 AND document_id = $2 AND user_id = $3
-     RETURNING id`,
-    [sourceId, documentId, userId]
-  );
-  return res.rows.length > 0;
-}
-
 // ── Images & AI Figure Management ──────────────────────────────────────────
 
 export async function getDocumentImages(documentId: string, userId: string): Promise<DocumentImage[]> {
@@ -546,7 +478,7 @@ export async function addDocumentImage(data: {
   documentId: string;
   userId: string;
   fileName: string;
-  imageUrl: string;
+  fileId: string;
   aiDescription?: string;
   suggestedCaption?: string;
   suggestedSectionId?: string | null;
@@ -554,18 +486,19 @@ export async function addDocumentImage(data: {
   await ensureDocumentAuxiliaryTables();
   const res = await databasePool.query(
     `INSERT INTO public.app_document_images (
-       document_id, user_id, file_name, image_url, ai_description, suggested_caption, suggested_section_id
+       document_id, user_id, file_name, image_url, ai_description, suggested_caption, suggested_section_id, file_id
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING *`,
     [
       data.documentId,
       data.userId,
       data.fileName,
-      data.imageUrl,
+      `file:${data.fileId}`,
       data.aiDescription || '',
       data.suggestedCaption || '',
       data.suggestedSectionId || null,
+      data.fileId,
     ]
   );
   return res.rows[0];
@@ -616,3 +549,26 @@ export async function deleteDocumentImage(imageId: string, documentId: string, u
   return res.rows.length > 0;
 }
 
+
+// Interview answers of one section ("Rédiger avec moi"). Callers check that the
+// document belongs to the user first; the section must belong to that document.
+export async function getSectionForInterview(
+  documentId: string,
+  sectionId: string,
+): Promise<{ id: string; title: string; interview_answers: unknown } | null> {
+  const result = await databasePool.query(
+    `select id, title, interview_answers from public.app_document_sections
+      where id = $1 and document_id = $2 limit 1`,
+    [sectionId, documentId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function saveSectionInterview(documentId: string, sectionId: string, interview: object): Promise<boolean> {
+  const result = await databasePool.query(
+    `update public.app_document_sections set interview_answers = $3::jsonb, updated_at = now()
+      where id = $1 and document_id = $2`,
+    [sectionId, documentId, JSON.stringify(interview)],
+  );
+  return (result.rowCount ?? 0) > 0;
+}

@@ -44,11 +44,6 @@ export function Footer() {
                   </Link>
                 </li>
                 <li>
-                  <a href="https://admin.campus360b.site" className="hover:text-[var(--color-ink)] transition-colors">
-                    Espace Recruteur
-                  </a>
-                </li>
-                <li>
                   <Link href="/telecharger" className="hover:text-[var(--color-ink)] transition-colors">
                     Télécharger
                   </Link>

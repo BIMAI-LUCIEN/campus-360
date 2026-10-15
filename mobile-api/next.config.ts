@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   // bindings, native .node loaders, post-install scripts). Marking it as a
   // server external package tells Next to require it at runtime instead
   // of bundling it. The dynamic import() in the PDF export route handles the rest.
-  serverExternalPackages: ['puppeteer'],
+  serverExternalPackages: ['puppeteer', 'pdfjs-dist', 'mammoth'],
 };
 
 export default nextConfig;

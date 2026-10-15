@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { ensureStageStudent, listStudentApplications, updateStudentApplicationStatus } from '@/lib/stages-db';
 import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
+import { stageErrorStatus } from '@/lib/stages-errors';
 
 const updateSchema = z.object({
   applicationId: z.string().min(1),
@@ -19,8 +20,11 @@ export async function GET(request: NextRequest) {
     const applications = await listStudentApplications(studentId);
     return withCors(NextResponse.json({ success: true, applications }), request);
   } catch (error) {
-    console.warn('[applications route] Caught error, returning empty applications:', error);
-    return withCors(NextResponse.json({ success: true, applications: [] }), request);
+    console.warn('[applications route] GET applications failed:', error);
+    return withCors(
+      NextResponse.json({ error: 'Candidatures indisponibles pour le moment.' }, { status: stageErrorStatus(error) }),
+      request,
+    );
   }
 }
 

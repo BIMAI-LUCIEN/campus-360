@@ -1,3 +1,4 @@
+import { isFreeLaunch } from '@/lib/free-launch';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -78,12 +79,13 @@ export async function POST(request: NextRequest) {
       const documentIds = items.rows.map((row) => String(row.document_id));
       if (!documentIds.length) throw new MobileApiError('Ce pack ne contient aucun PDF publie.', 422);
 
-      const price = Number(pack.rows[0].price_coins);
+      // Free during the V1 launch (see lib/free-launch.ts).
+      const price = isFreeLaunch() ? 0 : Number(pack.rows[0].price_coins);
       const wallet = await client.query(
         'select balance_coins from public.app_wallets where user_id = $1 for update',
         [user.id],
       );
-      if (!wallet.rows[0] || Number(wallet.rows[0].balance_coins) < price) {
+      if (price > 0 && (!wallet.rows[0] || Number(wallet.rows[0].balance_coins) < price)) {
         throw new MobileApiError('Solde insuffisant.', 409);
       }
 

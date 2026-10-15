@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { getDocumentFile } from '@/lib/document-files-db';
 import { requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
 import {
   getDocumentById,
@@ -52,7 +53,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 const addImageSchema = z.object({
   fileName: z.string().min(1).max(255),
-  imageUrl: z.string().min(1),
+  // An image uploaded to this document through /documents/[id]/files (kind=image).
+  fileId: z.string().uuid(),
   aiDescription: z.string().optional(),
   suggestedCaption: z.string().optional(),
   suggestedSectionId: z.string().uuid().optional().nullable(),
@@ -77,13 +79,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return withCors(NextResponse.json({ error: 'Données invalides.', details: parsed.error.issues }, { status: 400 }), request);
     }
 
+    const file = await getDocumentFile(parsed.data.fileId, userId);
+    if (!file || file.document_id !== documentId || file.kind !== 'image' || file.status !== 'ready') {
+      return withCors(NextResponse.json({ error: 'Image introuvable. Envoyez-la à nouveau.' }, { status: 404 }), request);
+    }
+
     const sections = await getDocumentSections(documentId);
     let aiDescription = parsed.data.aiDescription || '';
     let suggestedCaption = parsed.data.suggestedCaption || '';
     let suggestedSectionId = parsed.data.suggestedSectionId || null;
-
-    const currentImages = await getDocumentImages(documentId, userId);
-    const figureNum = currentImages.length + 1;
 
     // If no explicit recommendation was provided, run AI recommendation logic
     if (parsed.data.analyze && (!suggestedCaption || !suggestedSectionId)) {
@@ -117,7 +121,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
       if (!suggestedCaption) {
         const cleanName = parsed.data.fileName.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
-        suggestedCaption = `Figure ${figureNum} : ${cleanName.charAt(0).toUpperCase() + cleanName.slice(1)}`;
+        // The number (« Figure 2.1 ») is added when the document is rendered, from its chapter.
+        suggestedCaption = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
       }
     }
 
@@ -125,7 +130,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       documentId,
       userId,
       fileName: parsed.data.fileName,
-      imageUrl: parsed.data.imageUrl,
+      fileId: file.id,
       aiDescription,
       suggestedCaption,
       suggestedSectionId,

@@ -49,31 +49,6 @@ export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers });
 }
 
-function localPdfAnswer(question: string, context?: any): string {
-  const q = (question || '').toLowerCase();
-  const isObj = typeof context === 'object' && context !== null;
-  const title = isObj ? (context.title ?? 'ce cours') : 'ce cours';
-  const summary = isObj ? (context.aiSummary ?? '') : (typeof context === 'string' ? context : '');
-  const plan = isObj ? (context.aiStudyPlan ?? []) : [];
-
-  if (q.includes('plan') || q.includes('reviser') || q.includes('revision')) {
-    if (plan.length > 0) {
-      return `📌 **Plan de révision recommandé pour ${title} :**\n\n${plan.map((step: string, idx: number) => `**Étape ${idx + 1} :** ${step}`).join('\n')}`;
-    }
-  }
-
-  if (q.includes('resume') || q.includes('résumé') || q.includes('synthèse')) {
-    if (summary) {
-      return `📖 **Synthèse du cours — ${title} :**\n\n${summary}`;
-    }
-  }
-
-  if (summary) {
-    return `💡 **Point clé sur "${title}" :**\n\n${summary}\n\n*Pose-moi une question sur une notion ou un calcul pour approfondir.*`;
-  }
-
-  return `Bonjour ! Je suis ton tuteur IA pour **${title}**. Pose-moi une question sur le contenu, un exercice ou une notion difficile à comprendre.`;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -123,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     const systemPrompt = [
-      'Tu es le Professeur et Tuteur IA d’Élite de Campus 360.',
+      'Tu es le tuteur IA de Campus 360 : tu expliques le PDF de l’étudiant simplement et précisément.',
       'Ton rôle est d’apporter des explications limpides, intelligentes, rigoureuses et parfaitement adaptées à la demande de l’étudiant et à son cours universitaire.',
       '',
       'DIRECTIVES PÉDAGOGIQUES MAJEURES :',
@@ -153,13 +128,7 @@ export async function POST(request: NextRequest) {
 
     if (!apiKey) {
       return withCors(
-        NextResponse.json(
-          {
-            answer: localPdfAnswer(question, pdfContext),
-            local: true,
-          },
-          { status: 200 },
-        ),
+        NextResponse.json({ error: "L'assistant est indisponible pour le moment." }, { status: 503 }),
         request,
       );
     }
@@ -211,15 +180,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.warn('[ai/pdf-chat] All AI models failed, using fallback:', lastError);
+    console.warn('[ai/pdf-chat] All AI models failed:', lastError);
     return withCors(
-      NextResponse.json(
-        {
-          answer: localPdfAnswer(question, pdfContext),
-          local: true,
-        },
-        { status: 200 },
-      ),
+      NextResponse.json({ error: "L'assistant est indisponible pour le moment." }, { status: 503 }),
       request,
     );
   } catch (error) {

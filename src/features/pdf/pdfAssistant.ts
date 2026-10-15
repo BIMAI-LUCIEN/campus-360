@@ -24,26 +24,6 @@ export const buildPdfStudyContext = (document: CampusDocument) =>
     `Pages: ${document.pageCount}`,
   ].join('\n');
 
-const localAnswer = (document: CampusDocument, question: string) => {
-  const normalized = question.toLowerCase();
-  if (normalized.includes('resume') || normalized.includes('resumer')) {
-    return `Resume rapide: ${document.aiSummary || `"${document.title}" est un PDF de ${document.subject} pour ${document.level}. ${document.description}`}`;
-  }
-  if (normalized.includes('plan') || normalized.includes('etud')) {
-    const plan = document.studyPlan?.length
-      ? document.studyPlan.map((item, index) => `${index + 1}) ${item}`).join(' ')
-      : `1) lis la preview, 2) note les definitions de ${document.subject}, 3) fais les exercices types, 4) transforme chaque erreur en fiche de revision.`;
-    return `Plan d'etude conseille: ${plan}`;
-  }
-  if (normalized.includes('question') || normalized.includes('quiz')) {
-    const quiz = document.quiz?.length
-      ? document.quiz.map((item, index) => `${index + 1}) ${item.question} Reponse attendue: ${item.answer}`).join(' ')
-      : `Explique l'objectif principal du document. Cite deux notions importantes de ${document.subject}. Donne un exemple d'exercice probable pour ${document.level}.`;
-    return `Quiz rapide: ${quiz}`;
-  }
-  return `Je peux t'aider sur ce PDF. Demande-moi un resume, un plan d'etude, un quiz ou une explication d'une partie. Contexte actuel: ${document.title}, ${document.subject}, ${document.level}.`;
-};
-
 export const askPdfAssistant = async ({
   document,
   question,
@@ -53,6 +33,7 @@ export const askPdfAssistant = async ({
   question: string;
   messages: PdfAssistantMessage[];
 }) => {
+  const UNAVAILABLE = "L'assistant est indisponible pour le moment. Réessaie plus tard.";
   let response: Response;
   try {
     response = await authFetchRaw('/api/ai/pdf-chat', {
@@ -65,26 +46,17 @@ export const askPdfAssistant = async ({
       }),
     });
   } catch {
-    // Network or transport failure → fall back to local answer.
-    return localAnswer(document, question);
+    throw new Error(UNAVAILABLE);
   }
 
+  const payload = (await response.json().catch(() => null)) as { answer?: string; error?: string; message?: string } | null;
   if (!response.ok) {
-    // Surface actionable errors (out of credits, rate-limited) to the user
-    // instead of silently masking them behind a generic local answer.
-    if (response.status === 403 || response.status === 429) {
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string; message?: string }
-        | null;
-      if (payload?.message || payload?.error) {
-        throw new Error(payload.message || payload.error);
-      }
+    // Out of credits, rate-limited: the server message is actionable.
+    if ((response.status === 403 || response.status === 429) && (payload?.message || payload?.error)) {
+      throw new Error(payload.message || payload.error);
     }
-    return localAnswer(document, question);
+    throw new Error(UNAVAILABLE);
   }
-
-  const payload = (await response.json()) as { answer?: string; local?: string };
-  // `local` is only present when the server had no answer worth showing
-  // (e.g. AI not configured) and already computed the useful heuristic reply.
-  return payload.local ?? payload.answer ?? localAnswer(document, question);
+  if (!payload?.answer) throw new Error(UNAVAILABLE);
+  return payload.answer;
 };

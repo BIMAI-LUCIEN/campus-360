@@ -53,12 +53,6 @@ interface ProfileScreenProps {
   transactions: Transaction[];
   purchasedDocumentsCount: number;
   syncingAccount: boolean;
-  notifNewPdf: boolean;
-  notifPromos: boolean;
-  notifAlerts: boolean;
-  onToggleNotifNewPdf: (v: boolean) => void;
-  onToggleNotifPromos: (v: boolean) => void;
-  onToggleNotifAlerts: (v: boolean) => void;
   onOpenNotificationsSettings: () => void;
   onOpenSecuritySettings: () => void;
   onOpenSupport: () => void;
@@ -378,7 +372,7 @@ export function ProfileScreen({
             <View style={styles.neobankTopRow}>
               <View>
                 <Text style={styles.neobankLabel}>CAMPUS 360 PAY</Text>
-                <Text style={styles.neobankHolder}>{studentProfile?.name || 'Étudiant Certifié'}</Text>
+                <Text style={styles.neobankHolder}>{studentProfile?.name || 'Ajoute ton nom'}</Text>
               </View>
               <View style={styles.neobankIaPill}>
                 <Sparkles size={11} color={stitchColors.white} strokeWidth={2.4} />

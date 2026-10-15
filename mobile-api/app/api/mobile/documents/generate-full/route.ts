@@ -1,10 +1,14 @@
+import { aiCost } from '@/lib/free-launch';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { databasePool } from '@/lib/database';
 import { requireMobileUser, mobileErrorResponse, MobileApiError, withCors } from '@/lib/mobile-access';
 import { sendPushToUser } from '@/lib/push';
-import { SVG_DIAGRAMS, ACADEMIC_TABLE_SAMPLE } from '@/lib/academic-stage-template';
+import { isStudyField, outlineFor } from '@/lib/document-outlines';
+import { escapeHtml, normalizeHeadings } from '@/lib/document-render';
+import { llmRewrite } from '@/lib/llm';
+import { HTML_FORMAT_RULE, polishAiTics, stripRepeatedTitle, studentVoiceRules } from '@/lib/writing-rules';
 import {
   getDocumentById,
   MEMOIRE_PROFESSIONAL_SECTIONS,
@@ -14,7 +18,7 @@ import {
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-const IA_CREDITS_PER_GENERATION = 5;
+// Free during the V1 launch (see lib/free-launch.ts).
 const GENERATION_CONCURRENCY = 3;
 
 const CANDIDATE_MODELS = [
@@ -161,6 +165,7 @@ async function runWithConcurrency<T, R>(
 
 export async function POST(request: NextRequest) {
   try {
+    const creditCost = aiCost('fullDoc');
     const access = await requireMobileUser(request);
     if (access.response || !access.user) return withCors(access.response!, request);
     const user = access.user;
@@ -206,7 +211,7 @@ export async function POST(request: NextRequest) {
       [user.id],
     );
     const availableCredits = Number(walletCheck.rows[0]?.ia_credits ?? 0);
-    if (availableCredits < IA_CREDITS_PER_GENERATION) {
+    if (availableCredits < creditCost) {
       return withCors(
         NextResponse.json(
           { error: 'Crédits IA insuffisants.', code: 'INSUFFICIENT_AI_CREDITS' },
@@ -253,9 +258,12 @@ export async function POST(request: NextRequest) {
           String(section.content_html || '').trim().length > 0,
         );
         if (documentType === 'memoire' && !hasWrittenContent) {
-          const targetSections = memoirKind === 'professional'
-            ? MEMOIRE_PROFESSIONAL_SECTIONS
-            : MEMOIRE_RESEARCH_SECTIONS;
+          // Documents created with a field keep that field's outline.
+          const targetSections = isStudyField(ownedDocument.field)
+            ? outlineFor('memoire', ownedDocument.field)
+            : memoirKind === 'professional'
+              ? MEMOIRE_PROFESSIONAL_SECTIONS
+              : MEMOIRE_RESEARCH_SECTIONS;
           await client.query('delete from public.app_document_sections where document_id = $1', [documentId]);
           for (let index = 0; index < targetSections.length; index += 1) {
             const title = targetSections[index];
@@ -310,111 +318,65 @@ export async function POST(request: NextRequest) {
     const preferredModel = process.env.OPENROUTER_MODEL || CANDIDATE_MODELS[0];
     const modelsToTry = Array.from(new Set([preferredModel, ...CANDIDATE_MODELS]));
 
+    // Cover fields first: the identification sheet is filled from them.
+    const coverData = await extractCoverData(messages, docTitle, apiKey, documentType, memoirKind);
+
     const buildSection = async (section: { id: string; title: string }) => {
       const lowerTitle = section.title.toLowerCase();
+      const missing = (label: string) => `[${label}]`;
+      const field = (key: string, label: string) => escapeHtml(coverData[key] || missing(label));
 
-      // Specialized Academic Preliminary Sections
-      if (documentType === 'stage' && lowerTitle.includes('fiche d\'identification')) {
+      // Identification sheet: only what the student gave, brackets for the rest.
+      if (documentType === 'stage' && lowerTitle.includes('fiche d')) {
+        const row = (label: string, value: string) => `<tr><td><strong>${label}</strong></td><td>${value}</td></tr>`;
         return {
           id: section.id,
-          html: `
-            <p>La présente fiche récapitule les caractéristiques administratives et techniques du stage académique.</p>
-            <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 10pt;">
-              <tr style="background: #F1F5F9;"><th colspan="2" style="padding: 8px 12px; border: 1px solid #CBD5E1; text-align: left;">1. Identification de l'Étudiant Stagiaire</th></tr>
-              <tr><td style="padding: 6px 12px; border: 1px solid #E2E8F0; width: 40%; font-weight: 600;">Nom et Prénom :</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Lucien Nkouam</td></tr>
-              <tr><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Filière / Niveau :</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Master 2 - Génie Logiciel &amp; Systèmes d'Information</td></tr>
-              <tr><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Établissement :</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">École Nationale Supérieure Polytechnique / Université</td></tr>
-              <tr style="background: #F1F5F9;"><th colspan="2" style="padding: 8px 12px; border: 1px solid #CBD5E1; text-align: left;">2. Structure d'Accueil et Encadrement</th></tr>
-              <tr><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Raison Sociale :</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Campus 360 Inc. (Division Recherche &amp; Développement)</td></tr>
-              <tr><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Secteur d'Activité :</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Édition logicielle EdTech, Cloud et Intelligence Artificielle</td></tr>
-              <tr><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Maître de Stage Professionnel :</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">M. Lucien Nkouam (Lead Architecte Logiciel)</td></tr>
-              <tr><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Encadreur Académique :</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Dr. / Pr. Encadreur Universitaire (Département Informatique)</td></tr>
-              <tr><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: 600;">Période et Durée :</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Du 1er Mars au 31 Août 2026 (6 mois - 800 heures)</td></tr>
-            </table>
-          `,
+          html: [
+            '<table><tbody>',
+            row('Nom et prénom', field('studentName', 'nom et prénom')),
+            row('Matricule', field('matricule', 'matricule')),
+            row('Filière / niveau', field('specialty', 'filière et niveau')),
+            row('Établissement', field('school', 'établissement')),
+            row('Structure d’accueil', field('company', 'entreprise')),
+            row('Lieu', field('companyLocation', 'ville')),
+            row('Encadreur professionnel', field('tutorCorporate', 'encadreur professionnel')),
+            row('Encadreur académique', field('tutorAcademic', 'encadreur académique')),
+            row('Période du stage', missing('du … au …')),
+            '</tbody></table>',
+          ].join(''),
         };
       }
 
-      if (documentType === 'stage' && lowerTitle.includes('liste des abréviations')) {
+      // Acronyms: a two-column table the student fills in.
+      if (lowerTitle.includes('abréviation') || lowerTitle.includes('sigle')) {
         return {
           id: section.id,
-          html: `
-            <p>Ce glossaire définit les principaux acronymes et sigles technologiques employés tout au long du document :</p>
-            <table style="width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 10pt;">
-              <thead>
-                <tr style="background: #0F172A; color: #FFFFFF;"><th style="padding: 8px 12px; border: 1px solid #334155; width: 25%;">Sigle / Abréviation</th><th style="padding: 8px 12px; border: 1px solid #334155;">Signification Complète</th></tr>
-              </thead>
-              <tbody>
-                <tr style="background: #F8FAFC;"><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: bold;">API</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Application Programming Interface (Interface de Programmation)</td></tr>
-                <tr><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: bold;">JWT</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">JSON Web Token (Jeton d'Authentification Sécurisé)</td></tr>
-                <tr style="background: #F8FAFC;"><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: bold;">IA</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Intelligence Artificielle (Modèles LLM &amp; Deep Learning)</td></tr>
-                <tr><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: bold;">REST</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Representational State Transfer (Architecture Web)</td></tr>
-                <tr style="background: #F8FAFC;"><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: bold;">UML</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Unified Modeling Language (Langage de Modélisation Unifié)</td></tr>
-                <tr><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: bold;">MCD / MLD</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Modèle Conceptuel / Logique des Données</td></tr>
-                <tr style="background: #F8FAFC;"><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: bold;">SGBD</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Système de Gestion de Base de Données (PostgreSQL)</td></tr>
-                <tr><td style="padding: 6px 12px; border: 1px solid #E2E8F0; font-weight: bold;">CI / CD</td><td style="padding: 6px 12px; border: 1px solid #E2E8F0;">Continuous Integration &amp; Continuous Deployment</td></tr>
-              </tbody>
-            </table>
-          `,
+          html: '<table><thead><tr><th>Sigle</th><th>Signification</th></tr></thead><tbody><tr><td>[sigle]</td><td>[signification]</td></tr></tbody></table>',
         };
       }
 
-      if (documentType === 'stage' && lowerTitle.includes('liste des figures')) {
-        return {
-          id: section.id,
-          html: `
-            <p>Ce catalogue répertorie l'ensemble des schémas graphiques, diagrammes et tableaux analytiques intégrés au rapport :</p>
-            <ul style="line-height: 2; font-size: 10.5pt; list-style-type: none; padding-left: 0;">
-              <li style="border-bottom: 1px dashed #E2E8F0; padding: 6px 0; display: flex; justify-content: space-between;"><strong>Figure 1.1 :</strong> Architecture Globale en 3-Tiers du Système Campus 360 <span>Chapitre 1</span></li>
-              <li style="border-bottom: 1px dashed #E2E8F0; padding: 6px 0; display: flex; justify-content: space-between;"><strong>Figure 2.1 :</strong> Diagramme de Cas d'Utilisation UML du Module de Rédaction <span>Chapitre 2</span></li>
-              <li style="border-bottom: 1px dashed #E2E8F0; padding: 6px 0; display: flex; justify-content: space-between;"><strong>Figure 3.1 :</strong> Modèle Relationnel de Données (MCD / MLD) des Rapports et Sections <span>Chapitre 3</span></li>
-              <li style="border-bottom: 1px dashed #E2E8F0; padding: 6px 0; display: flex; justify-content: space-between;"><strong>Tableau 1.1 :</strong> Analyse Comparative des Performances et de la Rigueur de Rédaction <span>Chapitre 1</span></li>
-            </ul>
-          `,
-        };
+      // Lists of figures and tables are generated at export from the real captions.
+      if (lowerTitle.includes('liste des figures') || lowerTitle.includes('liste des tableaux')) {
+        return { id: section.id, html: '' };
       }
 
-      if (documentType === 'memoire' && lowerTitle.includes('bibliographie')) {
+      // References: never invented.
+      if (lowerTitle.includes('bibliographie') || lowerTitle.includes('webographie') || lowerTitle.includes('références')) {
         return {
           id: section.id,
-          html: `
-            <p><strong>Références fournies et vérifiées</strong></p>
-            <p>[Ajoutez ici les sources effectivement consultées et vérifiées.]</p>
-            <p><strong>Références suggérées à vérifier</strong></p>
-            <p>[Toute suggestion de l'IA doit être vérifiée avant son insertion dans la bibliographie définitive.]</p>
-          `,
-        };
-      }
-
-      if (documentType === 'stage' && lowerTitle.includes('bibliographie')) {
-        return {
-          id: section.id,
-          html: `
-            <p>Références bibliographiques et sources scientifiques conformes aux normes académiques (Norme IEEE / APA) :</p>
-            <ol style="line-height: 1.8; font-size: 10pt; padding-left: 20px;">
-              <li><strong>Pressman, R. S., &amp; Maxim, B. R. (2020).</strong> <em>Software Engineering: A Practitioner's Approach</em> (9th ed.). McGraw-Hill Education.</li>
-              <li><strong>Martin, R. C. (2018).</strong> <em>Clean Architecture: A Craftsman's Guide to Software Structure and Design</em>. Prentice Hall.</li>
-              <li><strong>Fowler, M. (2019).</strong> <em>Refactoring: Improving the Design of Existing Code</em> (2nd ed.). Addison-Wesley Professional.</li>
-              <li><strong>OpenAI Research Team. (2024).</strong> <em>GPT-4 Technical Report and Application to Academic Writing Automation</em>. arXiv:2303.08774.</li>
-              <li><strong>React Native Documentation (2026).</strong> <em>Cross-Platform Mobile Application Development and Performance Optimization</em>. Meta Open Source.</li>
-              <li><strong>PostgreSQL Global Development Group (2026).</strong> <em>PostgreSQL 17.0 Relational Database Architecture Documentation</em>. PostgreSQL.org.</li>
-            </ol>
-          `,
+          html: '<p>[Ajoute ici les ouvrages, articles et sites que tu as réellement consultés, au format demandé par ton établissement.]</p>',
         };
       }
 
       const systemPrompt = [
-        `Tu es le Rédacteur Universitaire d'Élite de Campus 360.`,
-        `Rédige le contenu académique complet, rigoureux et structuré pour la section : "${section.title}" du document "${docTitle}" (${documentType}).`,
+        `Tu écris la section « ${section.title} » du ${documentType === 'memoire' ? 'mémoire' : 'rapport de stage'} « ${docTitle} » d'un étudiant, à partir de votre discussion.`,
         documentGuidance,
-        `Directives d'excellence académique :`,
-        `- Structure avec des sous-titres hiérarchisés <h2> et <h3> (ex: 1.1 Contexte, 1.2 Problématique, 1.3 Objectifs).`,
-        `- Rédige des paragraphes complets, denses, soutenus et élégants (4-6 phrases par paragraphe).`,
-        `- N'invente aucune donnée, statistique, personne, enquête, résultat, auteur, publication ou DOI.`,
-        `- Si une donnée nécessaire manque, insère un marqueur explicite entre crochets, par exemple [Données à fournir], et explique brièvement ce qui est attendu.`,
-        `- Utilise uniquement les sources explicitement présentes dans la discussion. Toute piste non confirmée doit porter la mention "À vérifier".`,
-        `- Formate EXCLUSIVEMENT en HTML TipTap propre : <p>, <strong>, <em>, <h2>, <h3>, <ul>, <ol>, <li>, <br>.`,
-        `- Ne mets JAMAIS de balises <html>, <body>, <head>, ni de code markdown (\`\`\`html).`,
+        '',
+        studentVoiceRules('je'),
+        `- Utilise uniquement ce que l'étudiant a dit dans la discussion. Une piste non confirmée porte la mention « à vérifier ».`,
+        `- Longueur adaptée à ce que tu sais : mieux vaut une section courte et vraie, avec des crochets, qu'une section longue et vague.`,
+        '',
+        HTML_FORMAT_RULE,
       ].join('\n');
 
       const userPrompt = [
@@ -462,23 +424,12 @@ export async function POST(request: NextRequest) {
       if (!sectionContent) {
         throw new MobileApiError(`La section « ${section.title} » n'a pas pu être générée.`, 503);
       }
-
-      // Inject illustrative Vector Diagrams & Tables based on chapter subject
-      if (documentType === 'stage' && (lowerTitle.includes('contexte') || lowerTitle.includes('présentation de l\'entreprise') || lowerTitle.includes('chapitre 1'))) {
-        sectionContent += `\n${ACADEMIC_TABLE_SAMPLE}`;
-      } else if (documentType === 'stage' && (lowerTitle.includes('analyse') || lowerTitle.includes('besoins') || lowerTitle.includes('chapitre 2'))) {
-        sectionContent += `\n${SVG_DIAGRAMS.useCase}`;
-      } else if (documentType === 'stage' && (lowerTitle.includes('conception') || lowerTitle.includes('architectur') || lowerTitle.includes('réalisations') || lowerTitle.includes('chapitre 3'))) {
-        sectionContent += `\n${SVG_DIAGRAMS.architecture}\n${SVG_DIAGRAMS.databaseSchema}`;
-      }
+      sectionContent = normalizeHeadings(stripRepeatedTitle((await polishAiTics(sectionContent, llmRewrite)).html, section.title));
 
       return { id: section.id, html: sectionContent };
     };
 
-    const [generatedSections, coverData] = await Promise.all([
-      runWithConcurrency(editableSections, GENERATION_CONCURRENCY, buildSection),
-      extractCoverData(messages, docTitle, apiKey, documentType, memoirKind),
-    ]);
+    const generatedSections = await runWithConcurrency(editableSections, GENERATION_CONCURRENCY, buildSection);
 
     try {
       const client = await databasePool.connect();
@@ -497,12 +448,12 @@ export async function POST(request: NextRequest) {
           [user.id, generationId],
         );
 
-        if (replay.rows.length === 0 && walletCredits < IA_CREDITS_PER_GENERATION) {
+        if (replay.rows.length === 0 && walletCredits < creditCost) {
           throw new MobileApiError('Crédits IA insuffisants.', 402);
         }
 
         for (const generated of generatedSections) {
-          if (!generated.html) continue;
+          if (!generated.html && !/liste des (figures|tableaux)/i.test(sections.find((x) => x.id === generated.id)?.title || '')) continue;
           await client.query(
             'update public.app_document_sections set content_html = $1, updated_at = now() where id = $2',
             [generated.html, generated.id],
@@ -519,7 +470,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (replay.rows.length === 0) {
-          remainingCredits = walletCredits - IA_CREDITS_PER_GENERATION;
+          remainingCredits = walletCredits - creditCost;
           await client.query(
             'update public.app_wallets set ia_credits = $2, updated_at = now() where user_id = $1',
             [user.id, remainingCredits],
@@ -550,7 +501,7 @@ export async function POST(request: NextRequest) {
     if (user.id) {
       void sendPushToUser(user.id, {
         title: 'Ton document est prêt 🎉',
-        body: `${docTitle} a été rédigé avec succès par l'IA. Ouvre-le pour le personnaliser !`,
+        body: `${docTitle} a son premier jet. Ouvre-le pour compléter les passages entre crochets.`,
         data: { type: 'document_generated', documentId },
       });
     }
