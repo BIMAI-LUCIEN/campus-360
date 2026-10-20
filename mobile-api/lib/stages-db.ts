@@ -63,7 +63,8 @@ type StageJobRow = {
   title: string;
   description: string;
   requirements: string[] | null;
-  apply_method: 'WHATSAPP' | 'EMAIL' | 'PHYSICAL';
+  apply_method: 'WHATSAPP' | 'EMAIL' | 'LINK' | 'PHYSICAL';
+  source_url: string | null;
   is_sponsored: boolean;
   source: 'INTERNAL' | 'SCRAPED';
   kind: 'stage' | 'emploi';
@@ -94,6 +95,7 @@ const mapJob = (row: StageJobRow) => ({
   applyMethod: row.apply_method,
   isSponsored: row.is_sponsored,
   source: row.source,
+  sourceUrl: row.source_url ?? undefined,
   kind: row.kind,
   location: row.location ?? undefined,
   duration: row.duration ?? undefined,

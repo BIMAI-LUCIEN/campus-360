@@ -11,7 +11,7 @@ export interface AdminStageJob {
   duration?: string | null;
   stipend?: string | null;
   requirements: string[];
-  applyMethod: 'WHATSAPP' | 'EMAIL' | 'PHYSICAL';
+  applyMethod: 'WHATSAPP' | 'EMAIL' | 'LINK' | 'PHYSICAL';
   isSponsored: boolean;
   source: 'INTERNAL' | 'SCRAPED';
   contactWhatsapp?: string | null;

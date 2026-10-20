@@ -125,6 +125,13 @@ export async function POST(request: NextRequest) {
     if (!job) {
       return withCors(NextResponse.json({ error: 'Offre de stage indisponible.' }, { status: 404 }), request);
     }
+    if (job.applyMethod === 'LINK') {
+      // Nothing to dispatch: the student applies on the website of the posting.
+      return withCors(
+        NextResponse.json({ error: "Cette offre se postule sur le site de l'offre." }, { status: 422 }),
+        request,
+      );
+    }
     const companyName = job.company.name;
     const targetPhone = job.company.contactWhatsapp || undefined;
     const targetEmail = job.company.contactEmail || undefined;

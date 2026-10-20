@@ -20,8 +20,16 @@ export async function POST(request: NextRequest) {
     const access = await requireMobileUser(request, { readBudgetPerMinute: 15 });
     if (access.response) return withCors(access.response, request);
     const input = applySchema.parse(await request.json());
-    if (!(await getStageJob(input.jobId))) {
+    const job = await getStageJob(input.jobId);
+    if (!job) {
       return withCors(NextResponse.json({ error: 'Offre de stage indisponible.' }, { status: 404 }), request);
+    }
+    if (job.applyMethod === 'LINK') {
+      // Applications made on the source website are not tracked here.
+      return withCors(
+        NextResponse.json({ error: "Cette offre se postule sur le site de l'offre." }, { status: 422 }),
+        request,
+      );
     }
     const studentId = await ensureStageStudent(access.user!);
     const application = await createStageApplication({ ...input, studentId });

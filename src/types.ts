@@ -15,7 +15,8 @@ export type Transaction = {
 };
 
 export type CompanyStatus = 'UNVERIFIED' | 'VERIFIED' | 'SUSPENDED';
-export type ApplyMethod = 'WHATSAPP' | 'EMAIL' | 'PHYSICAL';
+// LINK: the offer is applied to on its own website (scraped offers with no contact).
+export type ApplyMethod = 'WHATSAPP' | 'EMAIL' | 'LINK' | 'PHYSICAL';
 export type JobSource = 'INTERNAL' | 'SCRAPED';
 export type AppStatus =
   | 'PENDING'
@@ -52,6 +53,7 @@ export type StageJob = {
   applyMethod: ApplyMethod;
   isSponsored: boolean;
   source: JobSource;
+  sourceUrl?: string; // URL of the posting, used when applyMethod is 'LINK'
   kind?: JobKind; // 'stage' | 'emploi' (classified by the scraping pipeline)
   createdAt: string;
   expiresAt: string;

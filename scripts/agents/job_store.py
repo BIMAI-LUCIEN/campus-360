@@ -149,6 +149,9 @@ class JobStore:
             apply_method = "WHATSAPP"
         elif fields.get("contact_email"):
             apply_method = "EMAIL"
+        elif fields.get("apply_url"):
+            # Only the URL of the posting is known: the student applies there (task 25.17).
+            apply_method = "LINK"
         else:
             apply_method = "PHYSICAL"
         expires_at = datetime.now(timezone.utc) + timedelta(days=DEFAULT_LIFETIME_DAYS)
