@@ -1,3 +1,4 @@
+-- migrate:no-transaction
 -- Adds the 'LINK' apply method (Module 25, task 25.17). Idempotent.
 -- A scraped offer (LinkedIn via Treg) often has no email and no WhatsApp number,
 -- only the URL of the posting. Such an offer used to be stored as 'PHYSICAL'

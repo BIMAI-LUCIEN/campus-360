@@ -32,6 +32,18 @@ alter table public.app_wallet_transactions
   add constraint app_wallet_transactions_status_check
   check (status in ('pending', 'success', 'failed'));
 
+-- 5b. Désambiguïsation des anciennes références dupliquées (ex. libellés 'MTN MoMo', 'Orange Money')
+update public.app_wallet_transactions t1
+set reference_id = t1.reference_id || '_' || substring(t1.id::text from 1 for 8)
+where t1.type = 'topup'
+  and t1.reference_id is not null
+  and exists (
+    select 1 from public.app_wallet_transactions t2
+    where t2.type = 'topup'
+      and t2.reference_id = t1.reference_id
+      and t2.id <> t1.id
+  );
+
 -- 6. Index unique partiel anti-rejeu sur la référence de recharge
 create unique index if not exists app_wallet_transactions_topup_ref_uidx
   on public.app_wallet_transactions (reference_id)
