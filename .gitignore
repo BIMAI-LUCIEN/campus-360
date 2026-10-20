@@ -84,3 +84,13 @@ graphify-out/
 scratch/
 __pycache__/
 *.pyc
+
+# Hand-labelled real offers for the scraping harness (task 25.2): never committed
+scripts/agents/tests/fixtures/
+
+# Google Play Service Account secrets (task 23.17)
+secrets/
+
+# Temporary logs and root screenshots
+error-*.txt
+/*.png

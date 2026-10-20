@@ -1,203 +1,99 @@
 # Campus 360 — Monorepo
 
-Ce fichier documente l'architecture du dépôt pour éviter de devoir ré-analyser le codebase à chaque tâche. À maintenir à jour si l'architecture change significativement (nouveau service, migration de schéma majeure, changement d'auth, etc.).
+Ce document décrit l'architecture exacte et actuelle du monorepo Campus 360 pour guider le travail des développeurs et des agents d'intelligence artificielle.
 
-> **Graphify-first :** avant de lire des fichiers, consulte `graphify-out/GRAPH_REPORT.md` / `graphify-out/graph.json` et `docs/ARCHITECTURE_MAP.md` (cartographie du 2026-10-13) pour ne lire que le strict nécessaire. Après un refactor : `graphify update .`
->
-> ⚠️ **Corrections vérifiées le 2026-10-13 (prioritaires sur le reste de ce fichier) :**
-> - Le dossier `admin-app/` **n'existe pas** : partout où ce fichier dit `admin-app/`, lire **`recruiter-web/`** (package `campus-360-admin`, port 3001). `recruiter-web/next.config.ts` n'a **aucun** rewrite vers mobile-api ; il contient ses propres routes `/api/mobile/*`, dupliquées et divergentes.
-> - Il existe un 4e service, `landing-site/` (Next 15, port 3000, Better Auth propre).
-> - Abonnements réels : `free`/`basic`/`pro`/`elite` (pas `premium`). Paiements via Notch Pay.
-> - Thème `src/theme/stitch.ts` : mêmes noms de tokens, mais valeurs « Clean White & Royal Violet » (`sienna` = #7C3AED).
-> - Stages/candidatures/WhatsApp (Evolution API + n8n) constituent désormais le cœur produit (voir `docs/ARCHITECTURE_MAP.md`).
+> **Carte de code :** avant de lire du code, consulter `contexte-code.md` (sommaire puis sections ciblées), puis le périmètre de `plan.md`.
+> **Graphe sémantique :** consulter `graphify-out/GRAPH_REPORT.md` pour explorer les liens entre modules sans lire de fichiers inutiles.
 
-## Vue d'ensemble
+---
 
-Monorepo à **3 services** + 1 dossier de maquettes de design :
+## 1. Vue d'ensemble des 4 services
 
-1. **App mobile Expo** (racine) — client React Native/Expo, ne parle jamais directement à Postgres/Storage
-2. **`mobile-api/`** (port 3002 dev) — backend "business" pour le mobile (auth, wallet, achats, documents/rédaction, notifications)
-3. **`admin-app/`** (port 3001 dev) — dashboard admin web + point d'entrée historique de l'auth en prod (`https://admin.campus360b.site`)
-4. **`stitch_academic_hub_ia_assistant/`** et **`admin-app/public/stitch_campus_360_admin_dashboard/`** — maquettes HTML statiques générées par l'outil "Stitch" (Google), servent de référence visuelle uniquement, pas de code exécutable dans l'app.
+Le monorepo comprend **4 services applicatifs** hébergés sur un VPS Linux de production (`Ubuntu 24.04`, PM2, Nginx, PostgreSQL) :
 
-### Comment les services s'articulent
+1. **App Mobile Expo / React Native** (racine) :
+   - Package : `campus-360` (version 1.2.0)
+   - Plateformes : Android (APK/AAB), iOS, Web (Expo Web)
+   - Lancement dev : `npm run start` / `npm run web`
+   - Typecheck : `npm run typecheck` (`node --stack_size=8192 node_modules/typescript/bin/tsc --noEmit`)
+   - Verrouillage design : `npm run lint:colors` (191 couleurs brutes autorisées, aucune addition sans thème)
 
-- Le mobile appelle `authFetch()` (`src/features/auth/betterAuth.ts`) vers un `authBaseUrl` résolu dynamiquement (voir section Auth).
-- `admin-app` proxifie `/api/mobile/:path*` vers `mobile-api` via `next.config.ts`:
-  ```ts
-  async rewrites() {
-    const mobileApiUrl = process.env.NEXT_PUBLIC_MOBILE_API_URL || 'http://localhost:3002';
-    return [{ source: '/api/mobile/:path*', destination: `${mobileApiUrl}/api/mobile/:path*` }];
-  }
-  ```
-  En pratique : le mobile appelle `admin-app` (prod) ou IP LAN:3001 (dev), et `admin-app` relaie vers `mobile-api:3002` pour tout `/api/mobile/*`.
-- `admin-app` et `mobile-api` **partagent la même base Postgres** (même `DATABASE_URL`) et **doivent partager le même `BETTER_AUTH_SECRET`** pour que les sessions soient valides des deux côtés.
-- ⚠️ **Dette technique** : `documents-db.ts` est dupliqué et divergent entre `admin-app/lib/documents-db.ts` (328 lignes, a `document_metadata`, insert sans colonnes thème) et `mobile-api/lib/documents-db.ts` (342 lignes, plus récent, insert avec `primary_color`/`secondary_color`/`font_family`). Vérifier les deux si on touche au schéma `app_documents`.
-- ⚠️ `README.md` et `PROJECT.md` sont **partiellement obsolètes** : ils décrivent encore Supabase Auth et admin-app comme gateway API unique, alors que l'architecture réelle actuelle est Better Auth + Postgres direct avec `mobile-api` en service séparé (port 3002).
+2. **Backend API Mobile (`mobile-api/`)** :
+   - Package : `campus-360-mobile-api` (Next.js 15, Node runtime, port local **3002**)
+   - Production : `https://api.campus360b.site`
+   - Rôle : Business logic mobile (authentification Better Auth, stages & candidatures, WhatsApp via Evolution API, gestion de compte & suppression RGPD, documents & IA, wallet en coins, paiements Notch Pay)
+   - Typecheck : `cd mobile-api && npm run typecheck`
+   - Migrations : `cd mobile-api && npm run migrate` (`scripts/migrate.mjs` vérifiant `public.schema_migrations`)
+   - Tests : `cd mobile-api && npm test` (`node --test tests/*.test.mjs`, 188 tests automatisés)
 
-## Stack technique
+3. **Portail Recruteur & Admin (`recruiter-web/`)** :
+   - Package : `campus-360-admin` (Next.js 15 App Router, Tailwind CSS v4, port local **3001**)
+   - Production : `https://admin.campus360b.site`
+   - Rôle : Dashboard administrateur (gestion du catalogue PDF, validation des stages scrapés, suivi des utilisateurs et transactions)
+   - Typecheck : `cd recruiter-web && npm run typecheck`
+   - Build : `cd recruiter-web && npm run build` (20/20 pages statiques générées)
+   - Architecture : Zéro doublon API mobile (toutes les routes `/api/mobile/*` et `/api/ai/*` ont été retirées en 23.22)
 
-**App mobile (racine, `package.json`)**
-- Expo SDK `~54.0.35`, React `^19.1.0`, React Native `^0.81.5`, TypeScript `~5.9.2` strict
-- Auth client : `better-auth` `^1.6.19` + `@better-auth/expo`
-- UI : `lucide-react-native`, `react-native-svg`, `expo-linear-gradient`, Google Fonts (`@expo-google-fonts/inter`, `@expo-google-fonts/outfit`)
-- `expo-file-system`, `expo-print`, `expo-sharing` (export PDF), `expo-secure-store` (session), `expo-notifications` (push), `expo-updates` (OTA)
-- Scripts : `npm run start|android|ios|web|typecheck`
-- `app.json` : "Campus 360", scheme `campus-bordes`, bundle `com.campus360b.app`, EAS projectId `098589af-cd81-41d3-8c74-173bd02396a5`, owner `campus360s-team`
+4. **Site Public & Landing (`landing-site/`)** :
+   - Package : `landing-site` (Next.js 15, port local **3000**)
+   - Production : `https://campus360b.site`
+   - Rôle : Vitrine publique, présentation des fonctionnalités, téléchargement de l'APK, formulaire de contact et mentions légales
 
-**`mobile-api/`** — `campus-360-mobile-api`, Next `^15.5.7`, port **3002**
-- `better-auth` `^1.3.34` + `@better-auth/expo`, `pg` `^8.21.0` (Postgres direct), `zod` `^4.3.6`, `puppeteer` `^25.1.0`, `resend` `^4.0.0`
+---
 
-**`admin-app/`** — `campus-360-admin`, Next `^15.5.7`, port **3001**
-- `@tiptap/react` + `@tiptap/starter-kit` (éditeur riche web), `docx` `^9.7.1`, `pdf-lib`, `pdfjs-dist` `5.4.54`, `recharts`, `tailwindcss` `^4.3.1`, `puppeteer`
-- Scripts : `predev`/`build` lancent `css:build`, `auth:migrate`, `mobile:setup`, `supabase:setup`, `verify`
+## 2. Articulation et Routage Réseau
 
-**Base de données** : PostgreSQL sur Supabase (pooler `aws-1-eu-north-1.pooler.supabase.com`), accès direct via `pg` (pas le SDK Supabase côté serveur). Auth via **Better Auth**, pas Supabase Auth.
+### Routage Client App Mobile (`src/features/auth/betterAuth.ts`)
+- `baseUrlFor(path)` route automatiquement :
+  - Chemins `/api/mobile/*` et `/api/ai/*` → `mobileApiBaseUrl` (port **3002** en dev, `https://api.campus360b.site` en prod)
+  - Chemins `/api/auth/*` → `authBaseUrl` (port **3001** en dev via Better Auth admin, `https://api.campus360b.site` en prod)
+- En développement avec tunnel Expo (ngrok) : `metro.config.js` relaie automatiquement `/api/mobile/` et `/api/ai/` vers le port 3002 et `/api/auth/` vers le port 3001.
 
-## Structure des dossiers
+### Authentification & Sessions
+- Moteur : **Better Auth** (PostgreSQL direct via `pg`).
+- Cookie de session : `better-auth.session_token` (préfixé `__Secure-` en production HTTPS).
+- Vérification d'e-mail : **obligatoire en production** (`requireEmailVerification: true` si `NODE_ENV === 'production'`).
+- Rôles : `student` par défaut, `admin` pour l'accès au tableau de bord.
+- Sécurité : Zéro repli fictif (`guest-student` et `student-offline` supprimés), tokens en URL refusés (authentification par Cookie ou Bearer uniquement).
 
-### `src/` (app mobile)
-- `AppShell.tsx` — composant racine, toute la logique métier + état + navigation (pas de react-navigation, navigation "maison" par état `activeSection`)
-- `config/env.ts` — variables d'env publiques (`EXPO_PUBLIC_*`), `isSupabaseConfigured()`
-- `types.ts` — types partagés : `Transaction`, `CampusDocument`, `CampusPdfPack`
-- `theme/stitch.ts` — design system éditorial (voir section Thème)
-- `ui/GlassComponents.tsx` — `Card`, `Pill`, `TopBar`, `BottomNav`, `InkRule`, `IconButton` (alias `GlassPanel`/`GlassCard` conservés pour compat)
-- `ui/screens/` — `HomeScreen`, `ExploreScreen`, `LibraryScreen`, `ProfileScreen`, `AuthScreen`, `DocumentsScreen`
-- `features/auth/betterAuth.ts` — client Better Auth, auto-détection IP dev, fonctions auth/API
-- `features/pdf/pdfApi.ts` — catalogue PDF/packs (REST Supabase direct en lecture publique + `authFetch` pour achats)
-- `features/pdf/pdfAssistant.ts` — assistant IA chat contextualisé sur un PDF, fallback local si API indispo
-- `features/pdf/PdfStudentSection.tsx` — catalogue/bibliothèque étudiant
-- `features/documents/DocumentEditorScreen.tsx` — éditeur natif (WebView HTML bundlé + toolbar)
-- `features/documents/DocumentsScreen.tsx` — liste/gestion documents (CV, lettre, stage, mémoire)
-- `features/onboarding/OnboardingScreen.tsx`, `FreePdfSelector.tsx`
+---
 
-### `mobile-api/`
-- `app/api/auth/[...all]/route.ts` — instance Better Auth (catch-all)
-- `app/api/mobile/*` — routes du mobile (compte, documents, achats, wallet, IA, notifications). Source de vérité : le dossier `app/api/mobile/`
-- `lib/auth.ts` — config Better Auth complète (voir Auth)
-- `lib/database.ts` — pool `pg` partagé (Proxy défensif si `DATABASE_URL` absent → throw seulement à l'usage, jamais au build)
-- `lib/documents-db.ts` — accès `app_documents`/`app_document_sections` (voir DB)
-- `lib/mobile-access.ts` — `requireMobileUser()`, `ensureMobileUser()` (mapping Better Auth → `app_users` legacy), rate limiting
-- `lib/login-throttle.ts`, `rate-limit.ts`, `route-rate-limit.ts` — anti brute-force
-- `lib/mailer.ts` (Resend), `lib/subscriptions.ts`
-- `middleware.ts` — CORS + headers sécurité pour `/api/*` et `/auth/*`
-- `sql/0004_add_document_editor_columns.sql` — migration idempotente (colonnes éditeur, `ia_credits`, tables usage/transactions)
-- `tests/documents.test.mjs` — tests d'intégration HTTP réels (voir Tests)
-- `tests/db-check.cjs`, `query-users.cjs` — scripts d'inspection DB ad hoc
+## 3. Modèle Économique & Lancement
 
-### `admin-app/`
-- `app/admin/layout.tsx`, `AdminShell.tsx` — shell dashboard (nav, guard rôle)
-- `app/admin/login/` — `LoginClient.tsx`, `page.tsx`
-- `app/admin/page.tsx`, `_components/DashboardOverview.tsx`
-- `app/admin/pdf/PdfDashboardClient.tsx` — CRUD catalogue PDF, upload, analyse IA, prix suggéré, statut (`draft`→`analyzing`→`needs_review`→`published`→`archived`)
-- `app/admin/packs/PacksDashboardClient.tsx`
-- `app/admin/users/UsersDashboardClient.tsx`
-- `app/admin/analytics/AnalyticsDashboard.tsx`, `DashboardCharts.tsx` (recharts)
-- `app/admin/settings/SettingsClient.tsx`
-- `app/admin/documents/DocumentsListClient.tsx`, `new/NewDocumentClient.tsx`
-- `app/documents/[id]/page.tsx`, `lib/html-to-docx.ts`, `extensions/ImagePlaceholder.ts` — éditeur riche Tiptap web + export docx
-- `app/api/*` — routes admin (analytics, users, packs, pdf, IA). Source de vérité : le dossier `app/api/`
-- `app/api/ai/pdf-chat/route.ts` — proxy IA consommé par `pdfAssistant.ts` mobile
-- `app/api/auth/[...all]/route.ts` — instance Better Auth propre à admin-app
-- `lib/auth.ts`, `auth-client.ts`, `auth-schema.ts`
-- `lib/course-db.ts`, `documents-db.ts`, `database.ts`
-- `lib/pdf-intelligence.ts`, `pdf-preview.ts`, `supabase-pdf.ts` — analyse IA PDF, preview, upload Storage
-- `lib/access.ts`, `mobile-access.ts`
-- `next.config.ts` — proxy `/api/mobile/*` → `mobile-api`
-- `scripts/*.mjs|.ts` — migrations ad hoc, seed, vérif RLS, setup Better Auth mobile, hotfix sécurité DB
-- `public/stitch_campus_360_admin_dashboard/` — maquettes design
-- `campus360-admin.sqlite` — DB SQLite locale (probable pré-Postgres dev/test)
+- **Pas d'abonnement récurrent** : Campus 360 fonctionne sur un modèle de portefeuille prépayé en coins (1 coin = 1 FCFA).
+- **Lancement gratuit** : Piloté par les variables d'environnement `FREE_LAUNCH_MODE=true` et `FREE_LAUNCH_UNTIL` (accès gratuit aux PDF et aux fonctionnalités d'assistance pendant la période d'amorçage).
+- **Paiements réels** : Intégration **Notch Pay** pour les recharges Mobile Money (MTN MoMo, Orange Money) avec validation par webhook signé.
+- **Plafond IA** : Quota journalier anti-abus (60 requêtes IA par utilisateur et par 24h) imposé sur toutes les routes de génération et chat.
 
-## Fonctionnalités principales
+---
 
-- **Catalogue PDF étudiant** : recherche/filtre université/faculté/matière/niveau (`ExploreScreen`, `PdfStudentSection.tsx`)
-- **Preview + achat PDF** via wallet coins (`buyDocument`/`buyPack` dans `AppShell.tsx`, `purchasePdfDocument`/`purchasePdfPack` dans `pdfApi.ts`)
-- **Packs PDF** (bundles avec réduction), suggestion auto si aucun publié (`buildSuggestedPacks`)
-- **Bibliothèque "Mes PDF"** (`LibraryScreen`)
-- **Wallet** : solde en coins, recharge Mobile Money (MTN MoMo / Orange Money), polling statut (`topUpStudentWallet`/`checkTopUpStatus`)
-- **Abonnements** (`free`/`basic`/`premium`) débloquant l'accès au catalogue (`hasSubscription`)
-- **Packs de crédits IA** (`micro`/`standard`/`boost`) — `purchaseIaPack`
-- **Assistant IA sur PDF** : chat contextualisé (résumé, plan d'étude, quiz), fallback local si API échoue
-- **Rédaction de documents** : CV, lettre motivation, rapport de stage, mémoire, document vierge — sections auto via `TEMPLATE_SECTIONS`, éditeur natif WebView + toolbar, génération IA, export PDF/DOCX, thème (couleurs, police, interligne, marges, template de couverture)
-- **Auth étudiant** : email/password, Google OAuth optionnel, reset password email, deep links (`campus-bordes://reset-password`)
-- **Onboarding** : slides + sélection PDF gratuit à l'inscription
-- **Notifications push** (Expo Notifications) + centre in-app
-- **OTA updates** (expo-updates) avec bannière nouvelle version
-- **Dashboard admin** : catalogue PDF complet, packs, users, analytics (funnels, usage IA, wallet)
-- **Analytics events** : `catalog_view`, `search`, `preview_open`, `purchase_start/success/failed`, `reader_open`, `assistant_question`, `free_pdf_claim`
+## 4. Design System & Charte Graphique
 
-## Base de données (Postgres, accès via `pg` direct)
+- Fichier source : `src/theme/stitch.ts`
+- Style : **Clean White & Royal Violet** (typographie soignée, contraste élevé, badges aux angles adoucis)
+- Tokens principaux :
+  - `sienna` / Primaire : `#7C3AED` (Violet Royal)
+  - `paper` / Fond clair : `#FFFFFF` / `stitchColors.paperSoft` `#F8FAFC`
+  - `ink` / Texte principal : `#0F172A`
+  - `inkMuted` / Texte secondaire : `#64748B`
+  - `emerald` / Succès & badges : `#047857`
+- Verrouillage automatique : `npm run lint:colors` interdit l'ajout direct de couleurs hexadécimales brutes dans les composants React Native.
 
-Tables principales (pas de schéma SQL unique, migrations incrémentales ; les colonnes se lisent dans les migrations et le code) :
-- `app_users` (lié à Better Auth), `app_wallets`, `app_wallet_transactions`
-- `app_document_purchases`, `app_pack_purchases`
-- `documents` (catalogue PDF public), `pdf_packs`, `pdf_pack_items`
-- `app_documents` et `app_document_sections` (rédaction)
-- `app_ia_usage_logs`
-- Tables legacy `profiles`, `wallets`, `document_purchases`, `pack_purchases`, `wallet_transactions` : copiées vers `app_*` à la première connexion (`copyLegacyData` dans `mobile-access.ts`)
+---
 
-Migration clé : `mobile-api/sql/0004_add_document_editor_columns.sql` — idempotente (`IF NOT EXISTS`), ajoute `content_json`, colonnes thème/layout (defaults `#2563EB`/`#0D9488`/`Lora`/`1.5`/`normal`/`classic`), `ia_credits` (default 10), crée `app_ia_usage_logs`/`app_wallet_transactions`.
+## 5. Base de Données & Migrations
 
-`mobile-api/lib/documents-db.ts` regroupe les opérations CRUD sur les documents et sections (`TEMPLATE_SECTIONS` pour la création, sections système protégées à la suppression).
+- Moteur : PostgreSQL direct via `pg.Pool` (avec support SSL vérifié en production).
+- Schéma de suivi : `public.schema_migrations` (numérotation séquentielle `0000_baseline.sql`, `0009_...`, etc.).
+- Exécution : `cd mobile-api && npm run migrate`. Aucune instruction DDL dynamique (`create table`) n'est exécutée au runtime applicatif.
 
-## Authentification
+---
 
-Better Auth partout, **deux instances distinctes** (admin-app + mobile-api) partageant la même base Postgres et devant partager `BETTER_AUTH_SECRET`.
+## 6. Fichiers Partagés (Jumeaux)
 
-`mobile-api/lib/auth.ts` :
-- Origines de confiance en dur en prod (`api.campus360b.site`, `admin.campus360b.site`, domaines Vercel) + origines locales (`campus-bordes://`, `localhost:3001/8081/8082`)
-- `emailAndPassword.requireEmailVerification = false` (volontaire, évite blocage si SMTP mal configuré)
-- Champs additionnels `user` : `role` (default `student`), `phone`, `whatsappPhone`, `university`, `faculty`, `level`
-- Cookie session `better-auth.session_token`, 7 jours, refresh quotidien, `httpOnly`, `sameSite: lax`, `secure` en prod
-- Plugins : `expo()`, `admin({ defaultRole: 'student', adminRoles: ['admin'] })`, `nextCookies()`
-- Rate limiting Better Auth (100 req/60s) + throttle brute-force sur `/sign-in/email` et `/sign-up/email`
-- Google OAuth conditionnel (seulement si `GOOGLE_CLIENT_ID`/`SECRET` semblent réels)
-- `databasePool`/`auth` exposés via Proxy qui throw seulement à l'usage (jamais au build Vercel)
+Certains utilitaires sont partagés entre `mobile-api/lib/` et `recruiter-web/lib/` :
+- `lib/origins.ts` : Liste des origines autorisées et validation CORS stricte
+- `lib/client-ip.ts` : Extraction sécurisée de l'adresse IP derrière proxy inverse
+- `lib/db-ssl.ts` : Configuration SSL pour les connexions PostgreSQL
 
-**Auto-détection IP dev** (`src/features/auth/betterAuth.ts`) :
-- `getDevBackendUrl()` : en dev natif, lit `Constants.expoConfig?.hostUri` (IP LAN du PC hôte fournie par Expo Go), construit `http://<ip>:3001`, fallback `Linking.createURL('/')`
-- Sur web : si `window.location.hostname` est localhost ou IP LAN privée, force `http://<hostname>:3001`, sinon utilise config prod — garde-fou pour ne jamais réécrire un domaine prod légitime
-- Résout le problème classique : un téléphone physique sur le même Wi-Fi ne peut pas atteindre `localhost:3001` (qui pointerait vers le téléphone lui-même)
-
-Sécurité additionnelle : `mobile-api/middleware.ts` (CORS + headers sécurité), `mobile-access.ts::requireMobileUser()` (vérif session + rate limit + auto-provisioning legacy).
-
-## Thème / UI
-
-`src/theme/stitch.ts` — design "éditorial" : *"No glassmorphism. No shadows. No gradients. Only ink, paper, sienna, emerald."*
-- Palette : `ink` (#0F172A), `paper` (#F6F1E7), `sienna` (#B7410E, CTA principal), `emerald` (#047857, succès/possédé/IA)
-- Anciens noms Material Design 3 conservés en alias (`primary`, `onPrimaryContainer`...) pour compat
-- Tokens `glass*` neutralisés (vestige de l'ancienne UI glassmorphism, retirée depuis)
-- Typo : serif (Georgia) pour displays éditoriaux, `Outfit` pour headlines, `Inter` pour le corps, monospace pour kickers/labels
-- `stitchRadius` très peu arrondi (`DEFAULT: 2`, `full: 9999` pour pills), `stitchShadows` quasi nulles (opacité 0.04-0.06)
-- `stitchComponents` : styles prêts à l'emploi (`btnPrimary`, `btnSienna`, `btnSecondary`, `btnGhost`, `btnPill*`, `inputWrapper`, `chipTag*`, `avatar`, `modalBackdrop`, `modalSheet`)
-
-`src/ui/GlassComponents.tsx` : `Card` (tones `paper`/`ink`/`sienna`), `Pill`, `InkRule`, `IconButton`, `TopBar`, `BottomNav`. Alias compat : `GlassPanel = Card`, `GlassCard = Card`, `GlassPill = Pill`, `GlassInput = EditorialInput`.
-
-## Tests
-
-`mobile-api/tests/documents.test.mjs` — tests d'intégration HTTP réels (pas de mocking, pas de Jest/Vitest) contre un serveur `mobile-api` lancé (`BASE_URL` par défaut `http://localhost:3002`) :
-- Nécessite `TEST_EMAIL`/`TEST_PASSWORD` sinon `smokeTests()` non authentifiés (`/api/health` → 200, `/api/mobile/documents` → 401)
-- Scénario complet : sign-in → créer document → lister → récupérer avec sections → PATCH settings → ajouter section → PATCH contenu → DELETE section → DELETE document → vérifier 404
-- Exécution : `node tests/documents.test.mjs`
-
-`db-check.cjs`, `query-users.cjs` — scripts d'inspection DB ad hoc, pas des tests automatisés.
-
-Aucun test unitaire (pas de Jest/Vitest configuré) — seulement ce test d'intégration HTTP et `tsc --noEmit`/`typecheck`.
-
-## Conventions de code
-
-- TypeScript strict partout, fonctions arrow exportées nommées plutôt que classes (sauf `MobileApiError extends Error`)
-- Pas de state management global (Redux/Zustand) — tout l'état mobile est dans `AppShell.tsx` (useState/useEffect), qui délègue le rendu à `src/ui/screens/`
-- Pas de `react-navigation` — navigation "maison" par état (`activeSection`), rendu conditionnel, `BottomNav` custom
-- Pattern erreurs API : `try/catch` → `mobileErrorResponse(error)` côté serveur (mappe `MobileApiError`/`RateLimitError` → codes HTTP, sinon 500) ; côté client `Alert.alert()` avec message extrait
-- Sécurité défensive systématique : limite taille payload (`MAX_BODY_BYTES`), validation `zod`, rate limiting par route + par user, transactions SQL explicites (`begin`/`commit`/`rollback`) avec `for update` pour achats/wallet (anti race condition/double achat)
-- Modules "fail-safe" serveur : `databasePool`/`auth` en Proxy qui throw seulement à l'usage, jamais au build
-- Analytics non bloquants : `recordPdfAnalyticsEvent` avale les erreurs (`catch {}`) — *"Analytics must never block reading, previewing or buying PDFs"*
-- Messages utilisateur en français, commentaires de code en anglais
-- Commits conventionnels (`feat(mobile):`, `fix(auth):`, `config(mobile-api):`, `chore:`)
-
-## Points de vigilance (dette technique connue)
-
-1. `documents-db.ts` dupliqué et divergent entre `admin-app` et `mobile-api` — vérifier les deux si modification du schéma `app_documents`/`app_document_sections`
-2. `README.md`/`PROJECT.md` décrivent une architecture obsolète (Supabase Auth, admin-app comme gateway unique) — ne pas s'y fier, se référer à ce fichier et au code
-3. `stitch_academic_hub_ia_assistant/` et `public/stitch_campus_360_admin_dashboard/` sont des maquettes statiques (HTML/PNG), pas du code applicatif
+*Note : Les tests automatisés (`mobile-api/tests/sessions-origins.test.mjs`) vérifient en continu l'alignement strict de ces fichiers.*

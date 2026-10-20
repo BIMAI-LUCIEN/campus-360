@@ -1,90 +1,60 @@
 # Campus 360
 
-Campus 360 est un MVP Expo SDK 54 / React Native centre sur un seul produit : une
-bibliotheque de PDF academiques pour les etudiants.
+Plateforme éducative et professionnelle tout-en-un pour étudiants d'Afrique centrale : stages vérifiés avec candidatures directes WhatsApp, bibliothèque académique (cours, TD, examens), wallet Mobile Money et assistance à la rédaction académique par IA.
 
-## Objectif produit
+---
 
-- Permettre aux admins d'ajouter, analyser, publier et archiver des PDF.
-- Permettre aux etudiants de rechercher, filtrer, preview, acheter et lire les PDF.
-- Garder le wallet uniquement comme moyen de paiement des PDF.
-- Brancher le tout sur Supabase Auth, PostgreSQL, Storage, RLS et fonctions serveur.
+## Architecture des Services
 
-## Ce qui est deja code
+Le monorepo comprend 4 services principaux :
 
-- App mobile PDF-only : catalogue, filtres, preview, achat, bibliotheque "Mes PDF" et assistant IA.
-- Compte etudiant : connexion, creation de compte, synchronisation des achats et du solde.
-- Wallet PDF : solde, recharge, historique et debit via fonction serveur.
-- Dashboard admin local : ajout et publication de PDF dans `admin/pdf-dashboard.html`.
-- Dashboard admin Next.js dans `admin-app/` avec auth, roles admin, upload PDF et API protegees.
-- Schema Supabase PDF dans `docs/PDF_SUPABASE.sql`.
-- Guide de branchement Supabase PDF dans `docs/PDF_SUPABASE_SETUP.md`.
-- Audit PDF dans `docs/PDF_COMPLETION_AUDIT.md`.
+| Service | Emplacement | Port Dev | URL Production | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **App Mobile** | Racine (`/`) | 8081 | Application mobile Android / iOS | Application Expo / React Native (SDK 54) |
+| **API Mobile** | `mobile-api/` | 3002 | `https://api.campus360b.site` | Backend business, Better Auth, stages, WhatsApp, IA |
+| **Portail Admin** | `recruiter-web/` | 3001 | `https://admin.campus360b.site` | Dashboard admin, validation des offres et gestion PDF |
+| **Site Public** | `landing-site/` | 3000 | `https://campus360b.site` | Vitrine publique et téléchargement de l'application |
 
-## Dashboard admin PDF
+---
 
-Ouvre ce fichier dans ton navigateur pour gerer les PDF localement :
+## Commandes Principales
 
-```text
-admin/pdf-dashboard.html
-```
-
-Ce dashboard permet d'ajouter un PDF, renseigner ses metadonnees, le publier, le remettre en
-brouillon, le supprimer, filtrer le catalogue et exporter les donnees JSON.
-
-Un adaptateur Supabase est pret dans `admin/pdf-supabase-adapter.js`, mais il attend tes
-informations Supabase pour remplacer le stockage local.
-
-## Dashboard admin web Next.js
-
-Une version MVP plus complete existe dans `admin-app/` :
-
-```powershell
-cd "C:\Users\MELAGO NATHAN\Documents\campus 360\admin-app"
-npm.cmd install
-npm.cmd run dev
-```
-
-Puis ouvre :
-
-```text
-http://localhost:3001/admin/login
-```
-
-Compte de test local :
-
-```text
-admin@campus360.local
-Admin123456!
-```
-
-Cette version inclut Better Auth, roles admin, restrictions serveur, SQLite, upload PDF,
-catalogue admin, publication/brouillon/archivage/suppression et API PDF protegees.
-
-## Lancer le projet
-
+### 1. Application Mobile
 ```bash
-npm.cmd install
-npm.cmd run start
+npm run start       # Lancement Metro Bundler
+npm run web         # Lancement version Web
+npm run typecheck   # Vérification des types TypeScript
+npm run lint:colors # Contrôle du respect du thème Stitch
 ```
 
-Sur Windows PowerShell, si `npm` ou `npx` est bloque par la policy de scripts, utilise
-`npm.cmd` et `npx.cmd`, ou lance :
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-```
-
-## Scripts utiles
-
+### 2. Backend API Mobile (`mobile-api/`)
 ```bash
-npm.cmd run typecheck
-npm.cmd run android
-npm.cmd run web
+cd mobile-api
+npm run dev         # Serveur dev (port 3002)
+npm run typecheck   # Typecheck TypeScript
+npm run migrate     # Exécution des migrations PostgreSQL
+npm test            # Suite de tests automatisés (188 tests)
 ```
 
-## Prochaine vraie etape
+### 3. Portail Recruteur & Admin (`recruiter-web/`)
+```bash
+cd recruiter-web
+npm run dev         # Serveur dev (port 3001)
+npm run typecheck   # Typecheck TypeScript
+npm run build       # Build de production Next.js
+```
 
-Brancher Supabase de bout en bout : auth etudiant, Postgres avec RLS, Storage PDF/previews,
-fonctions serveur pour achat/recharge, puis lecture PDF complete via URL signee.
-# campus-360
+### 4. Site Vitrine (`landing-site/`)
+```bash
+cd landing-site
+npm run dev         # Serveur dev (port 3000)
+npm run build       # Build de production Next.js
+```
+
+---
+
+## Documentation de Référence
+
+- Pour les directives d'architecture et de développement, consulter `CLAUDE.md`.
+- Pour la cartographie technique et l'arbre des fichiers, consulter `contexte-code.md`.
+- Pour le suivi des tâches et jalons de livraison, consulter `plan.md`.

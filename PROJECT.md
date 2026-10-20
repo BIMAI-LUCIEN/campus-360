@@ -1,3 +1,5 @@
+> **Document historique :** Pour l'architecture actuelle et les consignes à jour, se référer à [CLAUDE.md](file:///c:/Users/DELL/Desktop/mes%20projet/campus-360/CLAUDE.md) et [contexte-code.md](file:///c:/Users/DELL/Desktop/mes%20projet/campus-360/contexte-code.md).
+
 # Project: Campus 360 — Royal Violet & Clean White Mobile Redesign
 
 ## Architecture

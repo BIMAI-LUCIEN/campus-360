@@ -42,6 +42,13 @@
 |---|---|---|---|---|
 | VPS Ubuntu (`VPS_HOST` dans les secrets GitHub) | API mobile (port 3002), admin (3001), landing (3000), n8n, Evolution API, Postgres local | utilisateur `VPS_USER` avec la clé `VPS_SSH_KEY` (secrets GitHub) | **À confirmer** : chemin du fichier d'environnement de `mobile-api` sur le VPS, dans le dossier du projet (dossier de déploiement documenté : `/opt/campus-360`) | PM2 (nom d'application à confirmer, ex. `campus360-mobile-api`) |
 
+### Treg (passerelle d'APIs, scraping LinkedIn)
+- **Variable locale :** `TREG_API_KEY` dans `.env.local` (racine, ignoré par git). Jeton d'équipe `bct`.
+- **VPS :** CLI `treg` 0.26.0 dans `/opt/treg-cli` (`/opt/treg-cli/bin/treg`), connecté à l'équipe `bct` le 2026-10-20. Le jeton est stocké par le CLI dans le profil de `root` ; aucun fichier de jeton laissé ailleurs.
+- **Réseau :** treg.to est injoignable depuis le poste de développement et le réseau de l'utilisateur (connexion réinitialisée) ; joignable depuis le VPS.
+- **Variables lues par `scripts/agents/config.py` (noms seulement) :** `TREG_API_KEY` (transport HTTP), `TREG_BASE_URL`, `TREG_CLI` (transport CLI, défaut `/opt/treg-cli/bin/treg`), `TREG_MAX_CALLS_PER_RUN`, `TREG_MAX_COST_PER_CALL_USD`. Sur le VPS, sans `TREG_API_KEY`, le CLI déjà connecté est utilisé.
+- **À faire :** renouveler le jeton (il a transité dans une conversation), puis refaire `treg login` sur le VPS ; renouveler aussi la clé exposée dans `scripts/n8n/campus360_treg_full_workflow.json`.
+
 ## Secrets de plateforme (CI et déploiement)
 | Plateforme | Nom du secret | Utilisé par |
 |---|---|---|

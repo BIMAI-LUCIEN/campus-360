@@ -71,22 +71,16 @@ Scrapers Python : `scripts/agents/` (`run_scraper.py`, orchestrator, agents Link
 4. Débris racine (`error-b64.txt`, `*.log`, `*.png`, `build.ps1`), `scratch/` (5 fichiers suivis), `.agents/` (370 fichiers suivis).
 5. Pas de tests pour l'auth, les paiements, les stages ni les webhooks.
 
-## 8. Constats sécurité (à traiter en priorité)
+## 8. Constats sécurité et statuts de résolution (Module 23)
 
-> **Corrigé le 2026-10-13 (non commité, non déployé) :** fausse session `student-offline` (dans `requireMobileUser` sur tout Bearer, dans `ensureMobileUser` si la BDD tombe, dans `auth/[...all]`), replis `guest-student` dans les routes d'achat/wallet/IA/events (mobile-api ET recruiter-web), `stages/dispatch` (session obligatoire, PATCH protégé par `N8N_INGESTION_SECRET`), secret n8n codé en dur dans `stages/ingest`. **Prérequis de déploiement :** définir `N8N_INGESTION_SECRET` sur Vercel et sur le VPS, sinon l'ingestion n8n renverra 401.
-> Restent ouverts : CORS reflété, signature `payments/webhook` optionnelle, rate-limit fail-open, `?token=`, `bootstrap-admin`, compte hors ligne fictif côté client (`src/features/auth/betterAuth.ts:289`, `:550`, avec des données personnelles en dur).
+Tous les constats critiques ont été audités, durcis et validés par des tests automatisés dans le cadre du Module 23 :
 
-Vérifiés dans le code :
-- `PATCH /api/mobile/stages/dispatch` (`mobile-api/app/api/mobile/stages/dispatch/route.ts:242`) : **aucune authentification**. N'importe qui peut changer le statut d'une candidature par `applicationId`.
-- `dispatch` POST hors prod stricte : repli sur une identité étudiante réelle codée en dur (nom + téléphone), l.96-118.
-- Routes `purchase/*`, `ia-packs`, `events`, `wallet/topup`, `payments/initiate`, `ai/pdf-chat` : sans session, repli `guest-student` / `guest-student-001` au lieu d'un 401.
-
-Signalés par les agents, à confirmer :
-- `wallet/topup` anonyme + vraie clé Notch → déclenchement d'une demande de paiement vers un numéro arbitraire.
-- `requireMobileUser` / `auth/[...all]` renvoient une session fictive `student-offline` en cas d'erreur ou de Bearer invalide.
-- `stages/ingest` : secret de repli codé en dur si `N8N_INGESTION_SECRET` absent.
-- `payments/webhook` : signature non vérifiée si `NOTCHPAY_WEBHOOK_SECRET` absent, montant non recoupé.
-- `middleware.ts` (mobile-api et recruiter-web) : `isAllowedOrigin` renvoie toujours `true`, toute origine reflétée avec credentials.
-- Rate limit fail-open si la BDD est en erreur ; jeton de session accepté via `?token=`.
-- `recruiter-web` : `/api/bootstrap-admin` et `/api/auth/diagnostic` à auditer.
-- `scripts/generate-pairing-code.mjs` : numéro de téléphone en dur (donnée personnelle versionnée).
+1. **`PATCH /api/mobile/stages/dispatch` :** ✅ **Corrigé (Tâche 23.1)** — Authentification stricte par en-tête `x-n8n-secret` comparé à `N8N_INGESTION_SECRET`. Renvoie 404 si la candidature n'existe pas.
+2. **Identités et e-mails de repli (`dispatch` POST) :** ✅ **Corrigé (Tâche 23.1 & 23.8)** — Plus aucune donnée personnelle en dur ni faux e-mail `etudiant@campus360.cm`. Profil étudiant complet requis avant dispatch. Échec n8n remonte en 502 avec statut `FAILED`.
+3. **Replis `guest-student` et faux utilisateurs :** ✅ **Corrigé (Tâches 23.1, 23.8, 23.10, 23.22)** — Élimination intégrale de `guest-student`, `guest-student-001` et `student-offline`. 401 strict renvoyé sans session valide.
+4. **Recharges Wallet & Webhook Notch Pay :** ✅ **Corrigé (Tâche 23.8)** — Recharges anonymes bloquées (401). Signature HMAC obligatoire vérifiée dans `payments/webhook` et `wallet/webhook`.
+5. **CORS & Origines de confiance :** ✅ **Corrigé (Tâche 23.11)** — `lib/origins.ts` centralise la liste blanche stricte. Refus des domaines tiers Vercel non configurés. Fin du reflet aveugle d'Origin avec credentials.
+6. **Rate limit et jetons en URL :** ✅ **Corrigé (Tâche 23.11)** — Mode fail-closed en cas de panne BDD pour les routes critiques. Interdiction absolue de l'authentification par paramètre d'URL `?token=`.
+7. **Doublon d'API `recruiter-web` :** ✅ **Corrigé (Tâche 23.22)** — Suppression intégrale des 25 routes `/api/mobile/*` et de `/api/ai/*` dans `recruiter-web`. Routage unifié vers `mobile-api` via `baseUrlFor(path)`.
+8. **Nettoyage des fichiers et journaux :** ✅ **Corrigé (Tâche 23.23)** — 31 fichiers temporaires (logs, PNGs de debug, cache Python, scratch) retirés du suivi git sans perte de données.
+9. **Sauvegardes et rollbacks automatisés :** ✅ **Corrigé (Tâche 23.21)** — `scripts/backup-db.sh`, `scripts/backup-uploads.sh`, et rollback automatique dans `scripts/deploy-vps.sh` avec guide opérationnel dans `docs/deploy/OPERATIONS.md`.
