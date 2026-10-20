@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { databasePool } from '@/lib/database';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
+import { isMockAllowed } from '@/lib/payment-rules';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
@@ -54,8 +55,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const client = await databasePool.connect();
     try {
       const looksMock = reference.startsWith('mock_');
-      const hasRealPaymentProvider = Boolean(process.env.NOTCHPAY_PRIVATE_KEY);
-      const isMock = looksMock && !hasRealPaymentProvider;
+      const isMock = looksMock && isMockAllowed(process.env);
 
       const transRes = await client.query(
         `select id, status, amount_coins, created_at
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         throw new MobileApiError('Transaction introuvable.', 404);
       }
 
-      if (transaction.status === 'success') {
+      if (transaction.status === 'success' || transaction.status === 'completed') {
         const walletRes = await client.query(
           'select balance_coins from public.app_wallets where user_id = $1',
           [user.id],
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         return withCors(NextResponse.json({ status: 'pending' }), request);
       }
 
-      const privateKey = process.env.NOTCHPAY_PRIVATE_KEY;
+      const privateKey = process.env.NOTCHPAY_PRIVATE_KEY?.trim();
       if (!privateKey) {
         return withCors(NextResponse.json({ status: 'pending' }), request);
       }
@@ -147,10 +147,22 @@ export async function GET(request: NextRequest, context: RouteContext) {
         return withCors(NextResponse.json({ status: 'pending' }), request);
       }
 
-      const npData = (await npRes.json()) as { status?: string; data?: { status?: string } };
+      const npData = (await npRes.json()) as {
+        status?: string;
+        amount?: number;
+        data?: { status?: string; amount?: number };
+      };
       const npStatus = npData.status || npData.data?.status || '';
+      const rawAmount = npData.amount ?? npData.data?.amount;
+      const npAmount = rawAmount !== null && rawAmount !== undefined ? Number(rawAmount) : null;
 
-      if (npStatus === 'complete' || npStatus === 'confirmed') {
+      if (npStatus === 'complete' || npStatus === 'confirmed' || npStatus === 'success') {
+        if (npAmount !== null && npAmount !== Number(transaction.amount_coins)) {
+          console.warn(`[topup status] Amount mismatch for ${reference}: expected ${transaction.amount_coins}, got ${npAmount}`);
+          await client.query("update public.app_wallet_transactions set status = 'failed' where id = $1", [transaction.id]);
+          return withCors(NextResponse.json({ status: 'failed' }), request);
+        }
+
         try {
           await client.query('begin');
           const locked = await client.query(
@@ -187,7 +199,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         }
       }
 
-      if (npStatus === 'failed') {
+      if (npStatus === 'failed' || npStatus === 'canceled' || npStatus === 'expired') {
         await client.query(
           "update public.app_wallet_transactions set status = 'failed' where id = $1",
           [transaction.id],

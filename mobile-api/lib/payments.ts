@@ -1,10 +1,18 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 import { notifyAdmin, sendTopUpReceipt } from './automations';
 import { databasePool } from './database';
+import { MobileApiError } from './mobile-error';
+import {
+  PAYMENT_PACKS,
+  PaymentPackType,
+  decideWebhookCredit,
+  isMockAllowed,
+  verifyNotchSignature,
+} from './payment-rules';
 
-export type PaymentPackType = 'recharge_500' | 'recharge_1000' | 'recharge_2000' | 'recharge_5000' | 'discovery_500' | 'monthly_2000' | string;
-export type PaymentOperator = 'mtn' | 'orange' | 'wave';
+export { PAYMENT_PACKS, type PaymentPackType };
+export type PaymentOperator = 'mtn' | 'orange';
 
 export interface InitiatePaymentParams {
   studentId: string;
@@ -13,13 +21,12 @@ export interface InitiatePaymentParams {
   phone: string;
   operator: PaymentOperator;
   packType: PaymentPackType;
-  amount: number;
-  currency?: 'XAF' | 'XOF';
+  currency?: 'XAF';
 }
 
 export interface PaymentInitiationResult {
   reference: string;
-  status: 'pending' | 'success';
+  status: 'pending';
   paymentUrl?: string;
   directDebitPrompt: boolean;
   message: string;
@@ -31,8 +38,6 @@ const formatPhoneForOperator = (raw: string): string => {
   if (!cleaned.startsWith('+')) {
     if (cleaned.startsWith('237')) {
       cleaned = `+${cleaned}`;
-    } else if (cleaned.startsWith('225')) {
-      cleaned = `+${cleaned}`;
     } else {
       // Default to Cameroon prefix if 9 digits starting with 6
       cleaned = `+237${cleaned}`;
@@ -42,34 +47,53 @@ const formatPhoneForOperator = (raw: string): string => {
 };
 
 /**
- * Initialise le paiement direct Mobile Money (MTN MoMo, Orange Money, Wave)
- * via la passerelle Notch Pay / CinetPay ou mode mock sécurisé.
+ * Initiates direct Mobile Money payment (MTN MoMo or Orange Money) via Notch Pay.
+ * Inserts the pending transaction BEFORE calling the provider. Any provider failure marks status 'failed'.
  */
 export async function initiateMobileMoneyPayment(
   params: InitiatePaymentParams,
+  deps?: { pool?: any; fetch?: typeof fetch },
 ): Promise<PaymentInitiationResult> {
-  const privateKey = process.env.NOTCHPAY_PRIVATE_KEY;
-  const isRealPayment = Boolean(privateKey);
-  const formattedPhone = formatPhoneForOperator(params.phone);
-  const currency = params.currency || 'XAF';
+  const pool = deps?.pool || databasePool;
+  const doFetch = deps?.fetch || globalThis.fetch;
+  const amount = PAYMENT_PACKS[params.packType];
+  if (!amount) {
+    throw new MobileApiError('Pack de recharge invalide.', 400);
+  }
 
-  const description = `Campus 360 - Recharge Portefeuille (${params.amount} FCFA)`;
+  const privateKey = process.env.NOTCHPAY_PRIVATE_KEY?.trim();
+  const mockAllowed = isMockAllowed(process.env);
+
+  if (!privateKey && !mockAllowed) {
+    throw new MobileApiError('Paiement indisponible pour le moment.', 503);
+  }
+
+  const formattedPhone = formatPhoneForOperator(params.phone);
+  const currency = 'XAF';
+  const description = `Campus 360 - Recharge Portefeuille (${amount} FCFA)`;
 
   let reference = `c360_${params.packType}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   let paymentUrl: string | undefined;
-  let directDebitPrompt = true;
 
-  if (isRealPayment) {
+  // Insert pending row before contacting Notch Pay (atomic & tracked)
+  await pool.query(
+    `insert into public.app_wallet_transactions (
+       user_id, type, pack_type, amount_coins, reference_id, status
+     ) values ($1, 'topup', $2, $3, $4, 'pending')`,
+    [params.studentId, params.packType, amount, reference],
+  );
+
+  if (privateKey) {
     try {
-      const initRes = await fetch('https://api.notchpay.co/payments', {
+      const initRes = await doFetch('https://api.notchpay.co/payments', {
         method: 'POST',
         headers: {
-          Authorization: privateKey!,
+          Authorization: privateKey,
           Accept: 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount: params.amount,
+          amount,
           currency,
           email: params.studentEmail || 'etudiant@campus360.app',
           description,
@@ -80,186 +104,224 @@ export async function initiateMobileMoneyPayment(
         }),
       });
 
-      if (initRes.ok) {
-        const initData = (await initRes.json()) as {
-          reference?: string;
-          data?: { reference?: string };
-          transaction?: { reference?: string };
-          authorization_url?: string;
-        };
-
-        const gatewayRef =
-          initData.reference ||
-          initData.data?.reference ||
-          initData.transaction?.reference;
-
-        if (gatewayRef) {
-          reference = gatewayRef;
-          paymentUrl = initData.authorization_url;
-
-          // Push USSD direct si opérateur supporté
-          const channel = params.operator === 'orange' ? 'cm.orange' : 'cm.mtn';
-          await fetch(`https://api.notchpay.co/payments/${gatewayRef}`, {
-            method: 'POST',
-            headers: {
-              Authorization: privateKey!,
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              channel,
-              data: { account_number: formattedPhone },
-            }),
-          }).catch((err) => console.warn('[Payment Direct Push]', err));
-        }
+      if (!initRes.ok) {
+        await pool.query(
+          `update public.app_wallet_transactions set status = 'failed' where reference_id = $1`,
+          [reference],
+        );
+        throw new MobileApiError("L'opérateur n'a pas répondu. Réessaie.", 502);
       }
-    } catch (apiErr) {
-      console.warn('[Payment Gateway Warn] Fallback to internal processing:', apiErr);
-    }
-  }
 
-  // Enregistrement de la transaction en base
-  try {
-    const client = await databasePool.connect();
-    try {
-      await client.query(
-        `insert into public.app_wallet_transactions (
-           user_id, type, amount_coins, reference_id, status
-         ) values ($1, $2, $3, $4, 'pending')`,
-        [params.studentId, `momo_${params.packType}`, params.amount, reference],
+      const initData = (await initRes.json()) as {
+        reference?: string;
+        data?: { reference?: string };
+        transaction?: { reference?: string };
+        authorization_url?: string;
+      };
+
+      const gatewayRef =
+        initData.reference ||
+        initData.data?.reference ||
+        initData.transaction?.reference;
+
+      if (gatewayRef && gatewayRef !== reference) {
+        await pool.query(
+          `update public.app_wallet_transactions set reference_id = $1 where reference_id = $2`,
+          [gatewayRef, reference],
+        );
+        reference = gatewayRef;
+      }
+      paymentUrl = initData.authorization_url;
+
+      // Push USSD direct
+      const channel = params.operator === 'orange' ? 'cm.orange' : 'cm.mtn';
+      await doFetch(`https://api.notchpay.co/payments/${reference}`, {
+        method: 'POST',
+        headers: {
+          Authorization: privateKey,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          channel,
+          data: { account_number: formattedPhone },
+        }),
+      }).catch((err) => console.warn('[Payment Direct Push]', err));
+    } catch (error) {
+      if (error instanceof MobileApiError) throw error;
+      await pool.query(
+        `update public.app_wallet_transactions set status = 'failed' where reference_id = $1`,
+        [reference],
       );
-    } finally {
-      client.release();
+      throw new MobileApiError("L'opérateur n'a pas répondu. Réessaie.", 502);
     }
-  } catch (dbErr) {
-    console.warn('[Payment DB Record Skipped]:', dbErr);
   }
 
   return {
     reference,
     status: 'pending',
     paymentUrl,
-    directDebitPrompt,
-    message: directDebitPrompt
-      ? `Une notification de validation de débit (${params.amount} ${currency}) a été envoyée sur votre téléphone ${formattedPhone}. Veuillez saisir votre code PIN Mobile Money.`
-      : 'Veuillez finaliser le paiement sur la page sécurisée.',
-    mock: !isRealPayment,
+    directDebitPrompt: true,
+    message: `Une notification de validation de débit (${amount} ${currency}) a été envoyée sur votre téléphone ${formattedPhone}. Veuillez saisir votre code PIN Mobile Money.`,
+    mock: !Boolean(privateKey),
   };
 }
 
+export interface NotchWebhookResult {
+  status: number;
+  body: Record<string, unknown>;
+}
+
 /**
- * Traite le webhook de paiement entrant et crédite les jetons / pass illimité
+ * Unified webhook handler for both /api/mobile/payments/webhook and /api/mobile/wallet/webhook.
  */
-export async function verifyAndProcessMobilePaymentWebhook(params: {
-  rawBody: string;
-  signature?: string | null;
-  eventPayload: {
-    event?: string;
-    status?: string;
-    reference?: string;
-    amount?: number;
-    customer?: { email?: string; phone?: string };
-  };
-}): Promise<{ success: boolean; studentId?: string; packType?: string; amountCoins?: number; message: string }> {
-  const webhookSecret = process.env.NOTCHPAY_WEBHOOK_SECRET?.trim();
-
-  // Fail closed: a webhook that credits wallets must always be signed and verified.
-  if (!webhookSecret) {
-    throw new Error('Webhook de paiement non configuré (NOTCHPAY_WEBHOOK_SECRET manquant).');
-  }
-  if (!params.signature) {
-    throw new Error('Signature webhook absente');
+export async function processNotchWebhook(
+  rawBody: string,
+  headers: Headers | { get(name: string): string | null },
+): Promise<NotchWebhookResult> {
+  const secret = process.env.NOTCHPAY_WEBHOOK_SECRET?.trim();
+  if (!secret) {
+    console.error('[processNotchWebhook] NOTCHPAY_WEBHOOK_SECRET missing.');
+    return {
+      status: 503,
+      body: { error: 'Webhook non configuré.' },
+    };
   }
 
-  const expectedSignature = crypto
-    .createHmac('sha256', webhookSecret)
-    .update(params.rawBody)
-    .digest('hex');
+  const signature =
+    headers.get('x-notch-signature') ||
+    headers.get('x-cinetpay-signature') ||
+    headers.get('x-webhook-signature');
 
-  const sigBuf = Buffer.from(params.signature);
-  const expBuf = Buffer.from(expectedSignature);
-
-  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
-    throw new Error('Signature webhook invalide');
+  if (!verifyNotchSignature(rawBody, signature, secret)) {
+    return {
+      status: 401,
+      body: { error: 'Signature invalide.' },
+    };
   }
 
-  const { reference, status, event } = params.eventPayload;
+  let eventPayload: any;
+  try {
+    eventPayload = JSON.parse(rawBody);
+  } catch {
+    return {
+      status: 400,
+      body: { error: 'JSON invalide.' },
+    };
+  }
+
+  const reference =
+    eventPayload.reference ||
+    eventPayload.data?.reference ||
+    eventPayload.transaction?.reference;
+
+  if (!reference || typeof reference !== 'string' || reference.length > 200) {
+    return {
+      status: 400,
+      body: { error: 'Référence manquante ou invalide.' },
+    };
+  }
+
+  const status = String(eventPayload.status || eventPayload.data?.status || '');
+  const event = String(eventPayload.event || '');
   const isSuccess =
     status === 'complete' ||
+    status === 'confirmed' ||
     status === 'success' ||
     status === 'successful' ||
-    event === 'payment.complete';
+    event === 'payment.complete' ||
+    event === 'payment.confirmed';
 
-  if (!isSuccess || !reference) {
-    // Automation 4: admin alert on an explicit payment failure.
-    if (/fail|cancel|expire|reject/i.test(`${status ?? ''} ${event ?? ''}`)) {
-      await notifyAdmin('Paiement Mobile Money échoué', {
-        Statut: status,
-        Événement: event,
-        Référence: reference || 'inconnue',
-      });
-    }
-    return { success: false, message: 'Paiement non complété ou statut ignoré.' };
-  }
+  const rawAmount = eventPayload.amount ?? eventPayload.data?.amount;
+  const amount = rawAmount !== null && rawAmount !== undefined ? Number(rawAmount) : null;
 
   const client = await databasePool.connect();
   try {
     await client.query('begin');
 
-    // Retrouver la transaction
     const txRes = await client.query<{
       id: string;
       user_id: string;
       type: string;
+      pack_type: string | null;
       amount_coins: number;
       status: string;
     }>(
-      `select id, user_id, type, amount_coins, status
-         from public.app_wallet_transactions
-        where reference_id = $1
-        limit 1
-        for update`,
+      `select id, user_id, type, pack_type, amount_coins, status
+       from public.app_wallet_transactions
+       where reference_id = $1
+       limit 1
+       for update`,
       [reference],
     );
 
     if (txRes.rows.length === 0) {
       await client.query('rollback');
-      return { success: false, message: `Transaction introuvable pour la référence ${reference}.` };
+      return {
+        status: 404,
+        body: { error: `Transaction introuvable pour la référence ${reference}.` },
+      };
     }
 
     const tx = txRes.rows[0];
-    if (tx.status === 'success' || tx.status === 'completed') {
+    const decision = decideWebhookCredit(
+      { status: tx.status, amount_coins: Number(tx.amount_coins) },
+      { amount, success: isSuccess },
+    );
+
+    if (decision === 'ignore-already-processed') {
       await client.query('rollback');
-      return { success: true, message: 'Transaction déjà traitée.' };
+      return {
+        status: 200,
+        body: { ok: true, message: 'Transaction déjà traitée.' },
+      };
     }
 
-    // The amount the provider confirms must match what we initiated.
-    const paidAmount = Number(params.eventPayload.amount ?? 0);
-    if (paidAmount > 0 && paidAmount !== Number(tx.amount_coins)) {
+    if (decision === 'reject-amount') {
       await client.query('rollback');
-      return { success: false, message: `Montant incohérent pour la référence ${reference}.` };
+      await notifyAdmin('Montant webhook incohérent', {
+        Référence: reference,
+        Attendu: String(tx.amount_coins),
+        Reçu: String(amount),
+      }).catch(() => {});
+      return {
+        status: 400,
+        body: { error: 'Montant incohérent.' },
+      };
     }
 
-    // Mettre à jour le statut de la transaction
+    if (decision === 'mark-failed') {
+      await client.query(
+        `update public.app_wallet_transactions set status = 'failed' where id = $1`,
+        [tx.id],
+      );
+      await client.query('commit');
+      await notifyAdmin('Paiement Mobile Money échoué', {
+        Référence: reference,
+        Statut: status,
+        Événement: event,
+      }).catch(() => {});
+      return {
+        status: 200,
+        body: { ok: true, status: 'failed' },
+      };
+    }
+
+    // decision === 'credit'
     await client.query(
-      `update public.app_wallet_transactions
-          set status = 'completed'
-        where id = $1`,
+      `update public.app_wallet_transactions set status = 'success' where id = $1`,
       [tx.id],
     );
 
-    const isDiscovery = tx.type.includes('500') || tx.amount_coins === 500;
-
+    const isDiscovery = tx.pack_type === 'discovery_500';
     if (isDiscovery) {
-      // Crédit de 5 candidatures IA (+50 tokens / +5 candidatures)
       await client.query(
         `update public.stage_students
-            set tokens = tokens + 5
-          where auth_id = $1 or id::text = $1 or app_user_id::text = $1`,
+         set tokens = tokens + 5
+         where auth_id = $1 or id::text = $1 or app_user_id::text = $1`,
         [tx.user_id],
       );
     } else {
-      // 100 % wallet model (no subscription / monthly pass): the paid amount is credited in coins.
       await client.query(
         `insert into public.app_wallets (user_id, balance_coins)
          values ($1, $2)
@@ -272,19 +334,18 @@ export async function verifyAndProcessMobilePaymentWebhook(params: {
 
     await client.query('commit');
 
-    // Automation 3: receipt for wallet credits (after commit, best-effort).
     if (!isDiscovery) {
-      await sendTopUpReceipt(String(tx.user_id), Number(tx.amount_coins), reference);
+      await sendTopUpReceipt(String(tx.user_id), Number(tx.amount_coins), reference).catch(() => {});
     }
 
     return {
-      success: true,
-      studentId: tx.user_id,
-      packType: isDiscovery ? 'discovery_500' : 'wallet_topup',
-      amountCoins: Number(tx.amount_coins),
-      message: isDiscovery
-        ? '5 candidatures IA créditées avec succès.'
-        : `${Number(tx.amount_coins)} coins crédités sur ton wallet.`,
+      status: 200,
+      body: {
+        ok: true,
+        success: true,
+        studentId: tx.user_id,
+        amountCoins: Number(tx.amount_coins),
+      },
     };
   } catch (err) {
     await client.query('rollback');
@@ -292,4 +353,21 @@ export async function verifyAndProcessMobilePaymentWebhook(params: {
   } finally {
     client.release();
   }
+}
+
+/**
+ * Backward compatibility alias for existing callers.
+ */
+export async function verifyAndProcessMobilePaymentWebhook(params: {
+  rawBody: string;
+  signature?: string | null;
+  eventPayload?: any;
+}) {
+  const result = await processNotchWebhook(params.rawBody, {
+    get: (name: string) => (name.includes('signature') ? params.signature ?? null : null),
+  });
+  return {
+    success: result.status === 200 && Boolean((result.body as any).ok),
+    message: String((result.body as any).error || (result.body as any).message || 'OK'),
+  };
 }
