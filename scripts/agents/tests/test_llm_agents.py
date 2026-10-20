@@ -1,7 +1,15 @@
-"""Classifier + extractor tests (real model calls). Run: python scripts/agents/tests/test_llm_agents.py"""
+"""Classifier + extractor tests.
+
+Offline by default (fake model, no network):
+    python -m unittest discover -s tests -p "test_*.py"   (from scripts/agents)
+Real model calls (paid, only with the user's agreement):
+    python tests/test_llm_agents.py --live
+"""
 
 import sys
+import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from classifier_agent import classify_post  # noqa: E402
@@ -22,7 +30,37 @@ EXTRACT_TEXT = (
 )
 
 
-def main() -> int:
+class QuoteInSourceTests(unittest.TestCase):
+    def test_exact_quote_found(self):
+        self.assertTrue(quote_in_source("stage pré-emploi", EXTRACT_TEXT))
+
+    def test_case_and_accents_ignored(self):
+        self.assertTrue(quote_in_source("STAGE PRE-EMPLOI", EXTRACT_TEXT))
+
+    def test_single_character_refused(self):
+        self.assertFalse(quote_in_source("a", EXTRACT_TEXT))
+
+    def test_missing_quote_refused(self):
+        self.assertFalse(quote_in_source("Yaoundé", EXTRACT_TEXT))
+
+
+class LlmAgentsOfflineTests(unittest.TestCase):
+    # classifier_agent does `from llm_client import call_json`: patch the name it actually reads.
+    @mock.patch("classifier_agent.call_json")
+    def test_classifier_returns_model_category(self, fake_call):
+        fake_call.return_value = {"category": "stage", "confidence": 0.9, "reason": "x"}
+        result = classify_post("Avis de recrutement", "SANLAM recrute deux stagiaires RH à Douala.")
+        self.assertEqual(result["category"], "stage")
+        fake_call.assert_called_once()
+
+    @mock.patch("classifier_agent.call_json")
+    def test_classifier_clamps_confidence(self, fake_call):
+        fake_call.return_value = {"category": "emploi", "confidence": 3, "reason": "x"}
+        self.assertEqual(classify_post("Poste", "texte")["confidence"], 1.0)
+
+
+def live_check() -> int:
+    """Real model calls (OpenRouter, paid). Run only with --live and the user's agreement."""
     failures = 0
     for title, text, expected in CLASSIFY_CASES:
         result = classify_post(title, text)
@@ -32,7 +70,6 @@ def main() -> int:
 
     extracted = extract_fields("Stage Pré-Emploi Consultant Junior", EXTRACT_TEXT)
     fields, evidence = extracted["fields"], extracted["evidence"]
-    print("fields:", fields)
     source = "Stage Pré-Emploi Consultant Junior\n" + EXTRACT_TEXT
     for field, quote in evidence.items():
         if not quote_in_source(quote, source):
@@ -55,4 +92,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    if "--live" in sys.argv:
+        sys.exit(live_check())
+    unittest.main()

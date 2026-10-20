@@ -1,6 +1,10 @@
-"""Verifier agent tests. Run: python scripts/agents/tests/test_verifier.py"""
+"""Verifier agent tests.
+
+Run from scripts/agents: python -m unittest discover -s tests -p "test_*.py"
+"""
 
 import sys
+import unittest
 from datetime import date
 from pathlib import Path
 
@@ -22,33 +26,38 @@ def fields(**kwargs):
     return {"fields": base}
 
 
+# (name, company, title, expected_duplicate)
 CHECKS = [
-    ("doublon HYST", is_duplicate("HYST", "OFFRE DE STAGE PRÉ-EMPLOI Consultant(e) Junior en Contrôle Interne (6 MOIS) at HYST", EXISTING), True),
-    ("doublon KEISIS", is_duplicate("KEISIS INC CANADA", "Jobs Opportunities : 07 SALES AGENTS at KEISIS INC CANADA", EXISTING), True),
-    ("doublon SANLAM", is_duplicate("SANLAM ALLIANZ Cameroun Assurances vie", "Avis de recrutement : 02 STAGIAIRES PROFESSIONNELS RH at SANLAM ALLIANZ Cameroun Assurances vie", EXISTING), True),
-    ("pas doublon autre poste", is_duplicate("HYST Consulting", "Stage Assistant Marketing Digital", EXISTING), False),
+    ("doublon HYST", "HYST", "OFFRE DE STAGE PRÉ-EMPLOI Consultant(e) Junior en Contrôle Interne (6 MOIS) at HYST", True),
+    ("doublon KEISIS", "KEISIS INC CANADA", "Jobs Opportunities : 07 SALES AGENTS at KEISIS INC CANADA", True),
+    ("doublon SANLAM", "SANLAM ALLIANZ Cameroun Assurances vie", "Avis de recrutement : 02 STAGIAIRES PROFESSIONNELS RH at SANLAM ALLIANZ Cameroun Assurances vie", True),
+    ("pas doublon autre poste", "HYST Consulting", "Stage Assistant Marketing Digital", False),
 ]
 
+# (name, classification, extraction, key, expected)
 DECISIONS = [
-    ("stage clair -> publié", decide({"category": "stage", "confidence": 0.95}, fields(), EXISTING, TODAY)["status"], "published"),
-    ("emploi clair -> publié emploi", decide({"category": "emploi", "confidence": 0.9}, fields(), EXISTING, TODAY)["kind"], "emploi"),
-    ("concours -> rejeté", decide({"category": "concours", "confidence": 0.9}, fields(), EXISTING, TODAY)["status"], "rejected"),
-    ("entreprise générique -> rejeté", decide({"category": "stage", "confidence": 0.9}, fields(company="Entreprise partenaire"), EXISTING, TODAY)["status"], "rejected"),
-    ("date passée -> rejeté", decide({"category": "stage", "confidence": 0.9}, fields(deadline="2026-09-01"), EXISTING, TODAY)["status"], "rejected"),
-    ("sans contact -> à valider", decide({"category": "stage", "confidence": 0.9}, fields(contact_email=None), EXISTING, TODAY)["status"], "pending_review"),
-    ("confiance moyenne -> à valider", decide({"category": "stage", "confidence": 0.65}, fields(), EXISTING, TODAY)["status"], "pending_review"),
+    ("stage clair -> publié", {"category": "stage", "confidence": 0.95}, fields(), "status", "published"),
+    ("emploi clair -> publié emploi", {"category": "emploi", "confidence": 0.9}, fields(), "kind", "emploi"),
+    ("concours -> rejeté", {"category": "concours", "confidence": 0.9}, fields(), "status", "rejected"),
+    ("entreprise générique -> rejeté", {"category": "stage", "confidence": 0.9}, fields(company="Entreprise partenaire"), "status", "rejected"),
+    ("date passée -> rejeté", {"category": "stage", "confidence": 0.9}, fields(deadline="2026-09-01"), "status", "rejected"),
+    ("sans contact -> à valider", {"category": "stage", "confidence": 0.9}, fields(contact_email=None), "status", "pending_review"),
+    ("confiance moyenne -> à valider", {"category": "stage", "confidence": 0.65}, fields(), "status", "pending_review"),
 ]
 
 
-def main() -> int:
-    failures = 0
-    for name, got, expected in CHECKS + DECISIONS:
-        ok = got == expected
-        failures += 0 if ok else 1
-        print(f"{'OK  ' if ok else 'FAIL'} {name}: {got}")
-    print(f"{len(CHECKS) + len(DECISIONS) - failures}/{len(CHECKS) + len(DECISIONS)} passed")
-    return 1 if failures else 0
+class VerifierTests(unittest.TestCase):
+    def test_duplicates_table(self):
+        for name, company, title, expected in CHECKS:
+            with self.subTest(name=name):
+                self.assertEqual(is_duplicate(company, title, EXISTING), expected)
+
+    def test_decisions_table(self):
+        # Always pass today: decide() falls back to the machine date otherwise.
+        for name, classification, extraction, key, expected in DECISIONS:
+            with self.subTest(name=name):
+                self.assertEqual(decide(classification, extraction, EXISTING, TODAY)[key], expected)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    unittest.main()

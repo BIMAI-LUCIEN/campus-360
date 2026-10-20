@@ -1,6 +1,10 @@
-"""Filter agent tests on real-world style posts. Run: python scripts/agents/tests/test_filter.py"""
+"""Filter agent tests on real-world style posts.
+
+Run from scripts/agents: python -m unittest discover -s tests -p "test_*.py"
+"""
 
 import sys
+import unittest
 from datetime import date
 from pathlib import Path
 
@@ -35,16 +39,33 @@ CASES = [
 ]
 
 
-def main() -> int:
-    failures = 0
-    for title, text, company, expected in CASES:
+def _case(title: str) -> tuple:
+    return next(case for case in CASES if case[0] == title)
+
+
+class FilterPostTests(unittest.TestCase):
+    def _assert_case(self, case: tuple) -> None:
+        title, text, company, expected = case
         ok, reason = filter_post(title, text, company, today=TODAY)
-        if ok != expected:
-            failures += 1
-            print(f"FAIL {title!r}: got {ok} ({reason}), expected {expected}")
-    print(f"{len(CASES) - failures}/{len(CASES)} passed")
-    return 1 if failures else 0
+        self.assertEqual(ok, expected, f"{title!r}: {reason}")
+
+    def test_cases_table(self):
+        for case in CASES:
+            with self.subTest(title=case[0]):
+                self._assert_case(case)
+
+    def test_noise_bar_rejected(self):
+        self._assert_case(_case("Une nouvelle aventure commence chez Oasis Lounge !"))
+
+    def test_foreign_city_rejected(self):
+        self._assert_case(_case("Stage à Abidjan"))
+
+    def test_past_year_rejected(self):
+        self._assert_case(_case("Offre de stage 2023"))
+
+    def test_short_text_rejected(self):
+        self._assert_case(_case("Stage"))
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    unittest.main()

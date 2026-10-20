@@ -12,6 +12,7 @@ import psycopg2
 import psycopg2.extras
 
 from config import DATABASE_URL
+from daily_cap import cameroon_day_start_utc
 from verifier_agent import normalize_company
 
 logger = logging.getLogger("JobStore")
@@ -20,13 +21,88 @@ UNKNOWN_COMPANY = "Entreprise à identifier (voir la source)"
 
 
 class JobStore:
-    def __init__(self, dry_run: bool = False):
+    def __init__(self, dry_run: bool = False, connect: bool = True):
+        """connect=False (dry-run only): no database at all, not even reads."""
         self.dry_run = dry_run
-        self.conn = None if dry_run and not DATABASE_URL else psycopg2.connect(DATABASE_URL, sslmode="require")
+        if dry_run and (not connect or not DATABASE_URL):
+            self.conn = None
+        else:
+            self.conn = psycopg2.connect(DATABASE_URL, sslmode="require")
 
     def close(self):
         if self.conn:
             self.conn.close()
+
+    # --- daily cap, expiry and run journal (migration 0014) ------------------------
+    # None of these may stop a scraping run: a failure is logged and the run goes on.
+
+    def count_added_today(self, now: datetime = None) -> int:
+        """Scraped offers added since the start of the Cameroon day (published or pending review)."""
+        if not self.conn:
+            return 0
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """select count(*) from public.stage_jobs
+                        where source = 'SCRAPED' and status in ('published', 'pending_review')
+                          and created_at >= %s""",
+                    (cameroon_day_start_utc(now),),
+                )
+                return int(cur.fetchone()[0])
+        except Exception as error:
+            self.conn.rollback()
+            logger.warning(f"Comptage des offres du jour impossible ({type(error).__name__}) : plafond non appliqué.")
+            return 0
+
+    def expire_due_offers(self) -> int:
+        """Published offers whose expires_at has passed become 'expired'. Returns how many."""
+        if self.dry_run or not self.conn:
+            return 0
+        try:
+            with self.conn, self.conn.cursor() as cur:
+                cur.execute(
+                    """update public.stage_jobs set status = 'expired'
+                        where status = 'published' and expires_at is not null and expires_at < now()"""
+                )
+                count = cur.rowcount or 0
+            if count:
+                logger.info(f"{count} offre(s) expirée(s) retirée(s) de l'application.")
+            return count
+        except Exception as error:
+            logger.warning(f"Expiration des offres impossible ({type(error).__name__}) : migration 0014 appliquée ?")
+            return 0
+
+    def start_run(self, sources: list, window_label: str = "manuel"):
+        """Opens a stage_scrape_runs row for a real run. Returns its id, or None (dry-run, error)."""
+        if self.dry_run or not self.conn:
+            return None
+        try:
+            with self.conn, self.conn.cursor() as cur:
+                cur.execute(
+                    """insert into public.stage_scrape_runs (window_label, sources) values (%s, %s) returning id""",
+                    (window_label, list(sources or [])),
+                )
+                return str(cur.fetchone()[0])
+        except Exception as error:
+            logger.warning(f"Journal du passage impossible ({type(error).__name__}) : migration 0014 appliquée ?")
+            return None
+
+    def finish_run(self, run_id, collected: int, statuses: dict, cap_reached: bool, error: str = None):
+        if not run_id or self.dry_run or not self.conn:
+            return
+        try:
+            with self.conn, self.conn.cursor() as cur:
+                cur.execute(
+                    """update public.stage_scrape_runs
+                          set finished_at = now(), collected = %s, published = %s, pending_review = %s,
+                              rejected = %s, deferred = %s, cap_reached = %s, error = %s
+                        where id = %s""",
+                    (collected, statuses.get("published", 0), statuses.get("pending_review", 0),
+                     statuses.get("rejected", 0), statuses.get("deferred", 0), cap_reached,
+                     (error or None) and error[:500], run_id),
+                )
+        except Exception as err:
+            logger.warning(f"Clôture du journal du passage impossible ({type(err).__name__}).")
 
     def recent_offers(self, days: int = 60) -> list:
         """Recent offers (any status) used for duplicate detection."""

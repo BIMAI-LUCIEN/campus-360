@@ -10,7 +10,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 ENV_FILES = [
     BASE_DIR / ".env.local",
     BASE_DIR / "mobile-api" / ".env.local",
-    BASE_DIR / "admin-app" / ".env.local",
     BASE_DIR / ".env",
 ]
 
@@ -38,6 +37,32 @@ APIFY_API_TOKEN = os.getenv("APIFY_API_TOKEN", "")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+
+def _positive_int(name: str, default: int) -> int:
+    """Reads a positive integer setting; a missing or invalid value keeps the default."""
+    raw = os.getenv(name, "").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+# Treg (https://treg.to): one gateway for paid data APIs, used for LinkedIn job search.
+# Access, in this order: TREG_API_KEY over HTTP, else the `treg` CLI already signed in
+# on the server (TREG_CLI). Values are never printed or logged.
+TREG_API_KEY = os.getenv("TREG_API_KEY", "")
+TREG_BASE_URL = os.getenv("TREG_BASE_URL", "https://treg.to").rstrip("/")
+TREG_CLI = os.getenv("TREG_CLI", "/opt/treg-cli/bin/treg")
+TREG_MAX_CALLS_PER_RUN = _positive_int("TREG_MAX_CALLS_PER_RUN", 4)
+TREG_MAX_COST_PER_CALL_USD = os.getenv("TREG_MAX_COST_PER_CALL_USD", "0.01")
+
+# Reference list of sources, shared by the orchestrator, run_scraper and the scheduler.
+DEFAULT_PLATFORMS = ["CAMEROON_JOBS", "LINKEDIN", "FACEBOOK", "TIKTOK", "ACADEMIC_WEB"]
+
+# At most this many offers added per Cameroon day, internships and jobs together.
+DAILY_OFFER_CAP = _positive_int("DAILY_OFFER_CAP", 20)
 
 # Headers de requêtes furtifs (User-Agent rotation)
 USER_AGENTS = [

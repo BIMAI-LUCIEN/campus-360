@@ -8,9 +8,11 @@ const stagesScreenPath = path.join(projectRoot, 'src', 'ui', 'screens', 'StagesS
 const whatsappServicePath = path.join(projectRoot, 'src', 'features', 'whatsapp', 'whatsappService.ts');
 const typesPath = path.join(projectRoot, 'src', 'types.ts');
 
-const stagesContent = fs.readFileSync(stagesScreenPath, 'utf8');
-const whatsappContent = fs.readFileSync(whatsappServicePath, 'utf8');
-const typesContent = fs.readFileSync(typesPath, 'utf8');
+// Normalize line endings: the sources are CRLF on Windows, the expectations below use \n.
+const readLf = (file) => fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+const stagesContent = readLf(stagesScreenPath);
+const whatsappContent = readLf(whatsappServicePath);
+const typesContent = readLf(typesPath);
 
 let totalTests = 0;
 let passedTests = 0;
@@ -140,13 +142,17 @@ for (const tc of phoneTestCases) {
 }
 
 // Test recruiter WhatsApp URL construction in StagesScreen
-assert(stagesContent.includes('const rawPhone = selectedDetailJob.company?.contactWhatsapp || \'237690123456\';'), 'Recruiter WhatsApp has fallback phone when undefined or null');
-assert(stagesContent.includes('const clean = cleanPhoneNumber(rawPhone);'), 'Recruiter WhatsApp calls cleanPhoneNumber');
+assert(!stagesContent.includes('237690123456'), 'No hardcoded fallback WhatsApp number');
+assert(stagesContent.includes('companyWhatsapp(selectedDetailJob.company)'), 'Recruiter WhatsApp uses the company contact only');
+assert(stagesContent.includes('if (!phone) return;'), 'Recruiter WhatsApp does nothing when the company has no number');
+assert(stagesContent.includes('const clean = cleanPhoneNumber(phone);'), 'Recruiter WhatsApp calls cleanPhoneNumber');
 assert(stagesContent.includes('https://wa.me/${clean}?text=${textMsg}'), 'Recruiter WhatsApp builds valid wa.me URL format');
 assert(stagesContent.includes('Linking.openURL(url).catch('), 'Recruiter WhatsApp safely catches Linking failures');
 
 // Test recruiter Email URL construction
-assert(stagesContent.includes('const email = selectedDetailJob.company?.contactEmail || \'recrutement@campus360.app\';'), 'Recruiter Email has fallback email address');
+assert(!stagesContent.includes('recrutement@campus360.app'), 'No hardcoded fallback email address');
+assert(stagesContent.includes('companyEmail(selectedDetailJob.company)'), 'Recruiter Email uses the company contact only');
+assert(stagesContent.includes('if (!email) return;'), 'Recruiter Email does nothing when the company has no address');
 assert(stagesContent.includes('mailto:${email}?subject=${subject}&body=${body}'), 'Recruiter Email constructs valid mailto scheme');
 assert(stagesContent.includes('Linking.openURL(url).catch('), 'Recruiter Email safely catches Linking failures');
 
@@ -196,8 +202,9 @@ const stipendRaw2 = '75 000 FCFA';
 const stipendCleaned2 = stipendRaw2.replace(/\(.*\)/, '').trim();
 assert(stipendCleaned2 === '75 000 FCFA', 'Stipend regex handles clean amounts');
 
-assert(stagesContent.includes("selectedDetailJob.stipend ? selectedDetailJob.stipend.replace(/\\(.*\\)/, '').trim() : '75 000 FCFA'"), 'Sticky bar has resilient fallback if stipend is undefined or missing');
-assert(stagesContent.includes("job.stipend ? job.stipend.replace(/\\(.*\\)/, '').trim() : 'Gratification'"), 'Feed card has resilient fallback if stipend is undefined or missing');
+assert(stagesContent.includes("selectedDetailJob.stipend ? selectedDetailJob.stipend.replace(/\\(.*\\)/, '').trim() : 'Non précisée'"), 'Sticky bar says the stipend is unknown when missing');
+assert(stagesContent.includes("job.stipend ? job.stipend.replace(/\\(.*\\)/, '').trim() : 'Rémunération non précisée'"), 'Feed card says the stipend is unknown when missing');
+assert(!stagesContent.includes(": '75 000 FCFA'"), 'No invented stipend amount');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 6. Adversarial Integrity & Anti-Facade Audit

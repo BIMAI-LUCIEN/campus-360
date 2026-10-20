@@ -12,7 +12,9 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+import config
 from linkedin_agent import LinkedInScraperAgent
+from treg_linkedin_agent import TregLinkedInAgent
 from facebook_agent import FacebookScraperAgent
 from apify_agent import ApifyScraperAgent
 from web_academic_agent import WebAcademicAgent
@@ -29,6 +31,7 @@ logger = logging.getLogger("ScraperOrchestrator")
 class ScraperOrchestrator:
     def __init__(self):
         self.linkedin_agent = LinkedInScraperAgent()
+        self.treg_linkedin_agent = TregLinkedInAgent()
         self.facebook_agent = FacebookScraperAgent()
         self.apify_agent = ApifyScraperAgent()
         self.web_agent = WebAcademicAgent()
@@ -37,12 +40,16 @@ class ScraperOrchestrator:
         self.ai_agent = AIAnalyzerAgent()
         self.db_ingestor = DatabaseIngestor()
 
-    def run_full_pipeline(self, query: str = "informatique", platforms: list = None, limit_per_platform: int = 5, city: str = None, dry_run: bool = False) -> dict:
+    def run_full_pipeline(self, query: str = "informatique", platforms: list = None, limit_per_platform: int = 5, city: str = None, dry_run: bool = False, live: bool = False, use_db: bool = True, preloaded_items: list = None) -> dict:
         """
         Exécute le cycle complet : Collecte -> Analyse IA -> Sauvegarde.
         """
         if not platforms:
-            platforms = ["CAMEROON_JOBS", "LINKEDIN", "FACEBOOK", "TIKTOK", "ACADEMIC_WEB"]
+            platforms = list(config.DEFAULT_PLATFORMS)
+
+        # Paid sources (Treg) are called only on a real run: never in dry-run, never without --live.
+        self.treg_linkedin_agent.live = live and not dry_run
+        self.treg_linkedin_agent.reset_run()
 
         loc_label = f" (Cible: {city})" if city else " (National / Toutes régions)"
         logger.info(f"🚀 Lancement mission multi-agents : Mot-clé='{query}', Région={loc_label}, Plateformes={platforms}")
@@ -52,10 +59,24 @@ class ScraperOrchestrator:
         if not dry_run:
             self.db_ingestor.ensure_tables()
 
-        collected_items = []
+        # Daily cap, expiry and run journal (decisions 11 to 13). The cap is checked before
+        # collecting, so no paid call is made once today's offers are in.
+        cap = config.DAILY_OFFER_CAP
+        store = JobStore(dry_run=dry_run, connect=use_db or not dry_run)
+        run_id = store.start_run(platforms) if not dry_run else None
+        if not dry_run:
+            store.expire_due_offers()
+        added_today = store.count_added_today()
+        cap_reached = added_today >= cap
+        if cap_reached:
+            logger.info(f"Plafond quotidien atteint ({added_today}/{cap} offres ajoutées aujourd'hui) : collecte sautée.")
+        # Offline runs (tests, --from-fixture) bring their own items: no network collection.
+        collect_platforms = [] if cap_reached or preloaded_items is not None else platforms
+
+        collected_items = list(preloaded_items or [])
 
         # 2. Phase de Collecte
-        if "CAMEROON_JOBS" in platforms:
+        if "CAMEROON_JOBS" in collect_platforms:
             try:
                 cam_items = self.cameroon_agent.search_cameroon_jobs(query=query, city=city, max_results_per_query=limit_per_platform)
                 collected_items.extend(cam_items)
@@ -65,10 +86,16 @@ class ScraperOrchestrator:
         # Requête ciblée avec ville si spécifiée
         city_suffix = f" {city}" if city else ""
 
-        if "LINKEDIN" in platforms:
+        if "LINKEDIN" in collect_platforms:
             try:
+                # Order (decision 17): Treg (internships, then jobs), then Apify, then the RSS fallback.
                 li_items = []
-                if self.apify_agent.is_configured():
+                if self.treg_linkedin_agent.live and self.treg_linkedin_agent.is_configured():
+                    li_items.extend(self.treg_linkedin_agent.search_jobs(query=query, kind="stage", max_results=limit_per_platform))
+                    li_items.extend(self.treg_linkedin_agent.search_jobs(query=query, kind="emploi", max_results=limit_per_platform))
+                elif "LINKEDIN" in platforms and not self.treg_linkedin_agent.is_configured():
+                    logger.info("LinkedIn : Treg non configuré, passage aux sources de secours.")
+                if not li_items and self.apify_agent.is_configured():
                     li_items = self.apify_agent.scrape_linkedin_posts(query=f"stage {query}{city_suffix} Cameroun", limit=limit_per_platform)
                 if not li_items:
                     li_items = self.linkedin_agent.search_linkedin_reports(query=f"rapport de stage {query}{city_suffix}", max_results=limit_per_platform)
@@ -76,7 +103,7 @@ class ScraperOrchestrator:
             except Exception as e:
                 logger.error(f"Erreur Agent LinkedIn : {e}")
 
-        if "FACEBOOK" in platforms:
+        if "FACEBOOK" in collect_platforms:
             try:
                 fb_items = []
                 if self.apify_agent.is_configured():
@@ -87,7 +114,7 @@ class ScraperOrchestrator:
             except Exception as e:
                 logger.error(f"Erreur Agent Facebook : {e}")
 
-        if "TIKTOK" in platforms:
+        if "TIKTOK" in collect_platforms:
             try:
                 if self.apify_agent.is_configured():
                     tt_items = self.apify_agent.scrape_tiktok_posts(query=f"stage {query}{city_suffix} Cameroun", limit=limit_per_platform)
@@ -95,7 +122,7 @@ class ScraperOrchestrator:
             except Exception as e:
                 logger.error(f"Erreur Agent TikTok : {e}")
 
-        if "ACADEMIC_WEB" in platforms:
+        if "ACADEMIC_WEB" in collect_platforms:
             try:
                 web_items = self.web_agent.search_academic_reports(field=query, max_results=limit_per_platform)
                 collected_items.extend(web_items)
@@ -107,8 +134,8 @@ class ScraperOrchestrator:
         # 3. Analysis: offers go through the 4-agent pipeline, academic documents through the report analyzer.
         reports_saved = 0
         statuses = {"published": 0, "pending_review": 0, "rejected": 0, "deferred": 0}
-        store = JobStore(dry_run=dry_run)
         existing = store.recent_offers()
+        run_error = None
 
         try:
             for idx, item in enumerate(collected_items, start=1):
@@ -129,14 +156,24 @@ class ScraperOrchestrator:
                                 reports_saved += 1
                         continue
 
+                    if added_today >= cap:
+                        cap_reached = True
+                        logger.info(f"Plafond quotidien de {cap} offres atteint : éléments restants non traités.")
+                        break
                     result = process_offer(item, store, existing)
                     statuses[result["status"]] = statuses.get(result["status"], 0) + 1
+                    if result["status"] in ("published", "pending_review"):
+                        added_today += 1
                     logger.info(f"   -> {result['status']} ({result.get('kind')}, {result.get('confidence')}) : {result.get('reason')}")
                     if result["status"] == "published" and not dry_run:
                         self._notify_published(result, item)
                 except Exception as e:
                     logger.error(f"Erreur lors du traitement de l'élément : {e}")
+        except Exception as error:
+            run_error = f"{type(error).__name__}: {error}"
+            raise
         finally:
+            store.finish_run(run_id, len(collected_items), statuses, cap_reached, run_error)
             store.close()
 
         duration = round(time.time() - start_time, 2)
@@ -149,7 +186,9 @@ class ScraperOrchestrator:
             "jobs_saved": statuses["published"],
             "offers_by_status": statuses,
             "dry_run": dry_run,
-            "platforms": platforms
+            "platforms": platforms,
+            "added_today": added_today,
+            "cap_reached": cap_reached,
         }
 
         logger.info(f"🏁 Mission terminée en {duration}s : {reports_saved} rapports, offres {statuses}.")
