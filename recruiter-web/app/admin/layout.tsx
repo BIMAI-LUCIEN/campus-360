@@ -19,6 +19,20 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     ],
   },
   {
+    label: 'STAGES & EMPLOIS',
+    items: [
+      { href: '/admin/stages',       icon: 'work',         label: 'Offres de stage' },
+      { href: '/admin/applications', icon: 'send',         label: 'Candidatures' },
+      { href: '/admin/companies',    icon: 'apartment',    label: 'Entreprises' },
+    ],
+  },
+  {
+    label: 'FINANCES',
+    items: [
+      { href: '/admin/payments',     icon: 'payments',     label: 'Paiements & Wallet' },
+    ],
+  },
+  {
     label: 'ANALYTICS',
     items: [
       { href: '/admin/analytics', icon: 'analytics',       label: 'Analytics' },
@@ -38,6 +52,10 @@ const breadcrumbMap: Array<[RegExp, string, string]> = [
   [/^\/admin\/pdf/, 'Dashboard', 'Catalogue PDF'],
   [/^\/admin\/packs/, 'Dashboard', 'Packs'],
   [/^\/admin\/users/, 'Dashboard', 'Étudiants'],
+  [/^\/admin\/stages/, 'Stages & Emplois', 'Offres de stage'],
+  [/^\/admin\/applications/, 'Stages & Emplois', 'Candidatures'],
+  [/^\/admin\/companies/, 'Stages & Emplois', 'Entreprises'],
+  [/^\/admin\/payments/, 'Finances', 'Paiements & Wallet'],
   [/^\/admin\/documents\/new/, 'Dashboard', 'Nouveau document'],
   [/^\/admin\/documents/, 'Dashboard', 'Rédactions'],
 ];
