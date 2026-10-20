@@ -1,0 +1,49 @@
+import type { NextRequest } from 'next/server';
+
+import {
+  AI_ROUTE_LIMITS,
+  type AiRoute,
+  DAILY_LIMIT_MESSAGE,
+  readDailyLimit,
+  reserveDailyAiCall,
+} from './ai-quota-rules';
+import { databasePool } from './database';
+import { RateLimitError } from './rate-limit';
+import { enforceRateLimit } from './route-rate-limit';
+
+/**
+ * Enforces per-route burst limits and global daily 24h AI quotas per authenticated user.
+ * Even during the free launch mode, this protects LLM providers from runaway automated abuse.
+ */
+export const enforceAiQuota = async (
+  request: NextRequest,
+  options: { userId: string; route: AiRoute },
+): Promise<void> => {
+  // (a) Route-level burst rate limit (fail-closed under 'ai-' prefix)
+  const routeLimit = AI_ROUTE_LIMITS[options.route];
+  await enforceRateLimit(request, {
+    bucket: `ai-${options.route}`,
+    max: routeLimit.max,
+    windowMs: routeLimit.windowMs,
+    userId: options.userId,
+  });
+
+  // (b) Atomic daily global reservation in app_ia_usage_logs
+  const dailyLimit = readDailyLimit(process.env);
+  const reserved = await reserveDailyAiCall(databasePool, options.userId, dailyLimit);
+
+  if (!reserved) {
+    const oldestRes = await databasePool
+      .query<{ wait_seconds: number }>(
+        `select extract(epoch from (created_at + interval '1 day' - now()))::int as wait_seconds
+         from public.app_ia_usage_logs
+         where user_id = $1 and created_at > now() - interval '1 day'
+         order by created_at asc limit 1`,
+        [options.userId],
+      )
+      .catch(() => ({ rows: [] }));
+
+    const retryAfter = Math.max(60, Number(oldestRes.rows[0]?.wait_seconds || 3600));
+    throw new RateLimitError(DAILY_LIMIT_MESSAGE, retryAfter);
+  }
+};

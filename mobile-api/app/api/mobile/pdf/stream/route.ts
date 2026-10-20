@@ -1,3 +1,4 @@
+import { isFreeAccess } from '@/lib/purchase-price';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getCloudinaryConfig } from '@/lib/cloudinary';
@@ -15,6 +16,7 @@ export const runtime = 'nodejs';
 type CatalogDocument = {
   id: string;
   price_coins: number | string | null;
+  always_free?: boolean | null;
   file_path: string | null;
   preview_path: string | null;
 };
@@ -26,7 +28,7 @@ const requireEnv = (name: string) => {
 };
 
 const canReadFullDocument = async (document: CatalogDocument, user: MobileUser) => {
-  if (Number(document.price_coins ?? 0) <= 0) return true;
+  if (isFreeAccess(document)) return true;
 
   const allowed = await databasePool.query(
     `select 1 from public.app_document_purchases
@@ -58,7 +60,7 @@ export async function GET(request: NextRequest) {
     if (!lookupValue) throw new MobileApiError('Document non trouve.', 404);
 
     const result = await databasePool.query<CatalogDocument>(
-      `select id, price_coins, file_path, preview_path
+      `select id, price_coins, always_free, file_path, preview_path
        from public.documents
        where id = $1 or file_path = $1 or preview_path = $1
        limit 1`,

@@ -1,27 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { databasePool } from '@/lib/database';
-import { withCors } from '@/lib/mobile-access';
+import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
+import { enforceRateLimit } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
 
-export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin');
-  const headers: Record<string, string> = {
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers':
-      'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
-  };
-  if (origin) {
-    headers['Access-Control-Allow-Origin'] = origin;
-    headers['Access-Control-Allow-Credentials'] = 'true';
-  } else {
-    headers['Access-Control-Allow-Origin'] = '*';
-  }
-  return new NextResponse(null, { status: 204, headers });
-}
+export const OPTIONS = (request: NextRequest) => withCors(new NextResponse(null, { status: 204 }), request);
 
 export async function GET(request: NextRequest) {
   try {
+    const access = await requireMobileUser(request);
+    if (access.response) return access.response;
+
+    await enforceRateLimit(request, {
+      bucket: 'scraped-reports',
+      max: 60,
+      windowMs: 60_000,
+      userId: access.user.id,
+    });
+
     const { searchParams } = new URL(request.url);
     const field = searchParams.get('field');
     const level = searchParams.get('level');
@@ -30,7 +27,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '20', 10), 1), 50);
     const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
 
-    const conditions: string[] = [];
+    const conditions: string[] = ["status = 'published'"];
     const values: any[] = [];
     let idx = 1;
 
@@ -58,7 +55,7 @@ export async function GET(request: NextRequest) {
       idx++;
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
     const sql = `
       SELECT 
@@ -75,7 +72,6 @@ export async function GET(request: NextRequest) {
         table_of_contents,
         file_url,
         source_platform,
-        source_url,
         tags,
         quality_score,
         view_count,
@@ -110,14 +106,7 @@ export async function GET(request: NextRequest) {
       }),
       request
     );
-  } catch (err: any) {
-    console.error('Error fetching scraped reports:', err);
-    return withCors(
-      NextResponse.json(
-        { success: false, error: err.message || 'Failed to fetch stage reports' },
-        { status: 500 }
-      ),
-      request
-    );
+  } catch (error) {
+    return mobileErrorResponse(error, request);
   }
 }

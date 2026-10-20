@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { mobileErrorResponse, requireMobileUser, MobileApiError } from '@/lib/mobile-access';
+import { mobileErrorResponse, requireMobileUser, MobileApiError, withCors } from '@/lib/mobile-access';
+import { enforceAiQuota } from '@/lib/ai-quota';
+import { callLlm, isLlmConfigured } from '@/lib/llm';
 
 export const runtime = 'nodejs';
+
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+    'Access-Control-Allow-Headers':
+      'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
+  };
+  if (origin) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Access-Control-Allow-Credentials'] = 'true';
+  } else {
+    headers['Access-Control-Allow-Origin'] = '*';
+  }
+  return new NextResponse(null, { status: 204, headers });
+}
 
 const requestSchema = z.object({
   title: z.string().trim().min(3).max(300),
@@ -13,12 +31,12 @@ const requestSchema = z.object({
   tableOfContents: z.array(z.string()).optional(),
 });
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-
 export async function POST(request: NextRequest) {
   try {
     const access = await requireMobileUser(request);
-    if (access.response) return access.response;
+    if (access.response || !access.user) return withCors(access.response!, request);
+
+    await enforceAiQuota(request, { userId: access.user.id, route: 'defense-coach' });
 
     const body = await request.json().catch(() => null);
     const parsed = requestSchema.safeParse(body);
@@ -28,13 +46,8 @@ export async function POST(request: NextRequest) {
 
     const { title, field, company, level, abstract, tableOfContents } = parsed.data;
 
-    const openRouterKey = process.env.OPENROUTER_API_KEY || process.env.GEMINI_API_KEY;
-
-    if (!openRouterKey) {
-      return NextResponse.json({
-        success: true,
-        coaching: getStaticCoaching(title, field, company, level),
-      });
+    if (!isLlmConfigured()) {
+      throw new MobileApiError('Coach indisponible pour le moment.', 503);
     }
 
     const prompt = `
@@ -71,40 +84,31 @@ Génère en JSON strict sans balises markdown :
 }
 `;
 
-    const aiRes = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openRouterKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://campus360b.site',
-        'X-Title': 'Campus 360 Defense Coach API',
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
-        max_tokens: 2500,
-      }),
+    const raw = await callLlm([{ role: 'user', content: prompt }], {
+      temperature: 0.3,
+      maxTokens: 2500,
+      title: 'Campus 360 Defense Coach API',
     });
 
-    if (aiRes.ok) {
-      const aiData = await aiRes.json();
-      const raw = aiData.choices?.[0]?.message?.content?.trim() || '';
+    if (raw) {
       const cleaned = raw.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
       try {
         const parsedJson = JSON.parse(cleaned);
-        return NextResponse.json({ success: true, coaching: parsedJson });
+        return withCors(NextResponse.json({ success: true, coaching: parsedJson }), request);
       } catch {
         // Fallback si formatage invalide
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      coaching: getStaticCoaching(title, field, company, level),
-    });
+    return withCors(
+      NextResponse.json({
+        success: true,
+        coaching: getStaticCoaching(title, field, company, level),
+      }),
+      request,
+    );
   } catch (error) {
-    return mobileErrorResponse(error);
+    return withCors(mobileErrorResponse(error, request), request);
   }
 }
 
@@ -120,42 +124,55 @@ function getStaticCoaching(title: string, field: string, company?: string, level
       },
       {
         slide_number: 2,
-        title: 'Problématique & Objectifs',
+        title: 'Problématique & Contexte',
         timing_minutes: 2.5,
-        bullet_points: ['Contexte initial', 'Problématique centrale', 'Objectifs du projet'],
-        speaker_notes: 'La problématique essentielle à laquelle répond ce projet réside dans...',
+        bullet_points: ['Contexte organisationnel', 'Problème identifié', 'Objectif fixé'],
+        speaker_notes: "Le problème central de mon intervention réside dans l'optimisation des processus...",
       },
       {
         slide_number: 3,
-        title: 'Solution & Résultats Mesurables',
-        timing_minutes: 5.0,
-        bullet_points: ['Architecture retenue', 'Déploiement et tests', 'Gains concrets'],
-        speaker_notes: 'Sur le plan technique et opérationnel, nous avons mis en œuvre...',
+        title: 'Méthodologie & Travail Réalisé',
+        timing_minutes: 3.5,
+        bullet_points: ['Démarche adoptée', 'Outils & technologies', 'Livrables'],
+        speaker_notes: 'Pour répondre à ce défi, la méthodologie mise en place comprend trois phases clés...',
       },
       {
         slide_number: 4,
-        title: 'Conclusion & Perspectives',
+        title: 'Résultats & Impact',
         timing_minutes: 2.0,
-        bullet_points: ['Bilan des compétences', 'Limites identifiées', 'Perspectives d avenir'],
-        speaker_notes: 'En conclusion, ce stage m a permis de confronter les acquis théoriques aux réalités du terrain...',
+        bullet_points: ['Résultats mesurables', 'Bénéfices entreprise', 'Limites'],
+        speaker_notes: "Les résultats obtenus attestent de l'efficacité de la solution...",
+      },
+      {
+        slide_number: 5,
+        title: 'Conclusion & Perspectives',
+        timing_minutes: 1.5,
+        bullet_points: ['Apports professionnels', 'Perspectives d’évolution', 'Remerciements'],
+        speaker_notes: "Ce stage a consolidé mes compétences techniques et humaines. Je vous remercie pour votre attention et suis prêt pour vos questions.",
       },
     ],
     jury_simulation: [
       {
-        question: 'Comment avez-vous validé la fiabilité de votre méthodologie face aux contraintes du terrain ?',
-        trap_context: 'Le jury veut évaluer votre sens critique et votre rigueur scientifique.',
-        recommended_answer: 'Nous avons mis en place une phase pilote avec des jeux de données réels et un retour utilisateur continu...',
+        question: "Quelle a été votre valeur ajoutée personnelle réelle dans ce projet, par rapport au travail de l'équipe ?",
+        trap_context: "Le jury vérifie que l'étudiant n'a pas simplement regardé ou cosigné le travail d'un tuteur.",
+        recommended_answer: "J'ai personnellement pris en charge la phase d'analyse des besoins et l'implémentation du module central. Mon tuteur assurait la validation de l'architecture, mais le code et les tests étaient sous ma responsabilité directe.",
       },
       {
-        question: 'Quelles sont les limites majeures de votre travail que vous corrigeriez avec plus de temps ?',
-        trap_context: 'Teste votre honnêteté intellectuelle et votre capacité de recul.',
-        recommended_answer: 'Avec davantage de temps, nous aurions approfondi le volet scalabilité et automatisation de...',
+        question: "Si vous deviez recommencer ce projet aujourd'hui avec votre recul, que feriez-vous différemment ?",
+        trap_context: 'Le jury teste la maturité réflexive et la capacité à reconnaître ses erreurs avec lucidité.',
+        recommended_answer: "J'anticiperais davantage la phase de recueil des données en amont. Nous avons perdu une semaine sur l'accès aux environnements, ce qu'une préparation plus rigoureuse aurait évité.",
+      },
+      {
+        question: "Quelles limites techniques avez-vous rencontrées et comment les justifiez-vous ?",
+        trap_context: 'Le jury évalue votre maîtrise des contraintes du monde réel.',
+        recommended_answer: "La contrainte majeure était le temps et la compatibilité avec l'infrastructure existante. J'ai dû faire un compromis entre exhaustivité et stabilité pour garantir la mise en production.",
       },
     ],
     defense_tips: [
-      'Respirez calmement avant d entrer en salle et posez votre voix.',
-      'Maintenez un contact visuel équilibré entre tous les membres du jury.',
-      'Chronométrez votre discours pour terminer 1 minute avant le temps imparti.',
+      'Regardez tous les membres du jury, pas seulement le président.',
+      'Ne lisez jamais vos diapositives : elles illustrent, vous expliquez.',
+      'En cas de question déstabilisante, marquez 2 secondes de silence avant de répondre posément.',
+      'Préparez 2 diapositives de réserve (annexes) avec des détails techniques approfondis.',
     ],
   };
 }

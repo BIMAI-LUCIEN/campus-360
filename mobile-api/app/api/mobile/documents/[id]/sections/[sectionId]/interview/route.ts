@@ -1,3 +1,4 @@
+import { enforceAiQuota } from '@/lib/ai-quota';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const access = await requireMobileUser(request);
     if (access.response || !access.user) return withCors(access.response!, request);
     const userId = access.user.id;
-    await enforceRateLimit(request, { bucket: 'section-interview-draft', max: 20, windowMs: 10 * 60_000, userId });
+    await enforceAiQuota(request, { userId, route: 'section-interview-draft' });
 
     const parsed = draftSchema.safeParse(await request.json().catch(() => ({})));
     if (!parsed.success) {

@@ -1,3 +1,4 @@
+import { enforceAiQuota } from '@/lib/ai-quota';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -50,6 +51,8 @@ export async function POST(request: NextRequest) {
   try {
     const access = await requireMobileUser(request);
     if (access.response || !access.user) return withCors(access.response!, request);
+
+    await enforceAiQuota(request, { userId: access.user.id, route: 'onboard-chat' });
 
     const body = await request.json().catch(() => ({}));
     const parsed = chatSchema.safeParse(body);

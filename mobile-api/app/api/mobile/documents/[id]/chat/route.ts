@@ -1,3 +1,4 @@
+import { enforceAiQuota } from '@/lib/ai-quota';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     if (access.response || !access.user) return withCors(access.response!, request);
     const userId = access.user.id;
 
-    await enforceRateLimit(request, { bucket: 'document-chat', max: 40, windowMs: 10 * 60_000, userId });
+    await enforceAiQuota(request, { userId, route: 'document-chat' });
 
     const { id } = await context.params;
     const parsed = chatSchema.safeParse(await request.json().catch(() => ({})));

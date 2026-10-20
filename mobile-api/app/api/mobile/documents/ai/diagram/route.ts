@@ -1,3 +1,4 @@
+import { enforceAiQuota } from '@/lib/ai-quota';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
@@ -31,6 +32,8 @@ export async function POST(request: NextRequest) {
   try {
     const access = await requireMobileUser(request);
     if (access.response || !access.user) return withCors(access.response!, request);
+
+    await enforceAiQuota(request, { userId: access.user.id, route: 'diagram' });
 
     const body = await request.json().catch(() => ({}));
     const parsed = diagramSchema.safeParse(body);

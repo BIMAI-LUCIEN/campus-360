@@ -1,3 +1,4 @@
+import { enforceAiQuota } from '@/lib/ai-quota';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -56,18 +57,7 @@ export async function POST(request: NextRequest) {
     if (access.response || !access.user) return withCors(access.response!, request);
     const userId = access.user.id;
 
-    try {
-      await enforceRateLimit(request, {
-        bucket: 'ai-pdf-chat',
-        max: 60,
-        windowMs: 60_000,
-        userId,
-      });
-    } catch (error) {
-      const response = rateLimitFailedResponse(error);
-      if (response) return withCors(response, request);
-      throw error;
-    }
+    await enforceAiQuota(request, { userId, route: 'ai-pdf-chat' });
 
     const raw = (await request.json().catch(() => ({}))) as unknown;
     const parsed = bodySchema.safeParse(raw);

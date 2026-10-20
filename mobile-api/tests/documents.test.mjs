@@ -45,9 +45,9 @@ if (fs.existsSync(envPath)) {
     });
 }
 
-const BASE_URL = process.env.BETTER_AUTH_URL || 'http://localhost:3002';
-const TEST_EMAIL = process.env.TEST_EMAIL || '';
-const TEST_PASSWORD = process.env.TEST_PASSWORD || '';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3002';
+const TEST_EMAIL = process.env.E2E_EMAIL || process.env.TEST_EMAIL || '';
+const TEST_PASSWORD = process.env.E2E_PASSWORD || process.env.TEST_PASSWORD || '';
 
 // ── Simple fetch wrapper that keeps cookies ───────────────────────────────────
 class Session {
@@ -63,7 +63,7 @@ class Session {
       headers['Cookie'] = this.cookies.join('; ');
     }
     // Expo-origin so Better Auth doesn't reject the request from Node.js client
-    headers['Expo-Origin'] = 'campus-360://';
+    headers['Expo-Origin'] = 'campus360://';
 
     const res = await fetch(url, { ...init, headers });
     const setCookies = res.headers.get('set-cookie');

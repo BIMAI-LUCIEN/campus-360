@@ -419,53 +419,10 @@ export async function reorderDocumentSections(
 
 // ── Sources & Reference Documents (PDF, Photos, Notes) ─────────────────────
 
-let _auxiliaryTablesInitialized = false;
-
-export async function ensureDocumentAuxiliaryTables(): Promise<void> {
-  if (_auxiliaryTablesInitialized) return;
-  try {
-    await databasePool.query(`
-      CREATE TABLE IF NOT EXISTS public.app_document_sources (
-        id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-        document_id    UUID NOT NULL REFERENCES public.app_documents(id) ON DELETE CASCADE,
-        user_id        UUID NOT NULL REFERENCES public.app_users(id) ON DELETE CASCADE,
-        file_name      TEXT NOT NULL,
-        file_type      TEXT NOT NULL DEFAULT 'pdf',
-        file_size      BIGINT DEFAULT 0,
-        file_url       TEXT NOT NULL,
-        extracted_text TEXT DEFAULT '',
-        summary        TEXT DEFAULT '',
-        created_at     TIMESTAMPTZ DEFAULT now(),
-        updated_at     TIMESTAMPTZ DEFAULT now()
-      );
-
-      CREATE TABLE IF NOT EXISTS public.app_document_images (
-        id                   UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-        document_id          UUID NOT NULL REFERENCES public.app_documents(id) ON DELETE CASCADE,
-        user_id              UUID NOT NULL REFERENCES public.app_users(id) ON DELETE CASCADE,
-        file_name            TEXT NOT NULL,
-        image_url            TEXT NOT NULL,
-        ai_description       TEXT DEFAULT '',
-        suggested_caption    TEXT DEFAULT '',
-        suggested_section_id UUID REFERENCES public.app_document_sections(id) ON DELETE SET NULL,
-        is_placed            BOOLEAN DEFAULT FALSE,
-        created_at           TIMESTAMPTZ DEFAULT now()
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_doc_sources_doc_id ON public.app_document_sources(document_id);
-      CREATE INDEX IF NOT EXISTS idx_doc_images_doc_id ON public.app_document_images(document_id);
-    `);
-    _auxiliaryTablesInitialized = true;
-  } catch (error) {
-    console.warn('[Doc DB] Table creation notice:', error);
-  }
-}
 
 // ── Images & AI Figure Management ──────────────────────────────────────────
 
-export async function getDocumentImages(documentId: string, userId: string): Promise<DocumentImage[]> {
-  await ensureDocumentAuxiliaryTables();
-  const res = await databasePool.query(
+export async function getDocumentImages(documentId: string, userId: string): Promise<DocumentImage[]> {  const res = await databasePool.query(
     `SELECT * FROM public.app_document_images
      WHERE document_id = $1 AND user_id = $2
      ORDER BY created_at DESC`,
@@ -482,9 +439,7 @@ export async function addDocumentImage(data: {
   aiDescription?: string;
   suggestedCaption?: string;
   suggestedSectionId?: string | null;
-}): Promise<DocumentImage> {
-  await ensureDocumentAuxiliaryTables();
-  const res = await databasePool.query(
+}): Promise<DocumentImage> {  const res = await databasePool.query(
     `INSERT INTO public.app_document_images (
        document_id, user_id, file_name, image_url, ai_description, suggested_caption, suggested_section_id, file_id
      )
@@ -509,9 +464,7 @@ export async function updateDocumentImage(
   documentId: string,
   userId: string,
   patch: { isPlaced?: boolean; suggestedCaption?: string }
-): Promise<DocumentImage | null> {
-  await ensureDocumentAuxiliaryTables();
-  const fields: string[] = [];
+): Promise<DocumentImage | null> {  const fields: string[] = [];
   const params: any[] = [imageId, documentId, userId];
   let pIdx = 4;
 
@@ -538,9 +491,7 @@ export async function updateDocumentImage(
   return res.rows[0] || null;
 }
 
-export async function deleteDocumentImage(imageId: string, documentId: string, userId: string): Promise<boolean> {
-  await ensureDocumentAuxiliaryTables();
-  const res = await databasePool.query(
+export async function deleteDocumentImage(imageId: string, documentId: string, userId: string): Promise<boolean> {  const res = await databasePool.query(
     `DELETE FROM public.app_document_images
      WHERE id = $1 AND document_id = $2 AND user_id = $3
      RETURNING id`,
