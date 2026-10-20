@@ -1584,35 +1584,25 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 
 
-  - Dépôt de déploiement : `/opt/campus-360`, sur `main` au commit `5f6fda8` (**pas encore mis à jour** vers `fcd08ed`).
+  - Dépôt de déploiement : `/opt/campus-360`, sur `main` au tag `v1.0.0` (commit `1c82286`).
 
-
-
-- **Environnements :** `mobile-api/.env.local` et `recruiter-web/.env.production` sur le VPS (sauvegardes `.bak-20261015-185141`). Noms vérifiés : `RESEND_API_KEY` présent, `FREE_LAUNCH_MODE`, `FREE_LAUNCH_UNTIL`, `TRUST_PROXY` ajoutés le 2026-10-15.
-
-
+- **Environnements :** `mobile-api/.env.local` et `recruiter-web/.env.production` sur le VPS. Variables vérifiées et présentes : `RESEND_API_KEY`, `OPENROUTER_API_KEY`, `FREE_LAUNCH_MODE=true`, `FREE_LAUNCH_UNTIL`, `TRUST_PROXY=true`, `FILES_SIGNING_SECRET`, `UPLOAD_ROOT=/var/lib/campus360/uploads`, `FILES_PUBLIC_URL=https://files.campus360b.site`, `PAYMENTS_ENABLED=false`.
 
 - **Application mobile :** Expo OTA via EAS Updates (branche `production`).
 
+- **Dernière release (2026-10-20, v1.0.0, commit 1c82286) :**
 
+  - PM2 : `campus360-mobile-api` (online, port 3002), `campus360-recruiter-web` (online, port 3001), `campus360-landing-site` (online, port 3000). RAM stable (37-43% global).
 
-- **Dernière vérification production (2026-10-20, /test-and-verify) :**
-
-
-
-  - PM2 : `campus360-mobile-api` (online), `campus360-recruiter-web` (online), `campus360-landing-site` (online). Uptime > 33h, RAM stable (39% global).
-
-
+  - Migrations base de données : 12 migrations versionnées appliquées (0000 à 0015).
 
   - `https://api.campus360b.site/api/health` : 🟢 HTTP 200 `{"status":"ok","db":"connected"}`.
 
-
-
   - `https://campus360b.site` : 🟢 HTTP 200 OK.
 
-
-
   - `https://admin.campus360b.site` : 🟢 HTTP 200 OK.
+
+  - Retour arrière : `bash scripts/deploy-vps.sh --rollback` ou checkout commit précédent.
 
 
 
@@ -1674,11 +1664,11 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 ## 13. Journal des mises à jour
 
-
-
-
-
-
+- **2026-10-20** `/deploy-and-push` & `/vps-deploy` — **Livraison release V1 en production (tag `v1.0.0`, commit `1c82286`).**
+  - 10 commits conventionnels atomiques poussés sur `origin/main` avec tag annoté `v1.0.0`.
+  - 12 migrations versionnées appliquées avec succès (`0000_baseline` à `0015_apply_method_link`).
+  - VPS synchronisé, services Next.js compilés et redémarrés sous PM2 (`campus360-landing-site`, `campus360-mobile-api`, `campus360-recruiter-web`).
+  - Validation de santé publique : `https://api.campus360b.site/api/health` 🟢 HTTP 200 `connected`, vitrine et portail admin 🟢 HTTP 200.
 
 - **2026-10-15 19:30** `/code-analyzer-context` — Première cartographie (Mode 1). Commit `651e296`.
 

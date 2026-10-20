@@ -2721,6 +2721,8 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
 ---
 
 ## Journal d'exécution
+**[2026-10-20] Livraison release V1 v1.0.0 (commit 1c82286)** (deploy-and-push / vps-deploy) — commits : cbce205..1c82286 (10 commits atomiques, release figée et taguée v1.0.0) — services : campus360-mobile-api (port 3002), campus360-recruiter-web (3001), campus360-landing-site (3000) — base : 12 migrations versionnées appliquées (0000 à 0015) — health : https://api.campus360b.site/api/health (200 OK, db: connected), https://admin.campus360b.site (200 OK), https://campus360b.site (200 OK) — tâches livrées : Tâches 23.1 à 23.24, 25.1 à 25.17.
+
 **[2026-10-20] Tâche 23.13 validée** (execute) — fichiers : `mobile-api/lib/sanitize-html.ts`, `recruiter-web/lib/sanitize-html.ts`, `mobile-api/app/api/mobile/documents/{generate,ai,generate-full}/route.ts`, `recruiter-web/app/api/mobile/documents/{generate,ai,generate-full}/route.ts`, `mobile-api/tests/sanitize-images.test.mjs` — validation : grep `sanitizeHtmlFragment|buildCvPrompt|buildLettrePrompt` vide (0 ligne), sanitize-images 7/7 pass, npm test 159 pass / 0 fail / 14 skipped, tsc ×3 code 0, lint:colors 191/191 — sécurité : un seul assainisseur strict anti-XSS et anti-style dangereux (`url(`, `position`) pour toutes les générations IA, code markdown ````html` proprement extrait via `stripCodeFence`.
 
 
