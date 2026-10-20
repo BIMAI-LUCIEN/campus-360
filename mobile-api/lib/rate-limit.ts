@@ -40,33 +40,12 @@ export class RateLimitError extends Error {
   }
 }
 
-// Ensure the table exists. Idempotent — uses IF NOT EXISTS so this is safe
-// to call on every cold start. We also keep the schema minimal.
-const ensureTable = async () => {
-  await databasePool.query(`
-    create table if not exists public.app_rate_limits (
-      bucket text not null,
-      key text not null,
-      window_started_at timestamptz not null default now(),
-      count integer not null default 1,
-      primary key (bucket, key)
-    );
-    create index if not exists app_rate_limits_window_idx
-      on public.app_rate_limits (window_started_at);
-  `);
-};
-
-let tableEnsured = false;
 
 export const rateLimit = async (
   request: NextRequest,
   options: RateLimitOptions,
 ): Promise<void> => {
   try {
-    if (!tableEnsured) {
-      await ensureTable().catch(() => undefined);
-      tableEnsured = true;
-    }
 
     const key = options.key ?? getClientIp(request);
     const { bucket, max, windowMs } = options;

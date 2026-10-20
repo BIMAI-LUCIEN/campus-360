@@ -4,6 +4,10 @@ import { z } from 'zod';
 
 import { databasePool } from '@/lib/database';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
+import { ACCOUNT_DELETION_CONFIRM, deleteAccount } from '@/lib/account-deletion';
+import { getInstanceName, logoutInstance } from '@/lib/evolution-api';
+import { canStoreFiles, deleteStoredFile } from '@/lib/file-storage';
+import { rateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -175,6 +179,71 @@ export async function PATCH(request: NextRequest) {
       }),
       request,
     );
+  } catch (error) {
+    return withCors(mobileErrorResponse(error, request), request);
+  }
+}
+
+
+const deleteAccountSchema = z.object({
+  confirm: z.literal(ACCOUNT_DELETION_CONFIRM),
+}).strict();
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const access = await requireMobileUser(request);
+    if (access.response || !access.user) return withCors(access.response!, request);
+    const user = access.user;
+
+    await rateLimit(request, {
+      bucket: 'account-delete',
+      max: 3,
+      windowMs: 60 * 60_000,
+      key: user.id,
+      failMode: 'closed',
+    });
+
+    const contentLength = Number(request.headers.get('content-length') ?? 0);
+    if (contentLength > 1024) {
+      return withCors(NextResponse.json({ error: 'Requete trop volumineuse.' }, { status: 413 }), request);
+    }
+
+    const body = await request.json().catch(() => null);
+    const parsed = deleteAccountSchema.safeParse(body);
+    if (!parsed.success) {
+      return withCors(
+        NextResponse.json({ error: 'Tape SUPPRIMER pour confirmer la suppression.' }, { status: 400 }),
+        request,
+      );
+    }
+
+    const result = await deleteAccount(
+      {
+        appUserId: user.id,
+        betterAuthUserId: user.betterAuthUserId,
+        email: user.email,
+      },
+      {
+        pool: databasePool,
+        logoutWhatsApp: async () => {
+          const phone = user.whatsappPhone || user.phone;
+          if (!phone) return false;
+          return logoutInstance(getInstanceName(phone));
+        },
+        deleteFile: deleteStoredFile,
+        canStoreFiles,
+      },
+    );
+
+    const res = NextResponse.json({ success: true, whatsapp: result.whatsapp });
+    res.cookies.set('better-auth.session_token', '', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      expires: new Date(0),
+    });
+    return withCors(res, request);
   } catch (error) {
     return withCors(mobileErrorResponse(error, request), request);
   }

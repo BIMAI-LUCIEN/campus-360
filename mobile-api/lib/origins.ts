@@ -13,7 +13,7 @@ export const PRODUCTION_WEB_ORIGINS = [
 ];
 
 // Native app deep-link schemes (becomes campus360:// with task 23.17).
-export const APP_SCHEMES = ['campus-bordes://'];
+export const APP_SCHEMES = ['campus360://', 'campus-bordes://'];
 
 export const LOCAL_DEV_ORIGINS = [
   'http://localhost:3000',

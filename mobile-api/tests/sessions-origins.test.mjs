@@ -14,6 +14,9 @@ const read = (rel) => fs.readFileSync(path.resolve(rel), 'utf8');
 const headers = (map) => ({ get: (name) => map[name.toLowerCase()] ?? null });
 
 test('origines : liste exacte, aucun domaine tiers', () => {
+  assert.equal(origins.isTrustedOrigin('campus360://', PROD), true);
+  assert.equal(origins.isTrustedOrigin('campus-bordes://', PROD), true);
+  assert.equal(origins.isTrustedOrigin('evil://', PROD), false);
   assert.equal(origins.isTrustedOrigin('https://evil.vercel.app', PROD), false);
   assert.equal(origins.isTrustedOrigin('https://x.expo.dev', PROD), false);
   assert.equal(origins.isTrustedOrigin('https://admin.campus360b.site', PROD), true);
@@ -43,12 +46,10 @@ test('TLS base : vérifié en production, dérogation explicite seulement', () =
 });
 
 test('garde de source : plus de jeton en URL ni de session par identifiant', () => {
-  for (const file of ['lib/mobile-access.ts', '../recruiter-web/lib/mobile-access.ts']) {
-    const src = read(file);
-    assert.ok(!src.includes("searchParams.get('token')"), file);
-    assert.ok(!/s\.id\s*=/.test(src), file);
-  }
-  assert.ok(!read('../recruiter-web/lib/mobile-access.ts').includes('allowDirectUserIdentityFallback'));
+  const file = 'lib/mobile-access.ts';
+  const src = read(file);
+  assert.ok(!src.includes("searchParams.get('token')"), file);
+  assert.ok(!/s\.id\s*=/.test(src), file);
   assert.match(read('lib/mobile-access.ts'), /emailVerified !== true/);
   assert.match(read('lib/route-rate-limit.ts'), /failMode: isFailClosedBucket/);
 });

@@ -32,7 +32,7 @@ export function GET(request: NextRequest) {
   const tokenSafe = /^[A-Za-z0-9._\-]+$/.test(token) ? token : '';
   const errorSafe = /^[A-Za-z0-9._\- ]+$/.test(error) ? error : '';
 
-  let redirectUrl = 'campus-360://reset-password';
+  let redirectUrl = 'campus360://reset-password';
   if (tokenSafe) {
     redirectUrl += `?token=${encodeURIComponent(tokenSafe)}`;
   } else if (errorSafe) {

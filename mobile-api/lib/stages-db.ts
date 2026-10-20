@@ -8,7 +8,8 @@ export type StageStatus =
   | 'REVIEWING'
   | 'INTERVIEW'
   | 'ACCEPTED'
-  | 'REJECTED';
+  | 'REJECTED'
+  | 'WITHDRAWN';
 
 type StageStudentInput = {
   id: string;
@@ -686,68 +687,50 @@ export const updateApplicationDispatchStatus = async (
 };
 
 /**
- * Updates WhatsApp connection status for a student in Supabase PostgreSQL.
+ * Updates WhatsApp connection status for a student by ID in Supabase PostgreSQL.
+ * Errors are propagated to caller.
  */
-export const updateStageStudentWhatsAppStatus = async (
-  phoneOrInstance: string,
+export const setStageStudentWhatsAppStatusById = async (
+  studentId: string,
   instanceName: string,
   connected: boolean,
 ): Promise<void> => {
-  const digits = (phoneOrInstance || '').replace(/\D/g, '');
-  const phone9 = digits.length === 12 && digits.startsWith('237') ? digits.slice(3) : digits;
-  const phone12 = digits.length === 9 ? '237' + digits : digits;
-
-  try {
-    await databasePool.query(
-      `UPDATE public.stage_students
-       SET whatsapp_connected = $1,
-           whatsapp_instance = $2,
-           whatsapp_linked_at = (CASE WHEN $1 THEN now() ELSE NULL END)
-       WHERE phone_whatsapp = $3
-          OR phone_whatsapp = $4
-          OR whatsapp_instance = $2`,
-      [connected, instanceName, phone9, phone12],
-    );
-  } catch (err) {
-    console.warn('[stages-db] Failed to update student WhatsApp status in DB:', err);
-  }
+  await databasePool.query(
+    `UPDATE public.stage_students
+     SET whatsapp_connected = $3,
+         whatsapp_instance = $2,
+         whatsapp_linked_at = (CASE WHEN $3 THEN now() ELSE whatsapp_linked_at END)
+     WHERE id = $1`,
+    [studentId, instanceName, connected],
+  );
 };
 
 /**
- * Queries WhatsApp connection status for a student from Supabase PostgreSQL.
+ * Queries WhatsApp connection status for a student by ID from Supabase PostgreSQL.
+ * Errors are propagated to caller.
  */
-export const getStageStudentWhatsAppStatus = async (
-  phoneOrInstance: string,
+export const getStageStudentWhatsAppStatusById = async (
+  studentId: string,
 ): Promise<{ connected: boolean; instanceName?: string; linkedAt?: string | null } | null> => {
-  const digits = (phoneOrInstance || '').replace(/\D/g, '');
-  const phone9 = digits.length === 12 && digits.startsWith('237') ? digits.slice(3) : digits;
-  const phone12 = digits.length === 9 ? '237' + digits : digits;
+  const res = await databasePool.query<{
+    whatsapp_connected: boolean;
+    whatsapp_instance: string | null;
+    whatsapp_linked_at: string | null;
+  }>(
+    `SELECT whatsapp_connected, whatsapp_instance, whatsapp_linked_at
+     FROM public.stage_students
+     WHERE id = $1
+     LIMIT 1`,
+    [studentId],
+  );
 
-  try {
-    const res = await databasePool.query<{
-      whatsapp_connected: boolean;
-      whatsapp_instance: string | null;
-      whatsapp_linked_at: string | null;
-    }>(
-      `SELECT whatsapp_connected, whatsapp_instance, whatsapp_linked_at
-       FROM public.stage_students
-       WHERE phone_whatsapp = $1
-          OR phone_whatsapp = $2
-          OR whatsapp_instance = $3
-       LIMIT 1`,
-      [phone9, phone12, phoneOrInstance],
-    );
-
-    if (res.rows.length > 0) {
-      const row = res.rows[0];
-      return {
-        connected: Boolean(row.whatsapp_connected),
-        instanceName: row.whatsapp_instance || undefined,
-        linkedAt: row.whatsapp_linked_at ? new Date(row.whatsapp_linked_at).toISOString() : null,
-      };
-    }
-  } catch (err) {
-    console.warn('[stages-db] Failed to query student WhatsApp status from DB:', err);
+  if (res.rows.length > 0) {
+    const row = res.rows[0];
+    return {
+      connected: Boolean(row.whatsapp_connected),
+      instanceName: row.whatsapp_instance || undefined,
+      linkedAt: row.whatsapp_linked_at ? new Date(row.whatsapp_linked_at).toISOString() : null,
+    };
   }
   return null;
 };

@@ -1,3 +1,5 @@
+import { MobileApiError } from './mobile-error';
+export { MobileApiError };
 import { NextRequest, NextResponse } from 'next/server';
 import { isDatabaseUnavailable } from './db-errors';
 import { resolveStartingCoins } from './free-launch';
@@ -271,14 +273,6 @@ export const requireMobileUser = async (
   return { user, response: null };
 };
 
-export class MobileApiError extends Error {
-  constructor(
-    message: string,
-    readonly status = 400,
-  ) {
-    super(message);
-  }
-}
 
 export const withCors = (
   response: NextResponse,

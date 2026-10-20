@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { databasePool } from '@/lib/database';
-import { mobileErrorResponse, requireMobileUser, MobileApiError } from '@/lib/mobile-access';
+import { mobileErrorResponse, requireMobileUser, MobileApiError, withCors } from '@/lib/mobile-access';
+import { getStageJob } from '@/lib/stages-db';
 
 export const runtime = 'nodejs';
 
@@ -9,6 +10,8 @@ const directReachSchema = z.object({
   jobId: z.string().trim().uuid(),
   customNotes: z.string().trim().max(1000).optional(),
 });
+
+export const OPTIONS = (request: NextRequest) => withCors(new NextResponse(null, { status: 204 }), request);
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,26 +27,11 @@ export async function POST(request: NextRequest) {
 
     const { jobId, customNotes } = parsed.data;
 
-    // 1. Get job and company details
-    const { rows: jobRows } = await databasePool.query<{
-      job_id: string;
-      title: string;
-      location: string;
-      company_name: string;
-      contact_email: string;
-      contact_whatsapp: string | null;
-    }>(
-      `select j.id as job_id, j.title, j.location, c.name as company_name, c.contact_email, c.contact_whatsapp
-       from public.stage_jobs j
-       join public.stage_companies c on j.company_id = c.id
-       where j.id = $1`,
-      [jobId]
-    );
-
-    if (!jobRows.length) {
-      throw new MobileApiError('Offre introuvable.', 404);
+    // 1. Get job and company details (must be published, unexpired, non-suspended)
+    const job = await getStageJob(jobId);
+    if (!job) {
+      throw new MobileApiError('Offre de stage indisponible.', 404);
     }
-    const job = jobRows[0];
 
     // 2. Ensure or fetch student profile
     const { rows: studentRows } = await databasePool.query<{ id: string }>(
@@ -78,46 +66,43 @@ export async function POST(request: NextRequest) {
     const studentName = user.name || 'Candidat Campus 360';
     const emailSubject = encodeURIComponent(`Candidature Stage : ${job.title} — ${studentName}`);
     const emailBody = encodeURIComponent(
-      `Madame, Monsieur le Responsable RH de ${job.company_name},\n\n` +
-      `Je vous soumets ma candidature pour le poste de « ${job.title} » à ${job.location}.\n` +
+      `Madame, Monsieur le Responsable RH de ${job.company.name},\n\n` +
+      `Je vous soumets ma candidature pour le poste de « ${job.title} » à ${job.location || 'Douala / Yaoundé'}.\n` +
       `Mon profil académique et mes compétences sont vérifiés sur Campus 360.\n\n` +
       `Bien cordialement,\n${studentName}\nEmail : ${user.email}`
     );
 
-    const mailtoUrl = `mailto:${job.contact_email}?subject=${emailSubject}&body=${emailBody}`;
+    const mailtoUrl = job.company.contactEmail
+      ? `mailto:${job.company.contactEmail}?subject=${emailSubject}&body=${emailBody}`
+      : null;
 
     let whatsappUrl: string | null = null;
-    if (job.contact_whatsapp) {
-      let cleanPhone = job.contact_whatsapp.replace(/[^0-9+]/g, '');
+    if (job.company.contactWhatsapp) {
+      let cleanPhone = job.company.contactWhatsapp.replace(/[^0-9+]/g, '');
       if (cleanPhone.startsWith('00237')) cleanPhone = cleanPhone.slice(2);
       if (cleanPhone.startsWith('+')) cleanPhone = cleanPhone.slice(1);
       if (cleanPhone.startsWith('6') && cleanPhone.length === 9) cleanPhone = '237' + cleanPhone;
 
       const wpText = encodeURIComponent(
-        `Bonjour ${job.company_name} 👋\n\n` +
-        `Je suis ${studentName}. Je postule à votre offre de stage : *${job.title}* (${job.location}).\n` +
+        `Bonjour ${job.company.name} 👋\n\n` +
+        `Je suis ${studentName}. Je postule à votre offre de stage : *${job.title}* (${job.location || 'Cameroun'}).\n` +
         `Mon profil vérifié est disponible sur Campus 360.\n` +
         `Disponible pour échanger ! Merci.`
       );
       whatsappUrl = `https://wa.me/${cleanPhone}?text=${wpText}`;
     }
 
-    return NextResponse.json({
-      success: true,
-      job: {
-        title: job.title,
-        company: job.company_name,
-        location: job.location,
-      },
-      channels: {
+    return withCors(
+      NextResponse.json({
+        success: true,
+        jobId,
+        companyName: job.company.name,
         mailtoUrl,
         whatsappUrl,
-        contactEmail: job.contact_email,
-        contactWhatsapp: job.contact_whatsapp,
-      },
-      message: 'Candidature enregistrée et liens d acheminement générés avec succès.',
-    });
+      }),
+      request
+    );
   } catch (error) {
-    return mobileErrorResponse(error);
+    return mobileErrorResponse(error, request);
   }
 }

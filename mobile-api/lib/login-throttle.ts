@@ -33,20 +33,6 @@ type LoginAttemptRow = {
 const hashKey = (email: string, ip: string) =>
   createHash('sha256').update(`${email.toLowerCase()}|${ip}`).digest('hex');
 
-const ensureTable = async () => {
-  await databasePool.query(`
-    create table if not exists public.app_login_attempts (
-      key text primary key,
-      attempts integer not null default 0,
-      first_attempt_at timestamptz not null default now(),
-      last_attempt_at timestamptz not null default now()
-    );
-    create index if not exists app_login_attempts_last_idx
-      on public.app_login_attempts (last_attempt_at);
-  `);
-};
-
-let tableEnsured = false;
 
 const keyFromRequest = (request: Request, email: string): { key: string; ip: string } => {
   const ip = clientIpFrom(request.headers, process.env);
@@ -54,10 +40,6 @@ const keyFromRequest = (request: Request, email: string): { key: string; ip: str
 };
 
 export const checkLoginThrottle = async (request: Request, email: string) => {
-  if (!tableEnsured) {
-    await ensureTable();
-    tableEnsured = true;
-  }
 
   const { key } = keyFromRequest(request, email);
 
@@ -88,10 +70,6 @@ export const checkLoginThrottle = async (request: Request, email: string) => {
 };
 
 export const recordLoginFailure = async (request: Request, email: string) => {
-  if (!tableEnsured) {
-    await ensureTable();
-    tableEnsured = true;
-  }
 
   const { key } = keyFromRequest(request, email);
 
@@ -115,10 +93,6 @@ export const recordLoginFailure = async (request: Request, email: string) => {
 };
 
 export const recordLoginSuccess = async (request: Request, email: string) => {
-  if (!tableEnsured) {
-    await ensureTable();
-    tableEnsured = true;
-  }
   const { key } = keyFromRequest(request, email);
   await databasePool.query(
     `delete from public.app_login_attempts where key = $1`,
