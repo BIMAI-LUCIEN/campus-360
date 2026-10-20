@@ -3,6 +3,7 @@ import {
   Image,
   Platform,
   Pressable,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,8 +20,11 @@ import {
   LogOut,
   MessageSquare,
   RefreshCw,
+  Scale,
   Shield,
+  ShieldCheck,
   Sparkles,
+  Trash2,
   TrendingUp,
   type LucideIcon,
 } from 'lucide-react-native';
@@ -37,6 +41,8 @@ import {
   stitchSpacing,
   stitchTypography,
 } from '../../theme/stitch';
+import { legalLinks } from '../../config/legalLinks';
+import { publicEnv } from '../../config/env';
 import { WhatsAppPairingModal } from '../../features/whatsapp/WhatsAppPairingModal';
 import { getStoredWhatsAppStatus } from '../../features/whatsapp/whatsappService';
 
@@ -64,6 +70,7 @@ interface ProfileScreenProps {
   onApplications?: () => void;
   onSignInPress?: () => void;
   onSignOut: () => void;
+  onDeleteAccount: () => void;
 }
 
 interface MenuRow {
@@ -140,6 +147,7 @@ export function ProfileScreen({
   onApplications,
   onSignInPress,
   onSignOut,
+  onDeleteAccount,
 }: ProfileScreenProps) {
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = React.useState(false);
   const [isWhatsAppConnected, setIsWhatsAppConnected] = React.useState(false);
@@ -283,6 +291,49 @@ export function ProfileScreen({
       onPress: onSignOut,
       danger: true,
     },
+    {
+      key: 'delete-account',
+      label: 'Supprimer mon compte',
+      Icon: Trash2,
+      iconBg: stitchColors.errorBg,
+      iconColor: stitchColors.error,
+      onPress: onDeleteAccount,
+      danger: true,
+    },
+  ];
+
+  const links = legalLinks(publicEnv.landingUrl);
+  const legalRows: MenuRow[] = [
+    {
+      key: 'terms',
+      label: "Conditions d'utilisation",
+      Icon: FileText,
+      iconBg: 'rgba(100, 116, 139, 0.1)',
+      iconColor: stitchColors.inkMuted,
+      onPress: () => {
+        Linking.openURL(links.conditions).catch(() => {});
+      },
+    },
+    {
+      key: 'privacy',
+      label: 'Politique de confidentialité',
+      Icon: ShieldCheck,
+      iconBg: 'rgba(100, 116, 139, 0.1)',
+      iconColor: stitchColors.inkMuted,
+      onPress: () => {
+        Linking.openURL(links.privacy).catch(() => {});
+      },
+    },
+    {
+      key: 'legal-mentions',
+      label: 'Mentions légales',
+      Icon: Scale,
+      iconBg: 'rgba(100, 116, 139, 0.1)',
+      iconColor: stitchColors.inkMuted,
+      onPress: () => {
+        Linking.openURL(links.legal).catch(() => {});
+      },
+    },
   ];
 
   return (
@@ -401,6 +452,7 @@ export function ProfileScreen({
         <MenuCardGroup title="ACTIVITÉ & OUTILS" rows={activityRows} />
         <MenuCardGroup title="PARAMÈTRES & SÉCURITÉ" rows={settingsRows} />
         <MenuCardGroup title="COMPTE & ASSISTANCE" rows={accountRows} />
+        <MenuCardGroup title="INFORMATIONS LÉGALES" rows={legalRows} />
 
         {/* ── 5. Transactions Récentes ─────────────────────────────────── */}
         {transactions.length > 0 && (

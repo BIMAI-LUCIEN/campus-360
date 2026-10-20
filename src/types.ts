@@ -25,7 +25,8 @@ export type AppStatus =
   | 'REVIEWING'
   | 'INTERVIEW'
   | 'ACCEPTED'
-  | 'REJECTED';
+  | 'REJECTED'
+  | 'WITHDRAWN';
 
 export type StageCompany = {
   id: string;
@@ -123,6 +124,8 @@ export type CampusDocument = {
   downloads: number;
   uploaderName: string;
   status: 'draft' | 'analyzing' | 'needs_review' | 'published' | 'archived';
+  kind?: 'cours' | 'ancien_sujet' | 'corrige' | 'rapport' | 'memoire' | 'autre';
+  alwaysFree?: boolean;
   commissionRate: number;
   createdAt: string;
   aiSummary?: string;

@@ -66,6 +66,7 @@ import { OnboardingScreen as IntroSliderScreen } from './features/onboarding/Onb
 import { OnboardingScreen } from './ui/screens/OnboardingScreen';
 import type { ApplicationProfilePatch } from './features/stages/AiApplyModal';
 import { FreePdfSelector } from './features/onboarding/FreePdfSelector';
+import { DeleteAccountModal } from './features/account/DeleteAccountModal';
 import { Toast, type ToastMessage, type ToastVariant } from './ui/Toast';
 import { PdfStudentSection } from './features/pdf/PdfStudentSection';
 import {
@@ -277,6 +278,7 @@ export function AppShell() {
   const [notificationsSettingsVisible, setNotificationsSettingsVisible] = React.useState(false);
   const [editingDocumentId, setEditingDocumentId] = React.useState<string | null>(null);
   const [securitySettingsVisible, setSecuritySettingsVisible] = React.useState(false);
+  const [deleteAccountVisible, setDeleteAccountVisible] = React.useState(false);
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
@@ -1318,6 +1320,7 @@ export function AppShell() {
                     setAuthVisible(true);
                   }}
                   onSignOut={signOutStudent}
+                  onDeleteAccount={() => setDeleteAccountVisible(true)}
                 />
               )}
 
@@ -1634,6 +1637,13 @@ export function AppShell() {
             </Pressable>
           </Pressable>
         </Modal>
+
+        {/* Delete Account Modal */}
+        <DeleteAccountModal
+          visible={deleteAccountVisible}
+          onClose={() => setDeleteAccountVisible(false)}
+          onAccountDeleted={signOutStudent}
+        />
 
         {/* Free Pdf Selector */}
         <FreePdfSelector

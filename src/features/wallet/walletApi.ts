@@ -58,7 +58,7 @@ export const PAYMENT_PACKS: PaymentPack[] = [
   },
 ];
 
-export type MobileMoneyOperator = 'mtn' | 'orange' | 'wave';
+export type MobileMoneyOperator = 'mtn' | 'orange';
 
 export interface InitiatePaymentRequest {
   packType: WalletRechargePackId | string;

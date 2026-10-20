@@ -2,7 +2,7 @@
   "expo": {
     "name": "Campus 360",
     "slug": "campus-360",
-    "scheme": "campus-bordes",
+    "scheme": "campus360",
     "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -40,9 +40,16 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Campus 360 accède à vos photos pour les insérer dans vos documents.",
+          "photosPermission": "Campus 360 acc\u00e8de \u00e0 vos photos pour les ins\u00e9rer dans vos documents.",
           "cameraPermission": false,
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#7C4DFF"
         }
       ]
     ],
@@ -59,6 +66,11 @@
       "url": "https://u.expo.dev/49ce85c3-c644-4a6c-a492-2596e5047c74",
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#7C4DFF"
     }
   }
 }

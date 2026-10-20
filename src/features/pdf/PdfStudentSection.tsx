@@ -1,7 +1,8 @@
+import { FREE_LABEL } from '../../config/launch';
 import * as WebBrowser from 'expo-web-browser';
 import { WebView } from 'react-native-webview';
 import { createElement, useEffect, useMemo, useState } from 'react';
-import { authWebBaseUrl } from '../auth/betterAuth';
+import { authWebBaseUrl, mobileApiBaseUrl } from '../auth/betterAuth';
 import {
   ActivityIndicator,
   Alert,
@@ -385,7 +386,7 @@ export function PdfStudentSection({
 
   const openPreview = async (document: CampusDocument) => {
     setReaderDocument(document);
-    setIsReaderPreview(document.price > 0 && !ownedDocumentIds.includes(document.id));
+    setIsReaderPreview((document.price > 0 && !document.alwaysFree) && !ownedDocumentIds.includes(document.id));
     setReaderUrl('');
     setReaderError('');
     setReaderLoading(true);
@@ -450,7 +451,7 @@ export function PdfStudentSection({
   };
 
   const openDocument = async (document: CampusDocument) => {
-    if (document.price === 0 || ownedDocumentIds.includes(document.id)) {
+    if (document.price === 0 || document.alwaysFree === true || ownedDocumentIds.includes(document.id)) {
       setReaderDocument(document);
       setIsReaderPreview(false);
       setReaderUrl('');
@@ -943,7 +944,7 @@ export function PdfStudentSection({
                   {/* Badges */}
                   <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: owned ? stitchColors.emerald : stitchColors.sienna, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
                     <Text style={{ color: stitchColors.paper, fontSize: 10, fontWeight: 'bold' }}>
-                      {owned ? 'Acquis' : `${formatCoins(document.price)} C`}
+                      {owned ? 'Acquis' : (document.price === 0 || document.alwaysFree ? FREE_LABEL : `${formatCoins(document.price)} C`)}
                     </Text>
                   </View>
                 </View>
@@ -1132,7 +1133,7 @@ export function PdfStudentSection({
                   ) : readerUrl ? (
                     Platform.OS === 'web' ? (
                       createElement('iframe', {
-                        src: `/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}&id=${encodeURIComponent(readerDocument.id)}`,
+                        src: `/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}&id=${encodeURIComponent(readerDocument.id)}&api=${encodeURIComponent(mobileApiBaseUrl)}`,
                         title: readerDocument.title,
                         style: {
                           width: '100%',
@@ -1143,7 +1144,7 @@ export function PdfStudentSection({
                       })
                     ) : (
                       <WebView
-                        source={{ uri: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}&id=${encodeURIComponent(readerDocument.id)}` }}
+                        source={{ uri: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(readerUrl)}&id=${encodeURIComponent(readerDocument.id)}&api=${encodeURIComponent(mobileApiBaseUrl)}` }}
                         style={styles.inAppWebViewFull}
                         startInLoadingState
                         renderLoading={() => (
@@ -1176,7 +1177,7 @@ export function PdfStudentSection({
                         }}
                       >
                         <Text style={styles.previewUnlockButtonText}>
-                          Acheter pour {formatCoins(readerDocument.price)}
+                          {readerDocument.price === 0 || readerDocument.alwaysFree ? 'Ouvrir ce document (Gratuit)' : `Acheter pour ${formatCoins(readerDocument.price)}`}
                         </Text>
                       </Pressable>
                     </View>

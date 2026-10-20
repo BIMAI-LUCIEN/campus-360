@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { LegalPage, LegalSection } from "@/components/legal-page";
 
 export const metadata: Metadata = {
   title: "Politique de remboursement",
-  description: "Conditions et procédure de remboursement des achats Campus 360.",
+  description: "Conditions et procédure de remboursement des recharges et achats sur Campus 360.",
   alternates: { canonical: "/remboursement" },
 };
 
@@ -11,25 +12,29 @@ export default function RemboursementPage() {
   return (
     <LegalPage
       title="Politique de remboursement"
-      description="Satisfait ou remboursé pendant 14 jours, sans condition. Voici comment ça marche."
+      description="Transparence sur les règles de remboursement des recharges et achats de documents."
+      updatedAt="octobre 2026"
     >
-      <LegalSection title="Garantie 14 jours">
-        <p>Pour ton premier abonnement Basique, Pro ou Elite, tu as 14 jours pour tester sans risque. Si l&apos;offre ne te convient pas, nous te remboursons intégralement.</p>
+      <LegalSection title="1. Absence d'abonnement récurrent">
+        <p>Campus 360 fonctionne exclusivement au crédit de wallet et à l&apos;acte. Aucun abonnement récurrent n&apos;est facturé, éliminant tout risque de prélèvement imprévu.</p>
       </LegalSection>
-      <LegalSection title="Achats unitaires de PDFs">
-        <p>Le PDF n&apos;a pas été téléchargé ou ouvert ? On te rembourse sous 7 jours.</p>
-        <p>Si le PDF a été téléchargé, le contenu est différent du descriptif ? On rembourse aussi, sur preuve.</p>
+
+      <LegalSection title="2. Recharges de wallet Mobile Money">
+        <p>Si tu as effectué une recharge de portefeuille par erreur et qu&apos;aucun coin n&apos;a encore été dépensé, tu peux demander un remboursement sous 7 jours calendaires suivant le paiement.</p>
+        <p>La demande doit être formulée avec la référence de transaction Notch Pay et le numéro de téléphone émetteur.</p>
       </LegalSection>
-      <LegalSection title="Procédure">
+
+      <LegalSection title="3. Achats de documents du catalogue">
+        <p>Un document acheté présentant une erreur majeure (fichier corrompu, document incomplet ou ne correspondant pas au descriptif officiel) fait l&apos;objet d&apos;un recrédit immédiat de ton wallet en coins après signalement au support.</p>
+        <p>Rappel : les cours et anciens sujets sont gratuits par nature et ne font l&apos;objet d&apos;aucune transaction payante.</p>
+      </LegalSection>
+
+      <LegalSection title="4. Procédure de réclamation">
         <ol className="list-decimal pl-5 space-y-2">
-          <li>Envoie un email à support@campus360b.site avec ton numéro de commande</li>
-          <li>On confirme le remboursement sous 24h ouvrées</li>
-          <li>L&apos;argent est recrédité sur ton moyen de paiement initial sous 3-7 jours</li>
+          <li>Contacte notre équipe via notre <Link href="/contact" className="text-[var(--color-primary)] underline">formulaire de contact</Link> ou par email à <a href="mailto:support@campus360b.site" className="text-[var(--color-primary)] underline">support@campus360b.site</a>.</li>
+          <li>Transmets ton adresse email de compte et la référence de paiement concernée.</li>
+          <li>Notre équipe examine la réclamation et te répond sous 48 heures ouvrées.</li>
         </ol>
-      </LegalSection>
-      <LegalSection title="Cas particuliers">
-        <p>Bug technique t&apos;empêchant d&apos;accéder au contenu ? Remboursement systématique avec excuses.</p>
-        <p>Contenu offensant ou erroné signalé ? Remboursement + retrait immédiat.</p>
       </LegalSection>
     </LegalPage>
   );

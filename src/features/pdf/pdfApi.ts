@@ -17,6 +17,8 @@ type SupabaseDocumentRow = {
   file_path: string;
   preview_path: string | null;
   file_size: string | null;
+  kind?: string | null;
+  always_free?: boolean | null;
   status: CampusDocument['status'];
   commission_rate: number;
   rating: number;
@@ -169,6 +171,8 @@ const mapDocumentRow = (row: SupabaseDocumentRow): CampusDocument => ({
   downloads: row.downloads_count,
   uploaderName: 'Admin Campus 3602',
   status: row.status,
+  kind: (row.kind as any) || undefined,
+  alwaysFree: row.always_free === true,
   commissionRate: row.commission_rate,
   createdAt: new Date(row.created_at).toLocaleDateString('fr-FR'),
   aiSummary: row.ai_summary ?? undefined,

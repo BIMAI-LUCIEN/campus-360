@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -20,6 +21,8 @@ import {
   X,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { legalLinks } from '../../config/legalLinks';
+import { publicEnv } from '../../config/env';
 import {
   GlassCard,
   GlassInput,
@@ -308,6 +311,26 @@ export function AuthScreen({
                 style={{ marginTop: 8 }}
               />
 
+              {mode === 'sign-up' && (
+                <Text style={styles.legalNotice}>
+                  En créant un compte, tu acceptes les{' '}
+                  <Text
+                    style={styles.legalLink}
+                    onPress={() => Linking.openURL(legalLinks(publicEnv.landingUrl).conditions).catch(() => {})}
+                  >
+                    Conditions d'utilisation
+                  </Text>
+                  {' '}et la{' '}
+                  <Text
+                    style={styles.legalLink}
+                    onPress={() => Linking.openURL(legalLinks(publicEnv.landingUrl).privacy).catch(() => {})}
+                  >
+                    Politique de confidentialité
+                  </Text>
+                  .
+                </Text>
+              )}
+
               {/* Google */}
               {canGoogle && (mode === 'sign-in' || mode === 'sign-up') && (
                 <>
@@ -585,6 +608,20 @@ const styles = StyleSheet.create({
   switchHighlight: {
     color: stitchColors.sienna,
     fontWeight: '700',
+  },
+  legalNotice: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 12,
+    lineHeight: 17,
+    color: stitchColors.inkMuted,
+    textAlign: 'center',
+    marginTop: 12,
+    paddingHorizontal: 8,
+  },
+  legalLink: {
+    color: stitchColors.primary,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   closeBtn: {
     alignItems: 'center',

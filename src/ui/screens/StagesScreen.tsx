@@ -48,6 +48,7 @@ import {
   stitchShadows,
 } from '../../theme/stitch';
 import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from '../../features/stages/contactTargets';
+import { formatAddedAgo } from '../../features/stages/addedAt';
 
 interface StagesScreenProps {
   studentProfile: {
@@ -348,6 +349,9 @@ export function StagesScreen({
     });
   }, [jobs, studentProfile]);
 
+  // One clock reading per render, shared by every card's "added X ago" label.
+  const listNow = new Date();
+
   const displayedJobs = useMemo(() => {
     if (showTopThreeOnly) {
       return [...enrichedJobs].sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)).slice(0, 3);
@@ -528,6 +532,7 @@ export function StagesScreen({
               ? job.company.name.slice(0, 2).toUpperCase()
               : 'CP';
             const cardBannerUri = getRotatingJobBanner(job, index);
+            const addedLabel = formatAddedAgo(job.createdAt, listNow);
 
             return (
               <Pressable
@@ -597,6 +602,14 @@ export function StagesScreen({
                       {job.location || 'Douala'} · {job.duration || '3 à 6 mois'}
                     </Text>
                   </View>
+                  {addedLabel ? (
+                    <View style={styles.metaRow}>
+                      <Clock size={12} color={stitchColors.inkMuted} style={{ marginRight: 4 }} />
+                      <Text style={styles.metaText} accessibilityLabel={addedLabel}>
+                        {addedLabel}
+                      </Text>
+                    </View>
+                  ) : null}
 
                   {/* Skills Outline Tags */}
                   <View style={styles.skillsRow}>

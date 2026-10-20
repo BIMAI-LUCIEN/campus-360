@@ -507,6 +507,27 @@ export async function updateApplicationStatus(applicationId: string, status: App
   return true;
 }
 
+export async function withdrawStageApplication(applicationId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await authFetchRaw('/api/mobile/stages/applications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applicationId, status: 'WITHDRAWN' }),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      return { success: false, error: data?.error || 'Impossible de retirer la candidature.' };
+    }
+    localApplications = localApplications.map((a) =>
+      a.id === applicationId ? { ...a, status: 'WITHDRAWN' } : a
+    );
+    persistApplicationsLocally(localApplications);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Erreur réseau.' };
+  }
+}
+
 export async function updateApplicationNotes(applicationId: string, notes: string): Promise<boolean> {
   localApplications = localApplications.map((a) =>
     a.id === applicationId ? { ...a, notes } : a

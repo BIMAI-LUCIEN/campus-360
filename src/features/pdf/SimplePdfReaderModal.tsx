@@ -29,7 +29,7 @@ import {
   Sparkles,
 } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
-import { authWebBaseUrl } from '../auth/betterAuth';
+import { authWebBaseUrl, mobileApiBaseUrl } from '../auth/betterAuth';
 import { createSignedPdfUrl, recordPdfAnalyticsEvent } from './pdfApi';
 import { askPdfAssistant, type PdfAssistantMessage } from './pdfAssistant';
 import { loadPdfChatHistory, savePdfChatHistory, clearPdfChatHistory } from './chatHistoryStorage';
@@ -334,13 +334,13 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                   </View>
                   {Platform.OS === 'web' ? (
                     createElement('iframe', {
-                      src: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}&id=${encodeURIComponent(document.id)}`,
+                      src: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}&id=${encodeURIComponent(document.id)}&api=${encodeURIComponent(mobileApiBaseUrl)}`,
                       title: document.title,
                       style: { width: '100%', height: '100%', border: '0', backgroundColor: stitchColors.paper },
                     })
                   ) : (
                     <WebView
-                      source={{ uri: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}&id=${encodeURIComponent(document.id)}` }}
+                      source={{ uri: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}&id=${encodeURIComponent(document.id)}&api=${encodeURIComponent(mobileApiBaseUrl)}` }}
                       style={styles.webview}
                       startInLoadingState
                       renderLoading={() => (

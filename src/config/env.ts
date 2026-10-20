@@ -18,6 +18,7 @@ export type PublicEnv = {
   authWebUrl: string;
   adminUrl: string;
   filesUrl: string;
+  landingUrl: string;
 };
 
 // Production fallbacks below are intentional. EXPO_PUBLIC_* vars are inlined at
@@ -40,6 +41,7 @@ export const publicEnv: PublicEnv = {
   adminUrl: process.env.EXPO_PUBLIC_ADMIN_URL || 'https://admin.campus360b.site',
   // Files host (VPS) receiving document images and sources.
   filesUrl: process.env.EXPO_PUBLIC_FILES_URL || 'https://files.campus360b.site',
+  landingUrl: process.env.EXPO_PUBLIC_LANDING_URL || 'https://campus360b.site',
 };
 
 export const isSupabaseConfigured = () =>

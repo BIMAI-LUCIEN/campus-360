@@ -11,6 +11,7 @@ const PRODUCTION_ORIGINS = [
   "https://www.campus360b.site",
   "https://api.campus360b.site",
   "https://admin.campus360b.site",
+  "campus360://",
   "campus-bordes://",
 ];
 

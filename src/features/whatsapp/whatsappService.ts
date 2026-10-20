@@ -55,6 +55,19 @@ export function formatPairingCode(code: string): string {
 }
 
 /**
+ * Generates a deterministic 8-digit pairing code for testing or offline dev resilience.
+ */
+export function generateDeterministicPairingCode(phone: string): string {
+  const digits = cleanPhoneNumber(phone);
+  let hash = 0;
+  for (let i = 0; i < digits.length; i++) {
+    hash = (hash * 31 + digits.charCodeAt(i)) >>> 0;
+  }
+  const codeNum = (hash % 90000000) + 10000000;
+  return String(codeNum);
+}
+
+/**
  * Cross-platform clipboard helper (web navigator.clipboard & native RN Clipboard).
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
@@ -86,8 +99,8 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     return false;
   } catch (err) {
     console.warn('[whatsappService] Error copying text to clipboard:', err);
-    return false;
   }
+  return false;
 }
 
 /**
@@ -159,10 +172,10 @@ export async function saveWhatsAppStatus(
 
 /**
  * Disconnects WhatsApp and clears stored credentials.
+ * DELETE endpoint requires authentication; no query parameter is sent.
  */
 export async function clearWhatsAppStatus(phone?: string): Promise<void> {
   try {
-    const cleanPhone = cleanPhoneNumber(phone || '');
     if (Platform.OS === 'web') {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem(STORAGE_KEY);
@@ -172,7 +185,7 @@ export async function clearWhatsAppStatus(phone?: string): Promise<void> {
     }
 
     // Call server to terminate instance on Evolution API and Supabase
-    await authFetchRaw(`/api/mobile/whatsapp/instance${cleanPhone ? `?phone=${encodeURIComponent(cleanPhone)}` : ''}`, {
+    await authFetchRaw('/api/mobile/whatsapp/instance', {
       method: 'DELETE',
     }).catch(() => {});
   } catch (err) {
@@ -181,29 +194,25 @@ export async function clearWhatsAppStatus(phone?: string): Promise<void> {
 }
 
 /**
- * Requests an 8-digit pairing code from Evolution API backend proxy (with N8N fallback).
+ * Requests an 8-digit pairing code from Evolution API backend proxy.
+ * POST endpoint requires authentication and relies on profile phone number.
  */
 export async function requestPairingCode(
-  phone: string,
-  options?: { forceNew?: boolean },
+  phoneOrOptions?: string | { forceNew?: boolean },
+  maybeOptions?: { forceNew?: boolean },
 ): Promise<PairingCodeResponse> {
-  const cleanPhone = cleanPhoneNumber(phone);
-  if (!cleanPhone || cleanPhone.length < 8) {
-    return {
-      success: false,
-      pairingCode: '',
-      error: 'Veuillez saisir un numéro de téléphone valide (ex. 6XX XX XX XX).',
-    };
-  }
+  const options = typeof phoneOrOptions === 'object' && phoneOrOptions !== null
+    ? phoneOrOptions
+    : maybeOptions;
+  const passedPhone = typeof phoneOrOptions === 'string' ? phoneOrOptions : undefined;
+  const cleanPhone = cleanPhoneNumber(passedPhone || '');
 
-  // 1. Primary route: backend mobile-api proxy
   try {
     const res = await authFetchRaw('/api/mobile/whatsapp/instance', {
       method: 'POST',
       body: JSON.stringify({
-        phone: cleanPhone,
         action: options?.forceNew ? 'reconnect' : 'connect',
-        force: options?.forceNew,
+        force: Boolean(options?.forceNew),
       }),
     });
 
@@ -251,20 +260,13 @@ export async function requestPairingCode(
 
 /**
  * Checks connection state of WhatsApp instance (open, close, connecting).
+ * GET endpoint requires authentication; no query parameter is sent.
  */
-export async function checkConnectionStatus(phone: string): Promise<ConnectionStatusResponse> {
-  const cleanPhone = cleanPhoneNumber(phone);
-  if (!cleanPhone) {
-    return {
-      success: false,
-      connected: false,
-      state: 'close',
-      error: 'Numéro de téléphone requis.',
-    };
-  }
+export async function checkConnectionStatus(phone?: string): Promise<ConnectionStatusResponse> {
+  const cleanPhone = cleanPhoneNumber(phone || '');
 
   try {
-    const res = await authFetchRaw(`/api/mobile/whatsapp/instance?phone=${encodeURIComponent(cleanPhone)}`, {
+    const res = await authFetchRaw('/api/mobile/whatsapp/instance', {
       method: 'GET',
     });
 
@@ -280,6 +282,14 @@ export async function checkConnectionStatus(phone: string): Promise<ConnectionSt
         state: (data.state as 'open' | 'close' | 'connecting') || (isConnected ? 'open' : 'connecting'),
         instanceName: data.instanceName,
         offline: Boolean(data.offline),
+      };
+    }
+    if (data?.error) {
+      return {
+        success: false,
+        connected: false,
+        state: 'close',
+        error: data.error,
       };
     }
   } catch (networkErr) {

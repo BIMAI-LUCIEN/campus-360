@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   ActivityIndicator,
   Modal,
@@ -138,7 +137,7 @@ export function WhatsAppPairingModal({
   const handleRequestCode = async () => {
     const clean = cleanPhoneNumber(phone);
     if (!clean || clean.length < 8) {
-      setErrorMessage('Veuillez entrer un numéro de téléphone valide (ex: +237 690 12 34 56).');
+      setErrorMessage('Ajoute ton numéro WhatsApp dans ton profil avant de relier WhatsApp.');
       return;
     }
 
@@ -146,7 +145,7 @@ export function WhatsAppPairingModal({
     setStep('requesting');
 
     try {
-      const result = await requestPairingCode(clean);
+      const result = await requestPairingCode({ forceNew: false });
       if (result.success && (result.state === 'open' || result.connected)) {
         stopPolling();
         setStep('connected');
@@ -315,26 +314,28 @@ export function WhatsAppPairingModal({
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Numéro WhatsApp de l'étudiant</Text>
+                  <Text style={styles.inputLabel}>Numéro relié</Text>
                   <View style={styles.inputRow}>
                     <Smartphone size={18} color={stitchColors.inkMuted} strokeWidth={1.8} />
-                    <TextInput
-                      testID="input-whatsapp-phone"
-                      style={styles.textInput}
-                      value={phone}
-                      onChangeText={(t) => {
-                        setPhone(t);
-                        if (errorMessage) setErrorMessage(null);
-                      }}
-                      placeholder="Ex: 690 12 34 56 ou +237..."
-                      placeholderTextColor={stitchColors.inkSubtle}
-                      keyboardType="phone-pad"
-                      autoFocus={!phone}
-                    />
+                    <View style={styles.readOnlyPhoneContainer}>
+                      <Text style={styles.readOnlyPhoneText}>
+                        {phone ? `+${cleanPhoneNumber(phone)}` : 'Aucun numéro configuré'}
+                      </Text>
+                    </View>
                   </View>
                   <Text style={styles.inputHint}>
-                    Le numéro doit être celui de votre WhatsApp actuellement actif sur ce téléphone.
+                    {phone
+                      ? 'Ce numéro est celui de ton profil Campus 360.'
+                      : "Ajoute d'abord ton numéro WhatsApp dans ton profil."}
                   </Text>
+                  <Pressable
+                    onPress={handleClose}
+                    style={({ pressed }) => [styles.profileLinkBtn, pressed && { opacity: 0.7 }]}
+                  >
+                    <Text style={styles.profileLinkText}>
+                      Modifier mon numéro dans le profil
+                    </Text>
+                  </Pressable>
                 </View>
 
                 {errorMessage && (
@@ -480,7 +481,7 @@ export function WhatsAppPairingModal({
                     }}
                     style={({ pressed }) => [styles.changePhoneBtn, pressed && { opacity: 0.75 }]}
                   >
-                    <Text style={styles.changePhoneBtnText}>Changer de numéro / Régénérer</Text>
+                    <Text style={styles.changePhoneBtnText}>Régénérer un code</Text>
                   </Pressable>
                 </View>
               </View>
@@ -607,6 +608,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: stitchColors.ink,
     padding: 0,
+  },
+  readOnlyPhoneContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  readOnlyPhoneText: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 14,
+    fontWeight: '600',
+    color: stitchColors.ink,
+  },
+  profileLinkBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    paddingVertical: 4,
+  },
+  profileLinkText: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 12,
+    fontWeight: '600',
+    color: stitchColors.sienna,
+    textDecorationLine: 'underline',
   },
   inputHint: {
     fontFamily: fontFamilies.inter,

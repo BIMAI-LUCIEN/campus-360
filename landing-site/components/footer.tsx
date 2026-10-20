@@ -90,6 +90,11 @@ export function Footer() {
                     Mentions légales
                   </Link>
                 </li>
+                <li>
+                  <Link href="/suppression-compte" className="hover:text-[var(--color-ink)] transition-colors">
+                    Suppression de compte
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>

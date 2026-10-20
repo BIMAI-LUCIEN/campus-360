@@ -258,17 +258,7 @@ export function PaymentModal({
                   </Text>
                 </Pressable>
 
-                <Pressable
-                  style={[
-                    styles.operatorBtn,
-                    operator === 'wave' && styles.operatorBtnWave,
-                  ]}
-                  onPress={() => setOperator('wave')}
-                >
-                  <Text style={[styles.operatorText, operator === 'wave' && styles.operatorTextActive]}>
-                    Wave
-                  </Text>
-                </Pressable>
+
               </View>
 
               {/* 3. Numéro de Téléphone */}
@@ -478,10 +468,7 @@ const styles = StyleSheet.create({
     borderColor: '#FB923C',
     backgroundColor: 'rgba(251, 146, 60, 0.15)',
   },
-  operatorBtnWave: {
-    borderColor: '#38BDF8',
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-  },
+
   operatorText: {
     fontSize: 12.5,
     fontWeight: '600',

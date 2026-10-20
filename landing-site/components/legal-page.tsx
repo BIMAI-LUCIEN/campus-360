@@ -5,10 +5,11 @@ import { PageHero } from "./landing/page-hero";
 interface LegalPageProps {
   title: string;
   description: string;
+  updatedAt?: string;
   children: ReactNode;
 }
 
-export function LegalPage({ title, description, children }: LegalPageProps) {
+export function LegalPage({ title, description, updatedAt = "octobre 2026", children }: LegalPageProps) {
   return (
     <SiteShell hidePromo>
       <PageHero kicker="Informations légales" title={title} subtitle={description} compact />
@@ -18,7 +19,7 @@ export function LegalPage({ title, description, children }: LegalPageProps) {
             {children}
           </div>
           <p className="mt-12 pt-6 border-t border-[var(--color-border)] text-xs text-[var(--color-ink-lighter)]">
-            Dernière mise à jour : juillet 2026
+            Dernière mise à jour : {updatedAt}
           </p>
         </div>
       </article>
