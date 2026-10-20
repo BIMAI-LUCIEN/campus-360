@@ -513,6 +513,21 @@ export async function reviewAdminJob(jobId: string, decision: 'publish' | 'rejec
   return (rowCount ?? 0) > 0;
 }
 
+export async function bulkReviewAdminJobs(
+  jobIds: string[],
+  decision: 'publish' | 'reject',
+  reviewer: string,
+): Promise<number> {
+  if (jobIds.length === 0) return 0;
+  const { rowCount } = await databasePool.query(
+    `UPDATE public.stage_jobs
+        SET status = $2, reviewed_at = now(), reviewed_by = $3
+      WHERE id = ANY($1::uuid[]) AND status = 'pending_review'`,
+    [jobIds, decision === 'publish' ? 'published' : 'rejected', reviewer],
+  );
+  return rowCount ?? 0;
+}
+
 export async function deleteAdminJob(jobId: string): Promise<boolean> {
   try {
     await databasePool.query(`DELETE FROM public.stage_jobs WHERE id = $1`, [jobId]);

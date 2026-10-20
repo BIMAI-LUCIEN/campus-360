@@ -20,6 +20,7 @@ import {
   Filter,
   Check,
   X,
+  CheckCheck,
 } from 'lucide-react';
 import type { AdminStageJob } from '@/lib/admin-platform-service';
 import {
@@ -39,6 +40,75 @@ export function StagesDashboardClient() {
   const [sourceFilter, setSourceFilter] = useState('ALL');
   const [sponsoredFilter, setSponsoredFilter] = useState('ALL');
   const [pipelineFilter, setPipelineFilter] = useState('ALL');
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  useEffect(() => {
+    const existingIds = new Set(stages.map((s) => s.id));
+    setSelectedJobIds((prev) => prev.filter((id) => existingIds.has(id)));
+  }, [stages]);
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedJobIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedJobIds.length === stages.length && stages.length > 0) {
+      setSelectedJobIds([]);
+    } else {
+      setSelectedJobIds(stages.map((s) => s.id));
+    }
+  };
+
+  const handleBulkReview = async (decision: 'publish' | 'reject') => {
+    if (selectedJobIds.length === 0) return;
+    const actionLabel = decision === 'publish' ? 'valider et publier' : 'rejeter';
+    if (
+      !window.confirm(
+        `Confirmez-vous vouloir ${actionLabel} ces ${selectedJobIds.length} offre(s) sélectionnée(s) ?`
+      )
+    ) {
+      return;
+    }
+
+    setBulkLoading(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/stages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'bulk-review',
+          jobIds: selectedJobIds,
+          decision,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur lors du traitement par lot');
+
+      const nextStatus = decision === 'publish' ? 'published' : 'rejected';
+      const affectedSet = new Set(selectedJobIds);
+
+      setStages((prev) =>
+        pipelineFilter === 'pending_review'
+          ? prev.filter((s) => !affectedSet.has(s.id))
+          : prev.map((s) => (affectedSet.has(s.id) ? { ...s, pipelineStatus: nextStatus } : s))
+      );
+
+      setSelectedJobIds([]);
+      setMessage({ text: data.message, type: 'success' });
+    } catch (err) {
+      setMessage({
+        text: err instanceof Error ? err.message : 'Erreur réseau',
+        type: 'error',
+      });
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -303,6 +373,44 @@ export function StagesDashboardClient() {
           </div>
         </div>
       </Card>
+
+      {/* ── Bulk Actions Bar ────────────────────────────────────────── */}
+      {selectedJobIds.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-primary/10 border border-primary/20 rounded-lg p-3.5 text-sm shadow-sm">
+          <div className="flex items-center gap-2 text-primary font-semibold">
+            <CheckCheck size={18} />
+            <span>{selectedJobIds.length} offre(s) sélectionnée(s)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleBulkReview('publish')}
+              disabled={bulkLoading}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <Check size={14} />
+              <span>Valider et publier la sélection ({selectedJobIds.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleBulkReview('reject')}
+              disabled={bulkLoading}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <X size={14} />
+              <span>Rejeter la sélection ({selectedJobIds.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedJobIds([])}
+              disabled={bulkLoading}
+              className="text-xs text-fg-subtle hover:text-fg underline ml-2 cursor-pointer"
+            >
+              Désélectionner
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Offers Table ────────────────────────────────────────────── */}
       <Card padded={false} className="overflow-hidden">

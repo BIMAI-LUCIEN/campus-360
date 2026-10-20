@@ -6,6 +6,7 @@ import {
   toggleAdminJobSponsored,
   deleteAdminJob,
   reviewAdminJob,
+  bulkReviewAdminJobs,
 } from '@/lib/admin-platform-service';
 
 export const runtime = 'nodejs';
@@ -46,6 +47,11 @@ const actionSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('review'),
     jobId: z.string().uuid(),
+    decision: z.enum(['publish', 'reject']),
+  }),
+  z.object({
+    action: z.literal('bulk-review'),
+    jobIds: z.array(z.string().uuid()).min(1).max(200),
     decision: z.enum(['publish', 'reject']),
   }),
 ]);
@@ -91,6 +97,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: true,
         message: body.decision === 'publish' ? "Offre publiée dans l'app" : 'Offre rejetée',
+      });
+    }
+
+    if (body.action === 'bulk-review') {
+      const reviewer = `admin:${user?.email ?? 'inconnu'}`.slice(0, 80);
+      const updatedCount = await bulkReviewAdminJobs(body.jobIds, body.decision, reviewer);
+      return NextResponse.json({
+        ok: true,
+        count: updatedCount,
+        message: body.decision === 'publish'
+          ? `${updatedCount} offre(s) validée(s) et publiée(s) dans l'application`
+          : `${updatedCount} offre(s) rejetée(s)`,
       });
     }
 
