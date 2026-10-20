@@ -23,7 +23,7 @@ export function LoginClient() {
   const [googleEnabled, setGoogleEnabled] = useState(false);
 
   useEffect(() => {
-    fetch('/api/mobile/auth-capabilities')
+    fetch('/api/admin/auth-capabilities')
       .then((response) => response.json())
       .then((payload) => setGoogleEnabled(Boolean(payload.google)))
       .catch(() => undefined);

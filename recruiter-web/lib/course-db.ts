@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 
 export type UserRole = 'student' | 'admin' | 'super_admin';
 export type PdfStatus = 'draft' | 'analyzing' | 'needs_review' | 'published' | 'archived';
+export type PdfKind = 'cours' | 'ancien_sujet' | 'corrige' | 'rapport' | 'memoire' | 'autre';
 
 export type PdfDocument = {
   id: string;
@@ -21,6 +22,8 @@ export type PdfDocument = {
   filePath: string;
   fileSize: string;
   status: PdfStatus;
+  kind?: PdfKind;
+  alwaysFree?: boolean;
   salesCount: number;
   downloadsCount: number;
   commissionRate: number;
@@ -122,6 +125,8 @@ const mapPdf = (row: any): PdfDocument => ({
   filePath: String(row.file_path),
   fileSize: String(row.file_size || '0 MB'),
   status: row.status as PdfStatus,
+  kind: row.kind ? (String(row.kind) as PdfKind) : undefined,
+  alwaysFree: row.always_free === true,
   salesCount: Number(row.sales_count),
   downloadsCount: Number(row.downloads_count),
   commissionRate: Number(row.commission_rate),
@@ -280,6 +285,10 @@ export const updatePdfStatus = async (pdfId: string, status: PdfStatus, adminUse
 export const updatePdfPrice = async (pdfId: string, priceCoins: number, adminUserId: string) => {
   const db = getPool();
   if (!db) return null;
+  const existing = await db.query<{ always_free: boolean }>('select always_free from public.documents where id = $1', [pdfId]);
+  if (existing.rows[0]?.always_free && priceCoins > 0) {
+    throw new Error('Ce document est gratuit par nature.');
+  }
   await db.query('update public.documents set price_coins = $1, updated_at = now() where id = $2', [priceCoins, pdfId]);
   await audit(adminUserId, 'pdf.update_price', 'pdf_document', pdfId, { priceCoins });
   return getPdfById(pdfId);

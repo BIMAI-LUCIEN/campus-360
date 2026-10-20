@@ -46,14 +46,16 @@ Vérification : `curl -I https://files.campus360b.site/api/files/00000000-0000-4
 
 ## 5. Purge et sauvegarde (crontab de l'utilisateur pm2)
 
+Les sauvegardes complètes et la rotation automatisée sont centralisées dans les scripts `scripts/backup-db.sh` et `scripts/backup-uploads.sh`. Consulter [OPERATIONS.md](OPERATIONS.md) pour les détails d'exploitation et de restauration.
+
 ```cron
-# Fichiers orphelins (documents supprimés depuis Vercel), chaque nuit à 3 h
+# Fichiers orphelins (documents supprimés depuis Vercel), chaque nuit à 3 h (avec sécurité plafond)
 0 3 * * * cd /opt/campus-360 && UPLOAD_ROOT=/var/lib/campus360/uploads node scripts/purge-orphan-uploads.cjs >> /var/log/campus360-purge.log 2>&1
-# Sauvegarde quotidienne, 14 jours conservés
-30 3 * * * tar -czf /var/backups/campus360-uploads-$(date +\%F).tgz -C /var/lib/campus360 uploads && find /var/backups -name 'campus360-uploads-*.tgz' -mtime +14 -delete
+# Sauvegarde quotidienne des fichiers (7 jours de rétention quotidienne, 28 jours pour l'archive hebdomadaire)
+30 3 * * * /opt/campus-360/scripts/backup-uploads.sh >> /var/log/campus360-backup-uploads.log 2>&1
 ```
 
-`node scripts/purge-orphan-uploads.cjs --dry-run` liste ce qui serait supprimé, sans rien supprimer.
+`node scripts/purge-orphan-uploads.cjs --dry-run` liste ce qui serait supprimé, sans rien supprimer. Le flag `--max-delete` (défaut 200) protège contre toute suppression de masse accidentelle.
 
 ## 6. Application mobile
 

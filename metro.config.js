@@ -15,7 +15,8 @@ config.resolver.blockList = [
 // API calls work over the tunnel too. See src/features/auth/betterAuth.ts
 // getDevBackendUrl(), which points at the current origin when the detected
 // host isn't a plain LAN IPv4 (i.e. a tunnel hostname).
-const DEV_BACKEND_PORT = 3001;
+const DEV_AUTH_PORT = 3001;
+const DEV_MOBILE_API_PORT = 3002;
 const originalEnhanceMiddleware = config.server.enhanceMiddleware;
 config.server.enhanceMiddleware = (metroMiddleware, metroServer) => {
   const withOriginal = originalEnhanceMiddleware
@@ -24,13 +25,15 @@ config.server.enhanceMiddleware = (metroMiddleware, metroServer) => {
 
   return (req, res, next) => {
     if (req.url && (req.url.startsWith('/api/') || req.url.startsWith('/auth/'))) {
+      const isMobileOrAi = req.url.startsWith('/api/mobile/') || req.url.startsWith('/api/ai/');
+      const targetPort = isMobileOrAi ? DEV_MOBILE_API_PORT : DEV_AUTH_PORT;
       const proxyReq = http.request(
         {
           host: 'localhost',
-          port: DEV_BACKEND_PORT,
+          port: targetPort,
           path: req.url,
           method: req.method,
-          headers: { ...req.headers, host: `localhost:${DEV_BACKEND_PORT}` },
+          headers: { ...req.headers, host: `localhost:${targetPort}` },
         },
         (proxyRes) => {
           res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);

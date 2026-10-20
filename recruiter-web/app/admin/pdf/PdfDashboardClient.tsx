@@ -371,9 +371,13 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
       'academicYear',
       hints.academicYear || fieldValue(form, 'academicYear', '2025-2026'),
     );
+    const kindVal = fieldValue(form, 'kind', 'autre');
+    const alwaysFreeVal = form.querySelector<HTMLInputElement>('[name="alwaysFree"]')?.checked ?? false;
+    data.set('kind', kindVal);
+    data.set('alwaysFree', alwaysFreeVal ? 'true' : 'false');
     data.set(
       'priceCoins',
-      String(hints.suggestedPriceCoins || Number(fieldValue(form, 'priceCoins', '300'))),
+      String(alwaysFreeVal ? 0 : (hints.suggestedPriceCoins || Number(fieldValue(form, 'priceCoins', '300')))),
     );
     data.set('pageCount', String(hints.pageCount || 1));
     // Created in "analyzing"; the real OpenRouter pass below decides the fate.
@@ -993,35 +997,94 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
               </button>
 
               {advancedOpen && (
-                <div className="mb-3 grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                      Prix en Coins
-                    </label>
-                    <input
-                      name="priceCoins"
-                      type="number"
-                      min="0"
-                      step="50"
-                      defaultValue="300"
-                      className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
-                    />
+                <div className="mb-3 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                        Catégorie / Nature
+                      </label>
+                      <select
+                        name="kind"
+                        defaultValue="autre"
+                        onChange={(e) => {
+                          const form = e.currentTarget.form;
+                          if (!form) return;
+                          const cb = form.querySelector<HTMLInputElement>('[name="alwaysFree"]');
+                          const priceInput = form.querySelector<HTMLInputElement>('[name="priceCoins"]');
+                          if (e.target.value === 'cours' || e.target.value === 'ancien_sujet') {
+                            if (cb) cb.checked = true;
+                            if (priceInput) {
+                              priceInput.value = '0';
+                              priceInput.disabled = true;
+                            }
+                          }
+                        }}
+                        className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
+                      >
+                        <option value="cours">Cours académique</option>
+                        <option value="ancien_sujet">Ancien sujet / Examen</option>
+                        <option value="corrige">Corrigé d'examen</option>
+                        <option value="rapport">Rapport de stage</option>
+                        <option value="memoire">Mémoire de fin d'études</option>
+                        <option value="autre">Autre document</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                        Statut
+                      </label>
+                      <select
+                        name="status"
+                        defaultValue="draft"
+                        className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
+                      >
+                        <option value="draft">Brouillon</option>
+                        <option value="analyzing">Analyse IA</option>
+                        <option value="needs_review">À corriger</option>
+                        <option value="published">Publié</option>
+                        <option value="archived">Archive</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
-                      Statut
-                    </label>
-                    <select
-                      name="status"
-                      defaultValue="draft"
-                      className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15"
-                    >
-                      <option value="draft">Brouillon</option>
-                      <option value="analyzing">Analyse IA</option>
-                      <option value="needs_review">À corriger</option>
-                      <option value="published">Publié</option>
-                      <option value="archived">Archive</option>
-                    </select>
+
+                  <div className="grid grid-cols-2 gap-3 items-end">
+                    <div>
+                      <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-stitch-on-surface-variant">
+                        Prix en Coins
+                      </label>
+                      <input
+                        name="priceCoins"
+                        type="number"
+                        min="0"
+                        step="50"
+                        defaultValue="300"
+                        className="w-full rounded-xl border border-stitch-outline-variant bg-stitch-surface px-3 py-2.5 text-sm text-stitch-on-surface transition focus:border-stitch-primary focus:outline-none focus:ring-2 focus:ring-stitch-primary/15 disabled:opacity-50 disabled:bg-stitch-surface-container"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pb-2">
+                      <input
+                        id="chk-always-free"
+                        name="alwaysFree"
+                        type="checkbox"
+                        onChange={(e) => {
+                          const form = e.currentTarget.form;
+                          const priceInput = form?.querySelector<HTMLInputElement>('[name="priceCoins"]');
+                          if (priceInput) {
+                            if (e.target.checked) {
+                              priceInput.value = '0';
+                              priceInput.disabled = true;
+                            } else {
+                              priceInput.disabled = false;
+                              if (priceInput.value === '0') priceInput.value = '300';
+                            }
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-stitch-outline-variant text-stitch-primary focus:ring-stitch-primary/20"
+                      />
+                      <label htmlFor="chk-always-free" className="text-xs font-medium text-stitch-on-surface cursor-pointer">
+                        Toujours gratuit (cours/sujets)
+                      </label>
+                    </div>
                   </div>
                 </div>
               )}

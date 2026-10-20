@@ -139,8 +139,9 @@
       if (pdfUrl.includes('cloudinary.com') && pdfUrl.includes('/image/upload/')) {
         renderCloudinaryImages(pdfUrl);
       } else {
+        const apiBase = urlParams.get('api') || 'https://api.campus360b.site';
         const streamUrl = documentId
-          ? '/api/mobile/pdf/stream?id=' + encodeURIComponent(documentId)
+          ? apiBase.replace(/\/$/, '') + '/api/mobile/pdf/stream?id=' + encodeURIComponent(documentId)
           : null;
 
         const fallbackTimer = setTimeout(() => {

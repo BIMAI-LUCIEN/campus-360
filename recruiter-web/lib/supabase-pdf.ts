@@ -187,13 +187,13 @@ export const upsertSupabasePdf = async (document: PdfDocument | null) => {
         id, title, description, university, faculty, subject, teacher, level, academic_year,
         price_coins, page_count, file_path, preview_path, file_size, status, commission_rate, rating,
         sales_count, downloads_count, ai_summary, ai_tags, ai_difficulty, suggested_price_coins,
-        quality_score, ai_study_plan, ai_quiz, updated_at
+        quality_score, ai_study_plan, ai_quiz, kind, always_free, updated_at
       )
       values (
         $1, $2, $3, $4, $5, $6, $7, $8, $9,
         $10, $11, $12, $26, $13, $14, $15, $16,
         $17, $18, $19, $20::jsonb, $21, $22,
-        $23, $24::jsonb, $25::jsonb, now()
+        $23, $24::jsonb, $25::jsonb, $27, $28, now()
       )
       on conflict (id) do update
       set title = excluded.title,
@@ -220,6 +220,8 @@ export const upsertSupabasePdf = async (document: PdfDocument | null) => {
           quality_score = excluded.quality_score,
           ai_study_plan = excluded.ai_study_plan,
           ai_quiz = excluded.ai_quiz,
+          kind = excluded.kind,
+          always_free = excluded.always_free,
           updated_at = now()
     `,
     [
@@ -249,6 +251,8 @@ export const upsertSupabasePdf = async (document: PdfDocument | null) => {
       JSON.stringify(document.aiStudyPlan),
       JSON.stringify(document.aiQuiz),
       document.previewPath,
+      document.kind ?? 'autre',
+      document.alwaysFree === true,
     ],
   );
 };

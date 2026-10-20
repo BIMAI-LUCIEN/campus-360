@@ -16,7 +16,6 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
       { href: '/admin/pdf',       icon: 'menu_book',       label: 'Catalogue PDF' },
       { href: '/admin/packs',     icon: 'package_2',       label: 'Packs' },
       { href: '/admin/users',     icon: 'group',           label: 'Étudiants' },
-      { href: '/admin/documents', icon: 'description',   label: 'Rédactions' },
     ],
   },
   {

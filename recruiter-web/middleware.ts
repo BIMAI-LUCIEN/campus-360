@@ -103,5 +103,5 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   // Run on every /admin/* path AND the existing CORS-protected API routes.
-  matcher: ['/admin/:path*', '/api/auth/:path*', '/api/mobile/:path*'],
+  matcher: ['/admin/:path*', '/api/auth/:path*', '/api/admin/:path*'],
 };

@@ -308,7 +308,7 @@ export const authClient = createAuthClient({
       ? []
       : [
           expoClient({
-            scheme: 'campus-bordes',
+            scheme: 'campus360',
             storagePrefix: 'campus-bordes',
             storage: authStorage,
           }),
@@ -418,7 +418,7 @@ export const signInStudent = async (email: string, password: string) => {
 export const signInWithGoogle = async () => {
   const result = await authClient.signIn.social({
     provider: 'google',
-    callbackURL: 'campus-bordes://',
+    callbackURL: 'campus360://',
   });
   if (result?.error) throw new Error(errorMessage(result.error));
   return loadSession();
@@ -443,7 +443,7 @@ export const signUpStudent = async (
       password,
       name,
       ...extra,
-      callbackURL: 'campus-bordes://',
+      callbackURL: 'campus360://',
     } as any);
     if (!result.error && result.data?.user) {
       const payload = result.data as any;
@@ -514,6 +514,14 @@ export const changeStudentPassword = async (currentPassword: string, newPassword
 export const getAuthCapabilities = async (): Promise<AuthCapabilities> =>
   (await fetch(`${authBaseUrl}/api/mobile/auth-capabilities`)).json() as Promise<AuthCapabilities>;
 
+export const deleteStudentAccount = async (): Promise<void> => {
+  await mobileApiFetch('/api/mobile/account', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ confirm: 'SUPPRIMER' }),
+  });
+};
+
 export const clearStudentSession = async () => {
   await authStorage.deleteItemAsync('campus-bordes_session_token');
   await authStorage.deleteItemAsync('campus-bordes_user');
@@ -546,7 +554,7 @@ const buildAuthHeaders = async (base?: HeadersInit, json = true): Promise<Header
     } else if (token) {
       headers.set('Cookie', `better-auth.session_token=${token}; __Secure-better-auth.session_token=${token}`);
     }
-    headers.set('Expo-Origin', 'campus-bordes://');
+    headers.set('Expo-Origin', 'campus360://');
   } else if (token) {
     headers.set('Cookie', `better-auth.session_token=${token}; __Secure-better-auth.session_token=${token}`);
   }
@@ -571,8 +579,15 @@ export const authFetchRawAt = async (baseUrl: string, path: string, init: Reques
   });
 };
 
+export const baseUrlFor = (path: string): string => {
+  if (path.startsWith('/api/mobile/') || path.startsWith('/api/ai/')) {
+    return mobileApiBaseUrl;
+  }
+  return authBaseUrl;
+};
+
 export const authFetchRaw = async (path: string, init: RequestInit = {}) =>
-  authFetchRawAt(authBaseUrl, path, init);
+  authFetchRawAt(baseUrlFor(path), path, init);
 
 // authFetch against mobile-api (documents editor: sections, exports, files, sources).
 export const mobileApiFetch = async (path: string, init: RequestInit = {}) => {
