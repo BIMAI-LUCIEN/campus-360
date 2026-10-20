@@ -36,6 +36,7 @@ import {
   type GeneratedApplicationResult,
 } from './stagesApi';
 import { analyzeJobMatch, type MatchAnalysis } from './aiMatchEngine';
+import { APPLY_LINK_NOTICE, isLinkApply } from './applyTarget';
 import { exportApplicationPdf, buildWhatsAppPitch, generateCvPdfBase64 } from './pdfExportService';
 import { missingCvFields } from './cvHtml';
 import { StudentProfileExpressModal } from './StudentProfileExpressModal';
@@ -239,6 +240,12 @@ export function AiApplyModal({
   useEffect(() => {
     let isMounted = true;
     if (visible && job) {
+      // Safety net: a 'LINK' offer has no recipient, the screens open its website instead.
+      if (isLinkApply(job)) {
+        Alert.alert("Candidature sur le site de l'offre", APPLY_LINK_NOTICE);
+        onClose();
+        return;
+      }
       if (job.applyMethod === 'EMAIL') {
         setSelectedChannel('email');
       } else {
@@ -254,7 +261,7 @@ export function AiApplyModal({
     return () => {
       isMounted = false;
     };
-  }, [visible, job, currentProfile.phoneWhatsapp]);
+  }, [visible, job, currentProfile.phoneWhatsapp, onClose]);
 
   // Compute Match Analysis
   const matchAnalysis: MatchAnalysis | null = useMemo(() => {

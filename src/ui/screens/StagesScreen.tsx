@@ -34,6 +34,7 @@ import {
   ChevronDown,
   ChevronUp,
   ShieldCheck,
+  ExternalLink,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { StageJob } from '../../types';
@@ -49,6 +50,13 @@ import {
 } from '../../theme/stitch';
 import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from '../../features/stages/contactTargets';
 import { formatAddedAgo } from '../../features/stages/addedAt';
+import {
+  APPLY_LINK_LABEL,
+  APPLY_LINK_MISSING,
+  APPLY_LINK_NOTICE,
+  isLinkApply,
+  safeApplyUrl,
+} from '../../features/stages/applyTarget';
 
 interface StagesScreenProps {
   studentProfile: {
@@ -312,9 +320,25 @@ export function StagesScreen({
     });
   };
 
+  // 'LINK' offers (scraped, no contact) are applied to on their own website.
+  const openApplyLink = (job: StageJob) => {
+    const url = safeApplyUrl(job.sourceUrl);
+    if (!url) {
+      Alert.alert('Lien indisponible', APPLY_LINK_MISSING);
+      return;
+    }
+    Linking.openURL(url).catch(() => {
+      Alert.alert('Lien indisponible', "Impossible d'ouvrir le site de l'offre.");
+    });
+  };
+
   const handleApplyFromDetail = () => {
     const job = selectedDetailJob;
     if (!job) return;
+    if (isLinkApply(job)) {
+      openApplyLink(job);
+      return;
+    }
     if (Platform.OS === 'ios') {
       setSelectedDetailJob(null);
       setTimeout(() => {
@@ -644,11 +668,21 @@ export function StagesScreen({
                         if (e && typeof e.stopPropagation === 'function') {
                           e.stopPropagation();
                         }
+                        if (isLinkApply(job)) {
+                          openApplyLink(job);
+                          return;
+                        }
                         setApplyingJob(job);
                       }}
                     >
-                      <Sparkles size={13} color={stitchColors.white} />
-                      <Text style={styles.applyBtnText}>Postuler</Text>
+                      {isLinkApply(job) ? (
+                        <ExternalLink size={13} color={stitchColors.white} />
+                      ) : (
+                        <Sparkles size={13} color={stitchColors.white} />
+                      )}
+                      <Text style={styles.applyBtnText}>
+                        {isLinkApply(job) ? APPLY_LINK_LABEL : 'Postuler'}
+                      </Text>
                     </Pressable>
                   </View>
                 </View>
@@ -1072,12 +1106,17 @@ export function StagesScreen({
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Text style={styles.recruiterTitle}>{selectedDetailJob.company?.name || 'Recruteur'}</Text>
                       </View>
-                      {!companyWhatsapp(selectedDetailJob.company) && !companyEmail(selectedDetailJob.company) ? (
+                      {!isLinkApply(selectedDetailJob) &&
+                      !companyWhatsapp(selectedDetailJob.company) &&
+                      !companyEmail(selectedDetailJob.company) ? (
                         <Text style={styles.recruiterSubtitle}>{CONTACT_UNAVAILABLE}</Text>
                       ) : null}
                     </View>
                   </View>
 
+                  {isLinkApply(selectedDetailJob) ? (
+                    <Text style={styles.recruiterSubtitle}>{APPLY_LINK_NOTICE}</Text>
+                  ) : (
                   <View style={styles.recruiterActionsRow}>
                     <Pressable
                       testID="btn-contact-whatsapp"
@@ -1103,6 +1142,7 @@ export function StagesScreen({
                       </Text>
                     </Pressable>
                   </View>
+                  )}
                 </View>
 
                 {/* Bottom Spacing */}
@@ -1127,8 +1167,14 @@ export function StagesScreen({
                 style={styles.stickyApplyBtn}
                 onPress={handleApplyFromDetail}
               >
-                <Sparkles size={17} color={stitchColors.white} />
-                <Text style={styles.stickyApplyBtnText}>Postuler en 1 Clic</Text>
+                {isLinkApply(selectedDetailJob) ? (
+                  <ExternalLink size={17} color={stitchColors.white} />
+                ) : (
+                  <Sparkles size={17} color={stitchColors.white} />
+                )}
+                <Text style={styles.stickyApplyBtnText}>
+                  {isLinkApply(selectedDetailJob) ? APPLY_LINK_LABEL : 'Postuler en 1 Clic'}
+                </Text>
               </Pressable>
             </View>
           </View>
