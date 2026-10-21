@@ -4,10 +4,14 @@ import localFont from "next/font/local";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
-// Self-hosted fonts: no request to a font CDN at page load.
+// Brand fonts (brand book v1), self-hosted: Sora for titles, Inter for text,
+// Instrument Serif Italic for the single accent word of a title.
 const displayFont = localFont({
-  src: "./fonts/bricolage-grotesque-latin-800-normal.woff2",
-  weight: "800",
+  src: [
+    { path: "./fonts/sora-latin-400-normal.woff2", weight: "400" },
+    { path: "./fonts/sora-latin-600-normal.woff2", weight: "600" },
+    { path: "./fonts/sora-latin-700-normal.woff2", weight: "700" },
+  ],
   variable: "--font-display-face",
   display: "swap",
 });
@@ -15,9 +19,16 @@ const sansFont = localFont({
   src: [
     { path: "./fonts/inter-latin-400-normal.woff2", weight: "400" },
     { path: "./fonts/inter-latin-500-normal.woff2", weight: "500" },
-    { path: "./fonts/inter-latin-700-normal.woff2", weight: "700" },
+    { path: "./fonts/inter-latin-600-normal.woff2", weight: "600" },
   ],
   variable: "--font-sans-face",
+  display: "swap",
+});
+const accentFont = localFont({
+  src: "./fonts/instrument-serif-latin-400-italic.woff2",
+  weight: "400",
+  style: "italic",
+  variable: "--font-accent-face",
   display: "swap",
 });
 
@@ -92,7 +103,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0E0E10",
+  themeColor: "#7C3AED",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -163,7 +174,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`scroll-smooth ${displayFont.variable} ${sansFont.variable}`}>
+    <html lang="fr" className={`scroll-smooth ${displayFont.variable} ${sansFont.variable} ${accentFont.variable}`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/images/icon.png" />

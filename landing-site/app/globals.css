@@ -1,68 +1,74 @@
 @import "tailwindcss";
 
-/* ── Campus 360 "AI Analyzer" system ──────────────────────────────────────
-   The same identity that ships in the mobile app: near-black surfaces, a
-   violet→pink→blue gradient accent, bold sans, soft radii. Direct, not
-   decorative — the gradient is the one flourish, everything else is flat
-   and legible. ─────────────────────────────────────────────────────────── */
+/* ── Campus 360 — brand book v1 (octobre 2026) ─────────────────────────────
+   Raffiné, minimaliste, ludique : beaucoup de blanc (Paper 60 %), l'encre pour
+   le texte (Ink 22 %), un seul violet (12 %) et une touche d'accent (6 %).
+   Sora pour les titres, Inter pour le texte, Instrument Serif Italic pour un
+   seul mot d'accent par titre. Source : docs/brand/identite-visuelle.md. ─── */
 @theme {
-  /* Ink — now the foreground/text ramp (light on dark) */
-  --color-ink:         oklch(0.975 0.0015 264);
-  --color-ink-soft:     oklch(0.9 0.003 264);
-  --color-ink-muted:   oklch(0.66 0.006 264);
-  --color-ink-subtle:  oklch(0.48 0.008 264);
-  --color-ink-faint:   oklch(0.26 0.008 264);
+  /* Ink — text ramp (dark on light) */
+  --color-ink:         #0F172A;
+  --color-ink-soft:    #334155;
+  --color-ink-muted:   #64748B;
+  --color-ink-subtle:  #64748B;
+  --color-ink-faint:   #E2E8F0;
 
-  /* Paper — now the background/surface ramp (dark) */
-  --color-paper:      oklch(0.15 0.002 264);
-  --color-paper-deep:  oklch(0.2 0.003 264);
-  --color-paper-soft:  oklch(0.24 0.004 264);
-  --color-white:       oklch(1 0 0);
+  /* Paper — surfaces */
+  --color-paper:       #FFFFFF;
+  --color-paper-deep:  #F8FAFC;
+  --color-paper-soft:  #FFFFFF;
+  --color-white:       #FFFFFF;
 
-  /* Sienna — repurposed as the violet brand accent (solid uses: icons, dots) */
-  --color-sienna:      oklch(0.72 0.19 316);
-  --color-sienna-deep:  oklch(0.64 0.22 307);
-  --color-sienna-tone:  oklch(0.78 0.15 330);
-  --color-sienna-bg:    oklch(0.72 0.19 316 / 14%);
+  /* Violet — the only brand colour (sienna names kept for call-site compatibility) */
+  --color-sienna:      #7C3AED;
+  --color-sienna-deep: #6D28D9;
+  --color-sienna-tone: #6D28D9;
+  --color-sienna-bg:   #F5F3FF;
 
-  /* Emerald — success, ownership, confirmation. Bright on dark. */
-  --color-emerald:     oklch(0.78 0.14 162);
-  --color-emerald-deep: oklch(0.7 0.15 162);
-  --color-emerald-tone: oklch(0.85 0.12 162);
-  --color-emerald-bg:   oklch(0.78 0.14 162 / 14%);
+  /* Menthe — success, verified, paid */
+  --color-emerald:      #10B981;
+  --color-emerald-deep: #047857;
+  --color-emerald-tone: #047857;
+  --color-emerald-bg:   #E7F8F1;
 
-  /* Brand gradient — the signature accent (buttons, headlines, active states) */
-  --color-grad-1: #7C4DFF;
-  --color-grad-2: #E13D9E;
-  --color-grad-3: #3B82F6;
-  --gradient-brand: linear-gradient(90deg, var(--color-grad-1), var(--color-grad-2), var(--color-grad-3));
+  /* Playful accents (fond / couleur / texte). One per screen. */
+  --color-soleil-fond:  #FFF8DB;
+  --color-soleil:       #FFD43B;
+  --color-soleil-texte: #7A5600;
+  --color-corail-fond:  #FFF0EB;
+  --color-corail:       #FF7A59;
+  --color-corail-texte: #B4401F;
+  --color-menthe-fond:  #E7F8F1;
+  --color-menthe:       #10B981;
+  --color-menthe-texte: #047857;
 
-  /* Legacy `brand-*` aliases retint automatically to the violet ramp. */
-  --color-brand-50:  oklch(0.72 0.19 316 / 10%);
-  --color-brand-100: oklch(0.72 0.19 316 / 16%);
-  --color-brand-200: oklch(0.72 0.19 316 / 28%);
-  --color-brand-300: oklch(0.78 0.15 330);
-  --color-brand-400: oklch(0.75 0.17 322);
-  --color-brand-500: oklch(0.72 0.19 316);
-  --color-brand-600: oklch(0.68 0.205 311);
-  --color-brand-700: oklch(0.64 0.22 307);
-  --color-brand-800: oklch(0.52 0.19 305);
-  --color-brand-900: oklch(0.4 0.15 303);
+  /* One violet only: the former gradient is now the solid brand violet. */
+  --color-grad-1: #7C3AED;
+  --color-grad-2: #7C3AED;
+  --color-grad-3: #7C3AED;
+  --gradient-brand: linear-gradient(90deg, #7C3AED, #7C3AED);
 
-  /* No serif in the dark "AI Analyzer" language — display headings use the
-     same bold sans as body copy, just heavier. `font-serif`/`font-display`
-     stay as class names for call-site compatibility, retinted here. */
-  --font-serif: var(--font-display-face), Georgia, serif;
+  /* Violet ramp (brand book) — legacy brand-* aliases */
+  --color-brand-50:  #F5F3FF;
+  --color-brand-100: #EDE9FE;
+  --color-brand-200: #DDD6FE;
+  --color-brand-300: #C4B5FD;
+  --color-brand-400: #A78BFA;
+  --color-brand-500: #8B5CF6;
+  --color-brand-600: #7C3AED;
+  --color-brand-700: #6D28D9;
+  --color-brand-800: #5B21B6;
+  --color-brand-900: #4C1D95;
+
+  --font-serif: var(--font-display-face), "Segoe UI", sans-serif;
   --font-sans: var(--font-sans-face), "Segoe UI", sans-serif;
-  --font-mono: Consolas, "Courier New", monospace;
+  --font-accent: var(--font-accent-face), Georgia, serif;
+  --font-mono: var(--font-sans-face), "Segoe UI", sans-serif;
 
-  --radius-editorial: 14px;
+  --radius-editorial: 16px;
 
-  /* Legacy CTA alias — some pages still reference `bg-amber-cta`. Tailwind
-     v4 only generates utility classes from tokens declared inside @theme,
-     so this must live here (not :root) for those classes to resolve. */
-  --color-amber-cta:       oklch(0.72 0.19 316);
-  --color-amber-cta-hover: oklch(0.64 0.22 307);
+  --color-amber-cta:       #7C3AED;
+  --color-amber-cta-hover: #6D28D9;
 }
 
 :root {
@@ -85,10 +91,11 @@ body {
 
 /* Gradient text — the signature headline treatment, used deliberately. */
 .text-gradient-brand {
-  background: var(--gradient-brand);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-family: var(--font-accent);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: #7C3AED;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -107,14 +114,13 @@ p { text-wrap: pretty; }
 /* Editorial kicker — the em-dash + tracked mono label. A signature device,
    used deliberately in a few places, never as mechanical section grammar. */
 .kicker {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-sienna);
+  color: #7C3AED;
 }
-.kicker::before { content: "— "; color: var(--color-ink-faint); }
 
 .ink-rule { height: 1px; background: var(--color-ink); }
 
@@ -162,33 +168,31 @@ p { text-wrap: pretty; }
   position: absolute;
   z-index: -1;
   border-radius: 9999px;
-  filter: blur(90px);
   pointer-events: none;
+  border-style: solid;
 }
+/* Big orbit arc (brand element: "arcs d'orbite en grand, coupés par le bord du cadre") */
 .aurora-stage::before {
-  width: 56vmax; height: 56vmax; top: -22vmax; right: -12vmax;
-  background: radial-gradient(circle, #7c4dff 0%, transparent 65%);
-  opacity: 0.55;
-  animation: aurora-drift 18s ease-in-out infinite alternate;
+  width: 58vmax; height: 58vmax; top: -28vmax; right: -22vmax;
+  border-width: clamp(22px, 3.2vw, 48px);
+  border-color: #EDE9FE #DDD6FE transparent transparent;
+  animation: orbit-arc 60s linear infinite;
 }
 .aurora-stage::after {
-  width: 44vmax; height: 44vmax; bottom: -20vmax; left: -14vmax;
-  background: radial-gradient(circle, #e13d9e 0%, transparent 65%);
-  opacity: 0.35;
-  animation: aurora-drift 22s ease-in-out infinite alternate-reverse;
+  width: 30vmax; height: 30vmax; bottom: -18vmax; left: -12vmax;
+  border-width: clamp(14px, 2vw, 28px);
+  border-color: transparent #F5F3FF #EDE9FE transparent;
+  animation: orbit-arc 80s linear infinite reverse;
 }
-@keyframes aurora-drift {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to   { transform: translate3d(-6vmax, 4vmax, 0) scale(1.12); }
-}
+@keyframes orbit-arc { to { transform: rotate(360deg); } }
 
 .grid-fade {
   position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background-image:
-    linear-gradient(oklch(1 0 0 / 5%) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(1 0 0 / 5%) 1px, transparent 1px);
+    linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
   background-size: 64px 64px;
-  mask-image: radial-gradient(ellipse at 60% 40%, black 20%, transparent 70%);
+  mask-image: radial-gradient(ellipse at 60% 40%, black 15%, transparent 65%);
 }
 
 /* Phone in 3D space */
@@ -212,13 +216,17 @@ p { text-wrap: pretty; }
 .marquee-track { display: flex; width: max-content; animation: marquee 32s linear infinite; }
 @keyframes marquee { to { transform: translateX(-50%); } }
 
-/* Reveal on scroll: visible by default, animated only once JS marks it */
-.reveal-ready .reveal { opacity: 0; transform: translateY(28px); }
+/* Reveal on scroll: visible by default, animated only once JS marks it.
+   Uses the individual translate / rotate properties so it never overrides the
+   transform of tilt cards or 3D phones. */
+.reveal-ready .reveal { opacity: 0; translate: 0 28px; }
+.reveal-ready .reveal-3d { rotate: x 32deg; transform-origin: 50% 100%; }
 .reveal-ready .reveal.is-in {
-  opacity: 1; transform: none;
-  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 1; translate: none; rotate: none;
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), translate 0.9s cubic-bezier(0.16, 1, 0.3, 1), rotate 1.1s cubic-bezier(0.16, 1, 0.3, 1);
   transition-delay: var(--delay, 0ms);
 }
+.stage-3d { perspective: 1200px; }
 
 /* 3D tilt card */
 .tilt {
@@ -227,13 +235,13 @@ p { text-wrap: pretty; }
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .tilt-glow {
-  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), oklch(0.72 0.19 316 / 18%), transparent 60%);
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(124, 58, 237, 0.07), transparent 60%);
 }
 
 /* Glowing frame for the demo film */
 .film-frame {
-  border: 1px solid oklch(0.72 0.19 316 / 55%);
-  box-shadow: 0 0 0 1px oklch(1 0 0 / 4%), 0 40px 120px -30px oklch(0.64 0.22 307 / 60%);
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 30px 80px -40px rgba(124, 58, 237, 0.35);
 }
 
 /* Scroll story: screens swap with a 3D flip */
@@ -244,5 +252,72 @@ p { text-wrap: pretty; }
 @media (prefers-reduced-motion: reduce) {
   .aurora-stage::before, .aurora-stage::after, .float-y, .float-y-slow, .marquee-track { animation: none; }
   .phone-3d, .tilt { transform: none; transition: none; }
-  .reveal-ready .reveal { opacity: 1; transform: none; }
+  .reveal-ready .reveal { opacity: 1; translate: none; rotate: none; }
+  .orbit, .cube, .scroll-3d { animation: none !important; transform: none !important; }
 }
+
+/* ───────────── 3D layer (CSS only) ───────────── */
+
+/* Orbit: a tilted ring of feature badges circling the hero phone */
+.orbit-wrap { position: absolute; inset: 0; pointer-events: none; perspective: 1400px; }
+.orbit {
+  position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(68deg) rotateZ(0deg);
+  animation: orbit-spin 26s linear infinite;
+}
+.orbit-ring {
+  position: absolute; left: 50%; top: 50%;
+  width: var(--orbit-d, 520px); height: var(--orbit-d, 520px);
+  margin-left: calc(var(--orbit-d, 520px) / -2); margin-top: calc(var(--orbit-d, 520px) / -2);
+  border-radius: 9999px;
+  border: 2px dashed #DDD6FE;
+}
+.orbit-node {
+  position: absolute; left: 0; top: 0;
+  transform: rotateZ(var(--a)) translateX(calc(var(--orbit-d, 520px) / 2)) rotateZ(calc(-1 * var(--a))) rotateX(-68deg);
+  transform-style: preserve-3d;
+}
+.orbit-node > span {
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 14px;
+  background: #FFFFFF; border: 1px solid #E2E8F0;
+  box-shadow: 0 10px 24px -12px rgba(15, 23, 42, 0.18);
+  animation: orbit-counter 26s linear infinite;
+}
+@keyframes orbit-spin { to { transform: rotateX(68deg) rotateZ(360deg); } }
+@keyframes orbit-counter { to { transform: rotate(-360deg); } }
+
+/* Spinning glass cube (decoration) */
+.cube-scene { perspective: 900px; }
+.cube {
+  position: relative; width: var(--cube, 90px); height: var(--cube, 90px);
+  transform-style: preserve-3d;
+  animation: cube-spin 18s linear infinite;
+}
+.cube > i {
+  position: absolute; inset: 0; border-radius: 18%;
+  background: linear-gradient(135deg, rgba(196, 181, 253, 0.55), rgba(124, 58, 237, 0.28));
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  backdrop-filter: blur(2px);
+}
+.cube > i:nth-child(1) { transform: translateZ(calc(var(--cube, 90px) / 2)); }
+.cube > i:nth-child(2) { transform: rotateY(180deg) translateZ(calc(var(--cube, 90px) / 2)); }
+.cube > i:nth-child(3) { transform: rotateY(90deg) translateZ(calc(var(--cube, 90px) / 2)); }
+.cube > i:nth-child(4) { transform: rotateY(-90deg) translateZ(calc(var(--cube, 90px) / 2)); }
+.cube > i:nth-child(5) { transform: rotateX(90deg) translateZ(calc(var(--cube, 90px) / 2)); }
+.cube > i:nth-child(6) { transform: rotateX(-90deg) translateZ(calc(var(--cube, 90px) / 2)); }
+@keyframes cube-spin {
+  from { transform: rotateX(-20deg) rotateY(0deg); }
+  to   { transform: rotateX(340deg) rotateY(360deg); }
+}
+
+/* Scroll-linked 3D entrance: --p goes 0 → 1 as the block reaches the centre */
+.scroll-3d {
+  transform: perspective(1400px) rotateX(calc((1 - var(--p, 1)) * 26deg)) scale(calc(0.86 + var(--p, 1) * 0.14));
+  transform-origin: 50% 0%;
+  will-change: transform;
+}
+
+/* Tilted infinite marquee plane */
+.marquee-3d { transform: perspective(900px) rotateX(14deg); }

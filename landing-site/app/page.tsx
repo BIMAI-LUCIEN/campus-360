@@ -22,6 +22,9 @@ import { DemoFilm } from "@/components/landing/demo-film";
 import { ScrollStory } from "@/components/landing/scroll-story";
 import { TiltCard } from "@/components/landing/tilt-card";
 import { RevealRoot } from "@/components/landing/reveal-root";
+import { OrbitRing } from "@/components/landing/orbit-ring";
+import { Cube3D } from "@/components/landing/cube-3d";
+import { Scroll3D } from "@/components/landing/scroll-3d";
 
 const APK_URL =
   process.env.NEXT_PUBLIC_APK_DOWNLOAD_URL ??
@@ -51,23 +54,27 @@ export default function HomePage() {
         {/* ─── HERO ─────────────────────────────────────────────── */}
         <section className="aurora-stage border-b border-[var(--color-ink-faint)] pb-20 pt-28 lg:pb-28 lg:pt-36">
           <div className="grid-fade" />
+          <Cube3D size={64} className="absolute left-[4%] top-28 hidden opacity-70 md:block" />
+          <Cube3D size={40} delay="-6s" className="absolute bottom-16 left-[44%] hidden opacity-60 lg:block" />
           <div className="mx-auto grid max-w-6xl items-center gap-16 px-4 sm:px-6 lg:grid-cols-[1.05fr_0.95fr]">
             <div className="rise-in">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--color-sienna)]/30 bg-[var(--color-sienna-bg)] px-3 py-1">
-                <Sparkles className="h-3.5 w-3.5 text-[var(--color-sienna-tone)]" />
-                <span className="font-mono text-xs font-semibold tracking-wide text-[var(--color-sienna-tone)]">
-                  L&apos;IA pour ton stage & ta soutenance
+              <div className="mb-7 flex flex-wrap items-center gap-3">
+                <span className="inline-flex -rotate-3 items-center rounded-full bg-[var(--color-soleil)] px-4 py-1.5 font-display text-sm font-semibold text-[var(--color-ink)]">
+                  Étudiants
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-ink-muted)]">
+                  <Sparkles className="h-4 w-4 text-[var(--color-sienna)]" />
+                  L&apos;IA pour ton stage et ta soutenance
                 </span>
               </div>
 
-              <h1 className="mb-7 font-display text-[2.6rem] leading-[1.02] tracking-[-0.04em] sm:text-6xl lg:text-[5rem] lg:leading-[0.95]">
-                Trouve ton stage.{" "}
-                <span className="text-gradient-brand">Réussis ta soutenance.</span>
+              <h1 className="mb-7 font-display text-[2.7rem] leading-[1.04] tracking-[-0.03em] sm:text-6xl lg:text-[4.6rem] lg:leading-[1]">
+                Ton <span className="text-gradient-brand">premier</span> stage commence ici.
               </h1>
 
               <p className="mb-9 max-w-lg text-base leading-relaxed text-[var(--color-ink-muted)] sm:text-lg">
-                Des offres qui correspondent à ta filière, un CV officiel RH et une lettre générés en un clic, le suivi
-                de tes candidatures et un coach IA pour préparer ton jury.
+                Des stages adaptés à ta filière, ton CV officiel RH et ta lettre en un clic, le suivi de tes
+                candidatures et un coach IA pour réussir ta soutenance. Tout ton parcours, à 360°.
               </p>
 
               <div className="mb-8 flex flex-col gap-3 sm:flex-row">
@@ -98,21 +105,28 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="rise-in py-6" style={{ animationDelay: "150ms" }}>
-              <HeroPhone />
+            <div className="rise-in relative py-6" style={{ animationDelay: "150ms" }}>
+              <div className="absolute inset-0 origin-center scale-[0.62] sm:scale-90 lg:scale-100">
+                <OrbitRing diameter={540} />
+              </div>
+              <div className="relative z-10">
+                <HeroPhone />
+              </div>
             </div>
           </div>
         </section>
 
         {/* ─── MARQUEE ──────────────────────────────────────────── */}
         <section aria-label="Domaines et fonctions couverts" className="marquee overflow-hidden border-b border-[var(--color-ink-faint)] bg-[var(--color-paper-deep)] py-5">
+          <div className="marquee-3d">
           <div className="marquee-track gap-10 pr-10">
             {[...marquee, ...marquee].map((item, i) => (
               <span key={`${item}-${i}`} className="flex items-center gap-10 whitespace-nowrap font-display text-lg text-[var(--color-ink-muted)]">
                 {item}
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--gradient-brand)" }} />
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-sienna)]" />
               </span>
             ))}
+          </div>
           </div>
         </section>
 
@@ -121,12 +135,12 @@ export default function HomePage() {
           <div className="reveal mx-auto mb-12 max-w-2xl text-center">
             <p className="kicker mb-4 flex justify-center">La démo en 19 secondes</p>
             <h2 className="font-display text-3xl tracking-[-0.03em] sm:text-5xl">
-              Du profil à la soutenance, <span className="text-gradient-brand">sans détour.</span>
+              Du profil à la <span className="text-gradient-brand">soutenance</span>, sans détour.
             </h2>
           </div>
-          <div className="reveal" style={{ "--delay": "120ms" } as CSSProperties}>
+          <Scroll3D>
             <DemoFilm />
-          </div>
+          </Scroll3D>
         </section>
 
         {/* ─── SCROLL STORY ─────────────────────────────────────── */}
@@ -146,16 +160,16 @@ export default function HomePage() {
             <div className="reveal mb-14 max-w-2xl">
               <p className="kicker mb-4">Ce que l&apos;app fait pour toi</p>
               <h2 className="font-display text-3xl tracking-[-0.03em] sm:text-5xl">
-                Tout ton parcours, <span className="text-gradient-brand">au même endroit.</span>
+                Tout ton <span className="text-gradient-brand">parcours</span>, au même endroit.
               </h2>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-3 md:grid-rows-[auto_auto]">
+            <div className="stage-3d grid gap-5 md:grid-cols-3 md:grid-rows-[auto_auto]">
               {/* Coach: the signature feature */}
-              <TiltCard className="reveal rounded-3xl border border-[var(--color-sienna)]/40 bg-[var(--color-paper-soft)] p-8 md:col-span-2 md:row-span-2">
+              <TiltCard style={{ "--delay": "0ms" } as CSSProperties} className="reveal reveal-3d rounded-3xl border border-[#DDD6FE] bg-[var(--color-sienna-bg)] p-8 md:col-span-2 md:row-span-2">
                 <div className="flex h-full flex-col justify-between gap-10">
                   <div>
-                    <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl text-white" style={{ background: "var(--gradient-brand)" }}>
+                    <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-sienna)] text-white">
                       <GraduationCap className="h-6 w-6" />
                     </div>
                     <h3 className="mb-3 font-display text-3xl">Coach IA de soutenance</h3>
@@ -165,32 +179,32 @@ export default function HomePage() {
                     </p>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-white p-5 text-[#0f172a]">
+                    <div className="rounded-2xl border border-[var(--color-ink-faint)] bg-white p-5 text-[var(--color-ink)]">
                       <p className="mb-3 font-display text-lg">Slide 3 · Résultats</p>
-                      <div className="mb-2 h-2 rounded bg-slate-200" />
-                      <div className="mb-2 h-2 w-4/5 rounded bg-slate-200" />
-                      <div className="h-2 w-3/5 rounded bg-slate-200" />
+                      <div className="mb-2 h-2 rounded bg-[#E2E8F0]" />
+                      <div className="mb-2 h-2 w-4/5 rounded bg-[#E2E8F0]" />
+                      <div className="h-2 w-3/5 rounded bg-[#E2E8F0]" />
                     </div>
-                    <div className="rounded-2xl border border-violet-300/30 bg-[#1e1b2e] p-5">
-                      <p className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-amber-300">Question piège #1</p>
-                      <p className="text-sm text-white">Pourquoi avoir choisi cette méthodologie ?</p>
+                    <div className="rotate-2 rounded-2xl border border-[var(--color-ink-faint)] bg-white p-5 shadow-[0_12px_30px_-18px_rgba(15,23,42,0.25)]">
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-sienna)]">Question piège #1</p>
+                      <p className="text-sm font-medium text-[var(--color-ink)]">Pourquoi avoir choisi cette méthodologie ?</p>
                     </div>
                   </div>
                 </div>
               </TiltCard>
 
-              <TiltCard className="reveal rounded-3xl border border-[var(--color-ink-faint)] bg-[var(--color-paper-soft)] p-7">
-                <Sparkles className="mb-4 h-6 w-6 text-emerald-300" />
-                <p className="mb-1 font-display text-5xl text-gradient-brand">65%</p>
+              <TiltCard style={{ "--delay": "90ms" } as CSSProperties} className="reveal reveal-3d rounded-3xl border border-[var(--color-ink-faint)] bg-[var(--color-paper-soft)] p-7">
+                <Sparkles className="mb-4 h-6 w-6 text-[var(--color-sienna)]" strokeWidth={2} />
+                <p className="mb-1 font-display text-5xl font-bold text-[var(--color-sienna)]">65%</p>
                 <h3 className="mb-2 font-display text-xl">Matching de stage par IA</h3>
                 <p className="text-sm text-[var(--color-ink-muted)]">Un score de correspondance, tes points forts et un conseil pour chaque offre.</p>
               </TiltCard>
 
-              <TiltCard className="reveal rounded-3xl border border-[var(--color-ink-faint)] bg-[var(--color-paper-soft)] p-7">
-                <Clock className="mb-4 h-6 w-6 text-amber-300" />
+              <TiltCard style={{ "--delay": "180ms" } as CSSProperties} className="reveal reveal-3d rounded-3xl border border-[var(--color-ink-faint)] bg-[var(--color-paper-soft)] p-7">
+                <Clock className="mb-4 h-6 w-6 text-[var(--color-sienna)]" strokeWidth={2} />
                 <div className="mb-4 flex gap-1.5" aria-hidden>
                   {["J+1", "J+2", "J+3", "J+4", "J+5", "J+6", "J+7"].map((d) => (
-                    <span key={d} className={`flex h-9 flex-1 items-center justify-center rounded-lg text-[10px] font-bold ${d === "J+7" ? "bg-amber-400 text-amber-950" : "bg-white/5 text-[var(--color-ink-subtle)]"}`}>
+                    <span key={d} className={`flex h-9 flex-1 items-center justify-center rounded-lg text-[10px] font-bold ${d === "J+7" ? "bg-[var(--color-corail)] text-[var(--color-ink)]" : "bg-[#F1F5F9] text-[var(--color-ink-muted)]"}`}>
                       {d}
                     </span>
                   ))}
@@ -199,20 +213,20 @@ export default function HomePage() {
                 <p className="text-sm text-[var(--color-ink-muted)]">Toutes tes candidatures au même endroit, avec un rappel au bon moment.</p>
               </TiltCard>
 
-              <TiltCard className="reveal rounded-3xl border border-[var(--color-ink-faint)] bg-[var(--color-paper-soft)] p-7">
-                <FileText className="mb-4 h-6 w-6 text-violet-300" />
+              <TiltCard style={{ "--delay": "270ms" } as CSSProperties} className="reveal reveal-3d rounded-3xl border border-[var(--color-ink-faint)] bg-[var(--color-paper-soft)] p-7">
+                <FileText className="mb-4 h-6 w-6 text-[var(--color-sienna)]" strokeWidth={2} />
                 <h3 className="mb-2 font-display text-xl">CV officiel RH & lettre</h3>
                 <p className="text-sm text-[var(--color-ink-muted)]">Un CV deux colonnes au format recruteur et une lettre adaptée, modifiables avant envoi.</p>
               </TiltCard>
 
-              <TiltCard className="reveal rounded-3xl border border-[var(--color-ink-faint)] bg-[var(--color-paper-soft)] p-7">
-                <Brain className="mb-4 h-6 w-6 text-pink-300" />
+              <TiltCard style={{ "--delay": "360ms" } as CSSProperties} className="reveal reveal-3d rounded-3xl border border-[var(--color-ink-faint)] bg-[var(--color-paper-soft)] p-7">
+                <Brain className="mb-4 h-6 w-6 text-[var(--color-sienna)]" strokeWidth={2} />
                 <h3 className="mb-2 font-display text-xl">Atelier d&apos;écriture IA</h3>
                 <p className="text-sm text-[var(--color-ink-muted)]">Rapport de stage, mémoire ou CV rédigés avec l&apos;IA. Tu gardes la main sur le texte.</p>
               </TiltCard>
 
-              <TiltCard className="reveal rounded-3xl border border-[var(--color-ink-faint)] bg-[var(--color-paper-soft)] p-7">
-                <Wallet className="mb-4 h-6 w-6 text-sky-300" />
+              <TiltCard style={{ "--delay": "450ms" } as CSSProperties} className="reveal reveal-3d rounded-3xl border border-[var(--color-ink-faint)] bg-[var(--color-paper-soft)] p-7">
+                <Wallet className="mb-4 h-6 w-6 text-[var(--color-sienna)]" strokeWidth={2} />
                 <h3 className="mb-2 font-display text-xl">Wallet Mobile Money</h3>
                 <p className="text-sm text-[var(--color-ink-muted)]">Gratuit pendant le lancement. Ensuite, paiement à l'usage par Orange Money ou MTN MoMo.</p>
               </TiltCard>
@@ -230,10 +244,12 @@ export default function HomePage() {
         <Pricing />
 
         {/* ─── FINAL CTA ────────────────────────────────────────── */}
-        <section className="aurora-stage px-4 py-24 text-center sm:px-6 lg:py-32">
+        <section className="aurora-stage relative px-4 py-24 text-center sm:px-6 lg:py-32">
+          <Cube3D size={80} className="absolute left-[8%] top-1/2 hidden -translate-y-1/2 opacity-70 md:block" />
+          <Cube3D size={56} delay="-9s" className="absolute right-[9%] top-24 hidden opacity-70 md:block" />
           <div className="reveal relative mx-auto max-w-3xl">
             <h2 className="mb-5 font-display text-4xl tracking-[-0.03em] sm:text-6xl">
-              Ton premier stage commence <span className="text-gradient-brand">ici.</span>
+              Ton <span className="text-gradient-brand">parcours</span>, à 360°.
             </h2>
             <p className="mx-auto mb-10 max-w-lg text-[var(--color-ink-muted)]">
               Application Android gratuite, sans publicité. Toutes les fonctions sont gratuites pendant le lancement.

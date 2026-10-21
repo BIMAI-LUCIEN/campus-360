@@ -91,13 +91,13 @@ export function Pricing() {
         </div>
 
         {/* Plans grid */}
-        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6 lg:gap-8 max-w-7xl mx-auto">
+        <div className="stage-3d grid md:grid-cols-2 xl:grid-cols-4 gap-6 lg:gap-8 max-w-7xl mx-auto">
           {plans.map((plan) => {
             const Icon = plan.icon;
             return (
               <div
                 key={plan.name}
-                className={`reveal relative rounded-2xl p-6 lg:p-8 flex flex-col transition-all hover:-translate-y-1 ${
+                className={`reveal reveal-3d relative rounded-2xl p-6 lg:p-8 flex flex-col transition-all hover:-translate-y-1 ${
                   plan.popular
                     ? "bg-[var(--color-paper-soft)] border-2 border-[var(--color-sienna)] shadow-xl shadow-[var(--color-sienna)]/10"
                     : "bg-[var(--color-paper)] border border-[var(--color-ink-faint)]"

@@ -27,7 +27,7 @@ export default function BlogIndexPage() {
   const [featured, ...rest] = blogPosts;
   return (
     <SiteShell>
-      <PageHero kicker="Le blog Campus 360" title="Conseils et méthodes" accent="pour réussir." subtitle="Stages, candidatures, rédaction et soutenance : les bonnes pratiques partagées par l'équipe." />
+      <PageHero kicker="Le blog Campus 360" title="Conseils et méthodes pour" accent="réussir." subtitle="Stages, candidatures, rédaction et soutenance : les bonnes pratiques partagées par l'équipe." />
 
       {/* Featured */}
       <section className="py-12 bg-[var(--color-paper)]">

@@ -37,7 +37,7 @@ const faq = [
 export default function TarifsPage() {
   return (
     <SiteShell>
-      <PageHero kicker="Lancement V1" title="Tout est gratuit" accent="pendant le lancement." subtitle="Candidatures, CV, lettres, rapports, mémoires, coach de soutenance et PDF : teste tout sans payer. Les tarifs à l'usage s'appliqueront ensuite, sans abonnement." />
+      <PageHero kicker="Lancement V1" title="Tout est gratuit pendant le" accent="lancement." subtitle="Candidatures, CV, lettres, rapports, mémoires, coach de soutenance et PDF : teste tout sans payer. Les tarifs à l'usage s'appliqueront ensuite, sans abonnement." />
 
       <Pricing />
 

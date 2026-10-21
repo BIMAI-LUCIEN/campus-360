@@ -95,7 +95,7 @@ const features = [
 export default function FonctionnalitesPage() {
   return (
     <SiteShell>
-      <PageHero kicker="Tout ce que l'app fait pour toi" title="Trouver ton stage, rédiger ton dossier," accent="réussir ta soutenance." subtitle="Postule, suis tes candidatures et prépare ton rapport au même endroit. Paiement local par Mobile Money, à l'usage." />
+      <PageHero kicker="Tout ce que l'app fait pour toi" title="Trouver ton stage, rédiger ton dossier, réussir ta" accent="soutenance." subtitle="Postule, suis tes candidatures et prépare ton rapport au même endroit. Paiement local par Mobile Money, à l'usage." />
 
       <section className="py-16 lg:py-24 bg-[var(--color-paper)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -26,15 +26,8 @@ export function NavbarClient({ user }: { user?: { name?: string | null; email?: 
         <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-[8px] flex items-center justify-center"
-              style={{ background: "var(--gradient-brand)" }}
-            >
-              <span className="font-display text-white text-lg font-black leading-none">C</span>
-            </div>
-            <span className="font-display text-[1.05rem] font-bold text-[var(--color-ink)]">
-              Campus 360
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element -- official SVG logotype, not optimisable */}
+            <img src="/brand/logotype-couleur.svg" alt="Campus 360" width={178} height={28} className="h-7 w-auto" />
           </Link>
 
           {/* Desktop nav */}

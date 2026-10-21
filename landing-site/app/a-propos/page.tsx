@@ -50,7 +50,7 @@ const timeline = [
 export default function AProposPage() {
   return (
     <SiteShell>
-      <PageHero kicker="Notre histoire" title="On a galéré," accent="on a construit la solution." subtitle="Campus 360 est né en 2023 d'un constat simple : trouver un stage, rédiger son rapport et préparer sa soutenance, les étudiants le font trop souvent seuls et sans outils adaptés." />
+      <PageHero kicker="Notre histoire" title="On a galéré, on a construit la" accent="solution." subtitle="Campus 360 est né en 2023 d'un constat simple : trouver un stage, rédiger son rapport et préparer sa soutenance, les étudiants le font trop souvent seuls et sans outils adaptés." />
 
       <section className="py-16 bg-[var(--color-paper)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

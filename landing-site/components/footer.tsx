@@ -13,15 +13,8 @@ export function Footer() {
           {/* Brand */}
           <div className="max-w-xs">
             <Link href="/" className="inline-flex items-center gap-2.5 mb-4">
-              <div
-                className="w-8 h-8 rounded-[8px] flex items-center justify-center"
-                style={{ background: "var(--gradient-brand)" }}
-              >
-                <span className="font-display text-white text-lg font-black leading-none">C</span>
-              </div>
-              <span className="font-display text-lg font-bold">
-                Campus 360
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element -- official SVG logotype, not optimisable */}
+            <img src="/brand/logotype-couleur.svg" alt="Campus 360" width={204} height={32} className="h-8 w-auto" />
             </Link>
             <p className="text-sm text-[var(--color-ink-muted)] leading-relaxed">
               L&apos;intelligence artificielle pour trouver son stage et réussir ses études en Afrique.

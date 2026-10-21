@@ -3,10 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Play } from "lucide-react";
 
-type NetworkInfo = { saveData?: boolean; effectiveType?: string };
-
-// Muted demo film: plays only while on screen. On data-saver / 2G connections
-// or with reduced motion, nothing downloads until the visitor taps play.
+// Muted demo film that starts on its own as soon as the page loads, loops, and
+// pauses only while scrolled out of view (battery). If the browser refuses
+// autoplay (e.g. iPhone low-power mode), a play button appears instead.
 export function DemoFilm() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [manual, setManual] = useState(false);
@@ -15,26 +14,37 @@ export function DemoFilm() {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    const connection = (navigator as Navigator & { connection?: NetworkInfo }).connection;
-    const slowNetwork = Boolean(connection?.saveData) || /(^|-)2g$/.test(connection?.effectiveType ?? "");
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (slowNetwork || reducedMotion) {
-      setManual(true);
-      return;
-    }
+    let inView = false;
+    const tryPlay = () => {
+      if (document.visibilityState !== "visible") return;
+      video.play().then(() => setStarted(true)).catch(() => setManual(true));
+    };
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          video.play().then(() => setStarted(true)).catch(() => setManual(true));
-        } else {
-          video.pause();
-        }
+        inView = entry.isIntersecting;
+        if (inView) tryPlay();
+        else video.pause();
       },
-      { threshold: 0.45 },
+      { threshold: 0.1 },
     );
     observer.observe(video);
-    return () => observer.disconnect();
+
+    // Browsers pause muted videos while the tab is hidden; resume on return.
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && inView) tryPlay();
+    };
+    // Some browsers only allow playback once enough data is buffered.
+    const onCanPlay = () => {
+      if (inView && video.paused) tryPlay();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    video.addEventListener("canplay", onCanPlay);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
+      video.removeEventListener("canplay", onCanPlay);
+    };
   }, []);
 
   const playNow = () => {
@@ -47,7 +57,7 @@ export function DemoFilm() {
   };
 
   return (
-    <div className="film-frame relative mx-auto aspect-video w-full max-w-5xl overflow-hidden rounded-2xl bg-[#0c0a14]">
+    <div className="film-frame relative mx-auto aspect-video w-full max-w-5xl overflow-hidden rounded-2xl bg-[#F5F3FF]">
       <video
         ref={videoRef}
         className="h-full w-full object-cover"
@@ -55,7 +65,8 @@ export function DemoFilm() {
         muted
         loop
         playsInline
-        preload="none"
+        autoPlay
+        preload="auto"
         aria-label="Démo Campus 360 : trouver un stage, voir son score de correspondance, générer son CV officiel RH et sa lettre, postuler et préparer sa soutenance."
       >
         <source src="/motion/demo.webm" type="video/webm" />
@@ -65,10 +76,10 @@ export function DemoFilm() {
         <button
           type="button"
           onClick={playNow}
-          className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/20"
+          className="absolute inset-0 flex items-center justify-center bg-[#0F172A]/20 transition-colors hover:bg-[#0F172A]/10"
           aria-label="Lire la démo (900 Ko)"
         >
-          <span className="flex items-center gap-3 rounded-full bg-white px-6 py-3 font-bold text-[#0f172a] shadow-xl">
+          <span className="flex items-center gap-3 rounded-full bg-[#7C3AED] px-6 py-3 font-semibold text-white shadow-xl">
             <Play className="h-5 w-5 fill-current" /> Voir la démo · 19 s
           </span>
         </button>

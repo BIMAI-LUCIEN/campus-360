@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, type ReactNode, type PointerEvent } from "react";
+import { useRef, type CSSProperties, type ReactNode, type PointerEvent } from "react";
 import { cn } from "@/lib/cn";
 
 // Card that leans toward the pointer (desktop only) with a soft light spot.
-export function TiltCard({ children, className }: { children: ReactNode; className?: string }) {
+export function TiltCard({ children, className, style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
   const ref = useRef<HTMLDivElement>(null);
 
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
@@ -28,7 +28,7 @@ export function TiltCard({ children, className }: { children: ReactNode; classNa
   };
 
   return (
-    <div ref={ref} onPointerMove={onMove} onPointerLeave={onLeave} className={cn("tilt relative overflow-hidden", className)}>
+    <div ref={ref} style={style} onPointerMove={onMove} onPointerLeave={onLeave} className={cn("tilt relative overflow-hidden", className)}>
       <div className="tilt-glow pointer-events-none absolute inset-0" />
       <div className="relative">{children}</div>
     </div>

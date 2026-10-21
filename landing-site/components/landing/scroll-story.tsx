@@ -69,14 +69,14 @@ export function ScrollStory() {
             }}
             data-index={i}
             className={`rounded-2xl border p-6 transition-colors duration-500 lg:p-8 ${
-              active === i ? "border-[var(--color-sienna)]/50 bg-[var(--color-paper-soft)]" : "border-[var(--color-ink-faint)] bg-transparent"
+              active === i ? "border-[#C4B5FD] bg-white shadow-[0_20px_50px_-30px_rgba(124,58,237,0.35)]" : "border-[var(--color-ink-faint)] bg-white/60"
             }`}
           >
             <span className="font-mono text-xs font-bold tracking-[0.18em] text-[var(--color-sienna-tone)]">ÉTAPE {step.n}</span>
             <h3 className="mt-3 font-display text-2xl text-[var(--color-ink)] sm:text-3xl">{step.title}</h3>
             <p className="mt-3 text-[var(--color-ink-muted)]">{step.desc}</p>
             {/* Mobile: the screen sits under its step */}
-            <div className="relative mx-auto mt-6 aspect-[9/19.5] w-48 overflow-hidden rounded-[1.6rem] ring-1 ring-white/15 lg:hidden">
+            <div className="relative mx-auto mt-6 aspect-[9/19.5] w-48 overflow-hidden rounded-[1.6rem] ring-1 ring-black/5 lg:hidden">
               <Image src={step.shot} alt={step.alt} fill sizes="192px" className="object-cover object-top" loading="lazy" />
             </div>
           </li>
@@ -86,8 +86,8 @@ export function ScrollStory() {
       {/* Desktop: one sticky phone whose screen flips as you scroll */}
       <div className="sticky top-24 hidden lg:block">
         <div className="scene-3d mx-auto w-[300px]">
-          <div className="relative rounded-[2.6rem] bg-[#15121f] p-2.5 ring-1 ring-white/15 shadow-[0_50px_100px_-30px_rgba(124,77,255,0.6)]">
-            <div className="absolute left-1/2 top-4 z-10 h-6 w-24 -translate-x-1/2 rounded-full bg-[#15121f]" />
+          <div className="relative rounded-[2.6rem] bg-[#0F172A] p-2.5 ring-1 ring-black/5 shadow-[0_40px_90px_-40px_rgba(124,58,237,0.45)]">
+            <div className="absolute left-1/2 top-4 z-10 h-6 w-24 -translate-x-1/2 rounded-full bg-[#0F172A]" />
             <div className="relative aspect-[9/19.5] overflow-hidden rounded-[2.1rem] bg-white [transform-style:preserve-3d]">
               {steps.map((step, i) => (
                 <div key={step.n} className="story-shot absolute inset-0" data-active={active === i}>
@@ -101,7 +101,7 @@ export function ScrollStory() {
               <span
                 key={step.n}
                 className="h-1.5 rounded-full transition-all duration-500"
-                style={{ width: active === i ? 28 : 8, background: active === i ? "var(--gradient-brand)" : "var(--color-ink-faint)" }}
+                style={{ width: active === i ? 28 : 8, background: active === i ? "#7C3AED" : "#E2E8F0" }}
               />
             ))}
           </div>

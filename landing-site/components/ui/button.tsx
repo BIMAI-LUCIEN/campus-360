@@ -8,23 +8,23 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: "sm" | "md" | "lg";
 }
 
+// Brand book: one solid violet button per screen; the other actions use
+// Violet 50 or an outline.
 const variants = {
-  // Primary — the signature violet→pink→blue gradient CTA.
   primary:
-    "text-white bg-[image:var(--gradient-brand)] hover:brightness-110 active:translate-y-px shadow-[0_8px_24px_-8px_oklch(0.64_0.22_307_/_50%)]",
-  // Secondary — solid dark surface, used next to a primary gradient CTA.
+    "text-white bg-[#7C3AED] hover:bg-[#6D28D9] active:translate-y-px shadow-[0_10px_24px_-12px_rgba(124,58,237,0.6)]",
   secondary:
-    "bg-[var(--color-paper-deep)] text-[var(--color-ink)] border border-[var(--color-ink-faint)] hover:bg-[var(--color-paper-soft)] active:translate-y-px",
+    "bg-[#F5F3FF] text-[#6D28D9] hover:bg-[#EDE9FE] active:translate-y-px",
   ghost:
-    "bg-transparent text-[var(--color-ink)] hover:bg-[var(--color-ink)]/[0.06]",
+    "bg-transparent text-[var(--color-ink)] hover:bg-[#F1F5F9]",
   outline:
-    "bg-transparent text-[var(--color-ink)] border border-[var(--color-ink-faint)] hover:border-[var(--color-ink-subtle)]",
+    "bg-white text-[var(--color-ink)] border border-[#E2E8F0] hover:border-[#C4B5FD]",
 };
 
 const sizes = {
-  sm: "h-9 px-3.5 text-sm rounded-[var(--radius-editorial)]",
-  md: "h-11 px-5 text-[0.95rem] rounded-[var(--radius-editorial)]",
-  lg: "h-13 px-7 text-base rounded-[var(--radius-editorial)]",
+  sm: "h-9 px-3.5 text-sm rounded-xl",
+  md: "h-11 px-5 text-[0.95rem] rounded-xl",
+  lg: "h-13 px-7 text-base rounded-xl",
 };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
