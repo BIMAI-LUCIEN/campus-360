@@ -29,19 +29,9 @@ on:
         options:
           - android
           - all
-  push:
-    branches:
-      - main
-      - "feat/**"
-      - "deploy/**"
-    paths:
-      - "app.json"
-      - "eas.json"
-      - "package.json"
-      - "src/**"
-      - "App.tsx"
-      - "index.ts"
-      - ".github/workflows/eas-android.yml"
+  # No automatic build on push: every EAS build uses the Expo Free plan quota
+  # (exhausted in October 2026 by builds triggered on each push). Run it by hand
+  # from the Actions tab when a native change (icon, plugins, version) ships.
 
 jobs:
   build-android-apk:

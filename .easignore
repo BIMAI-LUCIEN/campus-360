@@ -1,0 +1,115 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+expo-start*.log
+*.log
+tsc*.log
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env
+.env*.local
+.env.production
+.env.production.*
+admin-app/.env.local
+admin-app/.next/
+admin-app/*.sqlite
+admin-app/*.sqlite-*
+admin-app/public/uploads/pdfs/*
+!admin-app/public/uploads/pdfs/.gitkeep
+
+recruiter-web/.env.local
+recruiter-web/.next/
+recruiter-web/*.sqlite
+recruiter-web/*.sqlite-*
+recruiter-web/public/uploads/pdfs/*
+!recruiter-web/public/uploads/pdfs/.gitkeep
+
+# generated reports & artifacts
+generated_reports/
+dist-mvp-check/
+dist-test/
+graphify-out/
+.idea/
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
+
+# Git worktrees
+.worktrees/
+
+# Local visual brainstorming sessions
+.superpowers/
+
+# Next.js build cache
+.next/
+
+
+.vercel
+.env*
+!.env.example
+!mobile-api/.env.example
+!recruiter-web/.env.example
+scratch/
+__pycache__/
+*.pyc
+
+# Hand-labelled real offers for the scraping harness (task 25.2): never committed
+scripts/agents/tests/fixtures/
+
+# Google Play Service Account secrets (task 23.17)
+secrets/
+
+# Temporary logs and root screenshots
+error-*.txt
+/*.png
+
+# ── EAS only: the mobile build needs the Expo app, not the other services ──
+landing-site/
+recruiter-web/
+mobile-api/
+admin/
+docs/
+scripts/
+graphify-out/
+.agent/
+.agents/
+.claude/
+.skills/
+scratch/
+secrets/
+*.tar.gz
+*.zip
+*.md
+!README.md
