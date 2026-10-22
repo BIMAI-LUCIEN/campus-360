@@ -407,7 +407,9 @@ export default function RecruteurPage() {
                     )}
 
                     <a
-                      href={`https://wa.me/${st.whatsapp.replace(/[^0-9]/g, '')}`}
+                      href={`https://wa.me/${st.whatsapp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                        `Bonjour ${st.name}, je vous contacte via Campus 360 suite à la consultation de votre profil en ${st.major}. Avez-vous des disponibilités pour échanger concernant une opportunité de stage ?`
+                      )}`}
                       target="_blank"
                       rel="noreferrer"
                       className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition shadow"

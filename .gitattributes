@@ -1,3 +1,6 @@
 landing-site/public/downloads/*.apk filter=lfs diff=lfs merge=lfs -text
 landing-site/public/downloads/*.aab filter=lfs diff=lfs merge=lfs -text
 landing-site/public/downloads/*.ipa filter=lfs diff=lfs merge=lfs -text
+
+# SQL migrations are checksummed after being applied: LF everywhere.
+*.sql text eol=lf

@@ -5,7 +5,13 @@ import test from 'node:test';
 import { loadTs, loadTsWithPackages } from './helpers/load-ts.mjs';
 
 const rules = await loadTs('lib/payment-rules.ts');
-const { PAYMENT_PACKS, verifyNotchSignature, decideWebhookCredit, isMockAllowed } = rules;
+const {
+  PAYMENT_PACKS,
+  verifyNyoleSignature,
+  verifyNotchSignature,
+  decideWebhookCredit,
+  isMockAllowed,
+} = rules;
 
 const BASE_URL = (process.env.BASE_URL || 'http://localhost:3002').replace(/\/$/, '');
 const serverUp = await fetch(`${BASE_URL}/api/health`, { signal: AbortSignal.timeout(3000) }).then(
@@ -14,7 +20,49 @@ const serverUp = await fetch(`${BASE_URL}/api/health`, { signal: AbortSignal.tim
 );
 const NO_SERVER = serverUp ? false : `serveur injoignable sur ${BASE_URL}`;
 
-test('verifyNotchSignature : validation stricte HMAC-SHA256 timing-safe', () => {
+test('verifyNyoleSignature : validation HMAC-SHA256 sur t.rawBody et fenêtre anti-rejeu 300s', () => {
+  const secret = 'af_test_sec_webhook_secret_key_12345';
+  const nowSeconds = 1_760_000_000;
+  const ts = String(nowSeconds - 10);
+  const body = JSON.stringify({
+    event: 'payment.completed',
+    livemode: false,
+    data: { id: 'cmvk0qbw900ixpotx0mk5i16l', status: 'SUCCESS', amount: 500, currency: 'XAF' },
+  });
+
+  const validDigest = crypto.createHmac('sha256', secret).update(`${ts}.${body}`).digest('hex');
+  const sigHeader = `t=${ts},v1=${validDigest}`;
+
+  // Signature et timestamp valides
+  assert.equal(verifyNyoleSignature(body, sigHeader, ts, secret, { nowSeconds }), true);
+  // Sans en-tête timestamp séparé (extrait de t=)
+  assert.equal(verifyNyoleSignature(body, sigHeader, null, secret, { nowSeconds }), true);
+
+  // En-tête timestamp incohérent avec t=
+  assert.equal(
+    verifyNyoleSignature(body, sigHeader, String(nowSeconds - 20), secret, { nowSeconds }),
+    false,
+  );
+
+  // Expiration anti-rejeu (> 300s)
+  assert.equal(
+    verifyNyoleSignature(body, sigHeader, ts, secret, { nowSeconds: nowSeconds + 305 }),
+    false,
+  );
+
+  // Signature altérée
+  const tamperedDigest = validDigest.slice(0, -1) + (validDigest.endsWith('a') ? 'b' : 'a');
+  assert.equal(
+    verifyNyoleSignature(body, `t=${ts},v1=${tamperedDigest}`, ts, secret, { nowSeconds }),
+    false,
+  );
+
+  // Mauvais secret ou corps modifié
+  assert.equal(verifyNyoleSignature(body, sigHeader, ts, 'wrong_secret', { nowSeconds }), false);
+  assert.equal(verifyNyoleSignature(body + ' ', sigHeader, ts, secret, { nowSeconds }), false);
+});
+
+test('verifyNotchSignature : validation stricte HMAC-SHA256 timing-safe (rétro-compatibilité)', () => {
   const secret = 'super_webhook_secret_key_12345';
   const body = JSON.stringify({ event: 'payment.complete', reference: 'c360_test_ref', amount: 1000 });
 
@@ -75,14 +123,15 @@ test('decideWebhookCredit : règles strictes de crédit, rejeu et rejet de monta
   );
 });
 
-test('isMockAllowed : interdiction formelle en production et si clé live configurée', () => {
+test('isMockAllowed : interdiction formelle en production et si clé Nyole ou Notch configurée', () => {
   assert.equal(isMockAllowed({ NODE_ENV: 'production' }), false);
   assert.equal(isMockAllowed({ VERCEL_ENV: 'production' }), false);
   assert.equal(isMockAllowed({ NODE_ENV: 'development' }), true);
+  assert.equal(isMockAllowed({ NODE_ENV: 'development', NYOLE_SECRET_KEY: 'af_test_sec_xyz' }), false);
   assert.equal(isMockAllowed({ NODE_ENV: 'development', NOTCHPAY_PRIVATE_KEY: 'live_key_xyz' }), false);
 });
 
-test('Enregistrement KO -> pas d’appel Notch (atomicité et protection)', async () => {
+test('Enregistrement KO -> pas d’appel Nyole (atomicité et protection)', async () => {
   globalThis.campusDatabasePool = {
     query: async () => {
       throw new Error('connect ECONNREFUSED 127.0.0.1:5432');
@@ -103,7 +152,7 @@ test('Enregistrement KO -> pas d’appel Notch (atomicité et protection)', asyn
   let fetchCalled = false;
   const mockFetch = async () => {
     fetchCalled = true;
-    return new Response(JSON.stringify({ status: 'accepted' }), { status: 200 });
+    return new Response(JSON.stringify({ id: 'cs_123' }), { status: 201 });
   };
 
   const failingPool = {
@@ -112,9 +161,8 @@ test('Enregistrement KO -> pas d’appel Notch (atomicité et protection)', asyn
     },
   };
 
-  // Sauvegarder la clé d'environnement temporairement
-  const oldKey = process.env.NOTCHPAY_PRIVATE_KEY;
-  process.env.NOTCHPAY_PRIVATE_KEY = 'test_key';
+  const oldNyoleKey = process.env.NYOLE_SECRET_KEY;
+  process.env.NYOLE_SECRET_KEY = 'af_test_sec_dummy';
   try {
     await assert.rejects(
       paymentsModule.initiateMobileMoneyPayment(
@@ -129,9 +177,83 @@ test('Enregistrement KO -> pas d’appel Notch (atomicité et protection)', asyn
       /Database insertion failed/,
     );
 
-    assert.equal(fetchCalled, false, 'Fetch vers Notch Pay ne doit jamais être appelé si l’insertion DB a échoué');
+    assert.equal(
+      fetchCalled,
+      false,
+      'Fetch vers Nyole ne doit jamais être appelé si l’insertion DB a échoué',
+    );
   } finally {
-    process.env.NOTCHPAY_PRIVATE_KEY = oldKey;
+    process.env.NYOLE_SECRET_KEY = oldNyoleKey;
+  }
+});
+
+test('Initialisation Nyole : crée la session Checkout, met à jour reference_id et retourne paymentUrl', async () => {
+  const queries = [];
+  const fakePool = {
+    query: async (sql, params) => {
+      queries.push({ sql, params });
+      return { rowCount: 1, rows: [] };
+    },
+  };
+
+  const fetchCalls = [];
+  const mockFetch = async (url, init) => {
+    fetchCalls.push({ url: String(url), init });
+    if (String(url).endsWith('/v1/checkout/sessions')) {
+      return new Response(
+        JSON.stringify({
+          id: 'cmvk0qbw900ixpotx0mk5i16l',
+          object: 'checkout.session',
+          url: 'https://app.nyole.com/checkout/cmvk0qbw900ixpotx0mk5i16l',
+          order_id: 'CS-TEST-001',
+          amount: 500,
+          currency: 'XAF',
+          status: 'pending',
+          livemode: false,
+        }),
+        { status: 201, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    return new Response(JSON.stringify({ sandbox: true }), { status: 200 });
+  };
+
+  const paymentsModule = await loadTsWithPackages('lib/payments.ts', [
+    'lib/database.ts',
+    'lib/db-ssl.ts',
+    'lib/payment-rules.ts',
+    'lib/mobile-error.ts',
+    'lib/automations.ts',
+    'lib/mailer.ts',
+    'lib/match-score.ts',
+    'lib/push.ts',
+  ]);
+
+  const oldNyoleKey = process.env.NYOLE_SECRET_KEY;
+  process.env.NYOLE_SECRET_KEY = 'af_test_sec_dummy';
+  try {
+    const res = await paymentsModule.initiateMobileMoneyPayment(
+      {
+        studentId: 'student-123',
+        studentEmail: 'student@campus360b.site',
+        studentName: 'Étudiant Test',
+        phone: '690123456',
+        operator: 'orange',
+        packType: 'recharge_500',
+      },
+      { pool: fakePool, fetch: mockFetch },
+    );
+
+    assert.equal(res.reference, 'cmvk0qbw900ixpotx0mk5i16l');
+    assert.equal(res.paymentUrl, 'https://app.nyole.com/checkout/cmvk0qbw900ixpotx0mk5i16l');
+    assert.equal(res.status, 'pending');
+    assert.equal(res.mock, false);
+    assert.equal(queries.length, 2, '1 insert pending + 1 update reference_id');
+    assert.match(queries[0].sql, /insert into public\.app_wallet_transactions/i);
+    assert.match(queries[1].sql, /update public\.app_wallet_transactions set reference_id/i);
+    assert.equal(queries[1].params[0], 'cmvk0qbw900ixpotx0mk5i16l');
+    assert.equal(fetchCalls.length, 2, '1 POST /v1/checkout/sessions + 1 POST /checkout/initiate');
+  } finally {
+    process.env.NYOLE_SECRET_KEY = oldNyoleKey;
   }
 });
 
@@ -142,7 +264,7 @@ test(
     const res = await fetch(`${BASE_URL}/api/mobile/payments/webhook`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event: 'payment.complete' }),
+      body: JSON.stringify({ event: 'payment.completed' }),
     });
 
     assert.ok(

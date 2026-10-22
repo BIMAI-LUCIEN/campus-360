@@ -896,7 +896,7 @@ export function AiApplyModal({
                           selectedChannel === 'whatsapp' && styles.channelSegmentTextActiveWhatsApp,
                         ]}
                       >
-                        WhatsApp {isWhatsAppLinked ? '⚡ 1-Clic' : ''}
+                        WhatsApp
                       </Text>
                     </Pressable>
 
@@ -930,92 +930,43 @@ export function AiApplyModal({
                     </Text>
                   ) : null}
                   {selectedChannel === 'whatsapp' ? (
-                    isWhatsAppLinked ? (
-                      <View style={styles.oneClickBox}>
-                        <View style={styles.linkedBadgeRow}>
-                          <CheckCircle2 size={13} color={stitchColors.emeraldDeep} />
-                          <Text style={styles.linkedBadgeText}>
-                            WhatsApp connecté ({linkedPhone || currentProfile.phoneWhatsapp || 'associé'})
-                          </Text>
-                        </View>
+                    <View style={styles.oneClickBox}>
+                      {/* TEMPORAIREMENT AJUSTÉ en attendant l'API officielle WhatsApp Cloud :
+                          Bouton d'appairage Evolution API et bouton d'envoi automatique en arrière-plan
+                          masqués pour préserver le numéro de téléphone contre les risques de ban.
+                          L'envoi s'effectue via l'application WhatsApp officielle (wa.me)
+                          ou par enregistrement dans le suivi in-app. Toute la logique sous-jacente est conservée. */}
+                      <Pressable
+                        testID="btn-fallback-manual-whatsapp"
+                        style={({ pressed }) => [styles.primaryOneClickBtn, pressed && { opacity: 0.9 }]}
+                        onPress={handleManualWhatsAppApply}
+                        disabled={submitting || !companyWhatsapp(job?.company)}
+                      >
+                        {submitting ? (
+                          <ActivityIndicator size="small" color={stitchColors.white} />
+                        ) : (
+                          <>
+                            <MessageSquare size={16} color={stitchColors.white} />
+                            <Text style={styles.primaryOneClickBtnText}>
+                              💬 Ouvrir WhatsApp & Envoyer ma Candidature
+                            </Text>
+                          </>
+                        )}
+                      </Pressable>
+                      <View style={styles.secondaryActionsRow}>
                         <Pressable
-                          testID="btn-apply-1click-whatsapp"
-                          style={({ pressed }) => [styles.primaryOneClickBtn, pressed && { opacity: 0.9 }]}
-                          onPress={() => handleOneClickApply('whatsapp')}
-                          disabled={submitting || !companyWhatsapp(job?.company)}
+                          testID="btn-apply-inapp"
+                          style={styles.textFallbackBtn}
+                          onPress={handleInAppApply}
+                          disabled={submitting}
                         >
-                          {submitting ? (
-                            <ActivityIndicator size="small" color={stitchColors.white} />
-                          ) : (
-                            <>
-                              <Zap size={16} color={stitchColors.white} />
-                              <Text style={styles.primaryOneClickBtnText}>
-                                ⚡ Postuler en 1 Clic (Envoi Automatique)
-                              </Text>
-                            </>
-                          )}
+                          <Text style={styles.textFallbackBtnText}>📁 Suivi in-app uniquement</Text>
                         </Pressable>
-                        <View style={styles.secondaryActionsRow}>
-                          <Pressable
-                            testID="btn-fallback-manual-whatsapp"
-                            style={styles.textFallbackBtn}
-                            onPress={handleManualWhatsAppApply}
-                            disabled={submitting || !companyWhatsapp(job?.company)}
-                          >
-                            <Text style={styles.textFallbackBtnText}>💬 Ouvrir WhatsApp Manuellement</Text>
-                          </Pressable>
-                          <Pressable
-                            testID="btn-apply-inapp"
-                            style={styles.textFallbackBtn}
-                            onPress={handleInAppApply}
-                            disabled={submitting}
-                          >
-                            <Text style={styles.textFallbackBtnText}>📁 Suivi in-app uniquement</Text>
-                          </Pressable>
-                        </View>
-                        <Text style={styles.subHintText}>
-                          Expédition directe en arrière-plan via Evolution API. Aucun changement d'application requis.
-                        </Text>
                       </View>
-                    ) : (
-                      <View style={styles.unlinkedBox}>
-                        <View style={styles.unlinkedWarningRow}>
-                          <AlertCircle size={15} color="#FBBF24" />
-                          <Text style={styles.unlinkedWarningTitle}>WhatsApp non associé</Text>
-                        </View>
-                        <Text style={styles.unlinkedWarningDesc}>
-                          Associez votre compte en 30s pour expédier vos dossiers en 1 clic en arrière-plan.
-                        </Text>
-                        <View style={styles.unlinkedActionsRow}>
-                          <Pressable
-                            testID="btn-open-pairing-modal"
-                            style={styles.pairingOfferBtn}
-                            onPress={() => setShowPairingModal(true)}
-                          >
-                            <Zap size={14} color={stitchColors.primary} />
-                            <Text style={styles.pairingOfferBtnText}>🔗 Associer mon WhatsApp en 30s</Text>
-                          </Pressable>
-                          <Pressable
-                            testID="btn-fallback-manual-whatsapp"
-                            style={styles.manualFallbackBtn}
-                            onPress={handleManualWhatsAppApply}
-                            disabled={submitting || !companyWhatsapp(job?.company)}
-                          >
-                            <Text style={styles.manualFallbackBtnText}>💬 Ouvrir WhatsApp Manuellement</Text>
-                          </Pressable>
-                        </View>
-                        <View style={styles.secondaryActionsRow}>
-                          <Pressable
-                            testID="btn-apply-inapp"
-                            style={styles.textFallbackBtn}
-                            onPress={handleInAppApply}
-                            disabled={submitting}
-                          >
-                            <Text style={styles.textFallbackBtnText}>📁 Enregistrer dans mon suivi uniquement</Text>
-                          </Pressable>
-                        </View>
-                      </View>
-                    )
+                      <Text style={styles.subHintText}>
+                        Votre candidature et votre pitch sont pré-remplis pour un envoi sécurisé via votre application WhatsApp officielle.
+                      </Text>
+                    </View>
                   ) : (
                     <View style={styles.emailBox}>
                       <Pressable

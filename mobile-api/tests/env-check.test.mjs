@@ -16,8 +16,7 @@ const validProductionEnv = {
   UPLOAD_ROOT: '/var/www/campus-360-uploads',
   OPENROUTER_API_KEY: 'sk-or-test-key-123',
   RESEND_API_KEY: 're_test_key_123',
-  NOTCHPAY_PRIVATE_KEY: 'pk.test.key.123',
-  NOTCHPAY_WEBHOOK_SECRET: 'whsec_test_123',
+  NYOLE_SECRET_KEY: 'af_test_sec_dummy_123456',
 };
 
 test('missingProductionEnv : environnement complet valide -> aucune variable manquante', () => {
@@ -68,24 +67,20 @@ test('missingProductionEnv : UPLOAD_ROOT optionnel sur Vercel', () => {
   assert.ok(missingNoVercel.includes('UPLOAD_ROOT'));
 });
 
-test('missingProductionEnv : clés Notch optionnelles si PAYMENTS_ENABLED=false', () => {
+test('missingProductionEnv : NYOLE_SECRET_KEY optionnel si PAYMENTS_ENABLED=false', () => {
   const missingDisabled = missingProductionEnv({
     ...validProductionEnv,
     PAYMENTS_ENABLED: 'false',
-    NOTCHPAY_PRIVATE_KEY: undefined,
-    NOTCHPAY_WEBHOOK_SECRET: undefined,
+    NYOLE_SECRET_KEY: undefined,
   });
-  assert.ok(!missingDisabled.includes('NOTCHPAY_PRIVATE_KEY'));
-  assert.ok(!missingDisabled.includes('NOTCHPAY_WEBHOOK_SECRET'));
+  assert.ok(!missingDisabled.includes('NYOLE_SECRET_KEY'));
 
   const missingEnabled = missingProductionEnv({
     ...validProductionEnv,
     PAYMENTS_ENABLED: 'true',
-    NOTCHPAY_PRIVATE_KEY: undefined,
-    NOTCHPAY_WEBHOOK_SECRET: undefined,
+    NYOLE_SECRET_KEY: undefined,
   });
-  assert.ok(missingEnabled.includes('NOTCHPAY_PRIVATE_KEY'));
-  assert.ok(missingEnabled.includes('NOTCHPAY_WEBHOOK_SECRET'));
+  assert.ok(missingEnabled.includes('NYOLE_SECRET_KEY'));
 });
 
 test('missingProductionEnv : BETTER_AUTH_SECRET exige au moins 32 caractères', () => {

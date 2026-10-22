@@ -207,6 +207,10 @@ export function ProfileScreen({
   ];
 
   const settingsRows: MenuRow[] = [
+    // TEMPORAIREMENT MASQUÉ en attendant l'API officielle WhatsApp Cloud :
+    // Évite les risques de blocage de numéro de téléphone avec l'appairage Evolution API.
+    // La logique (WhatsAppPairingModal, getStoredWhatsAppStatus) est conservée intacte.
+    /*
     {
       key: 'whatsapp_link',
       testID: 'menu-whatsapp-settings',
@@ -235,6 +239,7 @@ export function ProfileScreen({
       ),
       onPress: () => setIsWhatsAppModalOpen(true),
     },
+    */
     {
       key: 'security',
       label: 'Sécurité & mot de passe',

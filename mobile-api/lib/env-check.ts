@@ -56,13 +56,14 @@ export const missingProductionEnv = (env: Env): string[] => {
     missing.push('RESEND_API_KEY');
   }
 
-  // NOTCHPAY_PRIVATE_KEY & NOTCHPAY_WEBHOOK_SECRET: required unless PAYMENTS_ENABLED === 'false'
+  // NYOLE_SECRET_KEY: required unless PAYMENTS_ENABLED === 'false'
   if (env.PAYMENTS_ENABLED?.trim() !== 'false') {
-    if (!env.NOTCHPAY_PRIVATE_KEY?.trim()) {
-      missing.push('NOTCHPAY_PRIVATE_KEY');
-    }
-    if (!env.NOTCHPAY_WEBHOOK_SECRET?.trim()) {
-      missing.push('NOTCHPAY_WEBHOOK_SECRET');
+    const hasNyole = Boolean(env.NYOLE_SECRET_KEY?.trim());
+    const hasLegacyNotch =
+      Boolean(env.NOTCHPAY_PRIVATE_KEY?.trim()) &&
+      Boolean(env.NOTCHPAY_WEBHOOK_SECRET?.trim());
+    if (!hasNyole && !hasLegacyNotch) {
+      missing.push('NYOLE_SECRET_KEY');
     }
   }
 

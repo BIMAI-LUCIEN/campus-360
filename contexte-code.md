@@ -434,7 +434,7 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-- **But :** portefeuille en coins (1 coin = 1 FCFA), achats PDF et packs, crédits IA, recharge Mobile Money (NotchPay), mode gratuit de lancement.
+- **But :** portefeuille en coins (1 coin = 1 FCFA), achats PDF et packs, crédits IA, recharge Mobile Money (**Nyole** en passerelle principale, repli legacy NotchPay), mode gratuit de lancement.
 
 
 
@@ -450,7 +450,9 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-  - `mobile-api/lib/payments.ts` — initiation NotchPay et vérification de signature HMAC du webhook.
+  - `mobile-api/lib/payment-rules.ts` — règles pures de paiement : `verifyNyoleSignature` (validation HMAC-SHA256 sur `${timestamp}.${rawBody}` via `X-Afriflow-Signature` + `X-Afriflow-Timestamp`, fenêtre anti-rejeu 300s, `timingSafeEqual`), `verifyNotchSignature` (repli legacy), `decideWebhookCredit` et `isMockAllowed`.
+
+  - `mobile-api/lib/payments.ts` — initiation Nyole (`POST /v1/checkout/sessions` + push Mobile Money `POST /checkout/initiate` pour `MTN_MOMO_CMR` / `ORANGE_CMR`) et traitement transactionnel atomique du webhook (`processNyoleWebhook` / `processNotchWebhook`).
 
 
 
@@ -462,7 +464,7 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-  - `src/features/wallet/PaymentModal.tsx`, `walletApi.ts`, `paymentStatus.ts` — recharge avec suivi réel (polling 3 s, 20 essais).
+  - `src/features/wallet/PaymentModal.tsx`, `walletApi.ts`, `paymentStatus.ts` — recharge avec suivi réel (polling 3 s, 20 essais sur `/v1/checkout/sessions/{id}/status`) et lien direct vers la page de paiement hébergée Nyole (`paymentUrl`).
 
 
 
@@ -1590,7 +1592,10 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 - **Application mobile :** Expo OTA via EAS Updates (branche `production`).
 
-- **Dernière release (2026-10-20, v1.0.0, commit 1c82286) :**
+- **Dernière release : `db93fd5` · main · 2026-10-22 · VPS synchronisé sur `db93fd5` (charte v1 dans l'app, logo Orbite) ; APK build 114 (SHA-256 `ddb0c495...`, 72 Mo) déployé sur le VPS (/var/www/campus360-downloads/campus-360.apk) · cible : VPS (landing, admin, API, téléchargements APK) + EAS Updates · health : API 200 db connected, landing 200, admin 200, APK download 200.**
+  - Build APK EAS local (GitHub runner) : workflow `eas-android.yml` manuel, pré-release GitHub `apk-v1.2.0-114`.
+
+- **Release précédente (2026-10-20, v1.0.0, commit 1c82286) :**
 
   - PM2 : `campus360-mobile-api` (online, port 3002), `campus360-recruiter-web` (online, port 3001), `campus360-landing-site` (online, port 3000). RAM stable (37-43% global).
 
@@ -1656,13 +1661,15 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 16. **Ordre de mise en production du scraping :** appliquer 0014 **avant** de déployer le code du module 25 ; sinon expiration et journal échouent (journalisé, non bloquant) et le plafond reste actif.
 
-
-
-
+17. **Scraping : déclencheurs en doublon et à vide sur le VPS.** Les 4 crons du VPS tournent en `--dry-run` (aucune écriture) et sans `--live`. Le workflow GitHub `daily-scraper.yml` (9 h UTC) tourne en parallèle sans `--live`. Il faut supprimer les 4 crons VPS et désactiver le cron GitHub pour ne garder qu'un seul déclencheur effectif (démon PM2 `daily_scheduler.py` ou cron unique) (Tâche 25.18).
 
 
 
 ## 13. Journal des mises à jour
+
+- **2026-10-22** `/test-and-verify` — **Module 26 : Migration Passerelle de Paiement Nyole VERIFIED.** Preuves concrètes : suite de tests `mobile-api` à 197 tests (179 pass, 0 fail, 18 skip), tests de paiement et signature `verifyNyoleSignature` (HMAC-SHA256, anti-rejeu 300s, timing-safe) et `env-check` (exigence `NYOLE_SECRET_KEY`) à 100% au vert ; session de test réelle exécutée contre l'API sandbox Nyole (`https://app.nyole.com/api/v1/checkout/sessions` `201 Created` avec session ID `cm...` et polling `/status` `200 OK`) ; typechecks complets (`mobile-api` et app) code 0 ; `npm run lint:colors` à 189 (zéro régression) ; sécurité : zéro fuite de secret dans les fichiers versionnés.
+
+- **2026-10-22** `/plan-detail` — **Module 25 : Guide d'exécution de la tâche 25.18 (déclencheurs VPS).** Déclencheur unique formalisé (démon PM2 `campus360-scraper-daemon` ou cron unique 9h UTC) pour remplacer les 4 crons en `--dry-run` et désactiver le cron GitHub Actions en doublon.
 
 - **2026-10-20** `/deploy-and-push` & `/vps-deploy` — **Livraison release V1 en production (tag `v1.0.0`, commit `1c82286`).**
   - 10 commits conventionnels atomiques poussés sur `origin/main` avec tag annoté `v1.0.0`.

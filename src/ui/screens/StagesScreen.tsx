@@ -297,8 +297,9 @@ export function StagesScreen({
     const phone = companyWhatsapp(selectedDetailJob.company);
     if (!phone) return;
     const clean = cleanPhoneNumber(phone);
+    const candidateName = studentProfile?.fullName ? `${studentProfile.fullName}, ` : '';
     const textMsg = encodeURIComponent(
-      `Bonjour, je suis candidat sur Campus 360 pour l'offre "${selectedDetailJob.title}" au sein de ${selectedDetailJob.company?.name || 'votre structure'}.`
+      `Bonjour, je suis ${candidateName}candidat sur Campus 360 pour l'offre "${selectedDetailJob.title}" au sein de ${selectedDetailJob.company?.name || 'votre structure'}.`
     );
     const url = `https://wa.me/${clean}?text=${textMsg}`;
     Linking.openURL(url).catch(() => {

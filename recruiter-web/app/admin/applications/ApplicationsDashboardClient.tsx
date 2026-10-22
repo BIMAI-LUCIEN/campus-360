@@ -221,8 +221,18 @@ export function ApplicationsDashboardClient() {
                         </span>
                       </div>
                       {app.studentWhatsapp && (
-                        <div className="text-[11px] text-fg-subtle mt-0.5">
-                          💬 {app.studentWhatsapp}
+                        <div className="mt-0.5">
+                          <a
+                            href={`https://wa.me/${app.studentWhatsapp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                              `Bonjour ${app.studentName}, je vous contacte via Campus 360 au sujet de votre candidature pour le poste de ${app.jobTitle} chez ${app.companyName}.`
+                            )}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[11px] text-emerald-400 hover:text-emerald-300 hover:underline inline-flex items-center gap-1 font-medium"
+                            title={`Contacter ${app.studentName} sur WhatsApp (Campus 360)`}
+                          >
+                            💬 {app.studentWhatsapp}
+                          </a>
                         </div>
                       )}
                     </td>

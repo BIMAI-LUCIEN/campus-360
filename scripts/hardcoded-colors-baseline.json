@@ -1,5 +1,5 @@
 {
-  "total": 190,
+  "total": 189,
   "files": {
     "AppShell.tsx": 1,
     "components/FormattedMarkdown.tsx": 17,
@@ -8,7 +8,7 @@
     "features/onboarding/FreePdfSelector.tsx": 2,
     "features/pdf/PdfStudentSection.tsx": 5,
     "features/pdf/SimplePdfReaderModal.tsx": 1,
-    "features/stages/AiApplyModal.tsx": 28,
+    "features/stages/AiApplyModal.tsx": 27,
     "features/stages/aiMatchEngine.ts": 7,
     "features/stages/ApplicationDetailModal.tsx": 20,
     "features/wallet/PaymentModal.tsx": 6,

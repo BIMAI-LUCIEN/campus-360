@@ -8,7 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
-  Platform,
+  Linking,
 } from 'react-native';
 import {
   X,
@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Zap,
   ArrowRight,
+  ExternalLink,
 } from 'lucide-react-native';
 import {
   PAYMENT_PACKS,
@@ -48,6 +49,7 @@ export function PaymentModal({
   const [phone, setPhone] = useState(defaultPhone);
   const [loading, setLoading] = useState(false);
   const [waitingUssd, setWaitingUssd] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -73,6 +75,7 @@ export function PaymentModal({
     }
 
     setNoticeMessage(null);
+    setPaymentUrl(null);
     setLoading(true);
 
     try {
@@ -84,6 +87,7 @@ export function PaymentModal({
       });
 
       setLoading(false);
+      setPaymentUrl(response.paymentUrl || null);
       setWaitingUssd(true);
 
       // The server is the only source of truth: poll every 3 s, 20 attempts.
@@ -121,6 +125,7 @@ export function PaymentModal({
   const handleResetAndClose = () => {
     stopPolling();
     setWaitingUssd(false);
+    setPaymentUrl(null);
     setSuccess(false);
     setNoticeMessage(null);
     onClose();
@@ -128,6 +133,7 @@ export function PaymentModal({
 
   const handleSuccessContinue = () => {
     setWaitingUssd(false);
+    setPaymentUrl(null);
     setSuccess(false);
     setNoticeMessage(null);
     if (onPaymentSuccess) {
@@ -192,6 +198,17 @@ export function PaymentModal({
                   </Text>.
                 </Text>
               </View>
+              {paymentUrl ? (
+                <Pressable
+                  style={styles.checkoutLinkBtn}
+                  onPress={() => {
+                    Linking.openURL(paymentUrl).catch(() => {});
+                  }}
+                >
+                  <ExternalLink size={15} color={stitchColors.primary} style={{ marginRight: 6 }} />
+                  <Text style={styles.checkoutLinkText}>Ouvrir la page de paiement Nyole</Text>
+                </Pressable>
+              ) : null}
             </View>
           ) : (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
@@ -257,8 +274,6 @@ export function PaymentModal({
                     Orange Money
                   </Text>
                 </Pressable>
-
-
               </View>
 
               {/* 3. Numéro de Téléphone */}
@@ -306,7 +321,7 @@ export function PaymentModal({
               <View style={styles.securityRow}>
                 <ShieldCheck size={14} color={stitchColors.inkMuted} />
                 <Text style={styles.securityText}>
-                  Paiement chiffré et sécurisé. Débit immédiat par confirmation USSD.
+                  Paiement chiffré et sécurisé via Nyole. Débit immédiat par confirmation USSD.
                 </Text>
               </View>
             </ScrollView>
@@ -554,6 +569,23 @@ const styles = StyleSheet.create({
     color: '#D1FAE5',
     lineHeight: 18,
     textAlign: 'center',
+  },
+  checkoutLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: stitchColors.surface,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+  },
+  checkoutLinkText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: stitchColors.primary,
   },
   successContainer: {
     paddingVertical: 24,

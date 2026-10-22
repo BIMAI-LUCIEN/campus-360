@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import net from 'node:net';
 
 import { notifyAdmin, sendTopUpReceipt } from './automations';
 import { databasePool } from './database';
@@ -9,10 +10,20 @@ import {
   decideWebhookCredit,
   isMockAllowed,
   verifyNotchSignature,
+  verifyNyoleSignature,
 } from './payment-rules';
+
+try {
+  net.setDefaultAutoSelectFamilyAttemptTimeout?.(5000);
+} catch {
+  // Ignore on runtimes without setDefaultAutoSelectFamilyAttemptTimeout
+}
 
 export { PAYMENT_PACKS, type PaymentPackType };
 export type PaymentOperator = 'mtn' | 'orange';
+
+export const getNyoleBaseUrl = (): string =>
+  (process.env.NYOLE_API_URL?.trim() || 'https://app.nyole.com/api').replace(/\/+$/, '');
 
 export interface InitiatePaymentParams {
   studentId: string;
@@ -33,7 +44,7 @@ export interface PaymentInitiationResult {
   mock: boolean;
 }
 
-const formatPhoneForOperator = (raw: string): string => {
+export const formatPhoneForOperator = (raw: string): string => {
   let cleaned = raw.replace(/[\s()\-]/g, '');
   if (!cleaned.startsWith('+')) {
     if (cleaned.startsWith('237')) {
@@ -47,7 +58,7 @@ const formatPhoneForOperator = (raw: string): string => {
 };
 
 /**
- * Initiates direct Mobile Money payment (MTN MoMo or Orange Money) via Notch Pay.
+ * Initiates direct Mobile Money payment (MTN MoMo or Orange Money) via Nyole Checkout API.
  * Inserts the pending transaction BEFORE calling the provider. Any provider failure marks status 'failed'.
  */
 export async function initiateMobileMoneyPayment(
@@ -61,10 +72,12 @@ export async function initiateMobileMoneyPayment(
     throw new MobileApiError('Pack de recharge invalide.', 400);
   }
 
-  const privateKey = process.env.NOTCHPAY_PRIVATE_KEY?.trim();
+  const nyoleSecretKey = process.env.NYOLE_SECRET_KEY?.trim();
+  const legacyPrivateKey = process.env.NOTCHPAY_PRIVATE_KEY?.trim();
+  const hasProviderKey = Boolean(nyoleSecretKey || legacyPrivateKey);
   const mockAllowed = isMockAllowed(process.env);
 
-  if (!privateKey && !mockAllowed) {
+  if (!hasProviderKey && !mockAllowed) {
     throw new MobileApiError('Paiement indisponible pour le moment.', 503);
   }
 
@@ -75,7 +88,7 @@ export async function initiateMobileMoneyPayment(
   let reference = `c360_${params.packType}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   let paymentUrl: string | undefined;
 
-  // Insert pending row before contacting Notch Pay (atomic & tracked)
+  // Insert pending row before contacting payment gateway (atomic & tracked)
   await pool.query(
     `insert into public.app_wallet_transactions (
        user_id, type, pack_type, amount_coins, reference_id, status
@@ -83,12 +96,99 @@ export async function initiateMobileMoneyPayment(
     [params.studentId, params.packType, amount, reference],
   );
 
-  if (privateKey) {
+  if (nyoleSecretKey) {
+    const baseUrl = getNyoleBaseUrl();
+    try {
+      const initRes = await doFetch(`${baseUrl}/v1/checkout/sessions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${nyoleSecretKey}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'Idempotency-Key': reference,
+        },
+        body: JSON.stringify({
+          amount,
+          currency,
+          customer_name: params.studentName || 'Étudiant Campus 360',
+          customer_email: params.studentEmail || 'etudiant@campus360b.site',
+          customer_phone: formattedPhone,
+          description,
+          merchant_name: 'Campus 360',
+          metadata: {
+            reference,
+            student_id: params.studentId,
+            pack_type: params.packType,
+            operator: params.operator,
+          },
+        }),
+      });
+
+      if (!initRes.ok) {
+        await pool.query(
+          `update public.app_wallet_transactions set status = 'failed' where reference_id = $1`,
+          [reference],
+        );
+        throw new MobileApiError("L'opérateur n'a pas répondu. Réessaie.", 502);
+      }
+
+      const initData = (await initRes.json()) as {
+        id?: string;
+        url?: string;
+        order_id?: string;
+        reference?: string;
+        authorization_url?: string;
+      };
+
+      const gatewayRef = initData.id || initData.reference;
+      if (gatewayRef && gatewayRef !== reference) {
+        await pool.query(
+          `update public.app_wallet_transactions set reference_id = $1 where reference_id = $2`,
+          [gatewayRef, reference],
+        );
+        reference = gatewayRef;
+      }
+
+      paymentUrl =
+        initData.url ||
+        initData.authorization_url ||
+        (initData.id ? `https://app.nyole.com/checkout/${initData.id}` : undefined);
+
+      // Trigger direct Mobile Money push via Nyole Checkout Initiate endpoint
+      const methodCode = params.operator === 'orange' ? 'ORANGE_CMR' : 'MTN_MOMO_CMR';
+      await doFetch(`${baseUrl}/checkout/initiate`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${nyoleSecretKey}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          transactionId: reference,
+          gatewayId: 'plateforme-pawapay',
+          methodCode,
+          customerDetails: {
+            name: params.studentName || 'Étudiant Campus 360',
+            email: params.studentEmail || 'etudiant@campus360b.site',
+            phone: formattedPhone,
+            country: 'CM',
+          },
+        }),
+      }).catch((err) => console.warn('[Nyole Direct Push]', err));
+    } catch (error) {
+      if (error instanceof MobileApiError) throw error;
+      await pool.query(
+        `update public.app_wallet_transactions set status = 'failed' where reference_id = $1`,
+        [reference],
+      );
+      throw new MobileApiError("L'opérateur n'a pas répondu. Réessaie.", 502);
+    }
+  } else if (legacyPrivateKey) {
     try {
       const initRes = await doFetch('https://api.notchpay.co/payments', {
         method: 'POST',
         headers: {
-          Authorization: privateKey,
+          Authorization: legacyPrivateKey,
           Accept: 'application/json',
           'Content-Type': 'application/json',
         },
@@ -133,12 +233,11 @@ export async function initiateMobileMoneyPayment(
       }
       paymentUrl = initData.authorization_url;
 
-      // Push USSD direct
       const channel = params.operator === 'orange' ? 'cm.orange' : 'cm.mtn';
       await doFetch(`https://api.notchpay.co/payments/${reference}`, {
         method: 'POST',
         headers: {
-          Authorization: privateKey,
+          Authorization: legacyPrivateKey,
           Accept: 'application/json',
           'Content-Type': 'application/json',
         },
@@ -163,7 +262,7 @@ export async function initiateMobileMoneyPayment(
     paymentUrl,
     directDebitPrompt: true,
     message: `Une notification de validation de débit (${amount} ${currency}) a été envoyée sur votre téléphone ${formattedPhone}. Veuillez saisir votre code PIN Mobile Money.`,
-    mock: !Boolean(privateKey),
+    mock: !hasProviderKey,
   };
 }
 
@@ -172,28 +271,53 @@ export interface NotchWebhookResult {
   body: Record<string, unknown>;
 }
 
+export type NyoleWebhookResult = NotchWebhookResult;
+
 /**
  * Unified webhook handler for both /api/mobile/payments/webhook and /api/mobile/wallet/webhook.
+ * Supports Nyole (`X-Afriflow-Signature` + `X-Afriflow-Timestamp`) and legacy HMAC headers.
  */
-export async function processNotchWebhook(
+export async function processNyoleWebhook(
   rawBody: string,
   headers: Headers | { get(name: string): string | null },
-): Promise<NotchWebhookResult> {
-  const secret = process.env.NOTCHPAY_WEBHOOK_SECRET?.trim();
-  if (!secret) {
-    console.error('[processNotchWebhook] NOTCHPAY_WEBHOOK_SECRET missing.');
+): Promise<NyoleWebhookResult> {
+  const nyoleSecret =
+    process.env.NYOLE_WEBHOOK_SECRET?.trim() ||
+    process.env.NYOLE_SECRET_KEY?.trim();
+  const legacySecret = process.env.NOTCHPAY_WEBHOOK_SECRET?.trim();
+
+  if (!nyoleSecret && !legacySecret) {
+    console.error('[processNyoleWebhook] NYOLE_SECRET_KEY / NYOLE_WEBHOOK_SECRET missing.');
     return {
       status: 503,
       body: { error: 'Webhook non configuré.' },
     };
   }
 
-  const signature =
+  const afriflowSignature = headers.get('x-afriflow-signature');
+  const afriflowTimestamp = headers.get('x-afriflow-timestamp');
+  const legacySignature =
     headers.get('x-notch-signature') ||
     headers.get('x-cinetpay-signature') ||
     headers.get('x-webhook-signature');
 
-  if (!verifyNotchSignature(rawBody, signature, secret)) {
+  let signatureValid = false;
+  if (afriflowSignature && nyoleSecret) {
+    signatureValid = verifyNyoleSignature(
+      rawBody,
+      afriflowSignature,
+      afriflowTimestamp,
+      nyoleSecret,
+    );
+  } else if (legacySignature && (legacySecret || nyoleSecret)) {
+    signatureValid = verifyNotchSignature(
+      rawBody,
+      legacySignature,
+      (legacySecret || nyoleSecret)!,
+    );
+  }
+
+  if (!signatureValid) {
     return {
       status: 401,
       body: { error: 'Signature invalide.' },
@@ -211,9 +335,16 @@ export async function processNotchWebhook(
   }
 
   const reference =
-    eventPayload.reference ||
+    eventPayload.data?.id ||
     eventPayload.data?.reference ||
+    eventPayload.data?.metadata?.reference ||
+    eventPayload.reference ||
     eventPayload.transaction?.reference;
+
+  const fallbackMetaReference =
+    typeof eventPayload.data?.metadata?.reference === 'string'
+      ? eventPayload.data.metadata.reference
+      : null;
 
   if (!reference || typeof reference !== 'string' || reference.length > 200) {
     return {
@@ -222,13 +353,15 @@ export async function processNotchWebhook(
     };
   }
 
-  const status = String(eventPayload.status || eventPayload.data?.status || '');
-  const event = String(eventPayload.event || '');
+  const status = String(eventPayload.status || eventPayload.data?.status || '').toLowerCase();
+  const event = String(eventPayload.event || '').toLowerCase();
   const isSuccess =
     status === 'complete' ||
+    status === 'completed' ||
     status === 'confirmed' ||
     status === 'success' ||
     status === 'successful' ||
+    event === 'payment.completed' ||
     event === 'payment.complete' ||
     event === 'payment.confirmed';
 
@@ -250,9 +383,10 @@ export async function processNotchWebhook(
       `select id, user_id, type, pack_type, amount_coins, status
        from public.app_wallet_transactions
        where reference_id = $1
+          or ($2::text is not null and reference_id = $2)
        limit 1
        for update`,
-      [reference],
+      [reference, fallbackMetaReference],
     );
 
     if (txRes.rows.length === 0) {
@@ -355,16 +489,31 @@ export async function processNotchWebhook(
   }
 }
 
+export const processNotchWebhook = processNyoleWebhook;
+
 /**
  * Backward compatibility alias for existing callers.
  */
 export async function verifyAndProcessMobilePaymentWebhook(params: {
   rawBody: string;
   signature?: string | null;
+  timestamp?: string | null;
   eventPayload?: any;
 }) {
-  const result = await processNotchWebhook(params.rawBody, {
-    get: (name: string) => (name.includes('signature') ? params.signature ?? null : null),
+  const result = await processNyoleWebhook(params.rawBody, {
+    get: (name: string) => {
+      const lower = name.toLowerCase();
+      if (lower === 'x-afriflow-timestamp') {
+        return params.timestamp ?? null;
+      }
+      if (lower === 'x-afriflow-signature') {
+        return params.signature && params.signature.includes('v1=') ? params.signature : null;
+      }
+      if (lower.includes('signature')) {
+        return params.signature ?? null;
+      }
+      return null;
+    },
   });
   return {
     success: result.status === 200 && Boolean((result.body as any).ok),

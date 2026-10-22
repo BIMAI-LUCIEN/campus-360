@@ -147,7 +147,7 @@ export function buildWhatsAppPitch(data: {
   return `Bonjour ${data.companyName},
 
 Je suis ${data.studentName}, étudiant en ${data.major}.
-Je vous transmets ma candidature pour l'offre de stage : *${data.jobTitle}*.
+Je vous transmets ma candidature via Campus 360 pour l'offre de stage : *${data.jobTitle}*.
 
 🎯 *Pourquoi mon profil correspond :*
 ${data.letterSummary.slice(0, 300)}...
@@ -155,7 +155,7 @@ ${data.letterSummary.slice(0, 300)}...
 Mon CV complet au format officiel et ma lettre de motivation sont prêts à vous être transmis. Restant à votre disposition pour convenir d'un échange.
 
 Bien cordialement,
-*${data.studentName}*`;
+*${data.studentName}* (Candidat Campus 360)`;
 }
 
 /**

@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { databasePool } from '@/lib/database';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { isMockAllowed } from '@/lib/payment-rules';
+import { formatPhoneForOperator, getNyoleBaseUrl } from '@/lib/payments';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
@@ -40,18 +41,6 @@ const bodySchema = z.object({
     .optional(),
 });
 
-const formatPhoneForProvider = (raw: string): string => {
-  let phone = raw.replace(/[\s()\-]/g, '');
-  if (!phone.startsWith('+')) {
-    if (phone.startsWith('237')) {
-      phone = `+${phone}`;
-    } else {
-      phone = `+237${phone}`;
-    }
-  }
-  return phone;
-};
-
 export async function POST(request: NextRequest) {
   try {
     const contentLength = Number(request.headers.get('content-length') ?? 0);
@@ -78,17 +67,19 @@ export async function POST(request: NextRequest) {
 
     const input = bodySchema.parse(await request.json().catch(() => ({})));
 
-    const privateKey = process.env.NOTCHPAY_PRIVATE_KEY?.trim();
+    const nyoleSecretKey = process.env.NYOLE_SECRET_KEY?.trim();
+    const legacyPrivateKey = process.env.NOTCHPAY_PRIVATE_KEY?.trim();
+    const isRealPayment = Boolean(nyoleSecretKey || legacyPrivateKey);
     const mockAllowed = isMockAllowed(process.env);
 
-    if (!privateKey && !mockAllowed) {
+    if (!isRealPayment && !mockAllowed) {
       throw new MobileApiError('Paiement indisponible pour le moment.', 503);
     }
 
-    const isRealPayment = Boolean(privateKey);
     let reference = isRealPayment
       ? `c360_topup_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`
       : `mock_pay_${crypto.randomUUID().replace(/-/g, '')}`;
+    let paymentUrl: string | undefined;
 
     // Insert pending transaction BEFORE provider call (no swallowed errors)
     await databasePool.query(
@@ -106,69 +97,144 @@ export async function POST(request: NextRequest) {
         throw new MobileApiError('Le numero de telephone est requis pour ce moyen de paiement.', 400);
       }
 
+      const formattedPhone = formatPhoneForOperator(input.phoneNumber);
+      const isOrange = input.providerName.toLowerCase().includes('orange');
+
       try {
-        const initRes = await fetch('https://api.notchpay.co/payments', {
-          method: 'POST',
-          headers: {
-            Authorization: privateKey!,
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            amount: input.amountCoins,
-            currency: 'XAF',
-            email: user.email || 'etudiant@campus360b.site',
-            description: `Recharge Campus 360 - ${input.amountCoins} Coins`,
-          }),
-        });
+        if (nyoleSecretKey) {
+          const baseUrl = getNyoleBaseUrl();
+          const initRes = await fetch(`${baseUrl}/v1/checkout/sessions`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${nyoleSecretKey}`,
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+              'Idempotency-Key': reference,
+            },
+            body: JSON.stringify({
+              amount: input.amountCoins,
+              currency: 'XAF',
+              customer_name: user.name || 'Étudiant Campus 360',
+              customer_email: user.email || 'etudiant@campus360b.site',
+              customer_phone: formattedPhone,
+              description: `Recharge Campus 360 - ${input.amountCoins} Coins`,
+              merchant_name: 'Campus 360',
+              metadata: {
+                reference,
+                student_id: user.id,
+                operator: isOrange ? 'orange' : 'mtn',
+              },
+            }),
+          });
 
-        if (!initRes.ok) {
-          throw new MobileApiError("Impossible d'initialiser le paiement.", 502);
-        }
+          if (!initRes.ok) {
+            throw new MobileApiError("Impossible d'initialiser le paiement.", 502);
+          }
 
-        const initData = (await initRes.json()) as {
-          reference?: string;
-          data?: { reference?: string };
-          transaction?: { reference?: string };
-          authorization_url?: string;
-        };
+          const initData = (await initRes.json()) as {
+            id?: string;
+            url?: string;
+            reference?: string;
+            authorization_url?: string;
+          };
 
-        const providerRef =
-          initData.reference ||
-          initData.data?.reference ||
-          initData.transaction?.reference ||
-          (initData.authorization_url ? initData.authorization_url.split('/').pop() : '') ||
-          '';
+          const providerRef = initData.id || initData.reference || '';
+          if (providerRef && providerRef !== reference) {
+            await databasePool.query(
+              `update public.app_wallet_transactions set reference_id = $1 where reference_id = $2`,
+              [providerRef, reference],
+            );
+            reference = providerRef;
+          }
 
-        if (providerRef && providerRef !== reference) {
-          await databasePool.query(
-            `update public.app_wallet_transactions set reference_id = $1 where reference_id = $2`,
-            [providerRef, reference],
-          );
-          reference = providerRef;
-        }
+          paymentUrl =
+            initData.url ||
+            initData.authorization_url ||
+            (initData.id ? `https://app.nyole.com/checkout/${initData.id}` : undefined);
 
-        const channel = input.providerName.toLowerCase().includes('orange') ? 'cm.orange' : 'cm.mtn';
-        const formattedPhone = formatPhoneForProvider(input.phoneNumber);
+          const methodCode = isOrange ? 'ORANGE_CMR' : 'MTN_MOMO_CMR';
+          await fetch(`${baseUrl}/checkout/initiate`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${nyoleSecretKey}`,
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              transactionId: reference,
+              gatewayId: 'plateforme-pawapay',
+              methodCode,
+              customerDetails: {
+                name: user.name || 'Étudiant Campus 360',
+                email: user.email || 'etudiant@campus360b.site',
+                phone: formattedPhone,
+                country: 'CM',
+              },
+            }),
+          }).catch((err) => console.warn('[Nyole Topup Direct Push]', err));
+        } else if (legacyPrivateKey) {
+          const initRes = await fetch('https://api.notchpay.co/payments', {
+            method: 'POST',
+            headers: {
+              Authorization: legacyPrivateKey,
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              amount: input.amountCoins,
+              currency: 'XAF',
+              email: user.email || 'etudiant@campus360b.site',
+              description: `Recharge Campus 360 - ${input.amountCoins} Coins`,
+            }),
+          });
 
-        const chargeRes = await fetch(`https://api.notchpay.co/payments/${reference}`, {
-          method: 'POST',
-          headers: {
-            Authorization: privateKey!,
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            channel,
-            data: { account_number: formattedPhone },
-          }),
-        });
+          if (!initRes.ok) {
+            throw new MobileApiError("Impossible d'initialiser le paiement.", 502);
+          }
 
-        if (!chargeRes.ok) {
-          throw new MobileApiError(
-            'Erreur lors du traitement du debit direct. Verifiez le numero de telephone.',
-            400,
-          );
+          const initData = (await initRes.json()) as {
+            reference?: string;
+            data?: { reference?: string };
+            transaction?: { reference?: string };
+            authorization_url?: string;
+          };
+
+          const providerRef =
+            initData.reference ||
+            initData.data?.reference ||
+            initData.transaction?.reference ||
+            (initData.authorization_url ? initData.authorization_url.split('/').pop() : '') ||
+            '';
+
+          if (providerRef && providerRef !== reference) {
+            await databasePool.query(
+              `update public.app_wallet_transactions set reference_id = $1 where reference_id = $2`,
+              [providerRef, reference],
+            );
+            reference = providerRef;
+          }
+          paymentUrl = initData.authorization_url;
+
+          const channel = isOrange ? 'cm.orange' : 'cm.mtn';
+          const chargeRes = await fetch(`https://api.notchpay.co/payments/${reference}`, {
+            method: 'POST',
+            headers: {
+              Authorization: legacyPrivateKey,
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              channel,
+              data: { account_number: formattedPhone },
+            }),
+          });
+
+          if (!chargeRes.ok) {
+            throw new MobileApiError(
+              'Erreur lors du traitement du debit direct. Verifiez le numero de telephone.',
+              400,
+            );
+          }
         }
       } catch (err) {
         await databasePool.query(
@@ -179,7 +245,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return withCors(NextResponse.json({ reference, status: 'pending', mock: !isRealPayment }), request);
+    return withCors(
+      NextResponse.json({
+        reference,
+        paymentUrl,
+        status: 'pending',
+        mock: !isRealPayment,
+      }),
+      request,
+    );
   } catch (error) {
     return withCors(mobileErrorResponse(error, request), request);
   }

@@ -4,6 +4,15 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 
 ---
 
+**2026-10-22 · vps-deploy · Synchronisation VPS /opt/campus-360 sur commit db93fd5**
+
+- **Synchronisation :** /opt/campus-360 aligné sur origin/main (db93fd5 feat(app): charte v1 dans l'app).
+- **Statut PM2 :** 3 services online (landing-site, mobile-api, recruiter-web). pm2 save exécuté.
+- **Contrôles HTTP :** API 200 (db connected), Admin 200, Landing 200, APK download 200 (build 114, 75 Mo).
+- **Fichiers modifiés :** contexte-code.md (§12 mise à jour release), journal.md.
+
+
+
 **2026-10-20 · module 25 (scraping des offres) · /execute ALL · commit de référence fcd08ed (arbre de travail non commité)**
 
 - **Validées (DoD passée) :** 25.1 (tests Python `unittest`, 13 puis 56 tests OK), 25.3 (extracteur et harnais de mesure, jeu réel en attente), 25.4 (test M3, 83/83), 25.6 (expiration), 25.7 (plafond 20 par jour, avant collecte), 25.8 (journal de passage), 25.9 (démon unique, heure du Cameroun), 25.11 (adaptateur Treg LinkedIn), 25.12 (branchement LinkedIn : Treg, Apify, repli).

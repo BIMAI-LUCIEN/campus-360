@@ -1,25 +1,23 @@
 # Plan de Développement MVP : Campus 360 (Lancement Flash & Spécifications Officielles)
 
-> **Progression globale :** 101/159 tâches validées (64%) — Module 25 (scraping des offres) : 12/17 ; Module 24 (galerie de modèles de rapports) : 0/12 ; Module 23 (préparation V1) : 0/26 ; Module 20 : 16/16 validées ; Module 21 : 9/9 validées ; Module 19 : 10 en cours ; hors Module 19 : 3 en cours, 2 ouvertes  
+> **Progression globale :** 102/160 tâches validées (64%) — Module 25 (scraping des offres) : 13/18 ; Module 24 (galerie de modèles de rapports) : 0/12 ; Module 23 (préparation V1) : 0/26 ; Module 20 : 16/16 validées ; Module 21 : 9/9 validées ; Module 19 : 10 en cours ; hors Module 19 : 3 en cours, 2 ouvertes  
 > **Couverture MVP :** 100% des fonctionnalités du cadrage `contexte.md` (Template CV Officiel, Ingestion n8n, Mobile Money, Onboarding Express, Suivi J+7, Expédition Automatisée WhatsApp/Email via Evolution API & N8N, Éditeur de documents §13, Style du document & rédaction §14)  
 > **Dernière mise à jour :** 2026-10-20 par /execute (module 25)
 
 ---
 ## Reprise
-- **Tâche en cours :** aucune ; en cours `[/]` : 25.5, 25.10, 25.15 (voir plus bas)
-- **Prochaine :** 25.2 — jeu de référence de 50 offres étiquetées (🔒 : lecture de la base et étiquetage par l'utilisateur)
-- **Reste :** 25.2, 25.5, 25.10, 25.14 (visuel), 25.15, 25.16 — module 25 (25.17 faite, migration 0015 en attente) ; module 24 et module 23 : voir `Progression globale`
+- **Tâche en cours :** aucune
+- **Prochaine :** Décision utilisateur sur 25.18 (Option A démon PM2 vs Option B cron unique, et feu vert VPS) → `/execute 25.18`, puis 25.2 (accord lecture seule et étiquetage 50 offres)
+- **Reste :** 5 tâches `[!]` (bloquées 🔒) dans le Module 25 : 25.18 (prête à exécuter dès arbitrage), 25.2, 25.10, 25.15, 25.16 ; modules 23 et 24 : voir `Progression globale`
 - **Points ouverts :**
-  - 🔒 25.2 : accord lecture seule de la base partagée ; étiquetage de 50 offres par l'utilisateur
-  - 🔒 25.5 : application de la migration 0014 sur la base partagée (puis double application)
-  - 🔒 25.10 : rotation de la clé Treg exposée dans `scripts/n8n/campus360_treg_full_workflow.json`, retrait de sa valeur du fichier, avant tout commit
-  - 🔒 25.9 : désactiver le déclencheur GitHub `daily-scraper.yml` (décision 14)
-  - 🔒 25.16 : déploiement et premier passage réel (appels Treg payants)
-  - 25.14 : vérification visuelle non faite (session requise, identifiants de test à fournir)
-  - 🔒 25.17 : code fait et testé ; migration 0015 (valeur `LINK`) **non appliquée** sur la base partagée. Tant qu'elle ne l'est pas, le scraper échouera à écrire une offre `LINK` (valeur refusée par l'enum) : appliquer 0015 **avant** le premier passage réel.
-  - Non commité : tout le travail du module 25 est dans l'arbre de travail (`fcd08ed` = dernier commit)
-- **Commit de référence :** 5458012 (le code du module 25 a été commité en dehors de cette session, en 3 commits : e88439b, a2283cd, 5458012 ; seuls les fichiers de suivi et de documentation restent non commités)
-- **Dernière entrée journal :** 2026-10-20 · tâche 25.17 · execute
+  - 🔒 **25.18 : Arbitrage du déclencheur unique VPS.** Guide d'exécution détaillé rédigé (8 rubriques complètes). L'utilisateur doit choisir entre l'Option A (démon PM2 `campus360-scraper-daemon`, recommandée) et l'Option B (cron unique 9h UTC), puis autoriser la mise à jour sur le VPS.
+  - 🔒 **25.2 : Accord lecture seule base partagée & étiquetage.** Accord requis pour extraire l'échantillon sans données personnelles, puis étiquetage manuel de 50 offres par l'utilisateur.
+  - 🔒 **25.10 : Sécurisation clé Treg.** Retrait de la valeur de repli dans `scripts/n8n/campus360_treg_full_workflow.json` et rotation de la clé par l'utilisateur.
+  - 🔒 **25.15 : Validation sur jeu réel.** Câblage et passage synthétique validés (code 0) ; le passage complet attend le jeu réel étiqueté de 25.2.
+  - 🔒 **25.16 : Accord mise en prod.** Accord explicite pour le déploiement sur VPS et le premier passage réel (appels Treg payants).
+  - **Migrations : toutes appliquées** (12, dont 0014 et 0015) le 2026-10-20 ; vérifié en base le 2026-10-21. `npm run migrate --dry-run` repasse sans rien réappliquer.
+- **Commit de référence :** db93fd5 (= HEAD). Non commité : `.gitattributes` (règle LF pour les `.sql`), les 4 fichiers SQL renormalisés, `plan.md`, `journal.md`.
+- **Dernière entrée journal :** 2026-10-22 · plan-detail · Tâche 25.18 · plan-detail
 
 ---
 
@@ -2150,7 +2148,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
 
 **2. Conventions**
 - Messages affichés à l'utilisateur et journaux métier en français ; commentaires de code en anglais.
-- Aucune couleur en dur dans `src/` : tokens `stitchColors` seulement. `npm run lint:colors` doit rester à **192**.
+- Aucune couleur en dur dans `src/` : tokens `stitchColors` seulement. `npm run lint:colors` doit rester à **190**.
 - Python : stdlib + `requests` + `psycopg2` uniquement (pas de `requirements.txt`, ne pas ajouter de dépendance sans accord). Fuseau du Cameroun : `timezone(timedelta(hours=1))` (UTC+1, sans heure d'été) ; éviter `zoneinfo` (exige `tzdata` sous Windows).
 - Toute fonction qui touche l'horloge, le réseau ou la base reçoit une dépendance injectable (`now_fn`, `sleep_fn`, `post`, `conn`) pour être testée sans réseau.
 
@@ -2178,7 +2176,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
 **7. Commandes de vérification du module**
 - Python : `cd scripts/agents && PYTHONUTF8=1 python -m unittest discover -s tests -p "test_*.py"` → « OK », code 0 (code 5 si aucun test trouvé).
 - API : `cd mobile-api && npm test` → 0 échec.
-- App : `npx tsc --noEmit` (racine) → code 0 ; `npm run lint:colors` → 192.
+- App : `npx tsc --noEmit` (racine) → code 0 ; `npm run lint:colors` → 190.
 
 ### Décisions arbitrées le 2026-10-20 (prioritaires sur les « À demander » des tâches)
 
@@ -2192,7 +2190,19 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
 | 6 | Expiration automatique : statut `expired` sur date limite dépassée. | Cadrage §15.6 | 25.5, 25.6 |
 | 7 | Date sur la carte : relatif (« il y a 3 h ») depuis `stage_jobs.created_at` ; au-delà de 7 jours, date absolue en heure du Cameroun. | Cadrage §15.7 | 25.13, 25.14 |
 | 8 | Numéro de migration : **0014** (0009 à 0013 déjà réservées par les modules 23 et 24). | Plan, numérotation | 25.5 |
-| 9 | (O1, 25.2) Échantillon : `source = 'SCRAPED'` seulement ; exclure `contact_email`, `contact_whatsapp`, `evidence` (données personnelles) ; fixture gardée **hors dépôt** (dossier scratchpad ou ignoré par git). L'extraction elle-même attend l'accord 🔒 (décision 14). | Décision de l'assistant, réversible | 25.2 | | 10 | (O2, 25.3) `--offline` mesure seulement le câblage (faux LLM figé) et l'annonce comme telle. Une précision réelle n'est mesurée que sur des réponses **enregistrées** lors d'un passage `--live` autorisé. Une offre rejetée par le filtre compte comme « bruit » (prédiction correcte si étiquetée bruit). | Décision de l'assistant | 25.3, 25.15 | | 11 | (O3) Durée de vie par défaut : **30 jours**, comme le code actuel (`job_store.py`, `DEFAULT_LIFETIME_DAYS`), et non 60 : aucun changement de comportement, réversible. Fuseau : UTC+1 (Cameroun) sans heure d'été, défini explicitement dans le code. | Décision de l'assistant | 25.6, 25.9 | | 12 | (O4) Le plafond compte les lignes **réellement enregistrées** dans `stage_jobs` aujourd'hui (jour du Cameroun) : publiées et en revue. `deferred` n'est jamais écrit en base : il ne compte pas. Les rejets (journal `stage_job_rejections`) ne comptent pas. | Décision de l'assistant : une règle lisible en base | 25.7 | | 13 | (O5) **Aucune ligne de journal en dry-run** : le dry-run n'écrit rien. Le résumé est affiché en console seulement. | Décision de l'assistant | 25.8, 25.15 | | 14 | (O6) Déclencheur unique : `daily_scheduler.py` sur le VPS (fenêtre 10 h à 12 h, heure forcée à Africa/Douala). Le workflow GitHub `daily-scraper.yml` (9 h UTC) doit être **désactivé** : sa modification est un commit, donc soumise à l'accord 🔒 (décision 14). | Décision de l'assistant | 25.9 | | 15 | (O7) Nom de variable : `TREG_API_KEY`. Emplacement : fichier `.env.local` à la racine, déjà lu par `config.py` (aucun changement de code pour le chargement). Valeur : 🔒 fournie par l'utilisateur, jamais écrite dans le dépôt. | Décision de l'assistant (nom et emplacement) | 25.10 | | 16 | (O8) Outil LinkedIn : **`anyapi.linkedin.search.jobs`** (vérifié dans le catalogue Treg le 2026-10-20 : `POST /v1/run/linkedin.jobs_thin`, 0,0005 $ par appel, taux de succès observé 99 %). Garde : **`--live` obligatoire** pour tout appel, dry-run compris. | Vérifié auprès de Treg (lecture seule) | 25.11 | | 17 | (O9) Ordre des sources LinkedIn : Treg d'abord (si la clé est présente), puis Apify (si le jeton est présent), puis le repli RSS de `linkedin_agent.py`, qui est **conservé**. Pas de suppression. | Décision de l'assistant | 25.12 | | 18 | (O10) Plateformes de référence : la liste par défaut de `orchestrator.py` (CAMEROON_JOBS, LINKEDIN, FACEBOOK, TIKTOK, ACADEMIC_WEB). `run_scraper.py` et `daily_scheduler.py` s'alignent dessus. | Décision de l'assistant | 25.9, 25.12 | | 19 | (O11) Test M3 : ses assertions décrivent un code obsolète. On les **met à jour** au comportement actuel, sans modifier l'application. Une assertion qui échoue pour une autre raison est listée, pas masquée. | Décision de l'assistant | 25.4 | | 20 | **Requêtes LinkedIn validées par 4 appels réels le 2026-10-20** (`anyapi.linkedin.search.jobs`, 0,00066 $ facturés par appel, et non 0,0005 $). **Stages :** `employmentType: "internship"` + `location: "Cameroon"`, requêtes `stagiaire` et `intern` (20 offres sur 20 au Cameroun ; recouvrement entre les deux : dédoublonner par `id`). Le type `stage` vient du filtre, sans IA. **Emplois :** `location: "Cameroon"` sans filtre de type (10 offres sur 10 au Cameroun pour `emploi`). **Ne jamais** chercher le mot `stage` sans filtre : 25 résultats sur 25 hors Cameroun. Champs reçus : `id, title, company, companyUrl, location, createdUtc, url, logoUrl` (pas de description). `createdUtc` alimente `source_published_at`. Plafond de 20 offres ajoutées par jour : **toutes offres confondues** (décision utilisateur). | Essais réels autorisés par l'utilisateur | 25.7, 25.11, 25.12 |
+| 9 | (O1, 25.2) Échantillon : `source = 'SCRAPED'` seulement ; exclure `contact_email`, `contact_whatsapp`, `evidence` (données personnelles) ; fixture gardée **hors dépôt** (dossier scratchpad ou ignoré par git). L'extraction elle-même attend l'accord 🔒 (décision 14). | Décision de l'assistant, réversible | 25.2 |
+| 10 | (O2, 25.3) `--offline` mesure seulement le câblage (faux LLM figé) et l'annonce comme telle. Une précision réelle n'est mesurée que sur des réponses **enregistrées** lors d'un passage `--live` autorisé. Une offre rejetée par le filtre compte comme « bruit » (prédiction correcte si étiquetée bruit). | Décision de l'assistant | 25.3, 25.15 |
+| 11 | (O3) Durée de vie par défaut : **30 jours**, comme le code actuel (`job_store.py`, `DEFAULT_LIFETIME_DAYS`), et non 60 : aucun changement de comportement, réversible. Fuseau : UTC+1 (Cameroun) sans heure d'été, défini explicitement dans le code. | Décision de l'assistant | 25.6, 25.9 |
+| 12 | (O4) Le plafond compte les lignes **réellement enregistrées** dans `stage_jobs` aujourd'hui (jour du Cameroun) : publiées et en revue. `deferred` n'est jamais écrit en base : il ne compte pas. Les rejets (journal `stage_job_rejections`) ne comptent pas. | Décision de l'assistant : une règle lisible en base | 25.7 |
+| 13 | (O5) **Aucune ligne de journal en dry-run** : le dry-run n'écrit rien. Le résumé est affiché en console seulement. | Décision de l'assistant | 25.8, 25.15 |
+| 14 | (O6) Déclencheur unique : `daily_scheduler.py` sur le VPS (fenêtre 10 h à 12 h, heure forcée à Africa/Douala). Le workflow GitHub `daily-scraper.yml` (9 h UTC) doit être **désactivé** : sa modification est un commit, donc soumise à l'accord 🔒 (décision 14). | Décision de l'assistant | 25.9 |
+| 15 | (O7) Nom de variable : `TREG_API_KEY`. Emplacement : fichier `.env.local` à la racine, déjà lu par `config.py` (aucun changement de code pour le chargement). Valeur : 🔒 fournie par l'utilisateur, jamais écrite dans le dépôt. | Décision de l'assistant (nom et emplacement) | 25.10 |
+| 16 | (O8) Outil LinkedIn : **`anyapi.linkedin.search.jobs`** (vérifié dans le catalogue Treg le 2026-10-20 : `POST /v1/run/linkedin.jobs_thin`, 0,0005 $ par appel, taux de succès observé 99 %). Garde : **`--live` obligatoire** pour tout appel, dry-run compris. | Vérifié auprès de Treg (lecture seule) | 25.11 |
+| 17 | (O9) Ordre des sources LinkedIn : Treg d'abord (si la clé est présente), puis Apify (si le jeton est présent), puis le repli RSS de `linkedin_agent.py`, qui est **conservé**. Pas de suppression. | Décision de l'assistant | 25.12 |
+| 18 | (O10) Plateformes de référence : la liste par défaut de `orchestrator.py` (CAMEROON_JOBS, LINKEDIN, FACEBOOK, TIKTOK, ACADEMIC_WEB). `run_scraper.py` et `daily_scheduler.py` s'alignent dessus. | Décision de l'assistant | 25.9, 25.12 |
+| 19 | (O11) Test M3 : ses assertions décrivent un code obsolète. On les **met à jour** au comportement actuel, sans modifier l'application. Une assertion qui échoue pour une autre raison est listée, pas masquée. | Décision de l'assistant | 25.4 |
+| 20 | **Requêtes LinkedIn validées par 4 appels réels le 2026-10-20** (`anyapi.linkedin.search.jobs`, 0,00066 $ facturés par appel, et non 0,0005 $). **Stages :** `employmentType: "internship"` + `location: "Cameroon"`, requêtes `stagiaire` et `intern` (20 offres sur 20 au Cameroun ; recouvrement entre les deux : dédoublonner par `id`). Le type `stage` vient du filtre, sans IA. **Emplois :** `location: "Cameroon"` sans filtre de type (10 offres sur 10 au Cameroun pour `emploi`). **Ne jamais** chercher le mot `stage` sans filtre : 25 résultats sur 25 hors Cameroun. Champs reçus : `id, title, company, companyUrl, location, createdUtc, url, logoUrl` (pas de description). `createdUtc` alimente `source_published_at`. Plafond de 20 offres ajoutées par jour : **toutes offres confondues** (décision utilisateur). | Essais réels autorisés par l'utilisateur | 25.7, 25.11, 25.12 |
+| 21 | Déclencheur unique effectif (25.18) : Option A recommandée (démon PM2 `campus360-scraper-daemon`) ou Option B (cron unique 9 h UTC / 10 h WAT) sur le VPS. Le trigger `schedule:` de `.github/workflows/daily-scraper.yml` est désactivé au profit de `workflow_dispatch` seul. | Arbitré par plan-detail | 25.18 |
 | 🔒 | **Restant à fournir par l'utilisateur** (aucune tâche ne peut les trancher à sa place) : **(a)** accès Treg du serveur : clé d'API ou commande `treg` installée sur le VPS, et la procédure pour l'obtenir (25.10) ; **(b)** rotation de la clé déjà exposée dans `scripts/n8n/campus360_treg_full_workflow.json` (suivi par git) et retrait de sa valeur du fichier, **avant tout commit** ; **(c)** accord pour lire la base partagée en lecture seule (25.2) ; **(d)** étiquetage manuel des 50 offres (25.2) ; **(e)** accord pour désactiver le workflow GitHub (décision 14) ; **(f)** accord pour appliquer la migration 0014 sur la base partagée (25.5) ; **(g)** accord pour déployer (25.16) et pour le premier passage réel, qui fait des appels Treg payants (25.16). |
 
 **🔒 Bloquant utilisateur (à obtenir avant la tâche concernée) :**
@@ -2238,11 +2248,11 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
     - `discover` renvoie le code 5 (pas 0) si un fichier n'a aucun test : vérifier les trois fichiers.
   - **Dépendances :** aucune.
 
-- [ ] **Tâche 25.2 : Jeu de référence de 50 offres étiquetées**
+- [!] **Tâche 25.2 : Jeu de référence de 50 offres étiquetées (🔒 accord lecture seule base partagée et étiquetage manuel)**
   - **Pourquoi :** sans offres réelles étiquetées à la main, on ne sait pas combien d'offres publiées sont fausses ou combien de vraies offres sont rejetées ; la promotion d'un nouveau réglage se ferait à l'aveugle.
   - **État actuel :**
     - `scripts/agents/export_labeling_sample.py` et `scripts/agents/tests/fixtures/` n'existent pas.
-    - Modèle de lecture seule : `reprocess_existing.py` `load_offers(conn)` l.36-50 (`RealDictCursor`, jointure `stage_jobs j join stage_companies c`), connexion l.84 `psycopg2.connect(DATABASE_URL, sslmode="require")`.
+    - Modèle de lecture seule : `reprocess_existing.py` `load_offers(conn)` l.41-50 (`RealDictCursor`, jointure `stage_jobs j join stage_companies c`), connexion l.84 `psycopg2.connect(DATABASE_URL, sslmode="require")`.
     - Colonnes utiles de `stage_jobs` : `id`, `title`, `description`, `location`, `source` (enum `INTERNAL|SCRAPED`), `status`, `kind`, `source_url`, `created_at` (`docs/STAGES_SUPABASE.sql` l.61-77 + `mobile-api/sql/0005_stage_jobs_quality.sql`).
     - Catégories du classifieur : `classifier_agent.CATEGORIES` l.7 = `stage, emploi, concours, formation, bruit`.
     - ~72 offres en base selon le cadrage §15 (non recompté).
@@ -2331,7 +2341,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
 
 ### Lot B — Données, plafond et cadence
 
-- [/] **Tâche 25.5 : Migration 0014 (journal de run et statut `expired`)** — 2026-10-20 : `mobile-api/sql/0014_scrape_runs_and_expiry.sql` écrite (table `stage_scrape_runs`, contrainte de statut supprimée puis recréée avec `expired`, index `created_at`, transaction, sans RLS comme 0006, sans colonne `dry_run` : décision 13) ; test statique `mobile-api/tests/migration-0014.test.mjs` (3 cas). **Non appliquée** : aucune base de test ; 🔒 accord requis pour la base partagée (et double application pour prouver l'idempotence).
+- [X] **Tâche 25.5 : Migration 0014 (journal de run et statut `expired`)** — 2026-10-20 : `mobile-api/sql/0014_scrape_runs_and_expiry.sql` écrite (table `stage_scrape_runs`, contrainte de statut supprimée puis recréée avec `expired`, index `created_at`, transaction, sans RLS comme 0006, sans colonne `dry_run` : décision 13) ; test statique `mobile-api/tests/migration-0014.test.mjs` (3 cas). **Appliquée en production le 2026-10-20** (hors de cette session, par `npm run migrate`) : vérifié le 2026-10-21 — `stage_scrape_runs` existe, la contrainte de statut accepte `expired`. Idempotence prouvée par le lanceur, qui rejoue sans rien réappliquer.
   - **Pourquoi :** sans journal des passages, personne ne sait si le scraping a tourné, combien d'offres il a ajoutées ni s'il a planté ; sans statut `expired`, les offres périmées restent mêlées aux offres publiées côté administration.
   - **État actuel :**
     - `mobile-api/sql/0005_stage_jobs_quality.sql:18-21` : contrainte `stage_jobs_status_check` créée sous `if not exists`, valeurs `published`, `pending_review`, `rejected`. Aucune autre migration ne la modifie.
@@ -2471,7 +2481,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
 
 ### Lot C — Sources et Treg
 
-- [/] **Tâche 25.10 : Accès Treg côté serveur** — 2026-10-20 : `config.py` lit `TREG_API_KEY`, `TREG_BASE_URL` (https://treg.to), `TREG_CLI` (`/opt/treg-cli/bin/treg`), `TREG_MAX_CALLS_PER_RUN` (4), `TREG_MAX_COST_PER_CALL_USD` (0,01) ; entrée `admin-app/.env.local` retirée. L'API réelle est `https://treg.to/call/<endpoint>` avec `X-Treg-Token` (l'adresse `api.treg.ai` du workflow n8n ne résout pas). Sur le VPS, le CLI connecté (équipe bct) sert de transport sans nouveau secret. **Reste 🔒** : rotation de la clé exposée dans `scripts/n8n/campus360_treg_full_workflow.json` et retrait de sa valeur du fichier.
+- [!] **Tâche 25.10 : Accès Treg côté serveur (🔒 rotation/retrait repli n8n et clé VPS)** — 2026-10-20 : `config.py` lit `TREG_API_KEY`, `TREG_BASE_URL` (https://treg.to), `TREG_CLI` (`/opt/treg-cli/bin/treg`), `TREG_MAX_CALLS_PER_RUN` (4), `TREG_MAX_COST_PER_CALL_USD` (0,01) ; entrée `admin-app/.env.local` retirée. L'API réelle est `https://treg.to/call/<endpoint>` avec `X-Treg-Token` (l'adresse `api.treg.ai` du workflow n8n ne résout pas). Sur le VPS, le CLI connecté (équipe bct) sert de transport sans nouveau secret. **Reste 🔒** : rotation de la clé exposée dans `scripts/n8n/campus360_treg_full_workflow.json` et retrait de sa valeur du fichier.
   - **Pourquoi :** LinkedIn passe par Treg, mais le serveur n'a pas accès au connecteur Treg de Claude Code ; sans clé côté serveur, aucune offre LinkedIn n'arrive aux étudiants. Une clé déjà exposée dans le dépôt doit être neutralisée avant toute nouvelle livraison.
   - **État actuel :**
     - `config.py` `ENV_FILES` (~l.10-15) : `<racine>/.env.local`, `<racine>/mobile-api/.env.local`, `<racine>/admin-app/.env.local` (dossier inexistant), `<racine>/.env`. **Pas** `scripts/agents/.env`. `load_local_env()` (l.17-30) n'écrase pas une variable déjà présente.
@@ -2615,7 +2625,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
     - Dette existante hors périmètre : les replis « Douala » et « 3 à 6 mois » (l.597) affichent des valeurs inventées quand le champ manque.
   - **Dépendances :** 25.13. **🔒 À demander :** identifiants de test pour la vérification visuelle.
 
-- [X] **Tâche 25.17 : Postuler à une offre qui n'a qu'un lien (LinkedIn)** (sauf migration et visuel) — 2026-10-20 : `mobile-api/sql/0015_apply_method_link.sql` (valeur `LINK`, instruction seule) ; `src/features/stages/applyTarget.ts` (nouveau : `isLinkApply`, `safeApplyUrl` qui n'accepte que `https://`, libellés) ; `src/types.ts` (`LINK` + `sourceUrl`) ; `stages-db.ts` (`source_url` lu et renvoyé en `sourceUrl`) ; `dispatch/route.ts` et `apply/route.ts` → 422 « Cette offre se postule sur le site de l'offre. » ; `job_store.py` : WhatsApp > e-mail > lien > sur place ; `StagesScreen.tsx` : carte et fiche ouvrent le site (`openApplyLink`), bloc recruteur remplacé par la mention que la candidature n'est pas suivie ; `AiApplyModal.tsx` : garde-fou qui ferme le modal ; `recruiter-web/lib/admin-platform-service.ts` : union élargie. DoD : `npm test` mobile-api 177 réussis / 0 échec (7 nouveaux cas), unittest Python 60 OK (4 nouveaux cas), `tsc` racine + mobile-api + recruiter-web = 0, `lint:colors` 191 = base. **Non fait :** migration 0015 non appliquée (🔒 base partagée, à appliquer deux fois) ; vérification visuelle impossible (session requise). **Écart avec le guide :** module `applyTarget.ts` ajouté (non prévu) pour rendre testable la validation de l'URL externe.
+- [X] **Tâche 25.17 : Postuler à une offre qui n'a qu'un lien (LinkedIn)** (sauf migration et visuel) — 2026-10-20 : `mobile-api/sql/0015_apply_method_link.sql` (valeur `LINK`, instruction seule) ; `src/features/stages/applyTarget.ts` (nouveau : `isLinkApply`, `safeApplyUrl` qui n'accepte que `https://`, libellés) ; `src/types.ts` (`LINK` + `sourceUrl`) ; `stages-db.ts` (`source_url` lu et renvoyé en `sourceUrl`) ; `dispatch/route.ts` et `apply/route.ts` → 422 « Cette offre se postule sur le site de l'offre. » ; `job_store.py` : WhatsApp > e-mail > lien > sur place ; `StagesScreen.tsx` : carte et fiche ouvrent le site (`openApplyLink`), bloc recruteur remplacé par la mention que la candidature n'est pas suivie ; `AiApplyModal.tsx` : garde-fou qui ferme le modal ; `recruiter-web/lib/admin-platform-service.ts` : union élargie. DoD : `npm test` mobile-api 177 réussis / 0 échec (7 nouveaux cas), unittest Python 60 OK (4 nouveaux cas), `tsc` racine + mobile-api + recruiter-web = 0, `lint:colors` 191 = base. **Migration 0015 appliquée en production le 2026-10-20** (hors de cette session) : vérifié le 2026-10-21, l'enum `apply_method` vaut `WHATSAPP, EMAIL, PHYSICAL, LINK`. **Non fait :** vérification visuelle (session requise). **Écart avec le guide :** module `applyTarget.ts` ajouté (non prévu) pour rendre testable la validation de l'URL externe.
   - **Pourquoi :** une offre LinkedIn n'a ni e-mail ni WhatsApp. Aujourd'hui `job_store.save_offer` l'enregistre en `PHYSICAL` (« sur place ») : l'étudiant voit une méthode fausse, et « Postuler en 1 Clic » n'a aucun destinataire. L'étudiant doit pouvoir ouvrir l'offre et postuler sur le site de l'annonce.
   - **État actuel :**
     - Type SQL : `mobile-api/sql/0000_baseline.sql` l.14 `create type apply_method as enum ('WHATSAPP', 'EMAIL', 'PHYSICAL')` ; colonne l.405 `apply_method apply_method not null default 'WHATSAPP'`. Aucune migration 0001 à 0014 ne l'a modifié (`grep -n apply_method mobile-api/sql/*.sql`).
@@ -2663,9 +2673,46 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
     - `sourceUrl` est une URL externe : ouvrir uniquement en `https://`, sinon message d'erreur.
   - **Dépendances :** 25.12 (offres LinkedIn avec `apply_url`). **🔒 Avant d'appliquer la migration 0015 sur la base partagée :** accord explicite. Le code se code et se teste sans elle. **Bloque la publication des offres LinkedIn sans candidature possible.**
 
+- [!] **Tâche 25.18 : Aligner les déclencheurs réels du VPS sur la décision 14 (🔒 décision déclencheur VPS, prêt pour /execute après arbitrage)**
+  - **Pourquoi :** le scraping quotidien ne publie aucune nouvelle offre aujourd'hui. Les quatre crons du VPS tournent en `--dry-run` et sans `--live`, le démon `daily_scheduler.py` n'est pas lancé, et le déclencheur GitHub de 9 h UTC reste actif en doublon. L'alignement sur un déclencheur unique et effectif permet d'alimenter quotidiennement le catalogue avec les 20 offres prévues.
+  - **État actuel :**
+    - `.github/workflows/daily-scraper.yml:4-6` : bloc `schedule: - cron: '0 9 * * *'` actif en plus de `workflow_dispatch` (l.7).
+    - `crontab -l` du VPS : 4 lignes `--dry-run --platforms CAMEROON_JOBS,LINKEDIN,FACEBOOK,TIKTOK --city …` ; aucun processus de scraping en cours ; `stage_scrape_runs` : 0 ligne (migration 0014 appliquée).
+    - `scripts/agents/daily_scheduler.py:96-116` : démon prêt avec fenêtre 10 h à 12 h (heure du Cameroun via `CAMEROON_TZ`), `live=True`, arrêt sur `cap_reached` ou à 12 h.
+    - `scripts/agents/run_scraper.py:27-37` : supporte `--live`, `--platforms`, `--query`, `--limit`.
+  - **Fichiers :**
+    - Modifié : `.github/workflows/daily-scraper.yml` ;
+    - Sur le VPS : configuration de processus (`pm2` ou `crontab`) ;
+    - Test : `mobile-api/tests/scraper-trigger.test.mjs` (nouveau).
+  - **Étapes :**
+    1. **Désactivation CI** : dans `.github/workflows/daily-scraper.yml`, commenter ou supprimer le bloc `schedule:` (lignes 4-6) pour ne conserver que `workflow_dispatch`.
+    2. **Mise en place du déclencheur unique sur le VPS** (selon l'arbitrage utilisateur) :
+       - *Option A (Démon PM2, décision 14 - recommandée) :* sur le VPS, lancer le démon Python sous PM2 :
+         `pm2 start scripts/agents/daily_scheduler.py --name "campus360-scraper-daemon" --interpreter python3` puis `pm2 save`.
+       - *Option B (Cron unique) :* sur le VPS, insérer dans la crontab :
+         `0 9 * * * cd /opt/campus-360/scripts/agents && PYTHONUTF8=1 python3 daily_scheduler.py --run-now >> /var/log/campus-scraper.log 2>&1`
+    3. **Nettoyage crontab VPS** : retirer les 4 anciennes lignes exécutant `run_scraper.py` en `--dry-run`.
+    4. **Contrôle d'environnement VPS** : vérifier que `/opt/treg-cli/bin/treg` est fonctionnel ou que `TREG_API_KEY` est renseignée dans l'environnement du scraper.
+    5. **Exécution de test réel contrôlé** : lancer une commande manuelle avec `--live` et `--limit 1` sur une source gratuite ou LinkedIn pour valider l'insertion :
+       `cd /opt/campus-360/scripts/agents && PYTHONUTF8=1 python3 run_scraper.py --limit 1 --live`
+    6. **Vérification base** : vérifier qu'une ligne est créée dans `stage_scrape_runs` (`select id, started_at, published, error from public.stage_scrape_runs order by started_at desc limit 1;`).
+  - **Tests à écrire :**
+    - `mobile-api/tests/scraper-trigger.test.mjs` : vérifie statiquement que `.github/workflows/daily-scraper.yml` ne contient aucune directive `cron:` active, et que `workflow_dispatch:` est présent.
+  - **Vérification (DoD) :**
+    - `npm test` dans `mobile-api` $\rightarrow$ 0 échec (le nouveau test passe).
+    - `grep -E "^\s+- cron:" .github/workflows/daily-scraper.yml` $\rightarrow$ aucune ligne active (code 1).
+    - Sur le VPS : `crontab -l` ne contient plus de `--dry-run`.
+    - Sur le VPS : `pm2 status` montre `campus360-scraper-daemon` en ligne (Option A) ou la crontab unique est active (Option B).
+    - En base : `SELECT count(*) FROM public.stage_scrape_runs;` $\ge 1$.
+  - **Pièges :**
+    - Laisser le cron GitHub actif en parallèle crée une double collecte quotidienne et peut épuiser les quotas d'API tierces.
+    - Sur le VPS, le cron s'exécute avec un `PATH` restreint : toujours spécifier les chemins absolus pour `python3` et `treg`.
+    - Retirer `--dry-run` écrit en production : le plafond journalier de 20 offres protège le volume d'insertion.
+  - **Dépendances :** 25.10 (clé Treg), 25.16 (déploiement en production). **🔒 Décision utilisateur :** choisir l'Option A (Démon PM2) ou l'Option B (Cron unique), et autoriser la mise à jour sur le VPS.
+
 ### Lot E — Validation et mise en production
 
-- [/] **Tâche 25.15 : Passage complet en local (dry-run)** — 2026-10-20 : `run_scraper.py` gagne `--no-db` (aucune connexion, même en lecture ; exige `--dry-run`, sinon code 2), `--from-fixture` (aucune collecte réseau) et `--offline-llm` (faux modèle) ; résumé en 7 compteurs. Test `tests/test_run_scraper_offline.py` : ni `psycopg2.connect`, ni requête réseau, plafond injecté respecté. Passage réel en ligne de commande sur un jeu **synthétique** de 8 offres avec `DAILY_OFFER_CAP=5` : 5 publiées, `cap_reached: True`, code 0. **Reste** : le même passage sur le vrai jeu étiqueté (25.2).
+- [!] **Tâche 25.15 : Passage complet en local (dry-run) (🔒 en attente du jeu réel 25.2)** — 2026-10-20 : `run_scraper.py` gagne `--no-db` (aucune connexion, même en lecture ; exige `--dry-run`, sinon code 2), `--from-fixture` (aucune collecte réseau) et `--offline-llm` (faux modèle) ; résumé en 7 compteurs. Test `tests/test_run_scraper_offline.py` : ni `psycopg2.connect`, ni requête réseau, plafond injecté respecté. Passage réel en ligne de commande sur un jeu **synthétique** de 8 offres avec `DAILY_OFFER_CAP=5` : 5 publiées, `cap_reached: True`, code 0. **Reste** : le même passage sur le vrai jeu étiqueté (25.2).
   - **Pourquoi :** avant de toucher la production, il faut prouver sur un poste local, sans coût ni écriture partagée, que plafond, expiration et résumé fonctionnent ensemble.
   - **État actuel :**
     - `run_scraper.py` : options `--query`, `--platforms`, `--limit`, `--dry-run`, `--city` (l.21-26) ; affiche durée, collectés, rapports, `offers_by_status` (l.50-57).
@@ -2692,11 +2739,11 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
     - `reprocess_existing.py` contient sa propre logique `evaluate` (l.53-75) : un résultat différent de celui de l'orchestrateur n'est pas un bug de ce module.
   - **Dépendances :** 25.3 (faux LLM), 25.6 à 25.9, 25.12.
 
-- [ ] **Tâche 25.16 : Mise en production et première exécution réelle**
+- [!] **Tâche 25.16 : Mise en production et première exécution réelle (🔒 accord écrit déploiement et passage réel payant)**
   - **Pourquoi :** tant que la migration, le code et le déclencheur ne sont pas en production, les étudiants ne voient ni les offres LinkedIn, ni la date d'ajout, et l'administrateur n'a pas de journal.
   - **État actuel :**
-    - VPS encore sur un commit antérieur (`5f6fda8`, journal du 2026-10-20) ; déploiement par `/vps-deploy` ou `.github/workflows/deploy-vps.yml` (~).
-    - Migration 0014 écrite (25.5) mais non appliquée. Déclencheur choisi en O6 (25.9).
+    - Code scraping validé localement (60 tests unitaires OK) ; VPS actuellement sur `28136bd`.
+    - Migrations 0014 et 0015 appliquées en production le 2026-10-20 ; `stage_scrape_runs` existe et l'enum `apply_method` comprend `LINK`. Déclencheur à aligner en 25.18.
     - 17.11 (onglet « À valider ») et 17.14 (planification) en cours.
   - **Fichiers :** aucun fichier du dépôt modifié en dehors du journal ; sur le VPS : fichier `.env` retenu en O7 (noms seulement dans le dépôt), crontab ou service selon O6.
   - **Étapes (toutes 🔒, une par une avec accord explicite) :**
@@ -2720,7 +2767,59 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
 
 ---
 
+## 💳 MODULE 26 : Migration Passerelle de Paiement Mobile Money vers Nyole (`https://nyole.com/docs/`)
+
+> **Objectif :** Remplacer NotchPay par **Nyole** (`https://app.nyole.com/api`) comme passerelle principale de paiement Mobile Money (MTN MoMo, Orange Money) et Carte bancaire dans `mobile-api` et l'application mobile/web, tout en préservant l'atomicité des transactions, la vérification cryptographique des webhooks (`X-Afriflow-Signature` + `X-Afriflow-Timestamp`), le polling de statut et l'absence de tout crédit sans paiement confirmé.
+
+- [X] **Tâche 26.1 : Règles pures & vérification de signature webhook Nyole (`payment-rules.ts` & `env-check.ts`)** - validée le 2026-10-22
+  - **Fichiers :** `mobile-api/lib/payment-rules.ts`, `mobile-api/lib/env-check.ts`, `mobile-api/.env.example`, `.env.example`
+  - **Action :**
+    - Implémenter `verifyNyoleSignature(rawBody, signatureHeader, timestampHeader, secret, nowSeconds?)` :
+      - Extraction du timestamp (`x-afriflow-timestamp` ou `t=` dans `x-afriflow-signature`) et du digest `v1=`.
+      - Fenêtre anti-rejeu stricte de 300 secondes ($\pm 5\text{ min}$).
+      - Calcul HMAC-SHA256 sur `${timestamp}.${rawBody}` avec `NYOLE_SECRET_KEY` (ou secret webhook dédié `NYOLE_WEBHOOK_SECRET`) et comparaison en temps constant (`crypto.timingSafeEqual`).
+    - Mettre à jour `isMockAllowed(env)` pour interdire tout mode mock dès que `NYOLE_SECRET_KEY` (ou `NOTCHPAY_PRIVATE_KEY` en repli) est défini ou que `NODE_ENV === 'production'`.
+    - Mettre à jour `env-check.ts` et `.env.example` : exiger `NYOLE_SECRET_KEY` en production lorsque `PAYMENTS_ENABLED !== 'false'`.
+  - **DoD :** Tests unitaires `payment-rules` et `env-check` passants à 100%.
+
+- [X] **Tâche 26.2 : Initiation de session Checkout Nyole, push Mobile Money & Webhook atomique (`payments.ts`)** - validée le 2026-10-22
+  - **Fichiers :** `mobile-api/lib/payments.ts`, `mobile-api/app/api/mobile/payments/initiate/route.ts`, `mobile-api/app/api/mobile/payments/webhook/route.ts`
+  - **Action :**
+    - Configurer `net.setDefaultAutoSelectFamilyAttemptTimeout?.(5000)` pour garantir la résilience dual-stack IPv4/IPv6 Cloudflare vers `app.nyole.com`.
+    - Dans `initiateMobileMoneyPayment` :
+      1. Insérer d'abord la transaction en statut `'pending'` dans `app_wallet_transactions` (aucun appel externe si l'insertion échoue).
+      2. Créer la session Checkout via `POST https://app.nyole.com/api/v1/checkout/sessions` avec `Authorization: Bearer ${NYOLE_SECRET_KEY}` et `Idempotency-Key: ${reference}`.
+      3. Mettre à jour `reference_id` avec l'identifiant de session Nyole (`session.id`) et déclencher l'initiation Mobile Money (`GET /v1/checkout/sessions/{id}/methods?country=cm` puis `POST https://app.nyole.com/api/checkout/initiate` pour `MTN_MOMO_CMR` ou `ORANGE_CMR`).
+      4. Retourner `reference: session.id` et `paymentUrl: session.url` (`https://app.nyole.com/checkout/{id}`).
+    - Dans `processNyoleWebhook` (et alias `processNotchWebhook`) :
+      - Vérifier `x-afriflow-signature` et `x-afriflow-timestamp`.
+      - Accepter l'événement `payment.completed` / `status === 'SUCCESS'` et créditer atomiquement le portefeuille (`app_wallets.balance_coins` + `stage_students.tokens` / `is_premium`) via `decideWebhookCredit`.
+  - **DoD :** Aucun appel réseau si l'insertion DB échoue ; webhook signé créditant une seule fois (idempotence garantie).
+
+- [X] **Tâche 26.3 : Routes Portefeuille Topup & Polling de statut Nyole (`wallet/topup`)** - validée le 2026-10-22
+  - **Fichiers :** `mobile-api/app/api/mobile/wallet/topup/route.ts`, `mobile-api/app/api/mobile/wallet/topup/[reference]/route.ts`, `mobile-api/app/api/mobile/wallet/webhook/route.ts`
+  - **Action :**
+    - Aligner `POST /api/mobile/wallet/topup` sur la création de session Nyole (`POST /v1/checkout/sessions` + initiation Mobile Money) en retournant `reference` (`session.id`) et `paymentUrl` (`session.url`).
+    - Aligner `GET /api/mobile/wallet/topup/[reference]` sur `GET https://app.nyole.com/api/v1/checkout/sessions/${encodeURIComponent(reference)}/status` :
+      - Si `status === 'SUCCESS' && paid === true`, créditer atomiquement le portefeuille si la transaction locale était encore `'pending'`.
+      - Si `status === 'FAILED' || status === 'CANCELLED'`, marquer la transaction locale en `'failed'`.
+  - **DoD :** Polling `GET /api/mobile/wallet/topup/[reference]` synchronisé avec l'API Nyole `/v1/checkout/sessions/{id}/status`.
+
+- [X] **Tâche 26.4 : Interface Mobile/Web (`PaymentModal.tsx`) & Suite de Tests** - validée le 2026-10-22
+  - **Fichiers :** `src/features/wallet/PaymentModal.tsx`, `mobile-api/tests/payments.test.mjs`, `mobile-api/tests/env-check.test.mjs`
+  - **Action :**
+    - Conserver `paymentUrl` retourné par `initiateMobileMoneyPayment` dans `PaymentModal.tsx` et afficher un bouton d'action secondaire permettant d'ouvrir la page de paiement sécurisée Nyole (`Linking.openURL(paymentUrl)`) pendant l'attente USSD, tout en maintenant le polling automatique toutes les 3 secondes.
+    - Respecter strictement les jetons de couleur `stitchColors` (`npm run lint:colors` sans régression).
+    - Mettre à jour et enrichir les tests unitaires (`payments.test.mjs`, `env-check.test.mjs`).
+  - **DoD :** `npx tsc --noEmit` (racine et `mobile-api`) code 0, `cd mobile-api && npm test` 0 échec, `npm run lint:colors` sans hausse.
+
+---
+
 ## Journal d'exécution
+**[2026-10-22] Module 26 VERIFIED (test-and-verify)** — Intégration de la passerelle de paiement Mobile Money Nyole (`https://nyole.com/docs/`) vérifiée par preuves réelles : suite de tests `mobile-api` complète (179 pass, 0 fail, 18 skip serveur local), tests unitaires ciblés `payments.test.mjs`, `payment-status.test.mjs`, `env-check.test.mjs` à 100% de réussite (13/13) ; session sandbox live Nyole créée (`201 Created`, ID `cm...`) avec interrogation de statut (`200 OK`) et vérification des méthodes CM (`MTN_MOMO_CMR`, `ORANGE_CMR`, `card-xaf-stripe`) ; `npm run typecheck` à la racine et dans `mobile-api` à 0 erreur ; `npm run lint:colors` à 189 (zéro régression de jetons) ; audit sécurité : zéro secret exposé dans Git, calcul HMAC SHA-256 timing-safe avec tolérance anti-rejeu 300s.
+**[2026-10-22] Module 26 (Tâches 26.1 à 26.4) validé — Migration Passerelle de Paiement vers Nyole** (execute) — fichiers : `mobile-api/lib/payment-rules.ts`, `mobile-api/lib/payments.ts`, `mobile-api/lib/env-check.ts`, `mobile-api/app/api/mobile/wallet/topup/route.ts`, `mobile-api/app/api/mobile/wallet/topup/[reference]/route.ts`, `mobile-api/.env.example`, `src/features/wallet/PaymentModal.tsx`, `mobile-api/tests/payments.test.mjs`, `mobile-api/tests/env-check.test.mjs`, `contexte-code.md` — validation : tests unitaires `payments.test.mjs` + `payment-status.test.mjs` + `env-check.test.mjs` (13/13 pass, 0 fail), session sandbox Nyole testée en direct (`201 Created` sur `https://app.nyole.com/api/v1/checkout/sessions` et polling `/status` `200 OK`), `npx tsc --noEmit` ×2 code 0, `lint:colors` 189/189 — sécurité : signature webhook Nyole (`X-Afriflow-Signature` + `X-Afriflow-Timestamp`, HMAC-SHA256 sur `${ts}.${rawBody}`, anti-rejeu 300s, `timingSafeEqual`), aucun crédit sans confirmation serveur, clés configurées uniquement dans `.env.local` (ignoré par git).
+**[2026-10-22] Tâche 25.18 détaillée (plan-detail)** — Guide d'exécution de la tâche 25.18 (déclencheur unique VPS) rédigé avec les 8 rubriques complètes ; décision 21 arbitrée dans le tableau du Module 25 (Option A démon PM2 recommandée vs Option B cron unique ; désactivation du schedule GitHub) ; prête pour /execute dès arbitrage utilisateur.
+
 **[2026-10-20] Livraison release V1 v1.0.0 (commit 1c82286)** (deploy-and-push / vps-deploy) — commits : cbce205..1c82286 (10 commits atomiques, release figée et taguée v1.0.0) — services : campus360-mobile-api (port 3002), campus360-recruiter-web (3001), campus360-landing-site (3000) — base : 12 migrations versionnées appliquées (0000 à 0015) — health : https://api.campus360b.site/api/health (200 OK, db: connected), https://admin.campus360b.site (200 OK), https://campus360b.site (200 OK) — tâches livrées : Tâches 23.1 à 23.24, 25.1 à 25.17.
 
 **[2026-10-20] Tâche 23.13 validée** (execute) — fichiers : `mobile-api/lib/sanitize-html.ts`, `recruiter-web/lib/sanitize-html.ts`, `mobile-api/app/api/mobile/documents/{generate,ai,generate-full}/route.ts`, `recruiter-web/app/api/mobile/documents/{generate,ai,generate-full}/route.ts`, `mobile-api/tests/sanitize-images.test.mjs` — validation : grep `sanitizeHtmlFragment|buildCvPrompt|buildLettrePrompt` vide (0 ligne), sanitize-images 7/7 pass, npm test 159 pass / 0 fail / 14 skipped, tsc ×3 code 0, lint:colors 191/191 — sécurité : un seul assainisseur strict anti-XSS et anti-style dangereux (`url(`, `position`) pour toutes les générations IA, code markdown ````html` proprement extrait via `stripCodeFence`.
