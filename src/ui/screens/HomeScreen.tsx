@@ -35,6 +35,7 @@ import {
   stitchTypography,
   stitchShadows,
   brandGradient,
+  fontFamilies,
 } from '../../theme/stitch';
 import {
   CategoryGrid,
@@ -171,6 +172,9 @@ export function HomeScreen({
             end={{ x: 1, y: 1 }}
             style={styles.heroBanner}
           >
+            {/* Brand book: large orbit arcs, cut by the edge of the frame. */}
+            <View pointerEvents="none" style={styles.heroOrbitLarge} />
+            <View pointerEvents="none" style={styles.heroOrbitSmall} />
             <View style={styles.heroGreetingRow}>
               <View style={{ flex: 1, paddingRight: 8 }}>
                 <Text style={styles.heroGreetingText}>{firstName ? `Bonjour, ${firstName} 👋` : 'Bonjour 👋'}</Text>
@@ -181,13 +185,13 @@ export function HomeScreen({
                 ) : null}
               </View>
               <View style={styles.heroMatchBadge}>
-                <Sparkles size={12} color="#FDE047" />
-                <Text style={styles.heroMatchText}>Top Match</Text>
+                <Sparkles size={12} color={stitchColors.soleilInk} />
+                <Text style={styles.heroMatchText}>Étudiant</Text>
               </View>
             </View>
 
             <Text style={styles.heroCatchphrase}>
-              Trouve ton stage
+              Ton <Text style={styles.heroAccent}>premier</Text> stage commence ici.
             </Text>
           </LinearGradient>
         </View>
@@ -259,7 +263,9 @@ export function HomeScreen({
                   <ChevronRight size={14} color={stitchColors.primary} />
                 </Pressable>
               </View>
-              <Text style={styles.recoTitle}>Recommandé pour toi</Text>
+              <Text style={styles.recoTitle}>
+                Recommandé <Text style={styles.recoAccent}>pour toi</Text>
+              </Text>
               <Text style={styles.recoSubtitle} numberOfLines={1}>{recoReason}</Text>
             </View>
 
@@ -465,6 +471,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   heroBanner: {
+    overflow: 'hidden',
     paddingHorizontal: stitchSpacing.containerMargin,
     paddingTop: 16,
     paddingBottom: 22,
@@ -490,29 +497,59 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.85)',
     marginTop: 2,
   },
+  heroOrbitLarge: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+    top: -120,
+    right: -90,
+  },
+  heroOrbitSmall: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    bottom: -95,
+    left: -40,
+  },
+  // Soleil pill, tilted -3° (brand book: one playful accent per screen).
   heroMatchBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    transform: [{ rotate: '-3deg' }],
+    backgroundColor: stitchColors.soleil,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.28)',
+    borderColor: stitchColors.soleil,
     borderRadius: 20,
     paddingVertical: 4,
     paddingHorizontal: 9,
   },
   heroMatchText: {
-    fontFamily: stitchTypography.labelSm.fontFamily,
+    fontFamily: fontFamilies.interSemi,
     fontSize: 11,
-    fontWeight: '700',
-    color: stitchColors.white,
+    fontWeight: '600',
+    color: stitchColors.ink,
   },
   heroCatchphrase: {
-    fontFamily: stitchTypography.bodyMd.fontFamily,
-    fontSize: 13.5,
-    color: 'rgba(255, 255, 255, 0.92)',
-    fontWeight: '500',
-    marginTop: 4,
+    fontFamily: fontFamilies.displaySemi,
+    fontSize: 20,
+    lineHeight: 28,
+    color: stitchColors.white,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+    marginTop: 10,
+  },
+  heroAccent: {
+    fontFamily: fontFamilies.accent,
+    fontSize: 23,
+    fontWeight: '400',
+    color: stitchColors.white,
   },
 
   // 2. Catégories
@@ -589,9 +626,16 @@ const styles = StyleSheet.create({
   recoTitle: {
     fontFamily: stitchTypography.displayHero.fontFamily,
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     color: stitchColors.ink,
     letterSpacing: -0.6,
+  },
+  recoAccent: {
+    fontFamily: fontFamilies.accent,
+    fontSize: 25,
+    fontWeight: '400',
+    letterSpacing: 0,
+    color: stitchColors.sienna,
   },
   recoSubtitle: {
     marginTop: -4,

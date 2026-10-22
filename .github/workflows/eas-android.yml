@@ -25,6 +25,9 @@ on:
         options:
           - preview
 
+permissions:
+  contents: write
+
 jobs:
   build-android-apk:
     name: EAS local · android · ${{ inputs.profile }}
@@ -78,3 +81,20 @@ jobs:
           path: ${{ runner.temp }}/campus-360.apk
           if-no-files-found: error
           retention-days: 30
+
+      # Public pre-release so the VPS can fetch the APK itself (curl), without
+      # going through a developer's connection.
+      - name: Publish the APK as a GitHub pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./app.json').expo.version")
+          tag="apk-v${version}-${{ github.run_number }}"
+          sha=$(sha256sum "$RUNNER_TEMP/campus-360.apk" | cut -d' ' -f1)
+          gh release create "$tag" "$RUNNER_TEMP/campus-360.apk" \
+            --prerelease \
+            --target "${{ github.sha }}" \
+            --title "Campus 360 APK ${version} (build ${{ github.run_number }})" \
+            --notes "APK Android ${version}, commit ${{ github.sha }}. SHA-256 : ${sha}"
+          echo "Release: $tag (SHA-256 $sha)"

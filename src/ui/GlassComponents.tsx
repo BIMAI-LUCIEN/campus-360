@@ -75,8 +75,8 @@ import {
 } from '../theme/stitch';
 
 
-const SANS = Platform.select({ ios: 'System', android: 'sans-serif-medium', web: 'Outfit, sans-serif' }) as string;
-const INTER = Platform.select({ ios: 'System', android: 'sans-serif', web: 'Inter, sans-serif' }) as string;
+const SANS = fontFamilies.display;
+const INTER = fontFamilies.inter;
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace' }) as string;
 
 // ─── InkRule — thin divider ──────────────────────────────────────────────────

@@ -35,7 +35,8 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts } from 'expo-font';
-import { Outfit_600SemiBold, Outfit_700Bold } from '@expo-google-fonts/outfit';
+import { Sora_400Regular, Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sora';
+import { InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument-serif';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 
 import {
@@ -86,12 +87,13 @@ import {
   glassPanel,
   glassCard,
   brandGradient,
+  fontFamilies,
 } from './theme/stitch';
 import { publicEnv } from './config/env';
 
-const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia, serif' }) as string;
+const SERIF = fontFamilies.serif;
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace' }) as string;
-const SANS = Platform.select({ ios: 'System', android: 'sans-serif-medium', web: 'Outfit, sans-serif' }) as string;
+const SANS = fontFamilies.display;
 
 import { TopBar, BottomNav } from './ui/GlassComponents';
 import { HomeScreen } from './ui/screens/HomeScreen';
@@ -235,7 +237,7 @@ function PrimaryButtonLocal({
         pressed && !disabled && { transform: [{ scale: 0.96 }] },
       ]}
     >
-      <Text style={{ fontFamily: Platform.select({ ios: 'sans-serif', android: 'sans-serif', web: 'Inter, sans-serif' }) as string, fontSize: 14, lineHeight: 20, letterSpacing: 0.14, fontWeight: '600', color: variant === 'secondary' ? stitchColors.primary : stitchColors.paper }}>
+      <Text style={{ fontFamily: fontFamilies.interSemi, fontSize: 14, lineHeight: 20, letterSpacing: 0.14, fontWeight: '600', color: variant === 'secondary' ? stitchColors.primary : stitchColors.paper }}>
         {loading ? 'Patiente...' : label}
       </Text>
     </Pressable>
@@ -244,8 +246,10 @@ function PrimaryButtonLocal({
 
 export function AppShell() {
   const [fontsLoaded, fontError] = useFonts({
-    Outfit_600SemiBold,
-    Outfit_700Bold,
+    Sora_400Regular,
+    Sora_600SemiBold,
+    Sora_700Bold,
+    InstrumentSerif_400Regular_Italic,
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
@@ -1761,7 +1765,7 @@ const styles = StyleSheet.create({
   premiumHero: { marginBottom: 28 },
   premiumEyebrow: { fontFamily: MONO, fontSize: 11, letterSpacing: 1.6, color: stitchColors.sienna, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' },
   premiumTitle: { fontFamily: SANS, fontSize: 30, fontWeight: '700', color: stitchColors.ink, lineHeight: 36, letterSpacing: -0.6, marginBottom: 8 },
-  premiumSubtitle: { fontFamily: 'Inter, sans-serif', fontSize: 14, color: stitchColors.inkMuted, lineHeight: 21 },
+  premiumSubtitle: { fontFamily: fontFamilies.inter, fontSize: 14, color: stitchColors.inkMuted, lineHeight: 21 },
 
   blockTitle: { fontFamily: SANS, fontSize: 18, fontWeight: '700', color: stitchColors.ink, letterSpacing: -0.3, marginBottom: 14 },
 
@@ -1779,13 +1783,13 @@ const styles = StyleSheet.create({
   passRibbon: { position: 'absolute', top: -12, right: 22, paddingHorizontal: 12, paddingVertical: 6, borderRadius: stitchRadius.full },
   passRibbonText: { color: stitchColors.white, fontFamily: SANS, fontSize: 10, fontWeight: '700', letterSpacing: 0.6 },
   passCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  passKicker: { fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0.2, color: stitchColors.inkMuted, fontWeight: '600' },
+  passKicker: { fontFamily: fontFamilies.inter, fontSize: 12, letterSpacing: 0.2, color: stitchColors.inkMuted, fontWeight: '600' },
   passCurrentTag: { fontFamily: MONO, fontSize: 9, fontWeight: '700', color: stitchColors.emerald, letterSpacing: 1.2 },
   passName: { fontFamily: SANS, fontSize: 22, fontWeight: '700', color: stitchColors.ink, letterSpacing: -0.4, marginBottom: 12 },
   passPriceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 14 },
   passPrice: { fontFamily: SANS, fontSize: 32, fontWeight: '800', color: stitchColors.ink, letterSpacing: -0.8 },
-  passPriceUnit: { fontFamily: 'Inter, sans-serif', fontSize: 13, color: stitchColors.inkMuted },
-  passBody: { fontFamily: 'Inter, sans-serif', fontSize: 14, color: stitchColors.inkMuted, lineHeight: 20, marginBottom: 16 },
+  passPriceUnit: { fontFamily: fontFamilies.inter, fontSize: 13, color: stitchColors.inkMuted },
+  passBody: { fontFamily: fontFamilies.inter, fontSize: 14, color: stitchColors.inkMuted, lineHeight: 20, marginBottom: 16 },
   passBullets: { gap: 10, marginBottom: 20 },
   passBulletRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   passBulletIcon: {
@@ -1794,7 +1798,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   passBulletIconFeatured: { backgroundColor: stitchColors.siennaSoft },
-  passBulletText: { flex: 1, fontFamily: 'Inter, sans-serif', fontSize: 13.5, color: stitchColors.inkSoft, lineHeight: 19 },
+  passBulletText: { flex: 1, fontFamily: fontFamilies.inter, fontSize: 13.5, color: stitchColors.inkSoft, lineHeight: 19 },
   passCta: {
     backgroundColor: stitchColors.surfaceContainerHigh,
     paddingVertical: 14, alignItems: 'center', borderRadius: stitchRadius.button,
@@ -1826,7 +1830,7 @@ const styles = StyleSheet.create({
   },
   iaTileCredits: { fontFamily: SANS, fontSize: 20, fontWeight: '800', color: stitchColors.ink, letterSpacing: -0.4 },
   iaTileCreditsLabel: { fontFamily: MONO, fontSize: 8, color: stitchColors.inkMuted, letterSpacing: 1, marginBottom: 4 },
-  iaTileName: { fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: '600', color: stitchColors.inkSoft },
+  iaTileName: { fontFamily: fontFamilies.inter, fontSize: 12, fontWeight: '600', color: stitchColors.inkSoft },
   iaTilePrice: { fontFamily: SANS, fontSize: 12, fontWeight: '700', color: stitchColors.sienna, marginTop: 2 },
 
   // Wallet callout
@@ -1839,7 +1843,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   walletCalloutTitle: { fontFamily: SANS, fontSize: 19, fontWeight: '700', color: stitchColors.ink, letterSpacing: -0.3, marginBottom: 6 },
-  walletCalloutBody: { fontFamily: 'Inter, sans-serif', fontSize: 13.5, color: stitchColors.inkMuted, lineHeight: 20, marginBottom: 16 },
+  walletCalloutBody: { fontFamily: fontFamilies.inter, fontSize: 13.5, color: stitchColors.inkMuted, lineHeight: 20, marginBottom: 16 },
   walletCalloutCta: { paddingVertical: 14, alignItems: 'center', borderRadius: stitchRadius.button },
   walletCalloutCtaText: { fontFamily: SANS, fontSize: 14, fontWeight: '700', color: stitchColors.white },
 });

@@ -7,7 +7,7 @@ import {
 
 import { FileText, Mail, Briefcase, GraduationCap, Sparkles, Edit3, Download, Trash2, Eye, X } from 'lucide-react-native';
 import { authBaseUrl, authFetch, authClient, type StudentProfile } from '../auth/betterAuth';
-import { stitchColors, stitchShadows, stitchRadius } from '../../theme/stitch';
+import { stitchColors, stitchShadows, stitchRadius, fontFamilies } from '../../theme/stitch';
 import { GradientText } from '../../ui/GlassComponents';
 import { DocGenChat } from './DocGenChat';
 import { OfficialCvView } from '../stages/OfficialCvView';
@@ -40,7 +40,7 @@ const TYPE_TILES = [
 
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia, serif' }) as string;
 const MONO = Platform.select({ ios: 'Menlo', android: 'monospace', web: 'monospace' }) as string;
-const SANS = Platform.select({ ios: 'System', android: 'sans-serif-medium', web: 'Outfit, sans-serif' }) as string;
+const SANS = fontFamilies.display;
 
 type Document = {
   id: string;

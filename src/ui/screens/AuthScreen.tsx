@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -15,12 +16,10 @@ import {
   User,
   Mail,
   Lock,
-  GraduationCap,
   CheckCircle2,
   ShieldCheck,
   X,
 } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { legalLinks } from '../../config/legalLinks';
 import { publicEnv } from '../../config/env';
 import {
@@ -139,15 +138,16 @@ export function AuthScreen({
 
             {/* Logo Emblem */}
             <View style={styles.logoWrap}>
-              <LinearGradient
-                colors={[stitchColors.primary, stitchColors.siennaDeep]}
+              {/* Orbite monogram — never enclosed in a shape (brand book). */}
+              <Image
+                source={require('../../../assets/brand/logo-orbite.png')}
                 style={styles.logoMark}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <GraduationCap size={28} color={stitchColors.white} strokeWidth={2} />
-              </LinearGradient>
-              <Text style={styles.logoTitle}>Campus 360</Text>
+                resizeMode="contain"
+                accessibilityLabel="Logo Campus 360"
+              />
+              <Text style={styles.logoTitle}>
+                Campus <Text style={styles.logoTitleNumber}>360</Text>
+              </Text>
               <Text style={styles.logoSubtitle}>Portail Étudiant, Stages &amp; Réussite</Text>
             </View>
 
@@ -466,24 +466,22 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   logoMark: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 60,
+    height: 60,
     marginBottom: 10,
-    shadowColor: stitchColors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 5,
   },
+  // Logotype: "Campus" Sora 700 + "360" Sora 400 violet.
   logoTitle: {
-    fontFamily: fontFamilies.outfit,
+    fontFamily: fontFamilies.display,
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '700',
     color: stitchColors.ink, // #0F172A
     letterSpacing: -0.4,
+  },
+  logoTitleNumber: {
+    fontFamily: fontFamilies.displayRegular,
+    fontWeight: '400',
+    color: stitchColors.sienna,
   },
   logoSubtitle: {
     fontSize: 12,

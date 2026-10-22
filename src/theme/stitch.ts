@@ -34,6 +34,16 @@ export const stitchColors = {
   emeraldBg: 'rgba(16, 185, 129, 0.08)',
   emeraldSoft: 'rgba(16, 185, 129, 0.16)',
 
+  // Playful accents (brand book v1) — one per screen, never as text on white.
+  // Each accent comes with its background and a readable text colour.
+  soleil: '#FFD43B',
+  soleilBg: '#FFF8DB',
+  soleilInk: '#7A5600',
+  corail: '#FF7A59',
+  corailBg: '#FFF0EB',
+  corailInk: '#B4401F',
+  mentheInk: '#047857',
+
   // Pure
   white: '#FFFFFF',
 
@@ -136,29 +146,19 @@ export const stitchRadius = {
 };
 
 // ── Font families ────────────────────────────────────────────────────────────
-const outfitFamily = Platform.select({
-  ios: 'System',
-  android: 'sans-serif-medium',
-  web: 'Outfit, sans-serif',
-}) as string;
+// Brand book v1: Sora for titles, Inter for text, Instrument Serif Italic for a
+// single accent word. These are the names registered by `useFonts` in AppShell,
+// so they work the same on Android, iOS and web (system fonts were used on
+// native before, the brand fonts only reached the web build).
+const displayFamily = 'Sora_700Bold';
+const displaySemiFamily = 'Sora_600SemiBold';
+const interFamily = 'Inter_400Regular';
+const interMediumFamily = 'Inter_500Medium';
+const interSemiFamily = 'Inter_600SemiBold';
+const accentFamily = 'InstrumentSerif_400Regular_Italic';
 
-const interFamily = Platform.select({
-  ios: 'System',
-  android: 'sans-serif',
-  web: 'Inter, sans-serif',
-}) as string;
-
-const serifFamily = Platform.select({
-  ios: 'Georgia',
-  android: 'serif',
-  web: 'Georgia, serif',
-}) as string;
-
-const serifItalicFamily = Platform.select({
-  ios: 'Georgia-Italic',
-  android: 'serif',
-  web: 'Georgia, serif',
-}) as string;
+const serifFamily = displaySemiFamily;
+const serifItalicFamily = accentFamily;
 
 const monoFamily = Platform.select({
   ios: 'Menlo',
@@ -171,8 +171,16 @@ const monoFamily = Platform.select({
 export const fontFamilies = {
   serif: serifFamily,
   serifItalic: serifItalicFamily,
-  outfit: outfitFamily,
+  // `outfit` is the historical name of the title font, kept so screens do not
+  // all change at once: it now points to Sora.
+  outfit: displayFamily,
+  display: displayFamily,
+  displayRegular: 'Sora_400Regular',
+  displaySemi: displaySemiFamily,
+  accent: accentFamily,
   inter: interFamily,
+  interMedium: interMediumFamily,
+  interSemi: interSemiFamily,
   sans: interFamily,
   mono: monoFamily,
 };
@@ -181,7 +189,7 @@ export const fontFamilies = {
 export const stitchTypography = StyleSheet.create({
   // Display (bold sans — direct, no serif in dark UI)
   displayHero: {
-    fontFamily: outfitFamily,
+    fontFamily: displayFamily,
     fontSize: 34,
     lineHeight: 40,
     fontWeight: '700',
@@ -189,7 +197,7 @@ export const stitchTypography = StyleSheet.create({
     letterSpacing: -0.8,
   },
   displayLg: {
-    fontFamily: outfitFamily,
+    fontFamily: displayFamily,
     fontSize: 28,
     lineHeight: 34,
     fontWeight: '700',
@@ -197,7 +205,7 @@ export const stitchTypography = StyleSheet.create({
     letterSpacing: -0.6,
   },
   displayMd: {
-    fontFamily: outfitFamily,
+    fontFamily: displayFamily,
     fontSize: 22,
     lineHeight: 28,
     fontWeight: '700',
@@ -205,7 +213,7 @@ export const stitchTypography = StyleSheet.create({
     letterSpacing: -0.4,
   },
   displaySm: {
-    fontFamily: outfitFamily,
+    fontFamily: displaySemiFamily,
     fontSize: 18,
     lineHeight: 24,
     fontWeight: '600',
@@ -214,7 +222,7 @@ export const stitchTypography = StyleSheet.create({
   },
   // Sans display (outfit)
   headlineXl: {
-    fontFamily: outfitFamily,
+    fontFamily: displayFamily,
     fontSize: 40,
     lineHeight: 48,
     letterSpacing: -0.8,
@@ -222,7 +230,7 @@ export const stitchTypography = StyleSheet.create({
     color: stitchColors.ink,
   },
   headlineLg: {
-    fontFamily: outfitFamily,
+    fontFamily: displaySemiFamily,
     fontSize: 32,
     lineHeight: 40,
     letterSpacing: -0.32,
@@ -230,18 +238,25 @@ export const stitchTypography = StyleSheet.create({
     color: stitchColors.ink,
   },
   headlineLgMobile: {
-    fontFamily: outfitFamily,
+    fontFamily: displaySemiFamily,
     fontSize: 28,
     lineHeight: 36,
     fontWeight: '600',
     color: stitchColors.ink,
   },
   headlineMd: {
-    fontFamily: outfitFamily,
+    fontFamily: displaySemiFamily,
     fontSize: 24,
     lineHeight: 32,
     fontWeight: '600',
     color: stitchColors.ink,
+  },
+  // Accent word — one per title, 20 px minimum, violet.
+  accentWord: {
+    fontFamily: accentFamily,
+    fontStyle: 'normal',
+    fontWeight: '400',
+    color: stitchColors.sienna,
   },
   // Italic body
   bodyItalic: {
@@ -292,7 +307,7 @@ export const stitchTypography = StyleSheet.create({
   },
   // Labels
   labelMd: {
-    fontFamily: interFamily,
+    fontFamily: interSemiFamily,
     fontSize: 14,
     lineHeight: 20,
     letterSpacing: 0.14,
@@ -300,7 +315,7 @@ export const stitchTypography = StyleSheet.create({
     color: stitchColors.inkMuted,
   },
   labelSm: {
-    fontFamily: interFamily,
+    fontFamily: interMediumFamily,
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '500',
@@ -424,7 +439,7 @@ export const stitchComponents = StyleSheet.create({
     justifyContent: 'center' as const,
   },
   btnPrimaryText: {
-    fontFamily: interFamily,
+    fontFamily: interSemiFamily,
     fontSize: 14,
     lineHeight: 20,
     letterSpacing: 0.5,
@@ -440,7 +455,7 @@ export const stitchComponents = StyleSheet.create({
     justifyContent: 'center' as const,
   },
   btnSiennaText: {
-    fontFamily: interFamily,
+    fontFamily: interSemiFamily,
     fontSize: 14,
     lineHeight: 20,
     letterSpacing: 0.5,
@@ -458,7 +473,7 @@ export const stitchComponents = StyleSheet.create({
     justifyContent: 'center' as const,
   },
   btnSecondaryText: {
-    fontFamily: interFamily,
+    fontFamily: interSemiFamily,
     fontSize: 14,
     lineHeight: 20,
     letterSpacing: 0.5,
@@ -473,7 +488,7 @@ export const stitchComponents = StyleSheet.create({
     justifyContent: 'center' as const,
   },
   btnGhostText: {
-    fontFamily: interFamily,
+    fontFamily: interSemiFamily,
     fontSize: 14,
     fontWeight: '600',
     color: stitchColors.ink,
@@ -493,7 +508,7 @@ export const stitchComponents = StyleSheet.create({
     paddingHorizontal: 18,
   },
   btnPillText: {
-    fontFamily: interFamily,
+    fontFamily: interSemiFamily,
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.1,
