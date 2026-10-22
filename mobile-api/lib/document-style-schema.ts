@@ -24,7 +24,7 @@ export const documentStylePatchSchema = z
       .optional(),
     headings: z
       .object({
-        numbering: z.enum(['none', 'decimal', 'roman-alpha']),
+        numbering: z.enum(['none', 'decimal', 'roman-alpha', 'chapter-section-roman']),
         uppercaseChapters: z.boolean(),
         color: hex,
         rule: z.boolean(),
@@ -37,6 +37,7 @@ export const documentStylePatchSchema = z
         margins: z.enum(['narrow', 'normal', 'wide']),
         border: z.enum(['none', 'single', 'double', 'cover-only']),
         accentColor: hex,
+        bandColor: hex,
       })
       .partial()
       .strict()
@@ -51,6 +52,11 @@ export const documentStylePatchSchema = z
         numberFormat: z.enum(['n', 'page-n', 'n-of-total']),
         logoInHeader: z.boolean(),
         headerRule: z.boolean(),
+        headerStyle: z.enum(['plain', 'band']),
+        headerTextColor: hex,
+        authorLabel: z.string().max(60),
+        footerRule: z.boolean(),
+        pageNumberFrame: z.enum(['none', 'box']),
       })
       .partial()
       .strict()
@@ -71,6 +77,28 @@ export const documentStylePatchSchema = z
       .object({
         style: z.enum(['grid', 'striped', 'minimal']),
         headerColor: hex,
+      })
+      .partial()
+      .strict()
+      .optional(),
+    captions: z
+      .object({
+        scope: z.enum(['chapter', 'document']),
+        style: z.enum(['italic-center', 'bold-left']),
+      })
+      .partial()
+      .strict()
+      .optional(),
+    lists: z
+      .object({
+        bullet: z.enum(['disc', 'diamond']),
+      })
+      .partial()
+      .strict()
+      .optional(),
+    dedication: z
+      .object({
+        frame: z.boolean(),
       })
       .partial()
       .strict()

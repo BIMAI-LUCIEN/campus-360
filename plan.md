@@ -1,13 +1,13 @@
 # Plan de Développement MVP : Campus 360 (Lancement Flash & Spécifications Officielles)
 
-> **Progression globale :** 102/160 tâches validées (64%) — Module 25 (scraping des offres) : 13/18 ; Module 24 (galerie de modèles de rapports) : 0/12 ; Module 23 (préparation V1) : 0/26 ; Module 20 : 16/16 validées ; Module 21 : 9/9 validées ; Module 19 : 10 en cours ; hors Module 19 : 3 en cours, 2 ouvertes  
+> **Progression globale :** 103/160 tâches validées (64%) — Module 25 (scraping des offres) : 13/18 ; Module 24 (galerie de modèles de rapports) : 1/12 ; Module 23 (préparation V1) : 0/26 ; Module 20 : 16/16 validées ; Module 21 : 9/9 validées ; Module 19 : 10 en cours ; hors Module 19 : 3 en cours, 2 ouvertes  
 > **Couverture MVP :** 100% des fonctionnalités du cadrage `contexte.md` (Template CV Officiel, Ingestion n8n, Mobile Money, Onboarding Express, Suivi J+7, Expédition Automatisée WhatsApp/Email via Evolution API & N8N, Éditeur de documents §13, Style du document & rédaction §14)  
 > **Dernière mise à jour :** 2026-10-20 par /execute (module 25)
 
 ---
 ## Reprise
 - **Tâche en cours :** aucune
-- **Prochaine :** Décision utilisateur sur 25.18 (Option A démon PM2 vs Option B cron unique, et feu vert VPS) → `/execute 25.18`, puis 25.2 (accord lecture seule et étiquetage 50 offres)
+- **Prochaine :** 24.2 — Page de garde modulable par blocs (prête, sans décision). Module 25 : décision utilisateur sur 25.18 (Option A démon PM2 vs Option B cron unique, et feu vert VPS) → `/execute 25.18`, puis 25.2 (accord lecture seule et étiquetage 50 offres)
 - **Reste :** 5 tâches `[!]` (bloquées 🔒) dans le Module 25 : 25.18 (prête à exécuter dès arbitrage), 25.2, 25.10, 25.15, 25.16 ; modules 23 et 24 : voir `Progression globale`
 - **Points ouverts :**
   - 🔒 **25.18 : Arbitrage du déclencheur unique VPS.** Guide d'exécution détaillé rédigé (8 rubriques complètes). L'utilisateur doit choisir entre l'Option A (démon PM2 `campus360-scraper-daemon`, recommandée) et l'Option B (cron unique 9h UTC), puis autoriser la mise à jour sur le VPS.
@@ -16,8 +16,8 @@
   - 🔒 **25.15 : Validation sur jeu réel.** Câblage et passage synthétique validés (code 0) ; le passage complet attend le jeu réel étiqueté de 25.2.
   - 🔒 **25.16 : Accord mise en prod.** Accord explicite pour le déploiement sur VPS et le premier passage réel (appels Treg payants).
   - **Migrations : toutes appliquées** (12, dont 0014 et 0015) le 2026-10-20 ; vérifié en base le 2026-10-21. `npm run migrate --dry-run` repasse sans rien réappliquer.
-- **Commit de référence :** db93fd5 (= HEAD). Non commité : `.gitattributes` (règle LF pour les `.sql`), les 4 fichiers SQL renormalisés, `plan.md`, `journal.md`.
-- **Dernière entrée journal :** 2026-10-22 · plan-detail · Tâche 25.18 · plan-detail
+- **Commit de référence :** commit « feat(documents): options de style du module 24 (tâche 24.1) », parent 9fec41d (`.gitattributes` et SQL renormalisés déjà commités dans 9fec41d).
+- **Dernière entrée journal :** 2026-10-23 · Tâche 24.1 · execute
 
 ---
 
@@ -1788,7 +1788,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
 **6. Migrations** : la numérotation du Module 23 s'applique ; ce module ajoute `0013_document_templates.sql` (24.3). Aucune migration n'est nécessaire pour 24.1 et 24.2 (le style est un `jsonb` complété par `resolveStyle`).
 
 ### 1. Ce qu'un modèle sait décrire
-- [ ] **Tâche 24.1 : Options de style manquantes**
+- [X] **Tâche 24.1 : Options de style manquantes** (npm test mobile-api 206 : 188 réussis, 0 échec, 18 ignorés ; tsc app et mobile-api 0 ; lint:colors 189 = base ; légendes de tableau désormais en italique centrée par défaut comme les figures ; panneau non vu à l'écran : pas de session de test)
   - **Pourquoi :** la mise en page de la référence (bandeau d'en-tête coloré, pied « Rédigé et présenté par » avec numéro encadré, titres CHAPITRE / SECTION / I., puces ❖, légendes numérotées sur tout le document, dédicace encadrée) ne peut pas être décrite avec le style actuel. Sans ces options, aucun modèle fidèle n'est possible.
   - **État actuel :**
     - `mobile-api/lib/document-style.ts` (244 l.) : type `DocumentStyle` (l.21-61 : `version`, `preset`, `typography`, `headings { numbering: 'none' | 'decimal' | 'roman-alpha', uppercaseChapters, color, rule }`, `page { margins, border, accentColor }`, `headerFooter { headerLeft, headerRight, footerLeft, footerCenter, footerRight, numberFormat, logoInHeader, headerRule }`, `cover { template, schoolLogoFileId, companyLogoFileId, extraLines }`, `tables { style, headerColor }`) ; `PRESETS` (l.70-123) ; `resolveStyle` (l.154-210, ne recopie que les clés listées) ; `applyStylePatch` (l.217-236, un changement de preset garde seulement `cover.schoolLogoFileId`, `companyLogoFileId`, `extraLines`, l.221-224) ; palettes `STYLE_COLOR_PALETTE` (l.128) et `TABLE_HEADER_PALETTE` (l.129).
@@ -1872,8 +1872,8 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
 
 - [ ] **Tâche 24.3 : Table des modèles**
   - **Pourquoi :** il faut un endroit en base pour enregistrer un modèle (style complet, garde, plan des sections, logos, aperçu, statut de publication, trace de l'import) et savoir de quel modèle un document est parti.
-  - **État actuel :** dernière migration du dépôt `0008_section_interviews.sql` ; numéros réservés par le Module 23 : `0009` à `0012`. Type `Document` dans `mobile-api/lib/documents-db.ts` (l.4-25, sans `template_id`) ; copie divergente `recruiter-web/lib/documents-db.ts` (si 23.22 ne l'a pas supprimée). `app_document_files.document_id` est `not null` (`0006_document_files.sql`) : impossible d'y ranger les logos d'un modèle.
-  - **Fichiers :** créés : `mobile-api/sql/0013_document_templates.sql`, `mobile-api/lib/templates-db.ts`, `mobile-api/lib/template-schema.ts`, `mobile-api/tests/templates-db.test.mjs` ; modifiés : `mobile-api/lib/documents-db.ts` (type `Document`), `recruiter-web/lib/documents-db.ts` (si elle existe encore).
+  - **État actuel :** (recalé le 2026-10-23) migrations du dépôt `0000`, `0004` à `0012`, `0014`, `0015` : le numéro `0013` est libre et réservé à cette tâche ; `scripts/migrate.mjs` (`npm run migrate`) applique les fichiers non encore appliqués dans l'ordre des noms, donc `0013` passera même après `0015`. Type `Document` dans `mobile-api/lib/documents-db.ts` (l.4-25, sans `template_id`) ; `recruiter-web/lib/documents-db.ts` n'existe plus (supprimée par 23.22). `app_document_files.document_id` est `not null` (`0006_document_files.sql`) : impossible d'y ranger les logos d'un modèle.
+  - **Fichiers :** créés : `mobile-api/sql/0013_document_templates.sql`, `mobile-api/lib/templates-db.ts`, `mobile-api/lib/template-schema.ts`, `mobile-api/tests/templates-db.test.mjs` ; modifiés : `mobile-api/lib/documents-db.ts` (type `Document`).
   - **Étapes :**
     1. `0013_document_templates.sql` (idempotent) :
        - `create table if not exists public.app_document_templates (id uuid primary key default gen_random_uuid(), name text not null, establishment text not null default '', degree text not null default '', kind text not null default 'both', document_style jsonb not null, outline jsonb not null default '[]'::jsonb, logo_assets jsonb not null default '{}'::jsonb, preview_asset_id uuid, status text not null default 'draft', source_format text, source_report jsonb, created_by uuid references public.app_users(id) on delete set null, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), published_at timestamptz)` ;

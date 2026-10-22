@@ -139,12 +139,14 @@ export type StyleCssOptions = {
 // Content styles, scoped to `.doc-section` / `.doc-body`. Sizes in points so the
 // screen and the printed page share the same proportions.
 export const styleToCss = (style: DocumentStyle, options: StyleCssOptions): string => {
-  const { typography: ty, headings: h, page, tables } = style;
+  const { typography: ty, headings: h, page, tables, captions } = style;
   const body = FONT_STACKS[ty.bodyFont];
   const head = FONT_STACKS[ty.headingFont];
   const accent = page.accentColor;
   const headerText = textColorOn(tables.headerColor);
   const caps = h.uppercaseChapters ? 'uppercase' : 'none';
+  const captionLook =
+    captions.style === 'bold-left' ? 'font-style: normal; font-weight: 700; text-align: left;' : 'font-style: italic; text-align: center;';
 
   const tableRules =
     tables.style === 'grid'
@@ -159,21 +161,42 @@ export const styleToCss = (style: DocumentStyle, options: StyleCssOptions): stri
   if (options.cssNumbering) {
     const decimal = h.numbering === 'decimal';
     const roman = h.numbering === 'roman-alpha';
+    const sections = h.numbering === 'chapter-section-roman';
+    // "document" scope: figure and table counters run over the whole page, not per section.
+    const wholeDocument = captions.scope === 'document';
     numbering = `
-      .doc-section .doc-body { counter-reset: dh1 dh2 dfig dtab; }
+      ${wholeDocument ? `body { counter-reset: dfig dtab; }
+      .doc-section .doc-body { counter-reset: dh1 dh2 dh3; }` : `.doc-section .doc-body { counter-reset: dh1 dh2 dh3 dfig dtab; }`}
       .doc-body figure, .doc-body .academic-figure { counter-increment: dfig; }
       .doc-body .doc-table-caption { counter-increment: dtab; }
-      .doc-section[data-chapter] .doc-body figcaption::before { content: "Figure " var(--chapter) "." counter(dfig) " : "; font-weight: 700; }
+      ${wholeDocument ? `.doc-body figcaption::before { content: "Figure " counter(dfig) " : "; font-weight: 700; }
+      .doc-body .doc-table-caption::before { content: "Tableau " counter(dtab) " : "; font-weight: 700; }` : `.doc-section[data-chapter] .doc-body figcaption::before { content: "Figure " var(--chapter) "." counter(dfig) " : "; font-weight: 700; }
       .doc-section:not([data-chapter]) .doc-body figcaption::before { content: "Figure " counter(dfig) " : "; font-weight: 700; }
       .doc-section[data-chapter] .doc-body .doc-table-caption::before { content: "Tableau " var(--chapter) "." counter(dtab) " : "; font-weight: 700; }
-      .doc-section:not([data-chapter]) .doc-body .doc-table-caption::before { content: "Tableau " counter(dtab) " : "; font-weight: 700; }
+      .doc-section:not([data-chapter]) .doc-body .doc-table-caption::before { content: "Tableau " counter(dtab) " : "; font-weight: 700; }`}
       ${decimal || roman ? `.doc-section[data-chapter] .doc-body h1 { counter-increment: dh1; counter-reset: dh2; }
       .doc-section[data-chapter] .doc-body h2 { counter-increment: dh2; }` : ''}
       ${decimal ? `.doc-section[data-chapter] .doc-body h1::before { content: var(--chapter) "." counter(dh1) "  "; }
       .doc-section[data-chapter] .doc-body h2::before { content: var(--chapter) "." counter(dh1) "." counter(dh2) "  "; }` : ''}
       ${roman ? `.doc-section[data-chapter] .doc-body h1::before { content: counter(dh1, upper-alpha) ".  "; }
-      .doc-section[data-chapter] .doc-body h2::before { content: counter(dh2) ".  "; }` : ''}`;
+      .doc-section[data-chapter] .doc-body h2::before { content: counter(dh2) ".  "; }` : ''}
+      ${sections ? `.doc-section[data-chapter] .doc-body h1 { counter-increment: dh1; counter-reset: dh2 dh3; }
+      .doc-section[data-chapter] .doc-body h2 { counter-increment: dh2; counter-reset: dh3; }
+      .doc-section[data-chapter] .doc-body h3 { counter-increment: dh3; }
+      .doc-section[data-chapter] .doc-body h1::before { content: "SECTION " counter(dh1) " : "; }
+      .doc-section[data-chapter] .doc-body h2::before { content: counter(dh2, upper-roman) ". "; }
+      .doc-section[data-chapter] .doc-body h3::before { content: counter(dh3) ". "; }` : ''}`;
   }
+
+  // ❖ at the first level, • below. Only in HTML (Chromium has the glyph; pdf-lib's fonts do not).
+  const bullets =
+    style.lists.bullet === 'diamond'
+      ? `.doc-body ul > li::marker { content: "\\2756  "; }
+  .doc-body ul ul > li::marker { content: "\\2022  "; }`
+      : '';
+  const dedicationFrame = style.dedication.frame
+    ? `.doc-section[data-kind="dedication"] .doc-body { border: 1pt solid ${accent}; padding: 12pt 16pt; }`
+    : '';
 
   return `
   .doc-body {
@@ -213,6 +236,7 @@ export const styleToCss = (style: DocumentStyle, options: StyleCssOptions): stri
   .doc-body h4 { font-size: ${ty.bodySize}pt; font-weight: 600; font-style: italic; margin: 0.8em 0 0.3em; }
   .doc-body ul, .doc-body ol { margin: 0.3em 0 0.7em; padding-left: 1.6em; }
   .doc-body li { margin-bottom: 0.2em; }
+  ${bullets}
   .doc-body li p, .doc-body td p, .doc-body th p, .doc-body blockquote p { text-indent: 0; margin: 0; }
   .doc-body blockquote {
     margin: 0.8em 0;
@@ -233,16 +257,17 @@ export const styleToCss = (style: DocumentStyle, options: StyleCssOptions): stri
   .doc-body th, .doc-body td { padding: 4pt 6pt; vertical-align: top; text-align: left; }
   .doc-body th { background: ${tables.headerColor}; color: ${headerText}; font-weight: 700; }
   ${tableRules}
-  .doc-body .doc-table-caption { text-indent: 0; text-align: center; font-size: ${Math.max(9, ty.bodySize - 1)}pt; margin: 0.8em 0 0.3em; }
+  .doc-body .doc-table-caption { text-indent: 0; ${captionLook} font-size: ${Math.max(9, ty.bodySize - 1)}pt; margin: 0.8em 0 0.3em; }
   .doc-body figure, .doc-body .academic-figure { margin: 0.9em 0; text-align: center; page-break-inside: avoid; break-inside: avoid; }
   .doc-body figure img, .doc-body .academic-figure img { max-width: 85%; height: auto; }
   .doc-body figure.fig-full img { width: 100%; max-width: 100%; }
   .doc-body figure.fig-half img { width: 50%; }
   .doc-body figure.fig-small img { width: 30%; }
-  .doc-body figcaption { font-size: ${Math.max(9, ty.bodySize - 1)}pt; font-style: italic; margin-top: 0.3em; text-align: center; }
+  .doc-body figcaption { font-size: ${Math.max(9, ty.bodySize - 1)}pt; ${captionLook} margin-top: 0.3em; }
   .doc-body figcaption strong { font-weight: 400; }
   .doc-section[data-kind="dedication"] .doc-body p,
   .doc-section[data-kind="dedication"] .doc-body { text-align: right; text-indent: 0; font-style: italic; }
+  ${dedicationFrame}
   .doc-section[data-kind="abstract"] .doc-body p { text-indent: 0; }
   .doc-section[data-kind="abbreviations"] .doc-body p { text-indent: 0; text-align: left; }
   .doc-section[data-kind="abbreviations"] .doc-body table th { background: transparent; color: #111111; }

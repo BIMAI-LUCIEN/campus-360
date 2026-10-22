@@ -1,4 +1,4 @@
-import { chapterLabel, chapterNumberOf, classifySection, escapeHtml, normalizeHeadings, type SectionKind } from './document-render';
+import { chapterLabel, chapterNumberOf, classifySection, escapeHtml, normalizeHeadings, toRoman, type SectionKind } from './document-render';
 import type { DocumentStyle } from './document-style';
 
 // Numbers headings and captions as text for the exports (PDF and Word) and lists
@@ -50,6 +50,8 @@ export const numberDocument = (
   let looseFigure = 0;
   let looseTable = 0;
   const scheme = style.headings.numbering;
+  // "document": figures and tables are counted over the whole document (Figure 1, 2, 3…).
+  const wholeDocument = style.captions.scope === 'document';
 
   const numbered = sections.map((section) => {
     const { kind, preliminary } = classifySection(section.title);
@@ -63,14 +65,30 @@ export const numberDocument = (
     const sectionMarker = kind !== 'cover' ? toc[toc.length - 1].marker : '';
 
     // Headings: numbered inside chapters only (introduction and conclusion stay plain).
+    // "chapter-section-roman" also numbers h3: SECTION 1 : / I. / 1.
     let h1 = 0;
     let h2 = 0;
+    let h3 = 0;
     html = html.replace(/<(h[1-3])(\s[^>]*)?>([\s\S]*?)<\/\1>/gi, (_m, tag: string, attrs = '', inner: string) => {
       const level = Number(tag[1]);
       const text = stripTags(inner);
       if (!text) return `<${tag}${attrs}>${inner}</${tag}>`;
       let prefix = '';
-      if (chapter && scheme !== 'none' && level <= 2) {
+      if (chapter && scheme === 'chapter-section-roman') {
+        if (level === 1) {
+          h1 += 1;
+          h2 = 0;
+          h3 = 0;
+          prefix = `SECTION ${h1} :`;
+        } else if (level === 2) {
+          h2 += 1;
+          h3 = 0;
+          prefix = `${toRoman(h2)}.`;
+        } else {
+          h3 += 1;
+          prefix = `${h3}.`;
+        }
+      } else if (chapter && scheme !== 'none' && level <= 2) {
         if (level === 1) {
           h1 += 1;
           h2 = 0;
@@ -94,7 +112,7 @@ export const numberDocument = (
     let fig = 0;
     html = html.replace(/<figcaption(\s[^>]*)?>([\s\S]*?)<\/figcaption>/gi, (_m, attrs = '', inner: string) => {
       const text = captionText(inner);
-      const n = chapter ? `${label}.${(fig += 1)}` : String((looseFigure += 1));
+      const n = chapter && !wholeDocument ? `${label}.${(fig += 1)}` : String((looseFigure += 1));
       const entryLabel = `Figure ${n}`;
       const marker = nextMarker();
       figures.push({ marker, kind: 'figure', label: entryLabel, text });
@@ -106,7 +124,7 @@ export const numberDocument = (
     let tab = 0;
     html = html.replace(/<p(\s[^>]*class="[^"]*doc-table-caption[^"]*"[^>]*)>([\s\S]*?)<\/p>/gi, (_m, attrs: string, inner: string) => {
       const text = captionText(inner);
-      const n = chapter ? `${label}.${(tab += 1)}` : String((looseTable += 1));
+      const n = chapter && !wholeDocument ? `${label}.${(tab += 1)}` : String((looseTable += 1));
       const entryLabel = `Tableau ${n}`;
       const marker = nextMarker();
       tables.push({ marker, kind: 'table', label: entryLabel, text });

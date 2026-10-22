@@ -80,3 +80,68 @@ test('schéma strict : police hors liste, clé inconnue ou couleur invalide reje
   assert.equal(ok({ cover: { schoolLogoFileId: '../x' } }), false);
   assert.equal(ok({ cover: { extraLines: Array.from({ length: 7 }, () => ({ label: 'a', value: 'b' })) } }), false);
 });
+
+test('module 24 : les 4 styles prêts ont les nouvelles options, aux valeurs qui ne changent rien', () => {
+  for (const preset of STYLE_PRESETS) {
+    const s = presetStyle(preset);
+    assert.equal(s.headerFooter.headerStyle, 'plain');
+    assert.equal(s.headerFooter.headerTextColor, '#FFFFFF');
+    assert.equal(s.headerFooter.authorLabel, '');
+    assert.equal(s.headerFooter.footerRule, false);
+    assert.equal(s.headerFooter.pageNumberFrame, 'none');
+    assert.equal(s.page.bandColor, s.page.accentColor);
+    assert.deepEqual(s.captions, { scope: 'chapter', style: 'italic-center' });
+    assert.deepEqual(s.lists, { bullet: 'disc' });
+    assert.deepEqual(s.dedication, { frame: false });
+  }
+});
+
+test('module 24 : un style enregistré sans les nouvelles clés reçoit les valeurs du style prêt', () => {
+  const s = resolveStyle({ version: 1, preset: 'moderne', headerFooter: { headerLeft: 'title' }, page: { margins: 'wide' } });
+  assert.equal(s.headerFooter.headerStyle, 'plain');
+  assert.equal(s.page.bandColor, '#1E3A8A');
+  assert.equal(s.captions.scope, 'chapter');
+  assert.equal(s.lists.bullet, 'disc');
+  assert.equal(s.dedication.frame, false);
+});
+
+test('module 24 : valeurs invalides corrigées, libellé auteur tronqué à 60 caractères', () => {
+  const s = resolveStyle({
+    headerFooter: { headerStyle: 'neon', authorLabel: 'x'.repeat(200), pageNumberFrame: 'cercle', headerTextColor: 'blanc' },
+    page: { bandColor: 'rouge' },
+    headings: { numbering: 'chapter-section-roman' },
+    captions: { scope: 'page', style: 'bold-left' },
+    lists: { bullet: 'étoile' },
+    dedication: { frame: 'oui' },
+  });
+  assert.equal(s.headerFooter.headerStyle, 'plain');
+  assert.equal(s.headerFooter.authorLabel.length, 60);
+  assert.equal(s.headerFooter.pageNumberFrame, 'none');
+  assert.equal(s.headerFooter.headerTextColor, '#FFFFFF');
+  assert.equal(s.page.bandColor, presetStyle('classique').page.accentColor);
+  assert.equal(s.headings.numbering, 'chapter-section-roman');
+  assert.deepEqual(s.captions, { scope: 'chapter', style: 'bold-left' });
+  assert.equal(s.lists.bullet, 'disc');
+  assert.equal(s.dedication.frame, false);
+});
+
+test('module 24 : changer de style garde le libellé auteur saisi', () => {
+  const current = applyStylePatch(presetStyle('classique'), { headerFooter: { authorLabel: 'Rédigé et présenté par :', headerStyle: 'band' } });
+  const next = applyStylePatch(current, { preset: 'institutionnel' });
+  assert.equal(next.headerFooter.authorLabel, 'Rédigé et présenté par :');
+  assert.equal(next.headerFooter.headerStyle, 'plain');
+});
+
+test('module 24 : schéma des nouvelles options', async () => {
+  const { documentStylePatchSchema } = await loadTsWithPackages('lib/document-style-schema.ts', ['lib/document-style.ts']);
+  const ok = (body) => documentStylePatchSchema.safeParse(body).success;
+  assert.equal(ok({ captions: { scope: 'page' } }), false);
+  assert.equal(ok({ headerFooter: { authorLabel: 'x'.repeat(61) } }), false);
+  assert.equal(ok({ headerFooter: { authorLabel: 'x'.repeat(60), headerStyle: 'band', footerRule: true, pageNumberFrame: 'box', headerTextColor: '#FFFFFF' } }), true);
+  assert.equal(ok({ lists: { bullet: 'diamond' } }), true);
+  assert.equal(ok({ lists: { couleur: 'x' } }), false);
+  assert.equal(ok({ page: { bandColor: '#0F3D56' } }), true);
+  assert.equal(ok({ page: { bandColor: 'bleu' } }), false);
+  assert.equal(ok({ headings: { numbering: 'chapter-section-roman' } }), true);
+  assert.equal(ok({ dedication: { frame: true } }), true);
+});

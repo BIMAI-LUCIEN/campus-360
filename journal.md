@@ -49,3 +49,24 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 - **Fait hors de cette session :** le code du module 25 a été commité par un autre intervenant pendant l'exécution (`e88439b`, `a2283cd`, `5458012`, auteur BIMAI-LUCIEN). Je n'ai pas commité. Les compteurs de tests et la base de couleurs ont changé (124 → 177 tests, 192 → 191 couleurs) à cause de ce travail parallèle, pas de 25.17.
 - **Points ouverts :** voir le bloc « Reprise » de `plan.md`. **Appliquer 0015 avant le premier passage réel du scraper**, sinon l'écriture d'une offre `LINK` sera refusée par l'enum.
 - **À reporter dans contexte-code.md :** §3.2 (`applyTarget.ts`, méthode `LINK`, `sourceUrl` renvoyé par `mapJob`), §5 (migration 0015 écrite, prochain numéro libre 0016), §6 (dispatch et apply renvoient 422 sur une offre `LINK`), §10 (le piège 14 est traité).
+
+---
+
+**2026-10-23 · plan-check · Module 24 · prêtes 11 · corrigées 1 · à détailler 0 · bloquées 0**
+
+- **Contrôlé :** 24.1 en détail (fichiers, fonctions et numéros de ligne de `document-style.ts`, `document-style-schema.ts`, `document-render.ts`, `document-numbering.ts`, `DocumentStylePanel.tsx` : tous exacts) ; 24.2 à 24.12 : fichiers cités présents, dépendances dans l'ordre du module, décisions déjà tranchées (tableau du 2026-10-15, lignes 19 à 22).
+- **Corrigée :** 24.3, « État actuel » périmé : dernière migration `0015` (et non `0008`), `0013` libre, `npm run migrate` existe et applique `0013` même après `0015` ; `recruiter-web/lib/documents-db.ts` n'existe plus.
+- **Carte :** commit analysé `fcd08ed` ; depuis, seul `src/features/documents/DocumentsScreen.tsx` a changé dans la zone, sans effet sur le module 24.
+- **Prochaine :** `/execute 24.1`.
+
+---
+
+**2026-10-23 · Tâche 24.1 (options de style manquantes) · execute · commit de référence 9fec41d (non commité)**
+
+- **Fait :** nouvelles options du style, valeurs par défaut identiques pour les 4 styles prêts (aucun document existant ne change de numérotation ni d'en-tête) : numérotation `chapter-section-roman` (SECTION 1 : / I. / 1.), en-tête `headerStyle` (simple / bandeau), `headerTextColor`, `authorLabel` (60 caractères, conservé au changement de style), `footerRule`, `pageNumberFrame`, `page.bandColor`, blocs `captions` (par chapitre / sur tout le document ; italique centrée / gras à gauche), `lists` (puce ronde / losange ❖), `dedication.frame`. Blanc ajouté en fin de palette (texte du bandeau).
+- **Fichiers :** modifiés `mobile-api/lib/document-style.ts` + `src/features/documents/documentStyle.ts`, `mobile-api/lib/document-style-schema.ts`, `mobile-api/lib/document-numbering.ts`, `mobile-api/lib/document-render.ts` + `src/features/documents/documentRender.ts`, `src/features/documents/DocumentStylePanel.tsx`, `mobile-api/tests/document-style.test.mjs`, `mobile-api/tests/document-render.test.mjs` ; créé `mobile-api/tests/twin-files.test.mjs` (parité de `document-render.ts`, fins de ligne normalisées).
+- **Preuves :** avant : `npm test` 198 tests, 180 réussis, 0 échec, 18 ignorés ; après : 206 tests, 188 réussis, 0 échec, 18 ignorés ; `npx tsc --noEmit` mobile-api code 0 ; `npm run typecheck` app code 0 ; `npm run lint:colors` 189 = base.
+- **Écart de rendu voulu par le guide :** la légende de tableau prend la présentation choisie (italique centrée par défaut), alors qu'elle était droite et non italique.
+- **Non vérifié :** le panneau « Style du document » n'a pas été ouvert à l'écran (session étudiante requise, pas d'identifiants de test utilisés). Le bandeau d'en-tête, le libellé auteur, le filet du pied et le numéro encadré sont enregistrés mais pas encore dessinés : écran en 24.4, PDF en 24.5, Word en 24.6.
+- **Sécurité :** aucun secret ; `authorLabel` borné à 60 caractères par le schéma (400 au-delà) et par `resolveStyle`, échappé au rendu (24.4 à 24.6) ; nouvelles couleurs validées en `#RRGGBB`.
+- **À reporter dans contexte-code.md :** §3 (documents : nouvelles clés du style, schéma `chapter-section-roman`, `captions.scope`) ; §8 (jumeaux : `document-render.ts` désormais couvert par `tests/twin-files.test.mjs`).

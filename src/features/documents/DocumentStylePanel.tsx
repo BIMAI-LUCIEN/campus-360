@@ -26,6 +26,7 @@ import {
   type DocumentStyle,
   type DocumentStylePatch,
   type HeaderFooterSlot,
+  type HeadingNumbering,
 } from './documentStyle';
 import { buildStyleSampleHtml } from './editorTemplate';
 import { EditorSurface } from './EditorSurface';
@@ -56,6 +57,13 @@ const SLOT_LABELS: [HeaderFooterSlot, string][] = [
   ['school', 'École'],
   ['page', 'N° page'],
 ];
+
+const NUMBERING_LABELS: Record<HeadingNumbering, string> = {
+  decimal: '1. / 1.1',
+  'roman-alpha': 'I. / A.',
+  'chapter-section-roman': 'CHAPITRE / SECTION / I.',
+  none: 'Sans numéro',
+};
 
 type ChipOption<T extends string | number> = { value: T; label: string };
 
@@ -220,9 +228,9 @@ export function DocumentStylePanel({ visible, onClose, documentId, style, onChan
             </Row>
           </Section>
 
-          <Section title="Titres" summary={style.headings.numbering === 'decimal' ? '1. / 1.1' : style.headings.numbering === 'roman-alpha' ? 'I. / A.' : 'Sans numéro'} open={open === 'titles'} onToggle={() => toggle('titles')}>
+          <Section title="Titres" summary={NUMBERING_LABELS[style.headings.numbering]} open={open === 'titles'} onToggle={() => toggle('titles')}>
             <Row label="Numérotation">
-              <Chips options={[{ value: 'decimal', label: '1. / 1.1' }, { value: 'roman-alpha', label: 'I. / A.' }, { value: 'none', label: 'Aucune' }]} value={style.headings.numbering} onSelect={(numbering) => onChange({ headings: { numbering } })} />
+              <Chips options={(['decimal', 'roman-alpha', 'chapter-section-roman', 'none'] as const).map((value) => ({ value, label: value === 'none' ? 'Aucune' : NUMBERING_LABELS[value] }))} value={style.headings.numbering} onSelect={(numbering) => onChange({ headings: { numbering } })} />
             </Row>
             <Toggle label="Titres de chapitre en majuscules" value={style.headings.uppercaseChapters} onChange={(uppercaseChapters) => onChange({ headings: { uppercaseChapters } })} />
             <Toggle label="Trait sous les titres de chapitre" value={style.headings.rule} onChange={(rule) => onChange({ headings: { rule } })} />
@@ -263,7 +271,34 @@ export function DocumentStylePanel({ visible, onClose, documentId, style, onChan
             <Row label="Format du numéro">
               <Chips options={[{ value: 'n', label: '3' }, { value: 'page-n', label: 'Page 3' }, { value: 'n-of-total', label: '3 / 42' }]} value={hf.numberFormat} onSelect={(numberFormat) => onChange({ headerFooter: { numberFormat } })} />
             </Row>
+            <Row label="Numéro de page">
+              <Chips options={[{ value: 'none', label: 'Sans cadre' }, { value: 'box', label: 'Encadré' }]} value={hf.pageNumberFrame} onSelect={(pageNumberFrame) => onChange({ headerFooter: { pageNumberFrame } })} />
+            </Row>
+            <Row label="En-tête">
+              <Chips options={[{ value: 'plain', label: 'En-tête simple' }, { value: 'band', label: 'Bandeau coloré' }]} value={hf.headerStyle} onSelect={(headerStyle) => onChange({ headerFooter: { headerStyle } })} />
+            </Row>
+            {hf.headerStyle === 'band' ? (
+              <>
+                <Row label="Couleur du bandeau">
+                  <Colors palette={STYLE_COLOR_PALETTE} value={style.page.bandColor} onSelect={(bandColor) => onChange({ page: { bandColor } })} />
+                </Row>
+                <Row label="Couleur du texte sur le bandeau">
+                  <Colors palette={STYLE_COLOR_PALETTE} value={hf.headerTextColor} onSelect={(headerTextColor) => onChange({ headerFooter: { headerTextColor } })} />
+                </Row>
+              </>
+            ) : null}
+            <Row label="Libellé avant le nom">
+              <TextInput
+                style={styles.input}
+                defaultValue={hf.authorLabel}
+                placeholder="Rédigé et présenté par :"
+                placeholderTextColor={stitchColors.inkMuted}
+                maxLength={60}
+                onEndEditing={(e) => onChange({ headerFooter: { authorLabel: e.nativeEvent.text } })}
+              />
+            </Row>
             <Toggle label="Trait sous l’en-tête" value={hf.headerRule} onChange={(headerRule) => onChange({ headerFooter: { headerRule } })} />
+            <Toggle label="Filet au-dessus du pied" value={hf.footerRule} onChange={(footerRule) => onChange({ headerFooter: { footerRule } })} />
             <Toggle label="Logo de l’établissement dans l’en-tête" value={hf.logoInHeader} onChange={(logoInHeader) => onChange({ headerFooter: { logoInHeader } })} />
           </Section>
 
@@ -329,6 +364,25 @@ export function DocumentStylePanel({ visible, onClose, documentId, style, onChan
             <Row label="Couleur de l’en-tête">
               <Colors palette={TABLE_HEADER_PALETTE} value={style.tables.headerColor} onSelect={(headerColor) => onChange({ tables: { headerColor } })} />
             </Row>
+          </Section>
+
+          <Section title="Légendes" summary={`${style.captions.scope === 'document' ? 'Figure 1, 2, 3…' : 'Figure 2.1'} · ${style.captions.style === 'bold-left' ? 'gras à gauche' : 'italique centrée'}`} open={open === 'captions'} onToggle={() => toggle('captions')}>
+            <Row label="Numérotation des figures et tableaux">
+              <Chips options={[{ value: 'chapter', label: 'Par chapitre (2.1)' }, { value: 'document', label: 'Sur tout le document (1, 2, 3)' }]} value={style.captions.scope} onSelect={(scope) => onChange({ captions: { scope } })} />
+            </Row>
+            <Row label="Présentation">
+              <Chips options={[{ value: 'italic-center', label: 'Italique centrée' }, { value: 'bold-left', label: 'Gras à gauche' }]} value={style.captions.style} onSelect={(captionStyle) => onChange({ captions: { style: captionStyle } })} />
+            </Row>
+          </Section>
+
+          <Section title="Listes" summary={style.lists.bullet === 'diamond' ? 'Losange ❖' : 'Puce ronde •'} open={open === 'lists'} onToggle={() => toggle('lists')}>
+            <Row label="Puce">
+              <Chips options={[{ value: 'disc', label: 'Ronde •' }, { value: 'diamond', label: 'Losange ❖' }]} value={style.lists.bullet} onSelect={(bullet) => onChange({ lists: { bullet } })} />
+            </Row>
+          </Section>
+
+          <Section title="Pages préliminaires" summary={style.dedication.frame ? 'Dédicace encadrée' : 'Dédicace sans cadre'} open={open === 'prelim'} onToggle={() => toggle('prelim')}>
+            <Toggle label="Encadrer la dédicace" value={style.dedication.frame} onChange={(frame) => onChange({ dedication: { frame } })} />
           </Section>
         </ScrollView>
 
