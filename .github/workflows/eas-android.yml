@@ -49,10 +49,17 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Give Gradle enough memory (Metaspace OOM otherwise)
+        run: |
+          mkdir -p "$HOME/.gradle"
+          echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g" >> "$HOME/.gradle/gradle.properties"
+          echo "org.gradle.daemon=false" >> "$HOME/.gradle/gradle.properties"
+          cat "$HOME/.gradle/gradle.properties"
+
       - name: Build APK locally on the runner
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          GRADLE_OPTS: -Xmx4g -XX:MaxMetaspaceSize=1g
         run: |
           set -euo pipefail
           echo "::add-mask::$EXPO_TOKEN"
