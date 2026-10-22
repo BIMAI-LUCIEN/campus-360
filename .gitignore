@@ -94,3 +94,6 @@ secrets/
 # Temporary logs and root screenshots
 error-*.txt
 /*.png
+
+# APK served by nginx from /var/www/campus360-downloads (not git)
+landing-site/public/downloads/*.apk

@@ -23,17 +23,18 @@ const APK_URL =
 export const metadata: Metadata = {
   title: "Télécharger Campus 360 APK — Gratuit pour Android",
   description:
-    "Télécharge l'app Campus 360 pour Android. Installation en 3 étapes, paiement Mobile Money. APK gratuit, sans pub.",
+    "Télécharge l'app Campus 360 pour Android. Installation en 3 étapes. APK gratuit, sans pub, toutes les fonctions gratuites pendant le lancement.",
   alternates: { canonical: "/telecharger" },
   openGraph: {
     title: "Télécharger Campus 360 APK pour Android",
     description:
-      "APK gratuit, sans publicité. Installation rapide, paiement Mobile Money.",
+      "APK gratuit, sans publicité. Toutes les fonctions sont gratuites pendant le lancement.",
     url: "/telecharger",
   },
 };
 
 const changelog = [
+  { version: "1.2.0", date: "22 octobre 2026", changes: ["Toutes les fonctions gratuites pendant le lancement", "Nouvelle identité visuelle et nouvelle icône", "Section « Recommandé pour toi » avec ton vrai score de correspondance", "Coach de soutenance plus lisible"] },
   { version: "1.1.0", date: "23 juillet 2026", changes: ["Correction de la connexion et de la synchronisation du compte", "Éditeur de rédaction (CV, lettres, rapports) fiabilisé", "Assistant IA sur PDF : affichage correct des crédits restants", "Corrections de sécurité sur le portefeuille et les paiements", "Nouveau design épuré sur tout le parcours"] },
   { version: "1.0.1", date: "2 juillet 2026", changes: ["Renommage en Campus 360", "Corrections de bugs mineurs"] },
   { version: "1.0.0", date: "1 juillet 2026", changes: ["Version initiale", "Catalogue de PDF", "Assistant IA", "Wallet Mobile Money"] },
@@ -54,7 +55,7 @@ export default function TelechargerPage() {
           <a href={APK_URL} download="campus-360.apk">
             <Button size="lg" variant="primary" className="gap-2 w-full sm:w-auto">
               <Download className="w-5 h-5" />
-              campus-360.apk (71,5 Mo)
+              campus-360.apk (72 Mo)
             </Button>
           </a>
           <Link href="/contact">
@@ -89,7 +90,7 @@ export default function TelechargerPage() {
               {
                 step: "1",
                 title: "Télécharge l'APK",
-                desc: "Clique sur le bouton ci-dessus. Le fichier (71,5 Mo) s'enregistre dans ton dossier Téléchargements.",
+                desc: "Clique sur le bouton ci-dessus. Le fichier (72 Mo) s'enregistre dans ton dossier Téléchargements. Si ta connexion coupe, relance-le depuis tes téléchargements : il reprend là où il s'était arrêté.",
               },
               {
                 step: "2",
