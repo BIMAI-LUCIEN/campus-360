@@ -424,19 +424,27 @@ export async function processNyoleWebhook(
     }
 
     if (decision === 'mark-failed') {
+      const failureMessage =
+        eventPayload.data?.failure_message ||
+        eventPayload.failure_message ||
+        eventPayload.data?.message ||
+        eventPayload.message ||
+        'La transaction a été rejetée ou a expiré.';
+
       await client.query(
-        `update public.app_wallet_transactions set status = 'failed' where id = $1`,
-        [tx.id],
+        `update public.app_wallet_transactions set status = 'failed', failure_message = $2 where id = $1`,
+        [tx.id, failureMessage],
       );
       await client.query('commit');
       await notifyAdmin('Paiement Mobile Money échoué', {
         Référence: reference,
         Statut: status,
         Événement: event,
+        Motif: failureMessage,
       }).catch(() => {});
       return {
         status: 200,
-        body: { ok: true, status: 'failed' },
+        body: { ok: true, status: 'failed', failureMessage },
       };
     }
 

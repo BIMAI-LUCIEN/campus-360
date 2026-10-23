@@ -59,7 +59,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const isMock = looksMock && isMockAllowed(process.env);
 
       const transRes = await client.query(
-        `select id, status, pack_type, amount_coins, created_at
+        `select id, status, pack_type, amount_coins, created_at, failure_message
            from public.app_wallet_transactions
            where reference_id = $1 and user_id = $2`,
         [reference, user.id],
@@ -88,8 +88,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const legacyPrivateKey = process.env.NOTCHPAY_PRIVATE_KEY?.trim();
 
       if (transaction.status === 'failed') {
-        let failureMessage = 'La transaction a été rejetée ou a expiré.';
-        if (nyoleSecretKey && reference.startsWith('cm')) {
+        let failureMessage = transaction.failure_message || 'La transaction a été rejetée ou a expiré.';
+        if (
+          (!transaction.failure_message || failureMessage === 'La transaction a été rejetée ou a expiré.') &&
+          nyoleSecretKey &&
+          !reference.startsWith('mock_')
+        ) {
           try {
             const baseUrl = getNyoleBaseUrl();
             const sRes = await fetch(
@@ -322,8 +326,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
         providerStatus === 'expired'
       ) {
         await client.query(
-          "update public.app_wallet_transactions set status = 'failed' where id = $1",
-          [transaction.id],
+          "update public.app_wallet_transactions set status = 'failed', failure_message = $2 where id = $1",
+          [transaction.id, failureMessage],
         );
         return withCors(NextResponse.json({ status: 'failed', failureMessage }), request);
       }

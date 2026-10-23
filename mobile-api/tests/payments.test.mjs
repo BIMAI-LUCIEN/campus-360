@@ -274,3 +274,169 @@ test(
     );
   },
 );
+
+test('Traitement webhook payment.failed : vérifie signature Nyole, persiste failure_message et marque failed', async () => {
+  const queries = [];
+  const fakeClient = {
+    query: async (sql, params) => {
+      queries.push({ sql, params });
+      if (sql.includes('select id, user_id')) {
+        return {
+          rows: [
+            {
+              id: 'tx-fail-123',
+              user_id: 'user-456',
+              type: 'topup',
+              pack_type: 'recharge_500',
+              amount_coins: 500,
+              status: 'pending',
+            },
+          ],
+        };
+      }
+      return { rowCount: 1, rows: [] };
+    },
+    release: () => {},
+  };
+
+  const fakePool = {
+    connect: async () => fakeClient,
+    query: async (sql, params) => fakeClient.query(sql, params),
+    on: () => {},
+  };
+
+  globalThis.campusDatabasePool = fakePool;
+
+  const paymentsModule = await loadTsWithPackages('lib/payments.ts', [
+    'lib/database.ts',
+    'lib/db-ssl.ts',
+    'lib/payment-rules.ts',
+    'lib/mobile-error.ts',
+    'lib/automations.ts',
+    'lib/mailer.ts',
+    'lib/match-score.ts',
+    'lib/push.ts',
+  ]);
+
+  const secret = 'af_test_sec_nyole_secret_test';
+  const oldSecret = process.env.NYOLE_SECRET_KEY;
+  process.env.NYOLE_SECRET_KEY = secret;
+
+  try {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const ts = String(nowSeconds);
+    const payload = JSON.stringify({
+      event: 'payment.failed',
+      livemode: false,
+      data: {
+        id: 'cm_failed_session_123',
+        status: 'FAILED',
+        failure_message: 'Solde Mobile Money insuffisant',
+      },
+    });
+
+    const signature = crypto.createHmac('sha256', secret).update(`${ts}.${payload}`).digest('hex');
+    const headers = new Headers({
+      'x-afriflow-signature': `t=${ts},v1=${signature}`,
+      'x-afriflow-timestamp': ts,
+    });
+
+    const result = await paymentsModule.processNyoleWebhook(payload, headers);
+
+    assert.equal(result.status, 200);
+    assert.equal(result.body.ok, true);
+    assert.equal(result.body.status, 'failed');
+    assert.equal(result.body.failureMessage, 'Solde Mobile Money insuffisant');
+
+    const updateQuery = queries.find((q) => q.sql.includes("status = 'failed'"));
+    assert.ok(updateQuery, 'La requête de mise à jour en échec doit exister');
+    assert.match(updateQuery.sql, /failure_message/i);
+    assert.equal(updateQuery.params[1], 'Solde Mobile Money insuffisant');
+  } finally {
+    process.env.NYOLE_SECRET_KEY = oldSecret;
+  }
+});
+
+test('Traitement webhook payment.completed : vérifie signature Nyole, crédite le wallet et est idempotent', async () => {
+  const queries = [];
+  const fakeClient = {
+    query: async (sql, params) => {
+      queries.push({ sql, params });
+      if (sql.includes('select id, user_id')) {
+        return {
+          rows: [
+            {
+              id: 'tx-success-123',
+              user_id: 'user-789',
+              type: 'topup',
+              pack_type: 'recharge_1000',
+              amount_coins: 1000,
+              status: 'pending',
+            },
+          ],
+        };
+      }
+      return { rowCount: 1, rows: [] };
+    },
+    release: () => {},
+  };
+
+  const fakePool = {
+    connect: async () => fakeClient,
+    query: async (sql, params) => fakeClient.query(sql, params),
+    on: () => {},
+  };
+
+  globalThis.campusDatabasePool = fakePool;
+
+  const paymentsModule = await loadTsWithPackages('lib/payments.ts', [
+    'lib/database.ts',
+    'lib/db-ssl.ts',
+    'lib/payment-rules.ts',
+    'lib/mobile-error.ts',
+    'lib/automations.ts',
+    'lib/mailer.ts',
+    'lib/match-score.ts',
+    'lib/push.ts',
+  ]);
+
+  const secret = 'af_test_sec_nyole_secret_test';
+  const oldSecret = process.env.NYOLE_SECRET_KEY;
+  process.env.NYOLE_SECRET_KEY = secret;
+
+  try {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const ts = String(nowSeconds);
+    const payload = JSON.stringify({
+      event: 'payment.completed',
+      livemode: false,
+      data: {
+        id: 'cm_success_session_456',
+        status: 'SUCCESS',
+        amount: 1000,
+      },
+    });
+
+    const signature = crypto.createHmac('sha256', secret).update(`${ts}.${payload}`).digest('hex');
+    const headers = new Headers({
+      'x-afriflow-signature': `t=${ts},v1=${signature}`,
+      'x-afriflow-timestamp': ts,
+    });
+
+    const result = await paymentsModule.processNyoleWebhook(payload, headers);
+
+    assert.equal(result.status, 200);
+    assert.equal(result.body.ok, true);
+    assert.equal(result.body.success, true);
+    assert.equal(result.body.amountCoins, 1000);
+
+    const updateQuery = queries.find((q) => q.sql.includes("status = 'success'"));
+    assert.ok(updateQuery, 'La transaction doit être marquée success');
+    const creditQuery = queries.find((q) => q.sql.includes('app_wallets'));
+    assert.ok(creditQuery, 'Le portefeuille app_wallets doit être crédité');
+    assert.equal(creditQuery.params[0], 'user-789');
+    assert.equal(creditQuery.params[1], 1000);
+  } finally {
+    process.env.NYOLE_SECRET_KEY = oldSecret;
+  }
+});
