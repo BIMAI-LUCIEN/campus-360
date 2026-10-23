@@ -225,7 +225,8 @@ const blockHtml = (block: CoverBlock, data: CoverFields, logos: CoverBlockLogos)
     }
     case 'title-banner': {
       const title = data.title?.trim() || 'Titre du document';
-      return `${open(block, `cv-title cb-title-${block.variant}`, 'h1')}${block.prefix ? `${esc(block.prefix)} ` : ''}${esc(title)}</h1>`;
+      const fill = block.variant === 'band' && block.fill ? ` data-fill style="background:${esc(block.fill)}"` : '';
+      return `${open(block, `cv-title cb-title-${block.variant}`, 'h1')}<span class="cb-fill"${fill}></span>${block.prefix ? `${esc(block.prefix)} ` : ''}${esc(title)}</h1>`;
     }
     case 'heading': {
       const text = fillTemplate(block.text, data);
@@ -259,7 +260,8 @@ const blockHtml = (block: CoverBlock, data: CoverFields, logos: CoverBlockLogos)
     }
     case 'year-banner': {
       const text = fillTemplate(block.template, data);
-      return text ? `${open(block, `cv-year cb-year-${block.variant}`)}${text}</div>` : '';
+      const fill = block.variant === 'band' && block.fill ? `<span class="cb-fill" style="background:${esc(block.fill)}"></span>` : '';
+      return text ? `${open(block, `cv-year cb-year-${block.variant}`)}${fill}${text}</div>` : '';
     }
     case 'spacer':
       return `<div class="cb-spacer${block.grow ? ' cb-grow' : ''}" style="min-height:${block.height}mm"></div>`;
@@ -286,16 +288,23 @@ export const coverBlocksCss = (style: DocumentStyle): string => {
   .cover .cb-spacer { margin: 0; }
   .cover .cb-grow { flex: 1 1 auto; }
   .cover .cb-logos { display: flex; align-items: center; justify-content: center; gap: 12pt; }
-  .cover .cb-logos .cb-cell-side { flex: 0 0 auto; display: flex; justify-content: center; }
-  .cover .cb-logos .cb-cell-mid { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .cover .cb-logos .cb-cell-side { flex: 1 1 0; min-width: 0; display: flex; justify-content: center; }
+  .cover .cb-logos .cb-cell-mid { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+  .cover .cb-logos .cv-logo { max-width: 100%; }
   .cover .cb-logos[style*="text-align:left"] .cb-cell-mid { align-items: flex-start; }
   .cover .cb-rule { border-bottom: 3pt solid ${accent}; padding-bottom: 10pt; }
+  .cover .cv-title.cb-title-band, .cover .cv-year.cb-year-band { position: relative; z-index: 0; }
+  .cover .cb-fill { position: absolute; inset: 0; z-index: -1; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cover .cb-fill:not([style]) { display: none; }
   .cover .cv-title.cb-title-band { background: ${band}; color: ${onBand}; padding: 8pt 12pt; }
   .cover .cv-title.cb-title-frame { border-top: 1.5pt solid ${accent}; border-bottom: 1.5pt solid ${accent}; padding: 8pt 0; }
   .cover .cv-year.cb-year-band { background: ${band}; color: ${onBand}; border-top: none; padding: 6pt; }
   .cover .cv-year.cb-year-plain { border-top: none; padding-top: 0; }
   .cover .cv-title.cb-title-band, .cover .cv-year.cb-year-band { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .cover .cb-label { font-weight: 700; text-decoration: underline; margin-bottom: 3pt; }
+  .cover .cb-label { font-weight: inherit; text-decoration: underline; margin-bottom: 3pt; }
+  .cover .cb-supervisors .cv-name { font-weight: inherit; }
+  .cover .cb-author .cv-name { font-weight: 700; }
+  .cover .cb-author .cv-label, .cover .cb-supervisors .cv-label { font-weight: inherit; }
   .cover .cb-supervisors .cv-supervision { margin-top: 4pt; }
   `;
 };

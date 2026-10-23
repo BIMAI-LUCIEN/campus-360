@@ -34,6 +34,8 @@ export type DocxRenderOptions = {
   bullet?: 'disc' | 'diamond';
   captionLook?: 'italic-center' | 'bold-left';
   framed?: boolean;
+  paragraphIndent?: boolean;
+  paragraphAfter?: number; // twips
 };
 
 // Numbering definition referenced by ordered lists (one `instance` per list restarts at 1).
@@ -177,7 +179,7 @@ const toRuns = (nodes: HtmlNode[], format: RunFormat = {}): TextRun[] => {
       case 'img':
         break;
       case 'span':
-        runs.push(...toRuns(node.children, (node.attrs.class || '').includes('cap-label') ? { ...format, bold: true } : format));
+        runs.push(...toRuns(node.children, (node.attrs.class || '').split(/\s+/).includes('cap-label') ? { ...format, bold: true } : format));
         break;
       default:
         runs.push(...toRuns(node.children, format));
@@ -369,7 +371,13 @@ const blocksOf = (nodes: HtmlNode[], ctx: Context, inheritedFormat: RunFormat = 
           }));
           break;
         }
-        out.push(new Paragraph({ children: toRuns(trimRuns(node.children), inheritedFormat), alignment, spacing: { after: 160 }, border: frameOf(ctx) }));
+        out.push(new Paragraph({
+          children: toRuns(trimRuns(node.children), inheritedFormat),
+          alignment,
+          spacing: { after: ctx.options.paragraphAfter ?? 160 },
+          indent: ctx.options.paragraphIndent ? { firstLine: 425 } : undefined,
+          border: frameOf(ctx),
+        }));
         break;
       case 'h1':
       case 'h2':

@@ -92,3 +92,26 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 - **Preuves :** réexécution du SQL de 0013 dans une transaction annulée : sans erreur (idempotence) ; `app_documents.template_id` présent ; tables `app_document_templates`, `app_template_assets` et leurs contraintes présentes ; ligne dans `schema_migrations` ; 0 modèle en base.
 - **Débloque :** parcours de 24.10, 24.11, 24.12 (restent la session admin, les variables `ADMIN_SERVICE_SECRET` / `MOBILE_API_INTERNAL_URL` et un modèle publié de test).
 - **À reporter dans contexte-code.md :** §5 (migration 0013 appliquée le 2026-10-23 ; prochain numéro libre 0016).
+
+---
+
+**2026-10-23 · Tâche 24.12 (modèle « IUT de Douala — Rapport de stage ») · execute · commit de référence af05514 (non commité)**
+
+- **Demande :** copier complètement le style du rapport de référence et rendre la mise en forme utilisable dans l'app.
+- **Bloqué :** téléchargement du rapport de référence (Cloudinary) refusé par le garde-fou « données personnelles » de l'agent ; modèle construit d'après la description notée dans l'en-tête du module 24.
+- **Fait :** options `headings.titleAlign` et `headings.uppercaseSections` (style, schéma, CSS partagé, Word, import Word, panneau app, atelier) ; modèle `mobile-api/templates/iut-douala-rapport-de-stage.json` ; script `mobile-api/scripts/publish-template.mjs` (validation par le schéma de l'API, mise à jour par nom, vignette avec emplacements de logos vides) ; modèle publié en base (`f9bcb567-2cf4-4908-9d73-66fcd3d3baae`) ; boutons de titres de l'éditeur nommés selon la numérotation ; libellé de la période « Ex. : du 3 juin au 30 août 2026 » ; logos de garde fluides (débordement à 375 px corrigé) ; script de parcours `scripts/template-flow-captures.cjs`.
+- **Preuves :** `npm test` mobile-api 244 tests, 225 réussis, 0 échec, 19 ignorés ; tsc app, mobile-api, recruiter-web 0 ; lint:colors 189 ; `template-iut-douala.test.mjs` 3/3 ; captures `.agent/screenshots/m24/app-apercu-iut-375.png`.
+- **Non vérifié :** parcours réel dans l'app (le `mobile-api` local n'atteint pas la base distante en moins de 3 s : session non reconnue, 401/503) ; comparaison visuelle avec la référence.
+- **À reporter dans contexte-code.md :** §3 documents (options `titleAlign`, `uppercaseSections` ; dossier `mobile-api/templates/` et script `publish-template.mjs`) ; §10 (piège : `mobile-api` en dev local, délai de connexion de 3 s vers la base distante).
+
+---
+
+**2026-10-23 · Tâche 24.12 (comparaison avec le rapport de référence) · execute · commit de référence af05514 (non commité)**
+
+- **Fait :** référence téléchargée à la demande de l'utilisateur (téléchargement signé de l'API Cloudinary ; l'URL enregistrée répond 401) dans `reference-privee/`, ajouté au `.gitignore` ; 39 pages ; rendus et lecture de 12 pages ; mesures automatiques (Times 12, interligne 1,5, marges ≈ 3 cm, pied auteur, numéro encadré i/ii puis 1/2, légendes continues) ; couleurs au pixel.
+- **Moteur :** options `paragraphIndent`, `paragraphSpacing`, `titleSize`, `boldLabel`, `fill` des bandeaux de garde, 12 lignes d'en-tête bilingue, bandeau d'en-tête sur deux lignes dans la marge haute avec bordure, libellé du pied en gras (PDF et Word), tableau d'abréviations, sommaire en majuscules ; panneau de l'app et atelier admin à jour.
+- **Modèle :** en-tête complet de l'IUT (ministère, BP, téléphone, e-mail), logo de l'établissement au centre de l'en-tête, département et entreprise sur la ligne suivante, bandeaux #4472C4, bandeau d'en-tête #5B9BD5, titres à la taille du texte, paragraphes sans retrait séparés d'une ligne ; republié.
+- **Preuves :** `npm test` mobile-api 244 tests, 225 réussis, 0 échec, 19 ignorés ; tsc app, mobile-api, recruiter-web 0 ; lint:colors 189 ; captures fictives `.agent/screenshots/m24/modele-iut-garde-prelim.png` et `modele-iut-pages.png`.
+- **Écarts restants :** rubans et parchemin dessinés en bandeaux droits ; puces rondes dans le corps ; titre du sommaire non souligné ; import PDF : bandeau d'en-tête et plan non détectés sur la référence (à améliorer).
+- **Données personnelles :** la référence et ses rendus restent dans `reference-privee/` (ignoré) ; rien d'elle dans le dépôt, les tests ou ce journal.
+- **À reporter dans contexte-code.md :** §3 documents (nouvelles options de style, `fill` des bandeaux) ; §10 (URL Cloudinary des PDF en 401 avec l'authentification Basic).

@@ -90,7 +90,7 @@ test('module 24 : les 4 styles prêts ont les nouvelles options, aux valeurs qui
     assert.equal(s.headerFooter.footerRule, false);
     assert.equal(s.headerFooter.pageNumberFrame, 'none');
     assert.equal(s.page.bandColor, s.page.accentColor);
-    assert.deepEqual(s.captions, { scope: 'chapter', style: 'italic-center' });
+    assert.deepEqual(s.captions, { scope: 'chapter', style: 'italic-center', boldLabel: true });
     assert.deepEqual(s.lists, { bullet: 'disc' });
     assert.deepEqual(s.dedication, { frame: false });
   }
@@ -120,7 +120,7 @@ test('module 24 : valeurs invalides corrigées, libellé auteur tronqué à 60 c
   assert.equal(s.headerFooter.headerTextColor, '#FFFFFF');
   assert.equal(s.page.bandColor, presetStyle('classique').page.accentColor);
   assert.equal(s.headings.numbering, 'chapter-section-roman');
-  assert.deepEqual(s.captions, { scope: 'chapter', style: 'bold-left' });
+  assert.deepEqual(s.captions, { scope: 'chapter', style: 'bold-left', boldLabel: true });
   assert.equal(s.lists.bullet, 'disc');
   assert.equal(s.dedication.frame, false);
 });

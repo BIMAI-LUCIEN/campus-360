@@ -149,6 +149,9 @@ const readStyles = (stylesXml: string, style: DocumentStyle, report: ImportRepor
     if (run.color) style.headings.color = run.color;
     report.sure.push(`Titres de chapitre : ${style.typography.headingFont}${run.caps ? ', majuscules' : ''}${run.color ? `, couleur ${run.color}` : ''}`);
     if (has(heading1, 'w:pBdr')) style.headings.rule = true;
+    if (attrOf(heading1, 'w:jc', 'w:val') === 'center') style.headings.titleAlign = 'center';
+    const heading2 = styleById('Heading2') || styleByName(/^heading 2$/i) || '';
+    if (heading2 && runProps(heading2).caps) style.headings.uppercaseSections = true;
   } else {
     report.missing.push('Style des titres (Titre 1)');
   }

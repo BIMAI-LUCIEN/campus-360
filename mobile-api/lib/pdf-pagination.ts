@@ -42,6 +42,9 @@ export type PageStamp = {
   numberSlot?: 'left' | 'center' | 'right';
   // The left footer slot gets two thirds of the width (author label + name).
   wideFooterLeft?: boolean;
+  // Start of the left footer text printed in bold ("Rédigé et présenté par :").
+  footerBoldPrefix?: string;
+  bandBorder?: string; // #RRGGBB
 };
 
 export type StampOptions = {
@@ -119,11 +122,30 @@ export const stampPdf = async (pdf: Buffer, stamps: PageStamp[], options: StampO
     if (stamp.border && stamp.border !== 'none') drawBorder(page, stamp.border, Math.max(12, m * 0.45), accent);
 
     const headerY = height - m / 2 - 2;
-    if (stamp.band) {
-      // Drawn before any text; 18 pt high around the header line, inside the margin.
-      page.drawRectangle({ x: m, y: headerY - 5, width: width - 2 * m, height: 18, color: toRgb(stamp.band.color) });
-      const text = fit(bold, stamp.band.text.toUpperCase(), size, width - 2 * m - 12);
-      page.drawText(text, { x: (width - bold.widthOfTextAtSize(text, size)) / 2, y: headerY, size, font: bold, color: toRgb(stamp.band.textColor) });
+    const band = stamp.band;
+    if (band) {
+      // Drawn before any text, inside the top margin; a long title wraps on two lines.
+      const bandSize = 7.5;
+      const maxWidth = width - 2 * m - 16;
+      const words = safeText(bold, band.text.toUpperCase()).split(/\s+/).filter(Boolean);
+      const lines: string[] = [];
+      for (const word of words) {
+        const last = lines[lines.length - 1];
+        if (last !== undefined && bold.widthOfTextAtSize(`${last} ${word}`, bandSize) <= maxWidth) lines[lines.length - 1] = `${last} ${word}`;
+        else lines.push(word);
+      }
+      const shown = lines.slice(0, 2);
+      if (lines.length > 2) shown[1] = fit(bold, `${shown[1]} ${lines.slice(2).join(' ')}`, bandSize, maxWidth);
+      const bandHeight = shown.length * (bandSize + 2) + 10;
+      const bandTop = height - Math.max(8, m * 0.35);
+      page.drawRectangle({
+        x: m, y: bandTop - bandHeight, width: width - 2 * m, height: bandHeight, color: toRgb(band.color),
+        ...(stamp.bandBorder ? { borderColor: toRgb(stamp.bandBorder), borderWidth: 0.75 } : {}),
+      });
+      shown.forEach((line, i) => {
+        const y = bandTop - 5 - (i + 1) * (bandSize + 2) + 2;
+        page.drawText(line, { x: (width - bold.widthOfTextAtSize(line, bandSize)) / 2, y, size: bandSize, font: bold, color: toRgb(band.textColor) });
+      });
     }
     let leftX = m;
     if (stamp.logo && logo) {
@@ -162,7 +184,13 @@ export const stampPdf = async (pdf: Buffer, stamps: PageStamp[], options: StampO
       if (stamp.numberFrame && slot.key === stamp.numberSlot) {
         page.drawRectangle({ x: x - 4, y: footerY - 3.5, width: w + 8, height: size + 5, borderColor: accent, borderWidth: 0.75 });
       }
-      page.drawText(text, { x, y: footerY, size, font, color });
+      const prefix = slot.key === 'left' && stamp.footerBoldPrefix && text.startsWith(stamp.footerBoldPrefix) ? safeText(bold, stamp.footerBoldPrefix) : '';
+      if (prefix) {
+        page.drawText(prefix, { x, y: footerY, size, font: bold, color });
+        page.drawText(text.slice(stamp.footerBoldPrefix!.length), { x: x + bold.widthOfTextAtSize(prefix, size), y: footerY, size, font, color });
+      } else {
+        page.drawText(text, { x, y: footerY, size, font, color });
+      }
     }
   });
 

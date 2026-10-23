@@ -25,8 +25,8 @@ export type CoverBlock = {
 
 export type TemplateStyle = {
   preset: string;
-  typography: { headingFont: string; bodyFont: string; bodySize: number; lineSpacing: number };
-  headings: { numbering: string; uppercaseChapters: boolean; color: string; rule: boolean };
+  typography: { headingFont: string; bodyFont: string; bodySize: number; lineSpacing: number; paragraphIndent: boolean; paragraphSpacing: 'compact' | 'airy' };
+  headings: { numbering: string; uppercaseChapters: boolean; color: string; rule: boolean; titleAlign: 'left' | 'center'; uppercaseSections: boolean; titleSize: 'large' | 'normal' };
   page: { margins: string; border: string; accentColor: string; bandColor: string };
   headerFooter: {
     headerLeft: string; headerRight: string; footerLeft: string; footerCenter: string; footerRight: string;
@@ -35,7 +35,7 @@ export type TemplateStyle = {
   };
   cover: { template: string; blocks: CoverBlock[] | null; extraLines: { label: string; value: string }[]; [k: string]: unknown };
   tables: { style: string; headerColor: string };
-  captions: { scope: 'chapter' | 'document'; style: 'italic-center' | 'bold-left' };
+  captions: { scope: 'chapter' | 'document'; style: 'italic-center' | 'bold-left'; boldLabel: boolean };
   lists: { bullet: 'disc' | 'diamond' };
   dedication: { frame: boolean };
 };

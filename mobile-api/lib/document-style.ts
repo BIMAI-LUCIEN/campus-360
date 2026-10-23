@@ -40,7 +40,7 @@ export type CoverLogoSlot = 'school' | 'company' | 'department';
 export type CoverBlock = { id: string; style: CoverTextStyle } & (
   | { type: 'bilingual-header'; left: string[]; right: string[]; center: CoverLogoSlot | null }
   | { type: 'logos'; left: CoverLogoSlot | null; center: CoverLogoSlot | null; right: CoverLogoSlot | null; height: number /* pt, 20-120 */; centerText: string; rule: boolean }
-  | { type: 'title-banner'; prefix: string; variant: 'band' | 'frame' | 'plain' }
+  | { type: 'title-banner'; prefix: string; variant: 'band' | 'frame' | 'plain'; fill?: string | null }
   | { type: 'heading'; text: string }
   | { type: 'text'; template: string }
   | { type: 'author'; label: string; matriculeLabel: string }
@@ -56,7 +56,7 @@ export type CoverBlock = { id: string; style: CoverTextStyle } & (
       matriculeLabel: string;
       specialtyLabel: string;
     }
-  | { type: 'year-banner'; template: string; variant: 'band' | 'rule' | 'plain' }
+  | { type: 'year-banner'; template: string; variant: 'band' | 'rule' | 'plain'; fill?: string | null }
   | { type: 'spacer'; height: number /* mm, 2-60 */; grow: boolean }
   | { type: 'extra-lines' }
 );
@@ -74,12 +74,17 @@ export type DocumentStyle = {
     bodyFont: StyleFont;
     bodySize: number; // points, 10 to 14
     lineSpacing: number; // 1 to 2.5
+    paragraphIndent: boolean; // first-line indent of paragraphs
+    paragraphSpacing: 'compact' | 'airy'; // airy = a blank line between paragraphs
   };
   headings: {
     numbering: HeadingNumbering;
     uppercaseChapters: boolean;
     color: string; // #RRGGBB
     rule: boolean; // line under chapter titles
+    titleAlign: 'left' | 'center'; // section titles (Dédicace, Chapitre 1 : …)
+    uppercaseSections: boolean; // headings inside chapters (SECTION 1 : …, I. …)
+    titleSize: 'large' | 'normal'; // normal = titles at the size of the text, as in many school reports
   };
   page: {
     margins: PageMargins;
@@ -117,6 +122,7 @@ export type DocumentStyle = {
   captions: {
     scope: CaptionScope; // chapter = "Figure 2.1", document = "Figure 4" counted over the whole document
     style: CaptionStyle;
+    boldLabel: boolean; // "Figure 1 :" in bold
   };
   lists: {
     bullet: ListBullet; // diamond = ❖ at the first level
@@ -137,8 +143,8 @@ const PRESETS: Record<StylePreset, DocumentStyle> = {
   classique: {
     version: 1,
     preset: 'classique',
-    typography: { headingFont: 'Times New Roman', bodyFont: 'Times New Roman', bodySize: 12, lineSpacing: 1.5 },
-    headings: { numbering: 'decimal', uppercaseChapters: true, color: '#000000', rule: false },
+    typography: { headingFont: 'Times New Roman', bodyFont: 'Times New Roman', bodySize: 12, lineSpacing: 1.5, paragraphIndent: true, paragraphSpacing: 'compact' },
+    headings: { numbering: 'decimal', uppercaseChapters: true, color: '#000000', rule: false, titleAlign: 'left', uppercaseSections: false, titleSize: 'large' },
     page: { margins: 'normal', border: 'none', accentColor: '#1F2937', bandColor: '#1F2937' },
     headerFooter: {
       headerLeft: 'none', headerRight: 'chapter', footerLeft: 'none', footerCenter: 'page', footerRight: 'none',
@@ -147,15 +153,15 @@ const PRESETS: Record<StylePreset, DocumentStyle> = {
     },
     cover: { template: 'classic', schoolLogoFileId: null, companyLogoFileId: null, extraLines: [], departmentLogoFileId: null, blocks: null },
     tables: { style: 'grid', headerColor: '#F2F2F2' },
-    captions: { scope: 'chapter', style: 'italic-center' },
+    captions: { scope: 'chapter', style: 'italic-center', boldLabel: true },
     lists: { bullet: 'disc' },
     dedication: { frame: false },
   },
   moderne: {
     version: 1,
     preset: 'moderne',
-    typography: { headingFont: 'Calibri', bodyFont: 'Georgia', bodySize: 11.5, lineSpacing: 1.5 },
-    headings: { numbering: 'decimal', uppercaseChapters: false, color: '#1E3A8A', rule: true },
+    typography: { headingFont: 'Calibri', bodyFont: 'Georgia', bodySize: 11.5, lineSpacing: 1.5, paragraphIndent: true, paragraphSpacing: 'compact' },
+    headings: { numbering: 'decimal', uppercaseChapters: false, color: '#1E3A8A', rule: true, titleAlign: 'left', uppercaseSections: false, titleSize: 'large' },
     page: { margins: 'normal', border: 'none', accentColor: '#1E3A8A', bandColor: '#1E3A8A' },
     headerFooter: {
       headerLeft: 'title', headerRight: 'author', footerLeft: 'none', footerCenter: 'none', footerRight: 'page',
@@ -164,15 +170,15 @@ const PRESETS: Record<StylePreset, DocumentStyle> = {
     },
     cover: { template: 'modern', schoolLogoFileId: null, companyLogoFileId: null, extraLines: [], departmentLogoFileId: null, blocks: null },
     tables: { style: 'striped', headerColor: '#DBEAFE' },
-    captions: { scope: 'chapter', style: 'italic-center' },
+    captions: { scope: 'chapter', style: 'italic-center', boldLabel: true },
     lists: { bullet: 'disc' },
     dedication: { frame: false },
   },
   sobre: {
     version: 1,
     preset: 'sobre',
-    typography: { headingFont: 'Arial', bodyFont: 'Arial', bodySize: 11, lineSpacing: 1.5 },
-    headings: { numbering: 'decimal', uppercaseChapters: false, color: '#111827', rule: false },
+    typography: { headingFont: 'Arial', bodyFont: 'Arial', bodySize: 11, lineSpacing: 1.5, paragraphIndent: true, paragraphSpacing: 'compact' },
+    headings: { numbering: 'decimal', uppercaseChapters: false, color: '#111827', rule: false, titleAlign: 'left', uppercaseSections: false, titleSize: 'large' },
     page: { margins: 'wide', border: 'none', accentColor: '#111827', bandColor: '#111827' },
     headerFooter: {
       headerLeft: 'none', headerRight: 'none', footerLeft: 'none', footerCenter: 'page', footerRight: 'none',
@@ -181,15 +187,15 @@ const PRESETS: Record<StylePreset, DocumentStyle> = {
     },
     cover: { template: 'minimal', schoolLogoFileId: null, companyLogoFileId: null, extraLines: [], departmentLogoFileId: null, blocks: null },
     tables: { style: 'minimal', headerColor: '#FFFFFF' },
-    captions: { scope: 'chapter', style: 'italic-center' },
+    captions: { scope: 'chapter', style: 'italic-center', boldLabel: true },
     lists: { bullet: 'disc' },
     dedication: { frame: false },
   },
   institutionnel: {
     version: 1,
     preset: 'institutionnel',
-    typography: { headingFont: 'Cambria', bodyFont: 'Cambria', bodySize: 12, lineSpacing: 1.5 },
-    headings: { numbering: 'roman-alpha', uppercaseChapters: true, color: '#0F3D56', rule: true },
+    typography: { headingFont: 'Cambria', bodyFont: 'Cambria', bodySize: 12, lineSpacing: 1.5, paragraphIndent: true, paragraphSpacing: 'compact' },
+    headings: { numbering: 'roman-alpha', uppercaseChapters: true, color: '#0F3D56', rule: true, titleAlign: 'left', uppercaseSections: false, titleSize: 'large' },
     page: { margins: 'normal', border: 'cover-only', accentColor: '#0F3D56', bandColor: '#0F3D56' },
     headerFooter: {
       headerLeft: 'school', headerRight: 'chapter', footerLeft: 'none', footerCenter: 'page', footerRight: 'none',
@@ -198,7 +204,7 @@ const PRESETS: Record<StylePreset, DocumentStyle> = {
     },
     cover: { template: 'institutional', schoolLogoFileId: null, companyLogoFileId: null, extraLines: [], departmentLogoFileId: null, blocks: null },
     tables: { style: 'grid', headerColor: '#E0EAF1' },
-    captions: { scope: 'chapter', style: 'italic-center' },
+    captions: { scope: 'chapter', style: 'italic-center', boldLabel: true },
     lists: { bullet: 'disc' },
     dedication: { frame: false },
   },
@@ -263,14 +269,14 @@ const coverBlock = (value: unknown, index: number): CoverBlock | null => {
   const base = { id, style: coverTextStyle(b.style) };
   switch (type) {
     case 'bilingual-header':
-      return { ...base, type, left: lineList(b.left, 8), right: lineList(b.right, 8), center: slotOrNull(b.center) };
+      return { ...base, type, left: lineList(b.left, 12), right: lineList(b.right, 12), center: slotOrNull(b.center) };
     case 'logos':
       return {
         ...base, type, left: slotOrNull(b.left), center: slotOrNull(b.center), right: slotOrNull(b.right),
         height: range(b.height, 20, 120, 1, 70), centerText: text(b.centerText, 300, ''), rule: bool(b.rule, false),
       };
     case 'title-banner':
-      return { ...base, type, prefix: text(b.prefix, 60, ''), variant: pick(b.variant, ['band', 'frame', 'plain'] as const, 'plain') };
+      return { ...base, type, prefix: text(b.prefix, 60, ''), variant: pick(b.variant, ['band', 'frame', 'plain'] as const, 'plain'), fill: color(b.fill, '') || null };
     case 'heading':
       return { ...base, type, text: text(b.text, 160, '') };
     case 'text':
@@ -284,7 +290,7 @@ const coverBlock = (value: unknown, index: number): CoverBlock | null => {
         authorLabel: text(b.authorLabel, 60, ''), matriculeLabel: text(b.matriculeLabel, 60, ''), specialtyLabel: text(b.specialtyLabel, 60, ''),
       };
     case 'year-banner':
-      return { ...base, type, template: text(b.template, 160, ''), variant: pick(b.variant, ['band', 'rule', 'plain'] as const, 'plain') };
+      return { ...base, type, template: text(b.template, 160, ''), variant: pick(b.variant, ['band', 'rule', 'plain'] as const, 'plain'), fill: color(b.fill, '') || null };
     case 'spacer':
       return { ...base, type, height: range(b.height, 2, 60, 1, 10), grow: bool(b.grow, false) };
     case 'extra-lines':
@@ -334,12 +340,17 @@ export const resolveStyle = (input: unknown): DocumentStyle => {
       bodyFont: pick(t.bodyFont, STYLE_FONTS, base.typography.bodyFont),
       bodySize: range(t.bodySize, 10, 14, 0.5, base.typography.bodySize),
       lineSpacing: range(t.lineSpacing, 1, 2.5, 0.05, base.typography.lineSpacing),
+      paragraphIndent: bool(t.paragraphIndent, base.typography.paragraphIndent),
+      paragraphSpacing: pick(t.paragraphSpacing, ['compact', 'airy'] as const, base.typography.paragraphSpacing),
     },
     headings: {
       numbering: pick(h.numbering, ['none', 'decimal', 'roman-alpha', 'chapter-section-roman'] as const, base.headings.numbering),
       uppercaseChapters: bool(h.uppercaseChapters, base.headings.uppercaseChapters),
       color: color(h.color, base.headings.color),
       rule: bool(h.rule, base.headings.rule),
+      titleAlign: pick(h.titleAlign, ['left', 'center'] as const, base.headings.titleAlign),
+      uppercaseSections: bool(h.uppercaseSections, base.headings.uppercaseSections),
+      titleSize: pick(h.titleSize, ['large', 'normal'] as const, base.headings.titleSize),
     },
     page: {
       margins: pick(p.margins, ['narrow', 'normal', 'wide'] as const, base.page.margins),
@@ -382,6 +393,7 @@ export const resolveStyle = (input: unknown): DocumentStyle => {
     captions: {
       scope: pick(cp.scope, ['chapter', 'document'] as const, base.captions.scope),
       style: pick(cp.style, ['italic-center', 'bold-left'] as const, base.captions.style),
+      boldLabel: bool(cp.boldLabel, base.captions.boldLabel),
     },
     lists: {
       bullet: pick(ls.bullet, ['disc', 'diamond'] as const, base.lists.bullet),

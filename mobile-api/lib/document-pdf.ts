@@ -111,6 +111,7 @@ export const buildPdfHtml = (
 <style>
   @page { size: A4; margin: ${marginCm}cm; }
   ${PRINT_CSS}
+  ${style.headings.uppercaseSections ? '.toc-l0, .toc-l1 { text-transform: uppercase; } .toc-l0 { font-weight: 400; } .toc-chapter { font-weight: 700; }' : ''}
   ${styleToCss(style, { cssNumbering: false })}
   ${coverCss(style, coverHeight, false)}
 </style>
@@ -226,6 +227,8 @@ export const buildStamps = (input: PdfDocumentInput, layout: Layout): PageStamp[
       numberFrame: hf.pageNumberFrame === 'box',
       numberSlot,
       wideFooterLeft: hf.footerLeft === 'author' && labelled && !footer.center,
+      footerBoldPrefix: labelled ? hf.authorLabel.trim() : undefined,
+      bandBorder: band ? style.page.accentColor : undefined,
     };
   });
 };

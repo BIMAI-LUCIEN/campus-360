@@ -26,7 +26,7 @@ const blockBase = z.object({
     .strict(),
 });
 const label = z.string().max(60);
-const lines = z.array(z.string().max(120)).max(8);
+const lines = z.array(z.string().max(120)).max(12);
 
 export const coverBlockSchema = z.discriminatedUnion('type', [
   blockBase.extend({ type: z.literal('bilingual-header'), left: lines, right: lines, center: logoSlot }).strict(),
@@ -41,7 +41,7 @@ export const coverBlockSchema = z.discriminatedUnion('type', [
       rule: z.boolean(),
     })
     .strict(),
-  blockBase.extend({ type: z.literal('title-banner'), prefix: label, variant: z.enum(['band', 'frame', 'plain']) }).strict(),
+  blockBase.extend({ type: z.literal('title-banner'), prefix: label, variant: z.enum(['band', 'frame', 'plain']), fill: hex.nullable().optional() }).strict(),
   blockBase.extend({ type: z.literal('heading'), text: z.string().max(160) }).strict(),
   blockBase.extend({ type: z.literal('text'), template: z.string().max(300) }).strict(),
   blockBase.extend({ type: z.literal('author'), label, matriculeLabel: label }).strict(),
@@ -57,7 +57,7 @@ export const coverBlockSchema = z.discriminatedUnion('type', [
       specialtyLabel: label,
     })
     .strict(),
-  blockBase.extend({ type: z.literal('year-banner'), template: z.string().max(160), variant: z.enum(['band', 'rule', 'plain']) }).strict(),
+  blockBase.extend({ type: z.literal('year-banner'), template: z.string().max(160), variant: z.enum(['band', 'rule', 'plain']), fill: hex.nullable().optional() }).strict(),
   blockBase.extend({ type: z.literal('spacer'), height: z.number().min(2).max(60), grow: z.boolean() }).strict(),
   blockBase.extend({ type: z.literal('extra-lines') }).strict(),
 ]);
@@ -71,6 +71,8 @@ export const documentStylePatchSchema = z
         bodyFont: z.enum(STYLE_FONTS),
         bodySize: z.number().min(10).max(14),
         lineSpacing: z.number().min(1).max(2.5),
+        paragraphIndent: z.boolean(),
+        paragraphSpacing: z.enum(['compact', 'airy']),
       })
       .partial()
       .strict()
@@ -81,6 +83,9 @@ export const documentStylePatchSchema = z
         uppercaseChapters: z.boolean(),
         color: hex,
         rule: z.boolean(),
+        titleAlign: z.enum(['left', 'center']),
+        uppercaseSections: z.boolean(),
+        titleSize: z.enum(['large', 'normal']),
       })
       .partial()
       .strict()
@@ -140,6 +145,7 @@ export const documentStylePatchSchema = z
       .object({
         scope: z.enum(['chapter', 'document']),
         style: z.enum(['italic-center', 'bold-left']),
+        boldLabel: z.boolean(),
       })
       .partial()
       .strict()

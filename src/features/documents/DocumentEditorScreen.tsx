@@ -52,7 +52,7 @@ const COVER_FIELDS: { key: string; label: string; placeholder: string; multiline
   { key: 'matricule', label: 'Matricule', placeholder: 'Votre matricule' },
   { key: 'specialty', label: 'Filière / spécialité', placeholder: 'Ex. : Gestion des entreprises' },
   { key: 'company', label: 'Entreprise d’accueil', placeholder: 'Nom de l’entreprise', stageOnly: true },
-  { key: 'period', label: 'Période du stage', placeholder: 'Ex. : juin – août 2026', stageOnly: true },
+  { key: 'period', label: 'Période du stage', placeholder: 'Ex. : du 3 juin au 30 août 2026', stageOnly: true },
   { key: 'tutorCorporate', label: 'Encadreur professionnel', placeholder: 'Nom et fonction', stageOnly: true },
   { key: 'tutorAcademic', label: 'Encadreur académique', placeholder: 'Ex. : Dr …' },
   { key: 'year', label: 'Année académique', placeholder: 'Ex. : 2025-2026' },

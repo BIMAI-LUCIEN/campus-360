@@ -222,17 +222,18 @@ export const styleToCss = (style: DocumentStyle, options: StyleCssOptions): stri
     hyphens: auto;
     -webkit-hyphens: auto;
   }
-  .doc-body p { margin: 0 0 0.55em; text-align: justify; text-indent: 1.25em; }
+  .doc-body p { margin: 0 0 ${ty.paragraphSpacing === 'airy' ? '1em' : '0.55em'}; text-align: justify; text-indent: ${ty.paragraphIndent ? '1.25em' : '0'}; }
   .doc-body p[style*="text-align"] { text-indent: 0; }
   .doc-section-title {
     font-family: ${head};
-    font-size: ${(ty.bodySize * 1.5).toFixed(1)}pt;
+    font-size: ${(ty.bodySize * (h.titleSize === 'normal' ? 1.05 : 1.5)).toFixed(1)}pt;
     font-weight: 700;
     color: ${h.color};
     text-transform: ${caps};
     letter-spacing: ${h.uppercaseChapters ? '0.03em' : '0'};
     line-height: 1.25;
     margin: 0 0 1em;
+    text-align: ${h.titleAlign};
     ${h.rule ? `padding-bottom: 0.3em; border-bottom: 1.5pt solid ${accent};` : ''}
   }
   .doc-body h1, .doc-body h2, .doc-body h3, .doc-body h4 {
@@ -244,10 +245,11 @@ export const styleToCss = (style: DocumentStyle, options: StyleCssOptions): stri
     page-break-after: avoid;
     break-after: avoid;
   }
-  .doc-body h1 { font-size: ${(ty.bodySize * 1.25).toFixed(1)}pt; font-weight: 700; margin: 1.1em 0 0.5em; }
-  .doc-body h2 { font-size: ${(ty.bodySize * 1.1).toFixed(1)}pt; font-weight: 700; margin: 1em 0 0.4em; }
+  .doc-body h1 { font-size: ${(ty.bodySize * (h.titleSize === 'normal' ? 1 : 1.25)).toFixed(1)}pt; font-weight: 700; margin: 1.1em 0 0.5em; }
+  .doc-body h2 { font-size: ${(ty.bodySize * (h.titleSize === 'normal' ? 1 : 1.1)).toFixed(1)}pt; font-weight: 700; margin: 1em 0 0.4em; }
   .doc-body h3 { font-size: ${ty.bodySize}pt; font-weight: 700; font-style: italic; margin: 0.9em 0 0.3em; }
   .doc-body h4 { font-size: ${ty.bodySize}pt; font-weight: 600; font-style: italic; margin: 0.8em 0 0.3em; }
+  ${h.uppercaseSections ? '.doc-body h1, .doc-body h2 { text-transform: uppercase; }' : ''}
   .doc-body ul, .doc-body ol { margin: 0.3em 0 0.7em; padding-left: 1.6em; }
   .doc-body li { margin-bottom: 0.2em; }
   ${bullets}
@@ -284,8 +286,10 @@ export const styleToCss = (style: DocumentStyle, options: StyleCssOptions): stri
   ${dedicationFrame}
   .doc-section[data-kind="abstract"] .doc-body p { text-indent: 0; }
   .doc-section[data-kind="abbreviations"] .doc-body p { text-indent: 0; text-align: left; }
-  .doc-section[data-kind="abbreviations"] .doc-body table th { background: transparent; color: #111111; }
+  .doc-section[data-kind="abbreviations"] .doc-body table td:first-child { font-weight: 700; white-space: nowrap; }
+  .doc-body .cap-label { font-weight: ${captions.boldLabel ? 700 : 'inherit'}; font-style: inherit; }
   ${numbering}
+  ${captions.boldLabel ? '' : '.doc-body figcaption::before, .doc-body .doc-table-caption::before { font-weight: inherit !important; }'}
   `;
 };
 

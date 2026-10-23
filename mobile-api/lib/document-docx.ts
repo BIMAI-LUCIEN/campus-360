@@ -177,12 +177,12 @@ const coverBlocks = (d: CoverData, style: DocumentStyle, logos: DocxDocumentInpu
         const text = `${block.prefix ? `${block.prefix} ` : ''}${d.title || 'Titre du document'}`;
         const runs = filledRuns(text.replace(/&/g, '&amp;').replace(/</g, '&lt;'), {
           ...base,
-          color: block.variant === 'band' ? hex(style.headerFooter.headerTextColor) : color ?? (style.cover.template === 'modern' ? accent : hex(style.headings.color)),
+          color: b.color ? hex(b.color) : block.variant === 'band' ? hex(style.headerFooter.headerTextColor) : color ?? (style.cover.template === 'modern' ? accent : hex(style.headings.color)),
         });
         out.push(new Paragraph({
           alignment: ALIGN[b.align],
           spacing: { before: 120, after: 160 },
-          shading: block.variant === 'band' ? { type: ShadingType.CLEAR, color: 'auto', fill: hex(style.page.bandColor) } : undefined,
+          shading: block.variant === 'band' ? { type: ShadingType.CLEAR, color: 'auto', fill: hex(block.fill || style.page.bandColor) } : undefined,
           border: block.variant === 'frame'
             ? { top: { style: BorderStyle.SINGLE, size: 12, color: accent, space: 6 }, bottom: { style: BorderStyle.SINGLE, size: 12, color: accent, space: 6 } }
             : undefined,
@@ -200,7 +200,7 @@ const coverBlocks = (d: CoverData, style: DocumentStyle, logos: DocxDocumentInpu
         break;
       case 'author': {
         if (!d.studentName && !d.matricule) break;
-        if (block.label) out.push(new Paragraph({ alignment: ALIGN[b.align], children: [new TextRun({ text: block.label, bold: true, underline: {}, size: base.size })] }));
+        if (block.label) out.push(new Paragraph({ alignment: ALIGN[b.align], children: [new TextRun({ text: block.label, bold: b.bold, underline: {}, size: base.size })] }));
         if (d.studentName) out.push(new Paragraph({ alignment: ALIGN[b.align], children: [new TextRun({ text: d.studentName, bold: true, size: base.size + 2 })] }));
         const m = labelled(block.matriculeLabel, d.matricule);
         if (m) out.push(m);
@@ -208,7 +208,7 @@ const coverBlocks = (d: CoverData, style: DocumentStyle, logos: DocxDocumentInpu
       }
       case 'supervisors': {
         const head = (text: string) =>
-          text ? new Paragraph({ children: [new TextRun({ text, bold: true, allCaps: block.layout === 'author-left', underline: block.layout === 'columns' ? {} : undefined, size: 18, color: block.layout === 'author-left' ? '555555' : undefined })] }) : null;
+          text ? new Paragraph({ children: [new TextRun({ text, bold: block.layout === 'author-left' || b.bold, allCaps: block.layout === 'author-left', underline: block.layout === 'columns' ? {} : undefined, size: block.layout === 'columns' ? base.size : 18, color: block.layout === 'author-left' ? '555555' : undefined })] }) : null;
         if (block.layout === 'author-left') {
           const left = [
             d.studentName ? head(block.authorLabel) : null,
@@ -224,7 +224,7 @@ const coverBlocks = (d: CoverData, style: DocumentStyle, logos: DocxDocumentInpu
           if (left.length || right.length) out.push(columns([left, right]));
         } else {
           const col = (label: string, value?: string) =>
-            value ? [head(label), new Paragraph({ children: [new TextRun({ text: value, bold: true })] })].filter((p): p is Paragraph => p !== null) : [];
+            value ? [head(label), new Paragraph({ children: [new TextRun({ text: value, bold: b.bold, size: base.size })] })].filter((p): p is Paragraph => p !== null) : [];
           const cells = [col(block.academicLabel, d.tutorAcademic), col(block.corporateLabel, d.tutorCorporate)];
           if (!cells.some((c) => c.length)) break;
           const label = head(block.label);
@@ -240,9 +240,9 @@ const coverBlocks = (d: CoverData, style: DocumentStyle, logos: DocxDocumentInpu
         out.push(new Paragraph({
           alignment: ALIGN[b.align],
           spacing: { before: 200 },
-          shading: band ? { type: ShadingType.CLEAR, color: 'auto', fill: hex(style.page.bandColor) } : undefined,
+          shading: band ? { type: ShadingType.CLEAR, color: 'auto', fill: hex(block.fill || style.page.bandColor) } : undefined,
           border: block.variant === 'rule' ? { top: { style: BorderStyle.SINGLE, size: 8, color: accent, space: 6 } } : undefined,
-          children: filledRuns(text, { ...base, color: band ? hex(style.headerFooter.headerTextColor) : color }),
+          children: filledRuns(text, { ...base, color: b.color ? hex(b.color) : band ? hex(style.headerFooter.headerTextColor) : color }),
         }));
         break;
       }
@@ -276,6 +276,7 @@ const slotLine = (
     keepAuthor?: boolean;
     topRule?: boolean;
     numberFrame?: boolean;
+    authorLabel?: string; // printed in bold before the author's name
   },
 ): Paragraph => {
   const runs = (slot: HeaderFooterSlot | undefined): (TextRun | SimpleField)[] => {
@@ -291,6 +292,12 @@ const slotLine = (
     if (options.pagesOnly && !(slot === 'author' && options.keepAuthor)) return [];
     if (slot === 'chapter') return [new SimpleField('STYLEREF "heading 1"')];
     const text = slot === 'title' ? context.title : slot === 'author' ? context.author : context.school;
+    if (slot === 'author' && options.authorLabel && text.startsWith(options.authorLabel)) {
+      return [
+        new TextRun({ text: options.authorLabel, bold: true, size: 18, color: '555555' }),
+        new TextRun({ text: text.slice(options.authorLabel.length), size: 18, color: '555555' }),
+      ];
+    }
     return text ? [new TextRun({ text, size: 18, color: '555555' })] : [];
   };
   const left = runs(parts.left);
@@ -319,12 +326,15 @@ const slotLine = (
 };
 
 // Header band (Module 24): the document title on a coloured strip.
-const bandLine = (title: string, style: DocumentStyle) =>
-  new Paragraph({
+const bandLine = (title: string, style: DocumentStyle) => {
+  const side = { style: BorderStyle.SINGLE, size: 6, color: hex(style.page.accentColor), space: 4 };
+  return new Paragraph({
     alignment: AlignmentType.CENTER,
     shading: { type: ShadingType.CLEAR, color: 'auto', fill: hex(style.page.bandColor) },
-    children: [new TextRun({ text: title, bold: true, allCaps: true, size: 18, color: hex(style.headerFooter.headerTextColor) })],
+    border: { top: side, bottom: side, left: side, right: side },
+    children: [new TextRun({ text: title, bold: true, allCaps: true, size: 15, color: hex(style.headerFooter.headerTextColor) })],
   });
+};
 
 const pageChildren = (format: DocumentStyle['headerFooter']['numberFormat'], body: boolean) => {
   if (format === 'page-n') return ['Page ', PageNumber.CURRENT];
@@ -363,14 +373,18 @@ export const buildDocumentDocx = async (input: DocxDocumentInput): Promise<Buffe
     tableCaptionStyle: TABLE_CAPTION,
     bullet: style.lists.bullet,
     captionLook: style.captions.style,
+    paragraphIndent: style.typography.paragraphIndent,
+    paragraphAfter: style.typography.paragraphSpacing === 'airy' ? 240 : 160,
   };
+  // A caption label not in bold: the converter only bolds the class "cap-label".
+  const captionLabels = (html: string) => (style.captions.boldLabel ? html : html.replace(/class="cap-label"/g, 'class="cap-label-plain"'));
   const listInstance = { next: 1 };
   const page = { margin: { top: marginTwips, right: marginTwips, bottom: marginTwips, left: marginTwips, header: Math.round(marginTwips / 2), footer: Math.round(marginTwips / 2) } };
   const allBorders = style.page.border === 'single' || style.page.border === 'double' ? pageBorders(style.page.border, accent) : undefined;
   const context = { title: cover.title, author: authorLine(style, cover.studentName), school: cover.school || cover.university || '' };
   const hf = style.headerFooter;
   const band = hf.headerStyle === 'band';
-  const footerOptions = { accent, topRule: hf.footerRule, numberFrame: hf.pageNumberFrame === 'box' };
+  const footerOptions = { accent, topRule: hf.footerRule, numberFrame: hf.pageNumberFrame === 'box', authorLabel: hf.authorLabel.trim() || undefined };
 
   const tocEntries = numbered.toc
     .filter((e) => !numbered.sections.some((s) => s.sectionMarker === e.marker && s.kind === 'toc'))
@@ -409,7 +423,7 @@ export const buildDocumentDocx = async (input: DocxDocumentInput): Promise<Buffe
       const blocks = htmlToDocxBlocks(html, input.images, listInstance, { ...renderOptions, framed: style.dedication.frame });
       return [new Paragraph({ spacing: { before: 4000 } }), ...blocks];
     }
-    return htmlToDocxBlocks(section.html, input.images, listInstance, renderOptions);
+    return htmlToDocxBlocks(captionLabels(section.html), input.images, listInstance, renderOptions);
   };
 
   const prelim = numbered.sections.filter((s) => s.kind !== 'cover' && s.preliminary);
@@ -463,6 +477,7 @@ export const buildDocumentDocx = async (input: DocxDocumentInput): Promise<Buffe
   });
 
   const bodySize = Math.round(style.typography.bodySize * 2);
+  const normalTitles = style.headings.titleSize === 'normal';
   const boldCaption = style.captions.style === 'bold-left';
   const captionAlign = boldCaption ? AlignmentType.LEFT : AlignmentType.CENTER;
   const heading = (size: number, extra: { allCaps?: boolean; italics?: boolean } = {}) => ({
@@ -482,15 +497,16 @@ export const buildDocumentDocx = async (input: DocxDocumentInput): Promise<Buffe
           paragraph: { spacing: { line: Math.round(240 * style.typography.lineSpacing) }, alignment: AlignmentType.JUSTIFIED },
         },
         heading1: {
-          ...heading(Math.round(style.typography.bodySize * 3), { allCaps: style.headings.uppercaseChapters }),
+          ...heading(Math.round(style.typography.bodySize * (normalTitles ? 2.1 : 3)), { allCaps: style.headings.uppercaseChapters }),
           paragraph: {
             spacing: { before: 0, after: 360 },
             keepNext: true,
+            alignment: style.headings.titleAlign === 'center' ? AlignmentType.CENTER : AlignmentType.LEFT,
             border: style.headings.rule ? { bottom: { style: BorderStyle.SINGLE, size: 12, color: accent, space: 4 } } : undefined,
           },
         },
-        heading2: heading(Math.round(style.typography.bodySize * 2.5)),
-        heading3: heading(Math.round(style.typography.bodySize * 2.2)),
+        heading2: heading(Math.round(style.typography.bodySize * (normalTitles ? 2 : 2.5)), { allCaps: style.headings.uppercaseSections }),
+        heading3: heading(Math.round(style.typography.bodySize * (normalTitles ? 2 : 2.2)), { allCaps: style.headings.uppercaseSections }),
         heading4: heading(bodySize, { italics: true }),
         heading5: heading(bodySize, { italics: true }),
       },
@@ -513,8 +529,8 @@ export const buildDocumentDocx = async (input: DocxDocumentInput): Promise<Buffe
           id: 'TitreHorsSommaire',
           name: 'Titre hors sommaire',
           basedOn: 'Normal',
-          run: { font: style.typography.headingFont, size: Math.round(style.typography.bodySize * 3), bold: true, color: hex(style.headings.color), allCaps: style.headings.uppercaseChapters },
-          paragraph: { spacing: { after: 360 } },
+          run: { font: style.typography.headingFont, size: Math.round(style.typography.bodySize * (normalTitles ? 2.1 : 3)), bold: true, color: hex(style.headings.color), allCaps: style.headings.uppercaseChapters },
+          paragraph: { spacing: { after: 360 }, alignment: style.headings.titleAlign === 'center' ? AlignmentType.CENTER : AlignmentType.LEFT },
         },
       ],
     },

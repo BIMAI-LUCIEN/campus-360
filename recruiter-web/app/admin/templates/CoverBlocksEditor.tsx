@@ -72,8 +72,8 @@ export function CoverBlocksEditor({ blocks, onChange }: { blocks: CoverBlock[]; 
     const joined = lines.join('\n');
     return (
       <label className="block text-[12px] text-fg-subtle">
-        {label} (une ligne par ligne, 8 au plus)
-        <textarea className={`${input} h-24 py-1`} value={joined} onChange={(e) => update(index, { [key]: e.target.value.split('\n').slice(0, 8).map((l) => l.slice(0, 120)) })} />
+        {label} (une ligne par ligne, 12 au plus)
+        <textarea className={`${input} h-24 py-1`} value={joined} onChange={(e) => update(index, { [key]: e.target.value.split('\n').slice(0, 12).map((l) => l.slice(0, 120)) })} />
         {looksLikeName(joined) ? <span className="text-[12px] text-danger">Un modèle ne doit contenir aucun nom ni matricule.</span> : null}
       </label>
     );

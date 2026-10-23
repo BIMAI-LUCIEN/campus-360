@@ -12,13 +12,15 @@
 - **Points ouverts :**
   - 🔒 **24.6 : ouvrir `.agent/screenshots/m24/exemple-reference.docx` dans Word** (bandeau, pied encadré, puces ❖, garde) et noter le retour.
   - 🔒 **24.10 et 24.11 : parcours navigateur.** Session admin ouverte par l'utilisateur, un modèle publié de test, une session étudiante (expo-web, 375 px). Migration 0013 faite.
-  - 🔒 **24.12 : modèle IUT de Douala.** Téléchargement de la référence dans le scratchpad (autorisé, décision 22), import et retouche dans l'atelier avec l'utilisateur, publication, comparaison.
+  - 🔒 **24.12 : relire la liste des écarts** (rubans de la garde, puces, sommaire) et décider s'il faut aller plus loin ; supprimer `reference-privee/` quand la comparaison est close.
+  - **Bibliothèque PDF :** l'URL Cloudinary enregistrée du rapport de référence répond 401 avec l'authentification de `pdf/stream` (seul le téléchargement signé de l'API marche) : la lecture de ce PDF dans l'app échoue sans doute aussi.
+  - **Parcours réel dans l'app en local :** `mobile-api` en dev dépasse le délai de connexion de 3 s vers la base distante (`lib/database.ts`) ; à refaire contre l'API de production ou avec une base plus proche.
   - **Variables à poser (VPS et local) :** `ADMIN_SERVICE_SECRET` (même valeur, 32 caractères aléatoires au moins) dans `mobile-api` et `recruiter-web`, `MOBILE_API_INTERNAL_URL=http://127.0.0.1:3002` dans `recruiter-web`. Sans elles, l'atelier répond 503.
   - **24.13 (IA de vision) :** non commencée ; choix du modèle et premier appel payant à valider.
   - 🔒 **Module 25 :** 25.18 (choix A/B et feu vert VPS), 25.2, 25.10, 25.15, 25.16 (inchangés).
   - **Migrations :** toutes appliquées (0000, 0004 à 0015) ; 0013 le 2026-10-23.
-- **Commit de référence :** commit « feat(documents): galerie de modèles de rapports (tâches 24.2 à 24.11) », parent 6a106e3. Rien d'autre en attente pour le module 24.
-- **Dernière entrée journal :** 2026-10-23 · Tâche 24.3 (migration 0013) · execute
+- **Commit de référence :** commit « feat(documents): modèle IUT de Douala fidèle au rapport de référence », parent af05514.
+- **Dernière entrée journal :** 2026-10-23 · Tâche 24.12 (comparaison avec la référence) · execute
 ---
 
 ## 🏛️ HISTORIQUE DES MODULES DÉJÀ VALIDÉS (1 à 8)
@@ -2114,7 +2116,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
   - **Dépendances :** 24.3, 24.9 (pour avoir des modèles publiés), 24.2. Aucune décision utilisateur.
 
 ### 6. Premier modèle et validation
-- [!] **Tâche 24.12 : Modèle « IUT de Douala — Rapport de stage » et comparaison** (🔒 demande la session admin de l'utilisateur et sa présence pour relire l'import et les écarts ; non commencée)
+- [!] **Tâche 24.12 : Modèle « IUT de Douala — Rapport de stage » et comparaison** (🔒 reste : la relecture de la liste des écarts par l'utilisateur et le parcours réel dans l'app. Fait le 2026-10-23 : rapport de référence téléchargé à la demande de l'utilisateur dans `reference-privee/` (ignoré par git) puis comparé page par page (garde, dédicace, remerciements, sommaire, résumé, introduction, listes, abréviations, chapitre, figure, références, table des matières) ; couleurs relevées au pixel (bandeau d'en-tête #5B9BD5 bordé #41719C, bandeaux de garde #4472C4) ; moteur complété : `typography.paragraphIndent`, `typography.paragraphSpacing`, `headings.titleSize`, `captions.boldLabel`, couleur propre des bandeaux de garde (`fill`), en-tête bilingue jusqu'à 12 lignes, bandeau d'en-tête sur deux lignes dans la marge haute, libellé du pied en gras, tableau d'abréviations (en-tête gris, première colonne en gras), sommaire en majuscules ; modèle mis à jour et republié (`f9bcb567-…`) ; captures fictives `.agent/screenshots/m24/modele-iut-*.png`. Écarts restants assumés : rubans et parchemin de la garde dessinés en bandeaux droits ; puces rondes dans le corps (la référence mélange ❖ et •) ; sommaire de la référence sans numéros de page non reproduit ; titre « SOMMAIRE » non souligné)
   - **Pourquoi :** c'est le premier modèle demandé par l'utilisateur et la preuve que la chaîne complète (import, retouche, publication, rendu PDF et Word) recopie fidèlement une vraie mise en page.
   - **État actuel :** le rapport de référence est dans la table `documents` (catalogue), id `pdf_55f6da9bd04448a198`, `file_path` = URL Cloudinary (aucune trace dans le dépôt). `mobile-api/app/api/mobile/pdf/stream/route.ts` montre comment le récupérer : URL Cloudinary avec `Authorization: Basic base64(CLOUDINARY_API_KEY:CLOUDINARY_API_SECRET)`, `redirect: 'error'`, et nouvel essai en remplaçant `/image/upload/` par `/raw/upload/` si besoin (l.88-106) ; `mobile-api/lib/cloudinary.ts` (`getCloudinaryConfig` l.15, `isCloudinaryHost`). Aucun code de capture d'écran de PDF n'existe.
   - **Fichiers :** créés : `mobile-api/scripts/fetch-reference-pdf.mjs` (téléchargement vers le scratchpad), `mobile-api/scripts/pdf-page-captures.mjs` (captures PNG de pages d'un PDF), `.agent/screenshots/m24-compare-*.png` (rendus fictifs uniquement) ; le modèle lui-même vit en base (pas de fichier).

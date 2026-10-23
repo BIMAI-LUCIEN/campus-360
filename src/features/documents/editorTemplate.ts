@@ -116,7 +116,23 @@ const sectionAttributes = (title: string, style: DocumentStyle) => {
   return `data-kind="${kind}"${label ? ` data-chapter="${escapeHtml(label)}" style="--chapter: '${escapeHtml(label)}'"` : ''}`;
 };
 
+// Heading buttons named after the numbering of the style, so the student sees
+// what each level becomes (SECTION 1 : / I. / 1. for the academic scheme).
+const headingLabels = (style: DocumentStyle): [string, string, string] => {
+  switch (style.headings.numbering) {
+    case 'chapter-section-roman':
+      return ['SECTION', 'I. Sous-titre', '1. Point'];
+    case 'roman-alpha':
+      return ['A. Titre', '1. Sous-titre', 'Titre 3'];
+    case 'decimal':
+      return ['1.1 Titre', '1.1.1 Sous-titre', 'Titre 3'];
+    default:
+      return ['Titre 1', 'Titre 2', 'Titre 3'];
+  }
+};
+
 export function buildWysiwygHtml(initialContentHtml: string, title: string, style: DocumentStyle): string {
+  const [h1Label, h2Label, h3Label] = headingLabels(style);
   const cleaned = normalizeHeadings(stripLegacyPlaceholder(initialContentHtml));
   const content = cleaned || '<p><br></p>';
   const placeholder = escapeAttr(`Rédigez ici « ${title} »…`);
@@ -208,9 +224,9 @@ ${styleToCss(style, { cssNumbering: true })}
       <span class="tb" data-cmd="italic" title="Italique"><i class="serif">I</i></span>
       <span class="tb" data-cmd="underline" title="Souligné"><u class="serif">S</u></span>
       <span class="sep"></span>
-      <span class="tb text" data-block="h1" title="Titre 1">Titre 1</span>
-      <span class="tb text" data-block="h2" title="Titre 2">Titre 2</span>
-      <span class="tb text" data-block="h3" title="Titre 3">Titre 3</span>
+      <span class="tb text" data-block="h1" title="Titre de niveau 1">${h1Label}</span>
+      <span class="tb text" data-block="h2" title="Titre de niveau 2">${h2Label}</span>
+      <span class="tb text" data-block="h3" title="Titre de niveau 3">${h3Label}</span>
       <span class="tb text" data-block="p" title="Texte normal">Texte</span>
       <span class="sep"></span>
       <span class="tb" data-cmd="insertUnorderedList" title="Liste à puces">•≡</span>

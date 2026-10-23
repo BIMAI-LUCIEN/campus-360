@@ -1,0 +1,313 @@
+{
+  "name": "IUT de Douala — Rapport de stage",
+  "establishment": "IUT de Douala",
+  "degree": "DUT",
+  "kind": "stage",
+  "documentStyle": {
+    "preset": "classique",
+    "typography": {
+      "headingFont": "Times New Roman",
+      "bodyFont": "Times New Roman",
+      "bodySize": 12,
+      "lineSpacing": 1.5,
+      "paragraphIndent": false,
+      "paragraphSpacing": "airy"
+    },
+    "headings": {
+      "numbering": "chapter-section-roman",
+      "uppercaseChapters": true,
+      "color": "#000000",
+      "rule": false,
+      "titleAlign": "center",
+      "uppercaseSections": true,
+      "titleSize": "normal"
+    },
+    "page": {
+      "margins": "wide",
+      "border": "none",
+      "accentColor": "#41719C",
+      "bandColor": "#5B9BD5"
+    },
+    "headerFooter": {
+      "headerLeft": "none",
+      "headerRight": "none",
+      "footerLeft": "author",
+      "footerCenter": "none",
+      "footerRight": "page",
+      "numberFormat": "n",
+      "logoInHeader": false,
+      "headerRule": false,
+      "headerStyle": "band",
+      "headerTextColor": "#FFFFFF",
+      "authorLabel": "Rédigé et présenté par :",
+      "footerRule": true,
+      "pageNumberFrame": "box"
+    },
+    "cover": {
+      "template": "classic",
+      "extraLines": [],
+      "blocks": [
+        {
+          "id": "header",
+          "type": "bilingual-header",
+          "center": "school",
+          "left": [
+            "REPUBLIQUE DU CAMEROUN",
+            "PAIX - TRAVAIL - PATRIE",
+            "-------------",
+            "MINISTÈRE DE L’ENSEIGNEMENT SUPÉRIEUR",
+            "UNIVERSITÉ DE DOUALA",
+            "INSTITUT UNIVERSITAIRE DE TECHNOLOGIE",
+            "-------------",
+            "PO-BOX : 8698 DOUALA",
+            "Tél : (237) 233 40 24 82",
+            "E-mail : infos.iut@univ-douala.com"
+          ],
+          "right": [
+            "REPUBLIC OF CAMEROON",
+            "Peace - Work - Fatherland",
+            "-------------",
+            "MINISTRY OF HIGHER EDUCATION",
+            "THE UNIVERSITY OF DOUALA",
+            "UNIVERSITY INSTITUTE OF TECHNOLOGY",
+            "-------------",
+            "PO-BOX: 8698 DOUALA",
+            "Phone : (237) 233 40 2482",
+            "E-mail : infos.iut@univ-douala.com"
+          ],
+          "style": {
+            "align": "center",
+            "size": 8.5,
+            "bold": false,
+            "italic": false,
+            "uppercase": false,
+            "underline": false,
+            "color": null
+          }
+        },
+        {
+          "id": "logos",
+          "type": "logos",
+          "left": "department",
+          "center": null,
+          "right": "company",
+          "height": 55,
+          "centerText": "",
+          "rule": false,
+          "style": {
+            "align": "center",
+            "size": 11,
+            "bold": false,
+            "italic": false,
+            "uppercase": false,
+            "underline": false,
+            "color": null
+          }
+        },
+        {
+          "id": "space-logos",
+          "type": "spacer",
+          "height": 10,
+          "grow": false,
+          "style": {
+            "align": "center",
+            "size": 11,
+            "bold": false,
+            "italic": false,
+            "uppercase": false,
+            "underline": false,
+            "color": null
+          }
+        },
+        {
+          "id": "type-rapport",
+          "type": "heading",
+          "text": "RAPPORT DE STAGE ACADÉMIQUE",
+          "style": {
+            "align": "center",
+            "size": 11,
+            "bold": true,
+            "italic": false,
+            "uppercase": false,
+            "underline": false,
+            "color": null
+          }
+        },
+        {
+          "id": "title",
+          "type": "title-banner",
+          "prefix": "THÈME :",
+          "variant": "band",
+          "style": {
+            "align": "center",
+            "size": 12,
+            "bold": false,
+            "italic": false,
+            "uppercase": true,
+            "underline": false,
+            "color": "#FFFFFF"
+          },
+          "fill": "#4472C4"
+        },
+        {
+          "id": "period",
+          "type": "text",
+          "template": "Stage effectué {period} en vue de l’obtention du {degree}[ en {specialty}].",
+          "style": {
+            "align": "left",
+            "size": 11,
+            "bold": false,
+            "italic": false,
+            "uppercase": false,
+            "underline": false,
+            "color": null
+          }
+        },
+        {
+          "id": "author",
+          "type": "author",
+          "label": "Rédigé et présenté par :",
+          "matriculeLabel": "Matricule :",
+          "style": {
+            "align": "center",
+            "size": 11,
+            "bold": false,
+            "italic": false,
+            "uppercase": false,
+            "underline": false,
+            "color": null
+          }
+        },
+        {
+          "id": "space-tutors",
+          "type": "spacer",
+          "height": 6,
+          "grow": false,
+          "style": {
+            "align": "center",
+            "size": 11,
+            "bold": false,
+            "italic": false,
+            "uppercase": false,
+            "underline": false,
+            "color": null
+          }
+        },
+        {
+          "id": "tutors",
+          "type": "supervisors",
+          "layout": "columns",
+          "label": "Sous l’encadrement de :",
+          "academicLabel": "Encadreur académique :",
+          "corporateLabel": "Encadreur professionnel :",
+          "authorLabel": "",
+          "matriculeLabel": "",
+          "specialtyLabel": "",
+          "style": {
+            "align": "left",
+            "size": 11,
+            "bold": false,
+            "italic": false,
+            "uppercase": false,
+            "underline": false,
+            "color": null
+          }
+        },
+        {
+          "id": "space-1",
+          "type": "spacer",
+          "height": 4,
+          "grow": true,
+          "style": {
+            "align": "center",
+            "size": 11,
+            "bold": false,
+            "italic": false,
+            "uppercase": false,
+            "underline": false,
+            "color": null
+          }
+        },
+        {
+          "id": "year",
+          "type": "year-banner",
+          "template": "ANNÉE ACADÉMIQUE : {year}",
+          "variant": "band",
+          "style": {
+            "align": "center",
+            "size": 10,
+            "bold": false,
+            "italic": false,
+            "uppercase": false,
+            "underline": false,
+            "color": "#000000"
+          },
+          "fill": "#4472C4"
+        }
+      ]
+    },
+    "tables": {
+      "style": "grid",
+      "headerColor": "#D9D9D9"
+    },
+    "captions": {
+      "scope": "document",
+      "style": "italic-center",
+      "boldLabel": false
+    },
+    "lists": {
+      "bullet": "disc"
+    },
+    "dedication": {
+      "frame": false
+    }
+  },
+  "outline": [
+    {
+      "title": "Dédicace"
+    },
+    {
+      "title": "Remerciements"
+    },
+    {
+      "title": "Sommaire",
+      "system": true
+    },
+    {
+      "title": "Résumé"
+    },
+    {
+      "title": "Abstract"
+    },
+    {
+      "title": "Liste des figures"
+    },
+    {
+      "title": "Liste des tableaux"
+    },
+    {
+      "title": "Liste des abréviations"
+    },
+    {
+      "title": "Introduction générale"
+    },
+    {
+      "title": "Chapitre 1 : Présentation de la structure d’accueil"
+    },
+    {
+      "title": "Chapitre 2 : Déroulement du stage"
+    },
+    {
+      "title": "Chapitre 3 : Travail réalisé"
+    },
+    {
+      "title": "Conclusion générale"
+    },
+    {
+      "title": "Références bibliographiques"
+    },
+    {
+      "title": "Table des matières"
+    }
+  ]
+}

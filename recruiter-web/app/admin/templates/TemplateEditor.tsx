@@ -246,6 +246,12 @@ export function TemplateEditor({ id }: { id: string }) {
               </Row>
             </div>
             <label className="flex items-center gap-2 text-sm text-fg-muted"><input type="checkbox" checked={style.headings.uppercaseChapters} onChange={(e) => setStyle('headings', { uppercaseChapters: e.target.checked })} />Titres de chapitre en majuscules</label>
+            <label className="flex items-center gap-2 text-sm text-fg-muted"><input type="checkbox" checked={style.headings.titleAlign === 'center'} onChange={(e) => setStyle('headings', { titleAlign: e.target.checked ? 'center' : 'left' })} />Titres des parties centrés</label>
+            <label className="flex items-center gap-2 text-sm text-fg-muted"><input type="checkbox" checked={style.headings.uppercaseSections} onChange={(e) => setStyle('headings', { uppercaseSections: e.target.checked })} />SECTION et sous-titres en majuscules</label>
+            <label className="flex items-center gap-2 text-sm text-fg-muted"><input type="checkbox" checked={style.headings.titleSize === 'normal'} onChange={(e) => setStyle('headings', { titleSize: e.target.checked ? 'normal' : 'large' })} />Titres à la taille du texte</label>
+            <label className="flex items-center gap-2 text-sm text-fg-muted"><input type="checkbox" checked={style.typography.paragraphIndent} onChange={(e) => setStyle('typography', { paragraphIndent: e.target.checked })} />Retrait en début de paragraphe</label>
+            <label className="flex items-center gap-2 text-sm text-fg-muted"><input type="checkbox" checked={style.typography.paragraphSpacing === 'airy'} onChange={(e) => setStyle('typography', { paragraphSpacing: e.target.checked ? 'airy' : 'compact' })} />Une ligne entre les paragraphes</label>
+            <label className="flex items-center gap-2 text-sm text-fg-muted"><input type="checkbox" checked={style.captions.boldLabel} onChange={(e) => setStyle('captions', { boldLabel: e.target.checked })} />« Figure 1 : » en gras</label>
             <Row label="Couleur des titres"><Swatches value={style.headings.color} palette={COLORS} onChange={(color) => setStyle('headings', { color })} /></Row>
             <Row label="Couleur d’accent"><Swatches value={style.page.accentColor} palette={COLORS} onChange={(accentColor) => setStyle('page', { accentColor })} /></Row>
           </Section>

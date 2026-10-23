@@ -269,6 +269,10 @@ export function DocumentStylePanel({ visible, onClose, documentId, style, onChan
                 </Pressable>
               </View>
             </Row>
+            <Toggle label="Retrait en début de paragraphe" value={style.typography.paragraphIndent} onChange={(paragraphIndent) => onChange({ typography: { paragraphIndent } })} />
+            <Row label="Espace entre les paragraphes">
+              <Chips options={[{ value: 'compact', label: 'Serré' }, { value: 'airy', label: 'Une ligne' }]} value={style.typography.paragraphSpacing} onSelect={(paragraphSpacing) => onChange({ typography: { paragraphSpacing } })} />
+            </Row>
             <Row label="Interligne">
               <Chips options={[1, 1.15, 1.5, 2].map((v) => ({ value: v, label: String(v).replace('.', ',') }))} value={style.typography.lineSpacing} onSelect={(lineSpacing) => onChange({ typography: { lineSpacing } })} />
             </Row>
@@ -279,6 +283,13 @@ export function DocumentStylePanel({ visible, onClose, documentId, style, onChan
               <Chips options={(['decimal', 'roman-alpha', 'chapter-section-roman', 'none'] as const).map((value) => ({ value, label: value === 'none' ? 'Aucune' : NUMBERING_LABELS[value] }))} value={style.headings.numbering} onSelect={(numbering) => onChange({ headings: { numbering } })} />
             </Row>
             <Toggle label="Titres de chapitre en majuscules" value={style.headings.uppercaseChapters} onChange={(uppercaseChapters) => onChange({ headings: { uppercaseChapters } })} />
+            <Row label="Titres des parties (Dédicace, Chapitre 1…)">
+              <Chips options={[{ value: 'left', label: 'À gauche' }, { value: 'center', label: 'Centrés' }]} value={style.headings.titleAlign} onSelect={(titleAlign) => onChange({ headings: { titleAlign } })} />
+            </Row>
+            <Toggle label="SECTION et sous-titres en majuscules" value={style.headings.uppercaseSections} onChange={(uppercaseSections) => onChange({ headings: { uppercaseSections } })} />
+            <Row label="Taille des titres">
+              <Chips options={[{ value: 'large', label: 'Grands' }, { value: 'normal', label: 'Taille du texte' }]} value={style.headings.titleSize} onSelect={(titleSize) => onChange({ headings: { titleSize } })} />
+            </Row>
             <Toggle label="Trait sous les titres de chapitre" value={style.headings.rule} onChange={(rule) => onChange({ headings: { rule } })} />
             <Row label="Couleur des titres">
               <Colors palette={STYLE_COLOR_PALETTE} value={style.headings.color} onSelect={(color) => onChange({ headings: { color } })} />
@@ -419,6 +430,7 @@ export function DocumentStylePanel({ visible, onClose, documentId, style, onChan
             <Row label="Présentation">
               <Chips options={[{ value: 'italic-center', label: 'Italique centrée' }, { value: 'bold-left', label: 'Gras à gauche' }]} value={style.captions.style} onSelect={(captionStyle) => onChange({ captions: { style: captionStyle } })} />
             </Row>
+            <Toggle label="« Figure 1 : » en gras" value={style.captions.boldLabel} onChange={(boldLabel) => onChange({ captions: { boldLabel } })} />
           </Section>
 
           <Section title="Listes" summary={style.lists.bullet === 'diamond' ? 'Losange ❖' : 'Puce ronde •'} open={open === 'lists'} onToggle={() => toggle('lists')}>
