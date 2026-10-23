@@ -251,7 +251,8 @@ test('Initialisation Nyole : crée la session Checkout, met à jour reference_id
     assert.match(queries[0].sql, /insert into public\.app_wallet_transactions/i);
     assert.match(queries[1].sql, /update public\.app_wallet_transactions set reference_id/i);
     assert.equal(queries[1].params[0], 'cmvk0qbw900ixpotx0mk5i16l');
-    assert.equal(fetchCalls.length, 3, '1 POST /v1/checkout/sessions + 1 GET /methods + 1 POST /checkout/initiate');
+    assert.equal(fetchCalls.length, 1, '1 POST /v1/checkout/sessions (architecture Nyole Checkout)');
+    assert.match(fetchCalls[0].url, /\/v1\/checkout\/sessions$/);
   } finally {
     process.env.NYOLE_SECRET_KEY = oldNyoleKey;
   }

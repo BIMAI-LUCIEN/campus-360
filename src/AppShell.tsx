@@ -21,6 +21,7 @@ import {
 import * as SecureStore from 'expo-secure-store';
 import * as Notifications from 'expo-notifications';
 import * as Updates from 'expo-updates';
+import * as WebBrowser from 'expo-web-browser';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import {
@@ -954,13 +955,17 @@ export function AppShell() {
       const reference = res.reference;
       setRechargePaymentUrl(res.paymentUrl || null);
       let attempts = 0;
-      const maxAttempts = 40;
-      const isOrange = provider.toLowerCase().includes('orange');
-      setPollingMessage(
-        isOrange
-          ? 'Demande envoyée. Validez sur votre téléphone (ou composez #150*50# si aucun message n’apparaît)...'
-          : 'Demande envoyée. Veuillez valider le message de confirmation sur votre téléphone...',
-      );
+      const maxAttempts = 60;
+      setPollingMessage('Ouverture du paiement sécurisé Nyole... Validez sur votre téléphone une fois sur la page.');
+
+      if (res.paymentUrl) {
+        try {
+          void WebBrowser.openBrowserAsync(res.paymentUrl);
+        } catch {
+          Linking.openURL(res.paymentUrl).catch(() => {});
+        }
+      }
+
       const pollInterval = setInterval(async () => {
         try {
           attempts++;
@@ -971,6 +976,9 @@ export function AppShell() {
             setRechargeLoading(false);
             setPollingMessage('');
             setRechargeVisible(false);
+            try {
+              void WebBrowser.dismissBrowser();
+            } catch {}
             if (statusRes.balanceCoins !== undefined) setBalance(statusRes.balanceCoins);
             await syncStudentAccount(studentSession);
             Alert.alert('Recharge réussie', `${formatCoins(amount)} Coins ajoutés via ${provider}.`);
@@ -1006,6 +1014,9 @@ export function AppShell() {
       clearInterval(rechargePollRef.current);
       rechargePollRef.current = null;
     }
+    try {
+      void WebBrowser.dismissBrowser();
+    } catch {}
     setRechargeLoading(false);
     setPollingMessage('');
     setRechargeVisible(false);

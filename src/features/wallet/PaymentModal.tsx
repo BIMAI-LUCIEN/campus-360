@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import * as WebBrowser from 'expo-web-browser';
 import {
   Modal,
   View,
@@ -95,7 +96,14 @@ export function PaymentModal({
       setPaymentUrl(response.paymentUrl || null);
       setWaitingUssd(true);
 
-      // The server is the only source of truth: poll every 3 s, 20 attempts.
+      if (response.paymentUrl) {
+        try {
+          void WebBrowser.openBrowserAsync(response.paymentUrl);
+        } catch {
+          Linking.openURL(response.paymentUrl).catch(() => {});
+        }
+      }
+
       let attempts = 0;
       stopPolling();
       pollRef.current = setInterval(async () => {
@@ -107,6 +115,9 @@ export function PaymentModal({
             stopPolling();
             setWaitingUssd(false);
             setSuccess(true);
+            try {
+              void WebBrowser.dismissBrowser();
+            } catch {}
           } else if (status === 'failed') {
             stopPolling();
             setWaitingUssd(false);
