@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { databasePool } from '@/lib/database';
+import { sendTopUpReceipt } from '@/lib/automations';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { isMockAllowed } from '@/lib/payment-rules';
 import { getNyoleBaseUrl } from '@/lib/payments';
@@ -111,7 +112,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
                 data?: { failure_message?: string };
               };
               const msg = sData.failure_message || sData.data?.failure_message;
-              if (msg) failureMessage = msg;
+              if (msg) {
+                failureMessage = msg;
+                await client.query(
+                  "update public.app_wallet_transactions set failure_message = $2 where id = $1",
+                  [transaction.id, msg],
+                ).catch(() => {});
+              }
             }
           } catch {}
         }
@@ -189,12 +196,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const elapsedMs = Date.now() - new Date(transaction.created_at).getTime();
 
       if (nyoleSecretKey) {
-        // Wait 15s before polling Nyole's /status endpoint so the initial USSD push
-        // has time to initialize on the operator side without being aborted at t+3s.
-        if (elapsedMs < 15_000) {
-          return withCors(NextResponse.json({ status: 'pending' }), request);
-        }
-
         const baseUrl = getNyoleBaseUrl();
         const statusRes = await fetch(
           `${baseUrl}/v1/checkout/sessions/${encodeURIComponent(reference)}/status`,
@@ -224,6 +225,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
         providerAmount = rawAmount !== null && rawAmount !== undefined ? Number(rawAmount) : null;
         const msg = statusData.failure_message || statusData.data?.failure_message;
         if (msg) failureMessage = msg;
+
+        // If Nyole reports failure during the initial 8s window, keep pending
+        // in case the telecom operator push is still in flight.
+        if (
+          (providerStatus === 'failed' || providerStatus === 'canceled' || providerStatus === 'cancelled') &&
+          elapsedMs < 8_000
+        ) {
+          return withCors(NextResponse.json({ status: 'pending' }), request);
+        }
       } else if (legacyPrivateKey) {
         const npRes = await fetch(`https://api.notchpay.co/payments/${reference}`, {
           method: 'GET',
@@ -305,6 +315,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
             [user.id],
           );
           await client.query('commit');
+
+          if (transaction.pack_type !== 'discovery_500') {
+            await sendTopUpReceipt(user.id, Number(transaction.amount_coins), reference).catch(() => {});
+          }
 
           return withCors(
             NextResponse.json({

@@ -38,7 +38,13 @@ export const verifyNyoleSignature = (
 
     for (const part of parts) {
       const eqIdx = part.indexOf('=');
-      if (eqIdx === -1) continue;
+      if (eqIdx === -1) {
+        // Support direct hex signature without v1= prefix
+        if (/^[a-fA-F0-9]{64}$/.test(part)) {
+          v1Signature = part;
+        }
+        continue;
+      }
       const key = part.slice(0, eqIdx).trim();
       const val = part.slice(eqIdx + 1).trim();
       if (key === 't') {
@@ -58,10 +64,12 @@ export const verifyNyoleSignature = (
       return false;
     }
 
-    const tsSeconds = Number(effectiveTs);
-    if (!Number.isFinite(tsSeconds) || tsSeconds <= 0) {
+    const rawTsNum = Number(effectiveTs);
+    if (!Number.isFinite(rawTsNum) || rawTsNum <= 0) {
       return false;
     }
+    // Support both second and millisecond timestamps
+    const tsSeconds = effectiveTs.length >= 12 ? Math.floor(rawTsNum / 1000) : rawTsNum;
 
     const nowSeconds = options?.nowSeconds ?? Math.floor(Date.now() / 1000);
     const toleranceSeconds = options?.toleranceSeconds ?? 300;
@@ -77,14 +85,23 @@ export const verifyNyoleSignature = (
     const cleanSig = v1Signature.trim().toLowerCase();
     const cleanComputed = computed.trim().toLowerCase();
 
-    if (Buffer.byteLength(cleanSig) !== Buffer.byteLength(cleanComputed)) {
-      return false;
+    if (Buffer.byteLength(cleanSig) === Buffer.byteLength(cleanComputed)) {
+      if (crypto.timingSafeEqual(Buffer.from(cleanSig, 'utf8'), Buffer.from(cleanComputed, 'utf8'))) {
+        return true;
+      }
     }
 
-    return crypto.timingSafeEqual(
-      Buffer.from(cleanSig, 'utf8'),
-      Buffer.from(cleanComputed, 'utf8'),
-    );
+    // Direct rawBody fallback if header signature was calculated without timestamp prefix
+    const fallbackComputed = crypto
+      .createHmac('sha256', secret)
+      .update(rawBody)
+      .digest('hex');
+    const cleanFallback = fallbackComputed.trim().toLowerCase();
+    if (Buffer.byteLength(cleanSig) === Buffer.byteLength(cleanFallback)) {
+      return crypto.timingSafeEqual(Buffer.from(cleanSig, 'utf8'), Buffer.from(cleanFallback, 'utf8'));
+    }
+
+    return false;
   } catch {
     return false;
   }

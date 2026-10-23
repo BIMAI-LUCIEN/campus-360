@@ -65,10 +65,22 @@ export function PaymentModal({
     }
   };
 
-  // Polling never outlives the modal.
-  useEffect(() => stopPolling, []);
+  // Polling and in-app browser cleanup.
   useEffect(() => {
-    if (!visible) stopPolling();
+    return () => {
+      stopPolling();
+      try {
+        void WebBrowser.dismissBrowser();
+      } catch {}
+    };
+  }, []);
+  useEffect(() => {
+    if (!visible) {
+      stopPolling();
+      try {
+        void WebBrowser.dismissBrowser();
+      } catch {}
+    }
   }, [visible]);
 
   const handleInitiate = async () => {
@@ -105,6 +117,7 @@ export function PaymentModal({
       }
 
       let attempts = 0;
+      const maxAttempts = 60;
       stopPolling();
       pollRef.current = setInterval(async () => {
         attempts += 1;
@@ -121,18 +134,27 @@ export function PaymentModal({
           } else if (status === 'failed') {
             stopPolling();
             setWaitingUssd(false);
+            try {
+              void WebBrowser.dismissBrowser();
+            } catch {}
             setNoticeMessage(
               statusRes.failureMessage ||
                 'Le paiement a été refusé ou a expiré. Pour Orange Money, composez #150*50#.',
             );
-          } else if (attempts >= 40) {
+          } else if (attempts >= maxAttempts) {
             stopPolling();
             setWaitingUssd(false);
+            try {
+              void WebBrowser.dismissBrowser();
+            } catch {}
             setNoticeMessage("Paiement en attente. Ton solde sera mis à jour dès que l'opérateur confirme.");
           }
         } catch (pollError) {
           stopPolling();
           setWaitingUssd(false);
+          try {
+            void WebBrowser.dismissBrowser();
+          } catch {}
           setNoticeMessage(pollError instanceof Error ? pollError.message : 'Paiement introuvable.');
         }
       }, 3000);
@@ -160,6 +182,9 @@ export function PaymentModal({
 
   const handleResetAndClose = () => {
     stopPolling();
+    try {
+      void WebBrowser.dismissBrowser();
+    } catch {}
     setWaitingUssd(false);
     setCurrentRef(null);
     setPaymentUrl(null);

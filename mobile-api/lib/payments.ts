@@ -280,12 +280,13 @@ export async function processNyoleWebhook(
   rawBody: string,
   headers: Headers | { get(name: string): string | null },
 ): Promise<NyoleWebhookResult> {
-  const nyoleSecret =
+  const primaryNyoleSecret =
     process.env.NYOLE_WEBHOOK_SECRET?.trim() ||
     process.env.NYOLE_SECRET_KEY?.trim();
+  const fallbackNyoleSecret = process.env.NYOLE_SECRET_KEY?.trim();
   const legacySecret = process.env.NOTCHPAY_WEBHOOK_SECRET?.trim();
 
-  if (!nyoleSecret && !legacySecret) {
+  if (!primaryNyoleSecret && !legacySecret) {
     console.error('[processNyoleWebhook] NYOLE_SECRET_KEY / NYOLE_WEBHOOK_SECRET missing.');
     return {
       status: 503,
@@ -301,18 +302,26 @@ export async function processNyoleWebhook(
     headers.get('x-webhook-signature');
 
   let signatureValid = false;
-  if (afriflowSignature && nyoleSecret) {
+  if (afriflowSignature && primaryNyoleSecret) {
     signatureValid = verifyNyoleSignature(
       rawBody,
       afriflowSignature,
       afriflowTimestamp,
-      nyoleSecret,
+      primaryNyoleSecret,
     );
-  } else if (legacySignature && (legacySecret || nyoleSecret)) {
+    if (!signatureValid && fallbackNyoleSecret && fallbackNyoleSecret !== primaryNyoleSecret) {
+      signatureValid = verifyNyoleSignature(
+        rawBody,
+        afriflowSignature,
+        afriflowTimestamp,
+        fallbackNyoleSecret,
+      );
+    }
+  } else if (legacySignature && (legacySecret || primaryNyoleSecret)) {
     signatureValid = verifyNotchSignature(
       rawBody,
       legacySignature,
-      (legacySecret || nyoleSecret)!,
+      (legacySecret || primaryNyoleSecret)!,
     );
   }
 
@@ -354,15 +363,29 @@ export async function processNyoleWebhook(
 
   const status = String(eventPayload.status || eventPayload.data?.status || '').toLowerCase();
   const event = String(eventPayload.event || '').toLowerCase();
+  const paidFlag = eventPayload.paid ?? eventPayload.data?.paid;
+  const isExplicitlyUnpaid = paidFlag === false;
+  const isFailedEvent =
+    event === 'payment.failed' ||
+    event === 'charge.failed' ||
+    event === 'payment.cancelled' ||
+    event === 'payment.canceled' ||
+    status === 'failed' ||
+    status === 'cancelled' ||
+    status === 'canceled' ||
+    status === 'expired';
+
   const isSuccess =
-    status === 'complete' ||
-    status === 'completed' ||
-    status === 'confirmed' ||
-    status === 'success' ||
-    status === 'successful' ||
-    event === 'payment.completed' ||
-    event === 'payment.complete' ||
-    event === 'payment.confirmed';
+    !isExplicitlyUnpaid &&
+    !isFailedEvent &&
+    (status === 'complete' ||
+      status === 'completed' ||
+      status === 'confirmed' ||
+      status === 'success' ||
+      status === 'successful' ||
+      event === 'payment.completed' ||
+      event === 'payment.complete' ||
+      event === 'payment.confirmed');
 
   const rawAmount = eventPayload.amount ?? eventPayload.data?.amount;
   const amount = rawAmount !== null && rawAmount !== undefined ? Number(rawAmount) : null;
@@ -427,6 +450,10 @@ export async function processNyoleWebhook(
       const failureMessage =
         eventPayload.data?.failure_message ||
         eventPayload.failure_message ||
+        eventPayload.data?.failure_reason ||
+        eventPayload.failure_reason ||
+        eventPayload.data?.error?.message ||
+        eventPayload.error?.message ||
         eventPayload.data?.message ||
         eventPayload.message ||
         'La transaction a été rejetée ou a expiré.';
@@ -514,7 +541,7 @@ export async function verifyAndProcessMobilePaymentWebhook(params: {
         return params.timestamp ?? null;
       }
       if (lower === 'x-afriflow-signature') {
-        return params.signature && params.signature.includes('v1=') ? params.signature : null;
+        return params.signature ?? null;
       }
       if (lower.includes('signature')) {
         return params.signature ?? null;

@@ -450,9 +450,9 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-  - `mobile-api/lib/payment-rules.ts` — règles pures de paiement : `verifyNyoleSignature` (validation HMAC-SHA256 sur `${timestamp}.${rawBody}` via `X-Afriflow-Signature` + `X-Afriflow-Timestamp`, fenêtre anti-rejeu 300s, `timingSafeEqual`), `verifyNotchSignature` (repli legacy), `decideWebhookCredit` et `isMockAllowed`.
+  - `mobile-api/lib/payment-rules.ts` — règles pures de paiement : `verifyNyoleSignature` (validation HMAC-SHA256 sur `${timestamp}.${rawBody}` ou raw hex via `X-Afriflow-Signature` + `X-Afriflow-Timestamp`, support timestamps s/ms, fenêtre anti-rejeu 300s, `timingSafeEqual`), `verifyNotchSignature` (repli legacy), `decideWebhookCredit` et `isMockAllowed`.
 
-  - `mobile-api/lib/payments.ts` — initiation Nyole (`POST /v1/checkout/sessions` + push Mobile Money `POST /checkout/initiate` pour `MTN_MOMO_CMR` / `ORANGE_CMR`) et traitement transactionnel atomique du webhook (`processNyoleWebhook` / `processNotchWebhook`).
+  - `mobile-api/lib/payments.ts` — initiation Nyole Checkout (`POST /v1/checkout/sessions` et ouverture hébergée sécurisée in-app via `WebBrowser.openBrowserAsync`), traitement transactionnel atomique du webhook (`processNyoleWebhook` / `processNotchWebhook`) avec gestion de `failure_message` et séparation stricte des états de paiement.
 
 
 
