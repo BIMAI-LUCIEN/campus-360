@@ -101,7 +101,8 @@ export function PaymentModal({
       pollRef.current = setInterval(async () => {
         attempts += 1;
         try {
-          const { status } = await pollPaymentStatus(response.reference);
+          const statusRes = await pollPaymentStatus(response.reference);
+          const status = statusRes.status;
           if (status === 'success') {
             stopPolling();
             setWaitingUssd(false);
@@ -109,7 +110,10 @@ export function PaymentModal({
           } else if (status === 'failed') {
             stopPolling();
             setWaitingUssd(false);
-            setNoticeMessage('Le paiement a été refusé ou annulé.');
+            setNoticeMessage(
+              statusRes.failureMessage ||
+                'Le paiement a été refusé ou a expiré. Pour Orange Money, composez #150*50#.',
+            );
           } else if (attempts >= 40) {
             stopPolling();
             setWaitingUssd(false);

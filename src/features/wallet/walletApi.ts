@@ -103,7 +103,7 @@ export async function initiateMobileMoneyPayment(
  * Status of a payment as stored by the server. Network trouble or a 5xx keeps it
  * "pending"; an unknown reference is an error. Never "success" by default.
  */
-export async function pollPaymentStatus(reference: string): Promise<{ status: PaymentStatus; balanceCoins?: number }> {
+export async function pollPaymentStatus(reference: string): Promise<{ status: PaymentStatus; balanceCoins?: number; failureMessage?: string }> {
   let res: Response;
   try {
     res = await authFetchRaw(`/api/mobile/wallet/topup/${encodeURIComponent(reference)}`);
@@ -112,6 +112,6 @@ export async function pollPaymentStatus(reference: string): Promise<{ status: Pa
   }
   if (res.status === 404) throw new Error('Paiement introuvable.');
   if (!res.ok) return { status: 'pending' };
-  const data = (await res.json().catch(() => ({}))) as { status?: unknown; balanceCoins?: number };
-  return { status: mapServerPaymentStatus(data.status), balanceCoins: data.balanceCoins };
+  const data = (await res.json().catch(() => ({}))) as { status?: unknown; balanceCoins?: number; failureMessage?: string };
+  return { status: mapServerPaymentStatus(data.status), balanceCoins: data.balanceCoins, failureMessage: data.failureMessage };
 }

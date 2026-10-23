@@ -955,7 +955,12 @@ export function AppShell() {
       setRechargePaymentUrl(res.paymentUrl || null);
       let attempts = 0;
       const maxAttempts = 40;
-      setPollingMessage('Demande envoyée. Veuillez valider le message de confirmation sur votre téléphone...');
+      const isOrange = provider.toLowerCase().includes('orange');
+      setPollingMessage(
+        isOrange
+          ? 'Demande envoyée. Validez sur votre téléphone (ou composez #150*50# si aucun message n’apparaît)...'
+          : 'Demande envoyée. Veuillez valider le message de confirmation sur votre téléphone...',
+      );
       const pollInterval = setInterval(async () => {
         try {
           attempts++;
@@ -974,7 +979,11 @@ export function AppShell() {
             rechargePollRef.current = null;
             setRechargeLoading(false);
             setPollingMessage('');
-            Alert.alert('Paiement échoué', 'La transaction a été rejetée ou a échoué.');
+            Alert.alert(
+              'Paiement non validé',
+              statusRes.failureMessage ||
+                'La transaction a été rejetée ou a expiré. Pour Orange Money, composez #150*50# pour valider, ou ouvrez la page de paiement Nyole.',
+            );
           } else if (attempts >= maxAttempts) {
             clearInterval(pollInterval);
             rechargePollRef.current = null;

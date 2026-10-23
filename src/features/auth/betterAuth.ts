@@ -655,11 +655,11 @@ export const topUpStudentWallet = async (amountCoins: number, providerName: stri
     body: JSON.stringify({ amountCoins, providerName, phoneNumber }),
   })).json() as Promise<{ reference: string; status: string; paymentUrl?: string }>;
 
-export const checkTopUpStatus = async (reference: string): Promise<{ status: PaymentStatus; balanceCoins?: number }> => {
+export const checkTopUpStatus = async (reference: string): Promise<{ status: PaymentStatus; balanceCoins?: number; failureMessage?: string }> => {
   const data = (await (await authFetch(`/api/mobile/wallet/topup/${encodeURIComponent(reference)}`, {
     method: 'GET',
-  })).json()) as { status?: unknown; balanceCoins?: number };
-  return { status: mapServerPaymentStatus(data.status), balanceCoins: data.balanceCoins };
+  })).json()) as { status?: unknown; balanceCoins?: number; failureMessage?: string };
+  return { status: mapServerPaymentStatus(data.status), balanceCoins: data.balanceCoins, failureMessage: data.failureMessage };
 };
 
 export const purchaseIaPack = async (packId: 'micro' | 'standard' | 'boost') =>

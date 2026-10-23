@@ -84,8 +84,34 @@ export async function GET(request: NextRequest, context: RouteContext) {
         );
       }
 
+      const nyoleSecretKey = process.env.NYOLE_SECRET_KEY?.trim();
+      const legacyPrivateKey = process.env.NOTCHPAY_PRIVATE_KEY?.trim();
+
       if (transaction.status === 'failed') {
-        return withCors(NextResponse.json({ status: 'failed' }), request);
+        let failureMessage = 'La transaction a été rejetée ou a expiré.';
+        if (nyoleSecretKey && reference.startsWith('cm')) {
+          try {
+            const baseUrl = getNyoleBaseUrl();
+            const sRes = await fetch(
+              `${baseUrl}/v1/checkout/sessions/${encodeURIComponent(reference)}/status`,
+              {
+                headers: {
+                  Authorization: `Bearer ${nyoleSecretKey}`,
+                  Accept: 'application/json',
+                },
+              },
+            );
+            if (sRes.ok) {
+              const sData = (await sRes.json()) as {
+                failure_message?: string;
+                data?: { failure_message?: string };
+              };
+              const msg = sData.failure_message || sData.data?.failure_message;
+              if (msg) failureMessage = msg;
+            }
+          } catch {}
+        }
+        return withCors(NextResponse.json({ status: 'failed', failureMessage }), request);
       }
 
       if (isMock) {
@@ -147,9 +173,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
         return withCors(NextResponse.json({ status: 'pending' }), request);
       }
 
-      const nyoleSecretKey = process.env.NYOLE_SECRET_KEY?.trim();
-      const legacyPrivateKey = process.env.NOTCHPAY_PRIVATE_KEY?.trim();
-
       if (!nyoleSecretKey && !legacyPrivateKey) {
         return withCors(NextResponse.json({ status: 'pending' }), request);
       }
@@ -157,6 +180,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       let providerStatus = '';
       let providerPaid: boolean | undefined;
       let providerAmount: number | null = null;
+      let failureMessage = 'La transaction a été rejetée ou a expiré.';
 
       const elapsedMs = Date.now() - new Date(transaction.created_at).getTime();
 
@@ -187,12 +211,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
           status?: string;
           paid?: boolean;
           amount?: number;
-          data?: { status?: string; paid?: boolean; amount?: number };
+          failure_message?: string;
+          data?: { status?: string; paid?: boolean; amount?: number; failure_message?: string };
         };
         providerStatus = String(statusData.status || statusData.data?.status || '').toLowerCase();
         providerPaid = statusData.paid ?? statusData.data?.paid;
         const rawAmount = statusData.amount ?? statusData.data?.amount;
         providerAmount = rawAmount !== null && rawAmount !== undefined ? Number(rawAmount) : null;
+        const msg = statusData.failure_message || statusData.data?.failure_message;
+        if (msg) failureMessage = msg;
       } else if (legacyPrivateKey) {
         const npRes = await fetch(`https://api.notchpay.co/payments/${reference}`, {
           method: 'GET',
@@ -232,7 +259,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
             "update public.app_wallet_transactions set status = 'failed' where id = $1",
             [transaction.id],
           );
-          return withCors(NextResponse.json({ status: 'failed' }), request);
+          return withCors(NextResponse.json({ status: 'failed', failureMessage }), request);
         }
 
         try {
@@ -298,7 +325,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           "update public.app_wallet_transactions set status = 'failed' where id = $1",
           [transaction.id],
         );
-        return withCors(NextResponse.json({ status: 'failed' }), request);
+        return withCors(NextResponse.json({ status: 'failed', failureMessage }), request);
       }
 
       return withCors(NextResponse.json({ status: 'pending' }), request);
