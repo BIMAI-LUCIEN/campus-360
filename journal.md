@@ -4,6 +4,16 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 
 ---
 
+**2026-10-23 · vps-deploy · Déploiement production VPS sur commit ed520e4 (Module 24 App Docs & Module 26 Nyole)**
+
+- **Pre-flight local :** `tsc --noEmit` ×4 (app, `mobile-api`, `recruiter-web`, `landing-site`) = code 0.
+- **Synchronisation VPS :** `/opt/campus-360` aligné sur `origin/main` (`ed520e4`), 13 migrations (`0000` à `0015`) vérifiées appliquées (`0013_document_templates.sql` incluse).
+- **Builds & PM2 :** `campus360-mobile-api` (40 routes compilées, dont `/api/mobile/templates*`, `/api/mobile/documents/[id]/apply-template`, `/api/admin/templates/*`) et `campus360-recruiter-web` (CSS + 21 routes dont `/admin/templates*`) compilés et redémarrés (`online`, `pm2 save` exécuté).
+- **Contrôles HTTP :** `https://api.campus360b.site/api/health` 200 (`db: connected`), `https://admin.campus360b.site` 200, `https://campus360b.site` 200, `https://api.campus360b.site/api/mobile/templates` 401 (`Session requise.`).
+- **Points ouverts (variables d'environnement) :** définir `ADMIN_SERVICE_SECRET` dans `/opt/campus-360/mobile-api/.env.local` et `/opt/campus-360/recruiter-web/.env.production` (ainsi qu'en local), et `MOBILE_API_INTERNAL_URL=http://127.0.0.1:3002` dans `/opt/campus-360/recruiter-web/.env.production` pour activer le relais de l'atelier admin `/admin/templates`.
+
+---
+
 **2026-10-22 · vps-deploy · Synchronisation VPS /opt/campus-360 sur commit db93fd5**
 
 - **Synchronisation :** /opt/campus-360 aligné sur origin/main (db93fd5 feat(app): charte v1 dans l'app).
@@ -115,3 +125,14 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 - **Écarts restants :** rubans et parchemin dessinés en bandeaux droits ; puces rondes dans le corps ; titre du sommaire non souligné ; import PDF : bandeau d'en-tête et plan non détectés sur la référence (à améliorer).
 - **Données personnelles :** la référence et ses rendus restent dans `reference-privee/` (ignoré) ; rien d'elle dans le dépôt, les tests ou ce journal.
 - **À reporter dans contexte-code.md :** §3 documents (nouvelles options de style, `fill` des bandeaux) ; §10 (URL Cloudinary des PDF en 401 avec l'authentification Basic).
+
+---
+
+**2026-10-23 · Livraison du module 24 (variables VPS) · deploy-and-push · release `ed520e4`**
+
+- **Vérifications avant livraison :** `npm test` mobile-api 244 tests, 225 réussis, 0 échec ; tsc app, mobile-api, recruiter-web 0 ; build recruiter-web 0 ; lint:colors 189 ; aucun secret ni donnée du rapport de référence dans le diff.
+- **Push et déploiement du code :** `af05514` et `74fb8ee` étaient déjà sur `origin/main` et sur le VPS (`ed520e4`, déployé par un autre intervenant avec des correctifs de paiement).
+- **Fait sur le VPS (accord utilisateur) :** sauvegarde des fichiers d'environnement ; `ADMIN_SERVICE_SECRET` généré (64 caractères, valeur jamais affichée) dans `mobile-api/.env.local` et `recruiter-web/.env.production` ; `MOBILE_API_INTERNAL_URL=http://127.0.0.1:3002` dans `recruiter-web/.env.production` ; `pm2 restart … --update-env` des deux services.
+- **Preuves :** health 200 `db: connected` ; landing 200 ; admin 200 ; `/admin/templates` 307 vers la connexion ; `/api/admin/templates` 401 sans secret, 403 avec le secret et un utilisateur inconnu ; relais admin 401 sans session ; modèle IUT `published` avec vignette en base de production.
+- **Non fait :** OTA de l'app ; `a4cde78` (paiements, autre intervenant) non déployé ici ; branche `claude/vigorous-carson-30db9e` (correctif PDF Cloudinary) non fusionnée.
+- **Retour arrière :** `bash scripts/deploy-vps.sh --rollback` ; variables : restaurer les `.env*.bak-<date>` puis redémarrer PM2.

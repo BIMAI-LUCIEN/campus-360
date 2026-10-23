@@ -1592,7 +1592,10 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 - **Application mobile :** Expo OTA via EAS Updates (branche `production`).
 
-- **Dernière release : `db93fd5` · main · 2026-10-22 · VPS synchronisé sur `db93fd5` (charte v1 dans l'app, logo Orbite) ; APK build 114 (SHA-256 `ddb0c495...`, 72 Mo) déployé sur le VPS (/var/www/campus360-downloads/campus-360.apk) · cible : VPS (landing, admin, API, téléchargements APK) + EAS Updates · health : API 200 db connected, landing 200, admin 200, APK download 200.**
+- **Dernière release : `ed520e4` · main · 2026-10-23 · VPS synchronisé sur `ed520e4` (Module 24 : galerie de modèles de rapports, modèle IUT de Douala, imports Word/PDF, atelier admin `/admin/templates` ; Module 26 : passerelle Nyole & corrections polling USSD) · 13 migrations versionnées appliquées (`0000` à `0015`, dont `0013_document_templates.sql`) · cible : VPS (`campus360-mobile-api` 40 routes, `campus360-recruiter-web` 21 pages, `campus360-landing-site`) · health : API 200 db connected, admin 200, landing 200, `/api/mobile/templates` 401 (protégé).**
+  - Variables posées le 2026-10-23 : `ADMIN_SERVICE_SECRET` (mobile-api et recruiter-web, même valeur, 64 caractères) et `MOBILE_API_INTERNAL_URL=http://127.0.0.1:3002` (recruiter-web), sauvegardes `.env*.bak-<date>`, PM2 redémarrés avec `--update-env` ; `/api/admin/templates` 401 sans secret, 403 avec secret et utilisateur inconnu ; modèle IUT publié en base de production. OTA de l'app non faite.
+  - *Note variables d'environnement atelier admin :* `ADMIN_SERVICE_SECRET` (dans `mobile-api/.env.local` et `recruiter-web/.env.production`) et `MOBILE_API_INTERNAL_URL` (dans `recruiter-web/.env.production`) restent à renseigner par l'utilisateur pour activer le relais `/api/admin/templates/*`.
+- **Release précédente : `db93fd5` · main · 2026-10-22 · VPS synchronisé sur `db93fd5` (charte v1 dans l'app, logo Orbite) ; APK build 114 (SHA-256 `ddb0c495...`, 72 Mo) déployé sur le VPS (/var/www/campus360-downloads/campus-360.apk) · cible : VPS (landing, admin, API, téléchargements APK) + EAS Updates · health : API 200 db connected, landing 200, admin 200, APK download 200.**
   - Build APK EAS local (GitHub runner) : workflow `eas-android.yml` manuel, pré-release GitHub `apk-v1.2.0-114`.
 
 - **Release précédente (2026-10-20, v1.0.0, commit 1c82286) :**
@@ -1666,6 +1669,12 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 
 ## 13. Journal des mises à jour
+
+- **2026-10-23** `/vps-deploy` — **Déploiement en production sur le VPS du commit `ed520e4` (Module 24 App Docs / Galerie de modèles de rapports & Module 26 Nyole).**
+  - Vérifications pré-vol locales (`tsc --noEmit` ×4 : app, `mobile-api`, `recruiter-web`, `landing-site`) : code 0.
+  - Synchronisation `/opt/campus-360` sur `ed520e4`, vérification des 13 migrations (`0000` à `0015`, toutes appliquées dont `0013_document_templates.sql`).
+  - Compilation Next.js en production sans interruption (`campus360-mobile-api` 40 routes, `campus360-recruiter-web` 21 pages + CSS compilé), redémarrage PM2 et `pm2 save`.
+  - Santé publique vérifiée : `https://api.campus360b.site/api/health` 🟢 HTTP 200 (`{"status":"ok","db":"connected"}`), `https://admin.campus360b.site` 🟢 HTTP 200, `https://campus360b.site` 🟢 HTTP 200, `https://api.campus360b.site/api/mobile/templates` 🟢 HTTP 401 (`Session requise.`).
 
 - **2026-10-22** `/test-and-verify` — **Module 26 : Migration Passerelle de Paiement Nyole VERIFIED.** Preuves concrètes : suite de tests `mobile-api` à 197 tests (179 pass, 0 fail, 18 skip), tests de paiement et signature `verifyNyoleSignature` (HMAC-SHA256, anti-rejeu 300s, timing-safe) et `env-check` (exigence `NYOLE_SECRET_KEY`) à 100% au vert ; session de test réelle exécutée contre l'API sandbox Nyole (`https://app.nyole.com/api/v1/checkout/sessions` `201 Created` avec session ID `cm...` et polling `/status` `200 OK`) ; typechecks complets (`mobile-api` et app) code 0 ; `npm run lint:colors` à 189 (zéro régression) ; sécurité : zéro fuite de secret dans les fichiers versionnés.
 

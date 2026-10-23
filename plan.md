@@ -15,12 +15,13 @@
   - 🔒 **24.12 : relire la liste des écarts** (rubans de la garde, puces, sommaire) et décider s'il faut aller plus loin ; supprimer `reference-privee/` quand la comparaison est close.
   - **Bibliothèque PDF :** l'URL Cloudinary enregistrée du rapport de référence répond 401 avec l'authentification de `pdf/stream` (seul le téléchargement signé de l'API marche) : la lecture de ce PDF dans l'app échoue sans doute aussi.
   - **Parcours réel dans l'app en local :** `mobile-api` en dev dépasse le délai de connexion de 3 s vers la base distante (`lib/database.ts`) ; à refaire contre l'API de production ou avec une base plus proche.
-  - **Variables à poser (VPS et local) :** `ADMIN_SERVICE_SECRET` (même valeur, 32 caractères aléatoires au moins) dans `mobile-api` et `recruiter-web`, `MOBILE_API_INTERNAL_URL=http://127.0.0.1:3002` dans `recruiter-web`. Sans elles, l'atelier répond 503.
+  - **Variables :** posées sur le VPS le 2026-10-23 (`ADMIN_SERVICE_SECRET`, `MOBILE_API_INTERNAL_URL`). En local, à poser dans `mobile-api/.env.local` et `recruiter-web/.env.local` pour utiliser l'atelier.
+  - **App mobile :** la galerie de modèles et les nouveaux réglages n'atteignent les téléphones qu'après une mise à jour OTA (EAS, branche `production`) ou un nouvel APK.
   - **24.13 (IA de vision) :** non commencée ; choix du modèle et premier appel payant à valider.
   - 🔒 **Module 25 :** 25.18 (choix A/B et feu vert VPS), 25.2, 25.10, 25.15, 25.16 (inchangés).
   - **Migrations :** toutes appliquées (0000, 0004 à 0015) ; 0013 le 2026-10-23.
 - **Commit de référence :** commit « feat(documents): modèle IUT de Douala fidèle au rapport de référence », parent af05514.
-- **Dernière entrée journal :** 2026-10-23 · Tâche 24.12 (comparaison avec la référence) · execute
+- **Dernière entrée journal :** 2026-10-23 · Livraison module 24 (variables VPS) · deploy-and-push
 ---
 
 ## 🏛️ HISTORIQUE DES MODULES DÉJÀ VALIDÉS (1 à 8)
