@@ -158,13 +158,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
       let providerPaid: boolean | undefined;
       let providerAmount: number | null = null;
 
+      const elapsedMs = Date.now() - new Date(transaction.created_at).getTime();
+
       if (nyoleSecretKey) {
-        // Nyole's /v1/checkout/sessions/{id}/status endpoint is strictly for post-redirect
-        // or late webhook catch-up. Calling it while the USSD push is still waiting for the
-        // user's PIN causes Nyole to immediately abort the live USSD session as FAILED.
-        // During the first 3 minutes, rely on Nyole's real-time webhook updating the DB status.
-        const elapsedMs = Date.now() - new Date(transaction.created_at).getTime();
-        if (elapsedMs < 180_000) {
+        // Wait 15s before polling Nyole's /status endpoint so the initial USSD push
+        // has time to initialize on the operator side without being aborted at t+3s.
+        if (elapsedMs < 15_000) {
           return withCors(NextResponse.json({ status: 'pending' }), request);
         }
 

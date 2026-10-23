@@ -153,7 +153,40 @@ export async function POST(request: NextRequest) {
             initData.authorization_url ||
             (initData.id ? `https://app.nyole.com/checkout/${initData.id}` : undefined);
 
-          const methodCode = isOrange ? 'ORANGE_CMR' : 'MTN_MOMO_CMR';
+          // Per Nyole docs (/docs/paiements/moyens-de-paiement/), read available methods dynamically
+          let gatewayId = 'plateforme-pawapay';
+          let methodCode = isOrange ? 'ORANGE_CMR' : 'MTN_MOMO_CMR';
+          try {
+            const methodsRes = await fetch(
+              `${baseUrl}/v1/checkout/sessions/${encodeURIComponent(reference)}/methods?country=cm`,
+              {
+                method: 'GET',
+                headers: {
+                  Authorization: `Bearer ${nyoleSecretKey}`,
+                  Accept: 'application/json',
+                },
+              },
+            );
+            if (methodsRes.ok) {
+              const methodsData = (await methodsRes.json()) as {
+                methods?: Array<{ code?: string; gatewayId?: string; name?: string; type?: string }>;
+              };
+              const targetKeyword = isOrange ? 'orange' : 'mtn';
+              const matched = (methodsData.methods || []).find(
+                (m) =>
+                  m.type === 'MOBILE_MONEY' &&
+                  ((m.code || '').toLowerCase().includes(targetKeyword) ||
+                    (m.name || '').toLowerCase().includes(targetKeyword)),
+              );
+              if (matched?.code && matched?.gatewayId) {
+                methodCode = matched.code;
+                gatewayId = matched.gatewayId;
+              }
+            }
+          } catch {
+            // Fallback to default methodCode & gatewayId
+          }
+
           await fetch(`${baseUrl}/checkout/initiate`, {
             method: 'POST',
             headers: {
@@ -163,7 +196,7 @@ export async function POST(request: NextRequest) {
             },
             body: JSON.stringify({
               transactionId: reference,
-              gatewayId: 'plateforme-pawapay',
+              gatewayId,
               methodCode,
               customerDetails: {
                 name: user.name || 'Étudiant Campus 360',

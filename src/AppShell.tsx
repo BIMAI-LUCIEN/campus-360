@@ -358,6 +358,7 @@ export function AppShell() {
   const [rechargePhone, setRechargePhone] = React.useState('');
   const [rechargeLoading, setRechargeLoading] = React.useState(false);
   const [pollingMessage, setPollingMessage] = React.useState('');
+  const [rechargePaymentUrl, setRechargePaymentUrl] = React.useState<string | null>(null);
   const rechargePollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const [updateAvailable, setUpdateAvailable] = React.useState(false);
   const [updateLoading, setUpdateLoading] = React.useState(false);
@@ -951,6 +952,7 @@ export function AppShell() {
       setPollingMessage('Initialisation de la transaction...');
       const res = await topUpStudentWallet(amount, provider, rechargePhone.trim());
       const reference = res.reference;
+      setRechargePaymentUrl(res.paymentUrl || null);
       let attempts = 0;
       const maxAttempts = 40;
       setPollingMessage('Demande envoyée. Veuillez valider le message de confirmation sur votre téléphone...');
@@ -1475,6 +1477,10 @@ export function AppShell() {
               <View style={{ paddingVertical: 12, alignItems: 'center', gap: 8 }}>
                 <ActivityIndicator size="small" color={stitchColors.emeraldTone} />
                 <Text style={{ color: stitchColors.emeraldTone, fontSize: 13, fontWeight: '700', textAlign: 'center' }}>{pollingMessage}</Text>
+                {rechargePaymentUrl ? (
+                  <PrimaryButtonLocal label="Ouvrir la page de paiement Nyole" variant="secondary" fluid onPress={() => { Linking.openURL(rechargePaymentUrl).catch(() => {}); }} />
+                ) : null}
+                <PrimaryButtonLocal label="Annuler" variant="secondary" fluid onPress={cancelRechargePolling} />
               </View>
             ) : (
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>

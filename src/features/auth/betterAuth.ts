@@ -653,7 +653,7 @@ export const topUpStudentWallet = async (amountCoins: number, providerName: stri
   (await authFetch('/api/mobile/wallet/topup', {
     method: 'POST',
     body: JSON.stringify({ amountCoins, providerName, phoneNumber }),
-  })).json() as Promise<{ reference: string; status: string }>;
+  })).json() as Promise<{ reference: string; status: string; paymentUrl?: string }>;
 
 export const checkTopUpStatus = async (reference: string): Promise<{ status: PaymentStatus; balanceCoins?: number }> => {
   const data = (await (await authFetch(`/api/mobile/wallet/topup/${encodeURIComponent(reference)}`, {
