@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { databasePool } from '@/lib/database';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { isMockAllowed } from '@/lib/payment-rules';
-import { formatPhoneForOperator, getNyoleBaseUrl } from '@/lib/payments';
+import { detectCameroonOperator, formatPhoneForOperator, getNyoleBaseUrl } from '@/lib/payments';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
@@ -98,7 +98,8 @@ export async function POST(request: NextRequest) {
       }
 
       const formattedPhone = formatPhoneForOperator(input.phoneNumber);
-      const isOrange = input.providerName.toLowerCase().includes('orange');
+      const fallbackOp = input.providerName.toLowerCase().includes('orange') ? 'orange' : 'mtn';
+      const isOrange = detectCameroonOperator(formattedPhone, fallbackOp) === 'orange';
 
       try {
         if (nyoleSecretKey) {

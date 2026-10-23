@@ -58,6 +58,26 @@ export const formatPhoneForOperator = (raw: string): string => {
 };
 
 /**
+ * Automatically detects the Cameroon Mobile Money operator from the phone prefix
+ * so a user with an Orange number (69x, 655-659, 685-689) or MTN number (67x, 650-654, 680-684)
+ * never gets rejected by PawaPay due to a mismatched UI toggle.
+ */
+export const detectCameroonOperator = (
+  rawPhone: string,
+  fallback: PaymentOperator = 'mtn',
+): PaymentOperator => {
+  const digits = rawPhone.replace(/\D/g, '');
+  const national = digits.startsWith('237') && digits.length >= 12 ? digits.slice(3) : digits;
+  if (/^6(9\d|5[5-9]|8[5-9])\d{6}$/.test(national)) {
+    return 'orange';
+  }
+  if (/^6(7\d|5[0-4]|8[0-4])\d{6}$/.test(national)) {
+    return 'mtn';
+  }
+  return fallback;
+};
+
+/**
  * Initiates direct Mobile Money payment (MTN MoMo or Orange Money) via Nyole Checkout API.
  * Inserts the pending transaction BEFORE calling the provider. Any provider failure marks status 'failed'.
  */
@@ -82,6 +102,7 @@ export async function initiateMobileMoneyPayment(
   }
 
   const formattedPhone = formatPhoneForOperator(params.phone);
+  const effectiveOperator = detectCameroonOperator(formattedPhone, params.operator);
   const currency = 'XAF';
   const description = `Campus 360 - Recharge Portefeuille (${amount} FCFA)`;
 
@@ -119,7 +140,7 @@ export async function initiateMobileMoneyPayment(
             reference,
             student_id: params.studentId,
             pack_type: params.packType,
-            operator: params.operator,
+            operator: effectiveOperator,
           },
         }),
       });
@@ -155,7 +176,7 @@ export async function initiateMobileMoneyPayment(
         (initData.id ? `https://app.nyole.com/checkout/${initData.id}` : undefined);
 
       // Trigger direct Mobile Money push via Nyole Checkout Initiate endpoint
-      const methodCode = params.operator === 'orange' ? 'ORANGE_CMR' : 'MTN_MOMO_CMR';
+      const methodCode = effectiveOperator === 'orange' ? 'ORANGE_CMR' : 'MTN_MOMO_CMR';
       await doFetch(`${baseUrl}/checkout/initiate`, {
         method: 'POST',
         headers: {
