@@ -19,6 +19,7 @@ const initiateSchema = z
       'recharge_5000',
       'discovery_500',
     ]),
+    amount: z.number().int().positive().optional(),
     operator: z.enum(['mtn', 'orange']),
     phone: z
       .string()
@@ -27,8 +28,7 @@ const initiateSchema = z
       .max(20, 'Numéro de téléphone trop long')
       .regex(/^[+0-9 ()\-]+$/, 'Format de numéro invalide.'),
     currency: z.literal('XAF').default('XAF'),
-  })
-  .strict();
+  });
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,6 +69,6 @@ export async function POST(request: NextRequest) {
       request,
     );
   } catch (error) {
-    return mobileErrorResponse(error, request);
+    return withCors(mobileErrorResponse(error, request), request);
   }
 }

@@ -20,6 +20,7 @@ import {
   ArrowRight,
   ExternalLink,
 } from 'lucide-react-native';
+import { authFetchRaw } from '../auth/betterAuth';
 import {
   PAYMENT_PACKS,
   type PaymentPack,
@@ -49,7 +50,9 @@ export function PaymentModal({
   const [phone, setPhone] = useState(defaultPhone);
   const [loading, setLoading] = useState(false);
   const [waitingUssd, setWaitingUssd] = useState(false);
+  const [currentRef, setCurrentRef] = useState<string | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [simulating, setSimulating] = useState(false);
   const [success, setSuccess] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -76,6 +79,7 @@ export function PaymentModal({
 
     setNoticeMessage(null);
     setPaymentUrl(null);
+    setCurrentRef(null);
     setLoading(true);
 
     try {
@@ -87,6 +91,7 @@ export function PaymentModal({
       });
 
       setLoading(false);
+      setCurrentRef(response.reference);
       setPaymentUrl(response.paymentUrl || null);
       setWaitingUssd(true);
 
@@ -122,9 +127,26 @@ export function PaymentModal({
     }
   };
 
+  const handleSimulateSandbox = async () => {
+    if (!currentRef) return;
+    setSimulating(true);
+    try {
+      await authFetchRaw('/api/mobile/payments/sandbox-simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference: currentRef }),
+      });
+    } catch {
+      // Polling will handle resolution or timeout
+    } finally {
+      setSimulating(false);
+    }
+  };
+
   const handleResetAndClose = () => {
     stopPolling();
     setWaitingUssd(false);
+    setCurrentRef(null);
     setPaymentUrl(null);
     setSuccess(false);
     setNoticeMessage(null);
@@ -133,6 +155,7 @@ export function PaymentModal({
 
   const handleSuccessContinue = () => {
     setWaitingUssd(false);
+    setCurrentRef(null);
     setPaymentUrl(null);
     setSuccess(false);
     setNoticeMessage(null);
@@ -198,6 +221,23 @@ export function PaymentModal({
                   </Text>.
                 </Text>
               </View>
+
+              {/* Bouton de simulation directe en mode test Sandbox */}
+              <Pressable
+                style={[styles.simulateBtn, simulating && { opacity: 0.6 }]}
+                onPress={handleSimulateSandbox}
+                disabled={simulating}
+              >
+                {simulating ? (
+                  <ActivityIndicator size="small" color={stitchColors.secondary} />
+                ) : (
+                  <>
+                    <Sparkles size={14} color={stitchColors.secondary} style={{ marginRight: 6 }} />
+                    <Text style={styles.simulateBtnText}>Simuler le paiement test (Mode Sandbox)</Text>
+                  </>
+                )}
+              </Pressable>
+
               {paymentUrl ? (
                 <Pressable
                   style={styles.checkoutLinkBtn}
@@ -570,17 +610,36 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center',
   },
+  simulateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    width: '100%',
+  },
+  simulateBtnText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: stitchColors.secondary,
+  },
   checkoutLinkBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 14,
+    marginTop: 12,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 10,
     backgroundColor: stitchColors.surface,
     borderWidth: 1,
     borderColor: stitchColors.glassBorder,
+    width: '100%',
   },
   checkoutLinkText: {
     fontSize: 12.5,
