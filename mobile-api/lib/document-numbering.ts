@@ -17,7 +17,8 @@ export type NumberedSection = {
   sectionMarker: string;
 };
 
-export type TocEntry = { marker: string; level: 0 | 1 | 2; label: string; text: string };
+// `chapter`: the title of a chapter section, set apart in the table of contents.
+export type TocEntry = { marker: string; level: 0 | 1 | 2; label: string; text: string; chapter?: boolean };
 export type CaptionEntry = { marker: string; kind: 'figure' | 'table'; label: string; text: string };
 
 export type NumberedDocument = {
@@ -60,7 +61,7 @@ export const numberDocument = (
     let html = normalizeHeadings(section.content_html || '');
 
     if (kind !== 'cover') {
-      toc.push({ marker: nextMarker(), level: 0, label: '', text: section.title });
+      toc.push({ marker: nextMarker(), level: 0, label: '', text: section.title, chapter: chapter !== null });
     }
     const sectionMarker = kind !== 'cover' ? toc[toc.length - 1].marker : '';
 

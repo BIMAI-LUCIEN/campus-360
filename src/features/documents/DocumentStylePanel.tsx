@@ -29,6 +29,8 @@ import {
   type HeadingNumbering,
 } from './documentStyle';
 import { buildStyleSampleHtml } from './editorTemplate';
+import { TemplateGallery } from './TemplateGallery';
+import { applyTemplate } from './templatesApi';
 import { EditorSurface } from './EditorSurface';
 
 // « Style du document » : pick one of the four ready styles, then adjust each
@@ -40,6 +42,9 @@ type Props = {
   documentId: string;
   style: DocumentStyle;
   onChange: (patch: DocumentStylePatch) => void;
+  // Module 24: after a template was applied (style, cover, sections changed on the server).
+  onTemplateApplied?: () => void;
+  establishment?: string;
 };
 
 const PRESET_HINTS: Record<(typeof STYLE_PRESETS)[number], string> = {
@@ -57,6 +62,14 @@ const SLOT_LABELS: [HeaderFooterSlot, string][] = [
   ['school', 'École'],
   ['page', 'N° page'],
 ];
+
+type LogoWhich = 'school' | 'company' | 'department';
+const LOGO_KEYS = { school: 'schoolLogoFileId', company: 'companyLogoFileId', department: 'departmentLogoFileId' } as const;
+const LOGO_LABELS: Record<LogoWhich, string> = {
+  school: 'Logo de l’établissement',
+  department: 'Logo du département',
+  company: 'Logo de l’entreprise',
+};
 
 const NUMBERING_LABELS: Record<HeadingNumbering, string> = {
   decimal: '1. / 1.1',
@@ -144,14 +157,43 @@ const Section = ({ title, summary, open, onToggle, children }: {
   </View>
 );
 
-export function DocumentStylePanel({ visible, onClose, documentId, style, onChange }: Props) {
+export function DocumentStylePanel({ visible, onClose, documentId, style, onChange, onTemplateApplied, establishment }: Props) {
+  const [galleryVisible, setGalleryVisible] = useState(false);
+  const [applying, setApplying] = useState(false);
+
+  const pickTemplate = (template: { id: string; name: string } | null) => {
+    setGalleryVisible(false);
+    if (!template) return;
+    Alert.alert(
+      template.name,
+      'Le style, la page de garde et les sections manquantes du modèle seront ajoutés. Ton texte ne change pas.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Appliquer',
+          onPress: async () => {
+            setApplying(true);
+            try {
+              const { addedSections } = await applyTemplate(documentId, template.id);
+              onTemplateApplied?.();
+              Alert.alert('Modèle appliqué', addedSections ? `${addedSections} section(s) ajoutée(s), vides.` : 'Aucune section à ajouter.');
+            } catch (error) {
+              Alert.alert('Modèle', error instanceof Error ? error.message : 'Application impossible.');
+            } finally {
+              setApplying(false);
+            }
+          },
+        },
+      ],
+    );
+  };
   const [open, setOpen] = useState<string | null>('typo');
   const [logoUrls, setLogoUrls] = useState<Record<string, string>>({});
-  const [uploading, setUploading] = useState<'school' | 'company' | null>(null);
+  const [uploading, setUploading] = useState<LogoWhich | null>(null);
   const sampleHtml = useMemo(() => buildStyleSampleHtml(style), [style]);
   const toggle = (key: string) => setOpen((current) => (current === key ? null : key));
 
-  const logoIds = [style.cover.schoolLogoFileId, style.cover.companyLogoFileId].filter((v): v is string => Boolean(v));
+  const logoIds = [style.cover.schoolLogoFileId, style.cover.companyLogoFileId, style.cover.departmentLogoFileId].filter((v): v is string => Boolean(v));
   useEffect(() => {
     if (!visible || logoIds.length === 0) return;
     resolveFileUrls(logoIds).then(setLogoUrls).catch(() => undefined);
@@ -159,13 +201,13 @@ export function DocumentStylePanel({ visible, onClose, documentId, style, onChan
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, logoIds.join(',')]);
 
-  const pickLogo = async (which: 'school' | 'company') => {
+  const pickLogo = async (which: LogoWhich) => {
     try {
       const picked = await pickImageFromPhone();
       if (!picked) return;
       setUploading(which);
       const file = await uploadDocumentFile(documentId, picked, 'image');
-      onChange({ cover: which === 'school' ? { schoolLogoFileId: file.id } : { companyLogoFileId: file.id } });
+      onChange({ cover: { [LOGO_KEYS[which]]: file.id } });
     } catch (error) {
       Alert.alert('Logo', error instanceof Error ? error.message : 'Envoi impossible.');
     } finally {
@@ -192,6 +234,10 @@ export function DocumentStylePanel({ visible, onClose, documentId, style, onChan
         </View>
 
         <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled">
+          <Pressable style={styles.templateBtn} onPress={() => setGalleryVisible(true)} disabled={applying} accessibilityRole="button">
+            {applying ? <ActivityIndicator size="small" color={stitchColors.primary} /> : <Text style={styles.templateBtnText}>Changer de modèle d’établissement</Text>}
+          </Pressable>
+          <TemplateGallery visible={galleryVisible} onClose={() => setGalleryVisible(false)} onPick={pickTemplate} establishment={establishment} allowNone={false} />
           <Text style={styles.hint}>Choisissez un style, puis ajustez ce que vous voulez. Tout s’applique à l’écran et aux exports PDF et Word.</Text>
           <View style={styles.presets}>
             {STYLE_PRESETS.map((preset) => {
@@ -306,18 +352,18 @@ export function DocumentStylePanel({ visible, onClose, documentId, style, onChan
             <Row label="Modèle">
               <Chips options={[{ value: 'classic', label: 'Classique' }, { value: 'modern', label: 'Moderne' }, { value: 'minimal', label: 'Minimal' }, { value: 'institutional', label: 'Institutionnel' }]} value={style.cover.template} onSelect={(template) => onChange({ cover: { template } })} />
             </Row>
-            {(['school', 'company'] as const).map((which) => {
-              const fileId = which === 'school' ? style.cover.schoolLogoFileId : style.cover.companyLogoFileId;
+            {(['school', 'department', 'company'] as const).map((which) => {
+              const fileId = style.cover[LOGO_KEYS[which]];
               const url = fileId ? logoUrls[fileId] : undefined;
               return (
-                <Row key={which} label={which === 'school' ? 'Logo de l’établissement' : 'Logo de l’entreprise'}>
+                <Row key={which} label={LOGO_LABELS[which]}>
                   <View style={styles.logoRow}>
                     {url ? <Image source={{ uri: url }} style={styles.logo} resizeMode="contain" /> : <View style={[styles.logo, styles.logoEmpty]} />}
                     <Pressable style={styles.smallBtn} onPress={() => pickLogo(which)} disabled={uploading !== null}>
                       {uploading === which ? <ActivityIndicator size="small" color={stitchColors.primary} /> : <Text style={styles.smallBtnText}>{fileId ? 'Changer' : 'Choisir'}</Text>}
                     </Pressable>
                     {fileId ? (
-                      <Pressable onPress={() => onChange({ cover: which === 'school' ? { schoolLogoFileId: null } : { companyLogoFileId: null } })} hitSlop={8} accessibilityLabel="Retirer le logo">
+                      <Pressable onPress={() => onChange({ cover: { [LOGO_KEYS[which]]: null } })} hitSlop={8} accessibilityLabel="Retirer le logo">
                         <Trash2 size={16} color={stitchColors.error} />
                       </Pressable>
                     ) : null}
@@ -412,6 +458,8 @@ const styles = StyleSheet.create({
   body: { flex: 1 },
   bodyContent: { padding: 16, gap: 12, paddingBottom: 32 },
   hint: { color: stitchColors.inkMuted, fontSize: 12.5, lineHeight: 18 },
+  templateBtn: { borderWidth: 1, borderColor: stitchColors.primary, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginBottom: 12, backgroundColor: stitchColors.siennaBg },
+  templateBtnText: { color: stitchColors.primary, fontWeight: '700', fontSize: 14 },
   subHint: { color: stitchColors.inkMuted, fontSize: 12, lineHeight: 17, marginBottom: 4 },
   presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   preset: {

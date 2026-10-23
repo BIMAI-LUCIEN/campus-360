@@ -5,7 +5,7 @@ import JSZip from 'jszip';
 
 import { loadTs, loadTsWithPackages } from './helpers/load-ts.mjs';
 
-const LOCAL = ['lib/document-style.ts', 'lib/document-render.ts', 'lib/document-numbering.ts', 'lib/html-to-docx.ts'];
+const LOCAL = ['lib/document-style.ts', 'lib/document-cover.ts', 'lib/document-render.ts', 'lib/document-numbering.ts', 'lib/html-to-docx.ts'];
 const { buildDocumentDocx } = await loadTsWithPackages('lib/document-docx.ts', LOCAL);
 const { presetStyle, applyStylePatch } = await loadTs('lib/document-style.ts');
 
@@ -85,4 +85,60 @@ test('dédicace en italique calée à droite, titres IA en h2 renumérotés', as
   assert.match(paragraph, /<w:jc w:val="right"\/>/);
   assert.match(paragraph, /<w:i\/>/);
   assert.doesNotMatch(xml, /1\.1 1\.1/);
+});
+
+const PNG_1PX = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+const logoImage = { data: PNG_1PX, mime: 'image/png', width: 1, height: 1 };
+const textOf = (xml) => [...xml.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g)].map((m) => m[1]).join('');
+
+test('module 24 : modèle type référence (bandeau, pied auteur encadré, garde par blocs, puces ❖)', async () => {
+  const style = applyStylePatch(presetStyle('classique'), {
+    headings: { numbering: 'chapter-section-roman' },
+    headerFooter: { headerStyle: 'band', authorLabel: 'Rédigé et présenté par :', footerRule: true, pageNumberFrame: 'box', footerLeft: 'author', footerCenter: 'none', footerRight: 'page' },
+    captions: { scope: 'document' },
+    lists: { bullet: 'diamond' },
+    dedication: { frame: true },
+    cover: {
+      blocks: [
+        { id: 'header', type: 'bilingual-header', left: ['Université Exemple'], right: ['Example University'], center: null, style: {} },
+        { id: 'logos', type: 'logos', left: 'department', center: 'school', right: 'company', height: 50, centerText: '', rule: false, style: {} },
+        { id: 'title', type: 'title-banner', prefix: 'THÈME :', variant: 'band', style: { bold: true } },
+        { id: 'author', type: 'author', label: 'Rédigé et présenté par :', matriculeLabel: 'Matricule :', style: {} },
+        { id: 'year', type: 'year-banner', template: 'Année académique {year}', variant: 'band', style: {} },
+      ],
+    },
+  });
+  const twoChapters = [
+    ...sections,
+    { id: '6', title: 'Chapitre 2 : Travail', content_html: '<h1>Analyse</h1><ul><li>Point A</li></ul><figure><img alt="y"><figcaption>Architecture</figcaption></figure>' },
+  ];
+  const buffer = await buildDocumentDocx({
+    document: { title: 'Rapport', template_type: 'stage', cover_data: { title: 'Gestion des stocks', studentName: 'Awa Test', year: '2025-2026' } },
+    sections: twoChapters,
+    style,
+    images: new Map(),
+    logos: { school: logoImage, company: logoImage, department: logoImage },
+  });
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  fs.writeFileSync(path.join(os.tmpdir(), 'campus360-test-reference.docx'), buffer);
+  const zip = await JSZip.loadAsync(buffer);
+  const read = async (name) => zip.file(name).async('string');
+  const names = Object.keys(zip.files);
+  const headers = await Promise.all(names.filter((f) => /word\/header\d*\.xml/.test(f)).map(read));
+  const footers = await Promise.all(names.filter((f) => /word\/footer\d*\.xml/.test(f)).map(read));
+  const xml = await read('word/document.xml');
+  const numbering = await read('word/numbering.xml');
+
+  assert.ok(headers.some((h) => /<w:shd/.test(h) && /Gestion des stocks/.test(textOf(h)) && /<w:caps\/>/.test(h)), 'bandeau ombré avec le titre en majuscules');
+  assert.ok(footers.some((f) => textOf(f).includes('Rédigé et présenté par : Awa Test')), 'pied auteur');
+  assert.ok(footers.some((f) => /PAGE/.test(f) && /<w:bdr /.test(f)), 'numéro de page encadré');
+  const text = textOf(xml);
+  assert.ok(text.indexOf('Figure 1 : Organigramme') >= 0 && text.indexOf('Figure 2 : Architecture') > text.indexOf('Figure 1 : Organigramme'));
+  assert.match(text, /THÈME : Gestion des stocks/);
+  const cover = xml.slice(0, xml.indexOf('<w:sectPr'));
+  assert.equal((cover.match(/<w:drawing/g) || []).length, 3, 'trois logos sur la garde');
+  assert.match(numbering, /w:val="❖"/);
+  assert.match(text, /SECTION 1 : Historique/);
 });

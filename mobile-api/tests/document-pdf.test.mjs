@@ -6,7 +6,7 @@ import test from 'node:test';
 
 import { loadTs, loadTsWithPackages } from './helpers/load-ts.mjs';
 
-const LOCAL = ['lib/document-style.ts', 'lib/document-render.ts', 'lib/document-numbering.ts', 'lib/pdf-pagination.ts', 'lib/pdf-render.ts'];
+const LOCAL = ['lib/document-style.ts', 'lib/document-cover.ts', 'lib/document-render.ts', 'lib/document-numbering.ts', 'lib/pdf-pagination.ts', 'lib/pdf-render.ts'];
 const { renderDocumentPdf } = await loadTsWithPackages('lib/document-pdf.ts', LOCAL);
 const { presetStyle, applyStylePatch } = await loadTs('lib/document-style.ts');
 
@@ -122,4 +122,35 @@ test('sans numéro de page : aucun numéro imprimé', { timeout: 120_000 }, asyn
   const pages = await pageTexts(await renderDocumentPdf(input(style)));
   const intro = pages.findIndex((t) => /motintro/.test(t));
   assert.notEqual(lastToken(pages[intro]), '1');
+});
+
+test('module 24 : modèle type référence (bandeau, pied auteur, numéro encadré, légendes sur le document)', { timeout: 120_000 }, async () => {
+  const style = applyStylePatch(presetStyle('classique'), {
+    headings: { numbering: 'chapter-section-roman' },
+    headerFooter: { headerStyle: 'band', authorLabel: 'Rédigé et présenté par :', footerRule: true, pageNumberFrame: 'box', footerLeft: 'author', footerCenter: 'none', footerRight: 'page' },
+    captions: { scope: 'document' },
+    lists: { bullet: 'diamond' },
+    dedication: { frame: true },
+  });
+  const base = input(style);
+  const pdf = await renderDocumentPdf({ ...base, document: { ...base.document, cover_data: { ...base.document.cover_data, title: 'Gestion des stocks' } } });
+  fs.writeFileSync(path.join(os.tmpdir(), 'campus360-test-reference.pdf'), pdf);
+  const pages = await pageTexts(pdf);
+
+  assert.doesNotMatch(pages[0], /GESTION DES STOCKS/, 'pas de bandeau sur la garde');
+  for (const text of pages.slice(1)) assert.match(text, /GESTION DES STOCKS/);
+  assert.match(pages[1], /Rédigé et présenté par : Awa Test/);
+
+  const dedication = pages.findIndex((t) => /À ma famille/.test(t));
+  assert.equal(lastToken(pages[dedication]), 'i');
+  const intro = pages.findIndex((t) => /motintro/.test(t));
+  assert.equal(lastToken(pages[intro]), '1');
+  assert.ok(pages.slice(intro).every((t, i) => lastToken(t) === String(i + 1)), 'le numéro reste le dernier texte de la page');
+
+  const all = pages.join(' ');
+  assert.match(all, /Figure 1 : Organigramme/);
+  assert.match(all, /Figure 2 : Schéma du processus/);
+  assert.doesNotMatch(all, /Figure 2\.1/);
+  assert.match(all, /SECTION 1 : Historique/);
+  assert.match(all, /I\. Organisation/);
 });

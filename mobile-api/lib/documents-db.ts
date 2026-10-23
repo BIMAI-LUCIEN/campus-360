@@ -1,5 +1,7 @@
 import { databasePool } from './database';
 import { outlineFor, type StudyField } from './document-outlines';
+import { legacyColumnsFromStyle, type DocumentStyle } from './document-style';
+import { sectionsForNewDocument, styleFromTemplate } from './template-apply';
 
 export type Document = {
   id: string;
@@ -20,6 +22,8 @@ export type Document = {
   // Module 20: raw stored style (resolve with `resolveStyle` before use).
   document_style?: unknown;
   field?: string | null;
+  // Module 24: the template the document started from (informative).
+  template_id?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -194,7 +198,9 @@ export async function createDocument(
   title: string,
   description: string,
   templateType: string,
-  field: StudyField | null = null
+  field: StudyField | null = null,
+  // Module 24: a published report template (its sections and style).
+  template: { id: string; outline: { title: string }[]; style: DocumentStyle } | null = null,
 ): Promise<Document> {
   const targetUserId = await resolveDbUserId(userId);
   const client = await databasePool.connect();
@@ -213,9 +219,11 @@ export async function createDocument(
 
     // 2. Generate sections based on template
     // Reports and theses follow the outline of the student's field.
-    const sectionNames = (templateType === 'stage' || templateType === 'memoire') && field
-      ? outlineFor(templateType, field)
-      : TEMPLATE_SECTIONS[templateType] || TEMPLATE_SECTIONS.blank;
+    const sectionNames = template
+      ? sectionsForNewDocument(template.outline)
+      : (templateType === 'stage' || templateType === 'memoire') && field
+        ? outlineFor(templateType, field)
+        : TEMPLATE_SECTIONS[templateType] || TEMPLATE_SECTIONS.blank;
     for (let i = 0; i < sectionNames.length; i++) {
       const isSystem = i === 0 || sectionNames[i] === 'Sommaire';
       await client.query(
@@ -225,10 +233,23 @@ export async function createDocument(
       );
     }
 
+    let created = document;
+    if (template) {
+      const style = styleFromTemplate(template.style);
+      const legacy = legacyColumnsFromStyle(style);
+      const updated = await client.query(
+        `update public.app_documents
+            set document_style = $2::jsonb, font_family = $3, line_spacing = $4, margins = $5, cover_template = $6, template_id = $7
+          where id = $1 returning *`,
+        [document.id, JSON.stringify(style), legacy.font_family, legacy.line_spacing, legacy.margins, legacy.cover_template, template.id]
+      );
+      created = updated.rows[0];
+    }
+
     await client.query('commit');
     return {
-      ...document,
-      line_spacing: Number(document.line_spacing),
+      ...created,
+      line_spacing: Number(created.line_spacing),
     };
   } catch (error) {
     await client.query('rollback');

@@ -120,7 +120,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
   const [addingSection, setAddingSection] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [styleVisible, setStyleVisible] = useState(false);
-  const [coverLogoUrls, setCoverLogoUrls] = useState<{ school?: string | null; company?: string | null }>({});
+  const [coverLogoUrls, setCoverLogoUrls] = useState<{ school?: string | null; company?: string | null; department?: string | null }>({});
   const [exportVisible, setExportVisible] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const previewSurfaceRef = useRef<EditorSurfaceHandle | null>(null);
@@ -473,7 +473,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
   // Cover logos shown in the preview.
   useEffect(() => {
     if (!previewVisible) return;
-    const ids = [style.cover.schoolLogoFileId, style.cover.companyLogoFileId].filter((v): v is string => Boolean(v));
+    const ids = [style.cover.schoolLogoFileId, style.cover.companyLogoFileId, style.cover.departmentLogoFileId].filter((v): v is string => Boolean(v));
     if (ids.length === 0) {
       setCoverLogoUrls({});
       return;
@@ -482,9 +482,10 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
       .then((urls) => setCoverLogoUrls({
         school: style.cover.schoolLogoFileId ? urls[style.cover.schoolLogoFileId] : null,
         company: style.cover.companyLogoFileId ? urls[style.cover.companyLogoFileId] : null,
+        department: style.cover.departmentLogoFileId ? urls[style.cover.departmentLogoFileId] : null,
       }))
       .catch(() => setCoverLogoUrls({}));
-  }, [previewVisible, style.cover.schoolLogoFileId, style.cover.companyLogoFileId]);
+  }, [previewVisible, style.cover.schoolLogoFileId, style.cover.companyLogoFileId, style.cover.departmentLogoFileId]);
 
   // Whole document, read-only, with the section being edited at its latest state.
   const previewHtml = useMemo(() => {
@@ -962,6 +963,8 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
         documentId={documentId}
         style={style}
         onChange={updateStyle}
+        onTemplateApplied={loadReport}
+        establishment={report?.cover_data?.university as string | undefined}
       />
 
       {/* ── Images from the phone ───────────────────────────────────── */}

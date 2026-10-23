@@ -1,9 +1,10 @@
 // Shared rendering rules for academic documents (Module 20): section kinds, the
-// CSS generated from a document style, and the four cover templates. Pure code,
+// CSS generated from a document style, and the cover (built from blocks). Pure code,
 // no I/O. This file exists twice, identical except for the import path below:
 //   mobile-api/lib/document-render.ts  and  src/features/documents/documentRender.ts
 // A test fails if the two copies differ — edit both together.
 
+import { coverBlocksCss, coverBlocksFor, coverBlocksHtml } from './documentCover';
 import type { DocumentStyle, StyleFont } from './documentStyle';
 
 export const escapeHtml = (text: unknown): string =>
@@ -85,6 +86,19 @@ export const chapterNumberOf = (title: string): number | null => {
 
 export const chapterLabel = (chapter: number, style: DocumentStyle): string =>
   style.headings.numbering === 'roman-alpha' ? toRoman(chapter) : String(chapter);
+
+// Header band (Module 24): on every page except the cover, preliminary pages
+// included. One rule for the screen, the PDF and Word.
+export const showsHeaderBand = (kind: SectionKind, style: DocumentStyle): boolean =>
+  style.headerFooter.headerStyle === 'band' && kind !== 'cover';
+
+// Author as printed in the footer: "<label> <name>" when the style has a label.
+export const authorLine = (style: DocumentStyle, name: string | null | undefined): string => {
+  const n = (name || '').trim();
+  if (!n) return '';
+  const label = style.headerFooter.authorLabel.trim();
+  return label ? `${label} ${n}` : n;
+};
 
 // The editor's first heading level is <h1> and numbering is automatic. Content
 // written elsewhere (older AI prompts, paste) often starts at <h2> and carries
@@ -297,7 +311,7 @@ export type CoverData = {
   extraLines?: { label: string; value: string }[];
 };
 
-export type CoverLogos = { school?: string | null; company?: string | null };
+export type CoverLogos = { school?: string | null; company?: string | null; department?: string | null };
 
 // Builds the cover data from the stored cover fields. Nothing is invented: an
 // empty field simply does not appear on the page.
@@ -330,84 +344,11 @@ export const coverDataFrom = (
   };
 };
 
-const line = (label: string, value?: string) =>
-  value ? `<div class="cv-line"><span class="cv-label">${escapeHtml(label)}</span> ${escapeHtml(value)}</div>` : '';
-
-const logoImg = (src: string | null | undefined, cls: string) =>
-  src ? `<img class="${cls}" src="${escapeHtml(src)}" alt="" />` : '';
-
-const nationalHeader = (d: CoverData, logos: CoverLogos) => `
-  <div class="cv-national">
-    <div class="cv-nat-col">
-      <strong>RÉPUBLIQUE DU CAMEROUN</strong><br><em>Paix – Travail – Patrie</em>
-      ${d.university ? `<br>${escapeHtml(d.university)}` : ''}${d.school ? `<br>${escapeHtml(d.school)}` : ''}${d.faculty ? `<br>${escapeHtml(d.faculty)}` : ''}
-    </div>
-    <div class="cv-nat-logo">${logoImg(logos.school, 'cv-logo')}</div>
-    <div class="cv-nat-col">
-      <strong>REPUBLIC OF CAMEROON</strong><br><em>Peace – Work – Fatherland</em>
-      ${d.university ? `<br>${escapeHtml(d.university)}` : ''}${d.school ? `<br>${escapeHtml(d.school)}` : ''}${d.faculty ? `<br>${escapeHtml(d.faculty)}` : ''}
-    </div>
-  </div>`;
-
-const institutionBlock = (d: CoverData) =>
-  [d.university, d.school, d.faculty].filter(Boolean).map((v) => `<div>${escapeHtml(v)}</div>`).join('');
-
-const supervision = (d: CoverData) => {
-  const left = [
-    d.studentName ? `<div class="cv-name">${escapeHtml(d.studentName)}</div>` : '',
-    line('Matricule :', d.matricule),
-    line('Filière :', d.specialty),
-  ].join('');
-  const right = [line('Encadreur professionnel :', d.tutorCorporate), line('Encadreur académique :', d.tutorAcademic)].join('');
-  if (!left && !right) return '';
-  return `<div class="cv-supervision">
-    ${left ? `<div class="cv-sup-col"><div class="cv-sup-head">Présenté par</div>${left}</div>` : ''}
-    ${right ? `<div class="cv-sup-col"><div class="cv-sup-head">Sous la direction de</div>${right}</div>` : ''}
-  </div>`;
-};
-
-const extraLines = (d: CoverData) =>
-  (d.extraLines || []).length
-    ? `<div class="cv-extra">${(d.extraLines || []).map((l) => line(l.label ? `${l.label} :` : '', l.value)).join('')}</div>`
-    : '';
-
-const placeLine = (d: CoverData) =>
-  d.company ? `<div class="cv-place">${escapeHtml(d.kindLabel === 'Rapport de stage' ? 'Stage effectué à' : 'Réalisé au sein de')} <strong>${escapeHtml(d.company)}</strong>${d.period ? ` — ${escapeHtml(d.period)}` : ''}</div>` : '';
-
+// The cover is a list of blocks (document-cover.ts): the style's own blocks, or
+// those of its ready template.
 export const coverHtml = (d: CoverData, style: DocumentStyle, logos: CoverLogos = {}): string => {
-  const t = style.cover.template;
-  const degree = d.degree ? `<div class="cv-degree">En vue de l’obtention du ${escapeHtml(d.degree)}</div>` : '';
-  const year = d.year ? `<div class="cv-year">Année académique ${escapeHtml(d.year)}</div>` : '';
-  const title = `<h1 class="cv-title">${escapeHtml(d.title || 'Titre du document')}</h1>`;
-  const subtitle = d.subtitle ? `<div class="cv-subtitle">${escapeHtml(d.subtitle)}</div>` : '';
-  const companyLogo = logoImg(logos.company, 'cv-logo cv-logo-company');
-
-  if (t === 'modern') {
-    return `<div class="cover cover-modern">
-      <div class="cv-band">${logoImg(logos.school, 'cv-logo')}<div class="cv-band-text">${institutionBlock(d)}</div>${companyLogo}</div>
-      <div class="cv-main">
-        <div class="cv-kind">${escapeHtml(d.kindLabel)}</div>${title}${subtitle}${degree}${placeLine(d)}
-      </div>
-      ${supervision(d)}${extraLines(d)}${year}
-    </div>`;
-  }
-  if (t === 'minimal') {
-    return `<div class="cover cover-minimal">
-      <div class="cv-top">${institutionBlock(d)}</div>
-      <div class="cv-main"><div class="cv-kind">${escapeHtml(d.kindLabel)}</div>${title}${subtitle}</div>
-      <div class="cv-bottom">${d.studentName ? `<div class="cv-name">${escapeHtml(d.studentName)}</div>` : ''}${placeLine(d)}${line('Encadreur académique :', d.tutorAcademic)}${line('Encadreur professionnel :', d.tutorCorporate)}${extraLines(d)}${year}</div>
-    </div>`;
-  }
-  const framed = t === 'institutional';
-  return `<div class="cover cover-${framed ? 'institutional' : 'classic'}">
-    ${d.nationalHeader ? nationalHeader(d, logos) : `<div class="cv-top">${logoImg(logos.school, 'cv-logo')}${institutionBlock(d)}</div>`}
-    <div class="cv-main">
-      <div class="cv-kind">${escapeHtml(d.kindLabel)}</div>${degree}
-      <div class="cv-theme">Thème</div>${title}${subtitle}${placeLine(d)}
-      ${companyLogo ? `<div class="cv-company-logo">${companyLogo}</div>` : ''}
-    </div>
-    ${supervision(d)}${extraLines(d)}${year}
-  </div>`;
+  const blocks = style.cover.blocks ?? coverBlocksFor(style.cover.template, Boolean(d.nationalHeader));
+  return `<div class="cover cover-blocks cover-${style.cover.template}">${coverBlocksHtml(blocks, d, style, logos)}</div>`;
 };
 
 // Cover styles. `pageHeight` is the printable height (e.g. "247mm" for print,
@@ -453,6 +394,12 @@ export const coverCss = (style: DocumentStyle, pageHeight: string, withBorder = 
   .cover-minimal .cv-kind { color: #555555; }
   .cover-minimal .cv-bottom { font-size: 10.5pt; line-height: 1.5; }
   .cover-minimal .cv-year { border-top: none; }
-  .cover-institutional .cv-title { border-top: 1.5pt solid ${accent}; border-bottom: 1.5pt solid ${accent}; padding: 8pt 0; }
+  .cover .cb-kind { letter-spacing: 0.08em; color: ${accent}; }
+  .cover .cb-theme { letter-spacing: 0.1em; margin-top: 16pt; color: #555555; }
+  .cover .cb-subtitle { color: #333333; }
+  .cover .cb-place { margin-top: 10pt; }
+  .cover-minimal .cb-institution { letter-spacing: 0.12em; }
+  .cover-minimal .cb-kind { color: #555555; }
+  ${coverBlocksCss(style)}
   `;
 };

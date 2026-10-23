@@ -3,8 +3,8 @@ import test from 'node:test';
 
 import { loadTs, loadTsWithPackages } from './helpers/load-ts.mjs';
 
-const { normalizeHeadings, styleToCss } = await loadTs('lib/document-render.ts');
-const { numberDocument } = await loadTsWithPackages('lib/document-numbering.ts', ['lib/document-render.ts', 'lib/document-style.ts']);
+const { normalizeHeadings, styleToCss } = await loadTsWithPackages('lib/document-render.ts', ['lib/document-style.ts', 'lib/document-cover.ts']);
+const { numberDocument } = await loadTsWithPackages('lib/document-numbering.ts', ['lib/document-style.ts', 'lib/document-cover.ts', 'lib/document-render.ts']);
 const { presetStyle } = await loadTs('lib/document-style.ts');
 
 test('normalizeHeadings remonte h2/h3 en h1/h2 quand le contenu n’a pas de h1', () => {

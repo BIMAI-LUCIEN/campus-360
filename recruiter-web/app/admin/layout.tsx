@@ -14,6 +14,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     items: [
       { href: '/admin',           icon: 'dashboard',       label: 'Dashboard' },
       { href: '/admin/pdf',       icon: 'menu_book',       label: 'Catalogue PDF' },
+      { href: '/admin/templates', icon: 'style',           label: 'Modèles de rapport' },
       { href: '/admin/packs',     icon: 'package_2',       label: 'Packs' },
       { href: '/admin/users',     icon: 'group',           label: 'Étudiants' },
     ],
@@ -49,6 +50,8 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
 const breadcrumbMap: Array<[RegExp, string, string]> = [
   [/^\/admin$/, 'Dashboard', 'Overview'],
   [/^\/admin\/analytics$/, 'Analytics', 'Overview'],
+  [/^\/admin\/templates\/[^/]+/, 'Modèles de rapport', 'Atelier'],
+  [/^\/admin\/templates/, 'Dashboard', 'Modèles de rapport'],
   [/^\/admin\/pdf/, 'Dashboard', 'Catalogue PDF'],
   [/^\/admin\/packs/, 'Dashboard', 'Packs'],
   [/^\/admin\/users/, 'Dashboard', 'Étudiants'],

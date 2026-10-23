@@ -1,5 +1,6 @@
 import { stitchColors } from '../../theme/stitch';
 import {
+  authorLine,
   chapterLabel,
   chapterNumberOf,
   classifySection,
@@ -8,6 +9,7 @@ import {
   coverHtml,
   escapeHtml,
   normalizeHeadings,
+  showsHeaderBand,
   styleToCss,
   textColorOn,
   toRoman,
@@ -661,8 +663,10 @@ const formatPageNumber = (format: DocumentStyle['headerFooter']['numberFormat'],
   format === 'page-n' ? `Page ${page}` : format === 'n-of-total' ? `${page} / ${total}` : String(page);
 
 // Header and footer strip shown above/below body sections: what the export prints.
-const runningStrip = (slots: HeaderFooterSlot[], values: Record<HeaderFooterSlot, string>) => {
-  const parts = slots.map((slot) => `<span>${escapeHtml(values[slot] || '')}</span>`).join('');
+const runningStrip = (slots: HeaderFooterSlot[], values: Record<HeaderFooterSlot, string>, numberFrame = false) => {
+  const parts = slots
+    .map((slot) => `<span${slot === 'page' && numberFrame && values.page ? ' class="num-box"' : ''}>${escapeHtml(values[slot] || '')}</span>`)
+    .join('');
   return slots.some((slot) => values[slot]) ? `<div class="run-strip">${parts}</div>` : '';
 };
 
@@ -699,12 +703,18 @@ export function buildPreviewHtml(
         none: '',
         title: cover.title,
         chapter: section.title,
-        author: cover.studentName || '',
+        author: authorLine(style, cover.studentName),
         school: cover.school || cover.university || '',
         page: isBody ? formatPageNumber(hf.numberFormat, bodyPage, bodyTotal) : toRoman(prelimPage).toLowerCase(),
       };
-      const header = isBody ? runningStrip([hf.headerLeft, hf.headerRight], values) : '';
-      const footer = runningStrip([hf.footerLeft, hf.footerCenter, hf.footerRight], isBody ? values : { ...values, title: '', chapter: '', author: '', school: '' });
+      // Band: the document title on every page after the cover. Otherwise the
+      // header slots, on body pages only.
+      const header = showsHeaderBand(kind, style)
+        ? `<div class="run-band">${escapeHtml(cover.title)}</div>`
+        : isBody ? runningStrip([hf.headerLeft, hf.headerRight], values) : '';
+      // Preliminary pages print only the number, and the author when the style has an author label.
+      const prelimValues = { ...values, title: '', chapter: '', school: '', author: hf.authorLabel.trim() ? values.author : '' };
+      const footer = runningStrip([hf.footerLeft, hf.footerCenter, hf.footerRight], isBody ? values : prelimValues, hf.pageNumberFrame === 'box');
       return `<section class="document-sheet preview-page doc-section" ${sectionAttributes(section.title, style)}>
         ${header}
         <h1 class="doc-section-title">${escapeHtml(section.title)}</h1>
@@ -730,13 +740,15 @@ ${coverCss(style, 'auto', true)}
   .preview-page.cover-page { padding: 18px; }
   .run-strip { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: ${c.inkMuted}; border-bottom: 1px solid ${c.glassBorder}; padding-bottom: 4px; margin-bottom: 14px; font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; }
   .run-strip span:empty { display: none; }
-  .doc-body ~ .run-strip { border-bottom: none; border-top: 1px solid ${c.glassBorder}; padding-top: 4px; margin: 14px 0 0; }
+  .doc-body ~ .run-strip { border-bottom: none; border-top: 1px solid ${style.headerFooter.footerRule ? 'var(--accent)' : c.glassBorder}; padding-top: 4px; margin: 14px 0 0; }
+  .run-band { background: var(--band); color: var(--band-text); font-weight: 700; text-transform: uppercase; text-align: center; font-size: 11px; letter-spacing: 0.04em; padding: 6px 8px; margin: -4px -4px 14px; overflow-wrap: anywhere; font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; }
+  .run-strip .num-box { border: 1px solid var(--accent); padding: 0 6px; }
   .empty-section, .auto-note { color: ${c.inkSubtle}; font-style: italic; text-indent: 0 !important; }
   .toc { padding-left: 22px; }
   .toc li { margin-bottom: 4px; }
 </style>
 </head>
-<body>
+<body style="--band: ${style.page.bandColor}; --band-text: ${style.headerFooter.headerTextColor}; --accent: ${style.page.accentColor};">
   <div class="pages">
     <section class="document-sheet preview-page cover-page">${coverHtml(cover, style, logos)}</section>
     ${body}
@@ -777,6 +789,7 @@ export function buildStyleSampleHtml(style: DocumentStyle): string {
     <div class="doc-body">
       <h1>Analyse du besoin</h1>
       <p>J’ai d’abord rencontré les responsables du service pour recenser leurs attentes, puis j’ai classé les demandes par priorité.</p>
+      <ul><li>Entretiens avec le service</li><li>Classement des demandes</li></ul>
       <p class="doc-table-caption">Demandes recensées</p>
       <table><thead><tr><th>Demande</th><th>Priorité</th></tr></thead><tbody><tr><td>Suivi des réclamations</td><td>Haute</td></tr><tr><td>Tableau de bord</td><td>Moyenne</td></tr></tbody></table>
     </div>

@@ -23,6 +23,49 @@ export type ListBullet = 'disc' | 'diamond';
 export type CoverTemplate = 'classic' | 'modern' | 'minimal' | 'institutional';
 export type CoverLine = { label: string; value: string };
 
+// Cover built from blocks (Module 24). A block's text may hold fields such as
+// {studentName}; a line whose field is empty disappears. `[ … ]` marks an optional
+// part, `**bold**` and `*italic*` are allowed. Rendering: document-cover.ts.
+export type CoverAlign = 'left' | 'center' | 'right';
+export type CoverTextStyle = {
+  align: CoverAlign;
+  size: number; // points, 8 to 28
+  bold: boolean;
+  italic: boolean;
+  uppercase: boolean;
+  underline: boolean;
+  color: string | null; // #RRGGBB, null = the cover's default colour
+};
+export type CoverLogoSlot = 'school' | 'company' | 'department';
+export type CoverBlock = { id: string; style: CoverTextStyle } & (
+  | { type: 'bilingual-header'; left: string[]; right: string[]; center: CoverLogoSlot | null }
+  | { type: 'logos'; left: CoverLogoSlot | null; center: CoverLogoSlot | null; right: CoverLogoSlot | null; height: number /* pt, 20-120 */; centerText: string; rule: boolean }
+  | { type: 'title-banner'; prefix: string; variant: 'band' | 'frame' | 'plain' }
+  | { type: 'heading'; text: string }
+  | { type: 'text'; template: string }
+  | { type: 'author'; label: string; matriculeLabel: string }
+  | {
+      type: 'supervisors';
+      // columns: label, then academic and corporate side by side;
+      // author-left: author on the left, supervisors on the right.
+      layout: 'columns' | 'author-left';
+      label: string;
+      academicLabel: string;
+      corporateLabel: string;
+      authorLabel: string;
+      matriculeLabel: string;
+      specialtyLabel: string;
+    }
+  | { type: 'year-banner'; template: string; variant: 'band' | 'rule' | 'plain' }
+  | { type: 'spacer'; height: number /* mm, 2-60 */; grow: boolean }
+  | { type: 'extra-lines' }
+);
+export type CoverBlockType = CoverBlock['type'];
+export const COVER_BLOCK_TYPES: readonly CoverBlockType[] = [
+  'bilingual-header', 'logos', 'title-banner', 'heading', 'text', 'author', 'supervisors', 'year-banner', 'spacer', 'extra-lines',
+];
+export const COVER_MAX_BLOCKS = 30;
+
 export type DocumentStyle = {
   version: 1;
   preset: StylePreset;
@@ -64,6 +107,8 @@ export type DocumentStyle = {
     schoolLogoFileId: string | null;
     companyLogoFileId: string | null;
     extraLines: CoverLine[]; // e.g. jury, date of defence (max 6)
+    departmentLogoFileId: string | null;
+    blocks: CoverBlock[] | null; // null = the blocks of `template`
   };
   tables: {
     style: TableStyle;
@@ -100,7 +145,7 @@ const PRESETS: Record<StylePreset, DocumentStyle> = {
       numberFormat: 'n', logoInHeader: false, headerRule: true,
       headerStyle: 'plain', headerTextColor: '#FFFFFF', authorLabel: '', footerRule: false, pageNumberFrame: 'none',
     },
-    cover: { template: 'classic', schoolLogoFileId: null, companyLogoFileId: null, extraLines: [] },
+    cover: { template: 'classic', schoolLogoFileId: null, companyLogoFileId: null, extraLines: [], departmentLogoFileId: null, blocks: null },
     tables: { style: 'grid', headerColor: '#F2F2F2' },
     captions: { scope: 'chapter', style: 'italic-center' },
     lists: { bullet: 'disc' },
@@ -117,7 +162,7 @@ const PRESETS: Record<StylePreset, DocumentStyle> = {
       numberFormat: 'page-n', logoInHeader: false, headerRule: true,
       headerStyle: 'plain', headerTextColor: '#FFFFFF', authorLabel: '', footerRule: false, pageNumberFrame: 'none',
     },
-    cover: { template: 'modern', schoolLogoFileId: null, companyLogoFileId: null, extraLines: [] },
+    cover: { template: 'modern', schoolLogoFileId: null, companyLogoFileId: null, extraLines: [], departmentLogoFileId: null, blocks: null },
     tables: { style: 'striped', headerColor: '#DBEAFE' },
     captions: { scope: 'chapter', style: 'italic-center' },
     lists: { bullet: 'disc' },
@@ -134,7 +179,7 @@ const PRESETS: Record<StylePreset, DocumentStyle> = {
       numberFormat: 'n', logoInHeader: false, headerRule: false,
       headerStyle: 'plain', headerTextColor: '#FFFFFF', authorLabel: '', footerRule: false, pageNumberFrame: 'none',
     },
-    cover: { template: 'minimal', schoolLogoFileId: null, companyLogoFileId: null, extraLines: [] },
+    cover: { template: 'minimal', schoolLogoFileId: null, companyLogoFileId: null, extraLines: [], departmentLogoFileId: null, blocks: null },
     tables: { style: 'minimal', headerColor: '#FFFFFF' },
     captions: { scope: 'chapter', style: 'italic-center' },
     lists: { bullet: 'disc' },
@@ -151,7 +196,7 @@ const PRESETS: Record<StylePreset, DocumentStyle> = {
       numberFormat: 'n-of-total', logoInHeader: true, headerRule: true,
       headerStyle: 'plain', headerTextColor: '#FFFFFF', authorLabel: '', footerRule: false, pageNumberFrame: 'none',
     },
-    cover: { template: 'institutional', schoolLogoFileId: null, companyLogoFileId: null, extraLines: [] },
+    cover: { template: 'institutional', schoolLogoFileId: null, companyLogoFileId: null, extraLines: [], departmentLogoFileId: null, blocks: null },
     tables: { style: 'grid', headerColor: '#E0EAF1' },
     captions: { scope: 'chapter', style: 'italic-center' },
     lists: { bullet: 'disc' },
@@ -185,6 +230,84 @@ const text = (value: unknown, max: number, fallback: string) => (typeof value ==
 const fileId = (value: unknown) => (typeof value === 'string' && UUID.test(value) ? value.toLowerCase() : null);
 const obj = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+
+const BLOCK_ID = /^[a-z0-9-]{1,40}$/;
+const LOGO_SLOTS = ['school', 'company', 'department'] as const;
+const slotOrNull = (value: unknown): CoverLogoSlot | null =>
+  typeof value === 'string' && (LOGO_SLOTS as readonly string[]).includes(value) ? (value as CoverLogoSlot) : null;
+const lineList = (value: unknown, max: number) =>
+  (Array.isArray(value) ? value : []).filter((v): v is string => typeof v === 'string').slice(0, max).map((v) => v.trim().slice(0, 120));
+
+export const DEFAULT_COVER_TEXT_STYLE: CoverTextStyle = { align: 'center', size: 11, bold: false, italic: false, uppercase: false, underline: false, color: null };
+
+const coverTextStyle = (value: unknown): CoverTextStyle => {
+  const s = obj(value);
+  const d = DEFAULT_COVER_TEXT_STYLE;
+  return {
+    align: pick(s.align, ['left', 'center', 'right'] as const, d.align),
+    size: range(s.size, 8, 28, 0.5, d.size),
+    bold: bool(s.bold, d.bold),
+    italic: bool(s.italic, d.italic),
+    uppercase: bool(s.uppercase, d.uppercase),
+    underline: bool(s.underline, d.underline),
+    color: s.color === null || s.color === undefined ? null : typeof s.color === 'string' && HEX.test(s.color) ? s.color.toUpperCase() : null,
+  };
+};
+
+// One block from any input; null when its type is unknown (the block is dropped).
+const coverBlock = (value: unknown, index: number): CoverBlock | null => {
+  const b = obj(value);
+  const type = pick(b.type, COVER_BLOCK_TYPES, '' as CoverBlockType);
+  if (!type) return null;
+  const id = typeof b.id === 'string' && BLOCK_ID.test(b.id) ? b.id : `b${index + 1}`;
+  const base = { id, style: coverTextStyle(b.style) };
+  switch (type) {
+    case 'bilingual-header':
+      return { ...base, type, left: lineList(b.left, 8), right: lineList(b.right, 8), center: slotOrNull(b.center) };
+    case 'logos':
+      return {
+        ...base, type, left: slotOrNull(b.left), center: slotOrNull(b.center), right: slotOrNull(b.right),
+        height: range(b.height, 20, 120, 1, 70), centerText: text(b.centerText, 300, ''), rule: bool(b.rule, false),
+      };
+    case 'title-banner':
+      return { ...base, type, prefix: text(b.prefix, 60, ''), variant: pick(b.variant, ['band', 'frame', 'plain'] as const, 'plain') };
+    case 'heading':
+      return { ...base, type, text: text(b.text, 160, '') };
+    case 'text':
+      return { ...base, type, template: text(b.template, 300, '') };
+    case 'author':
+      return { ...base, type, label: text(b.label, 60, ''), matriculeLabel: text(b.matriculeLabel, 60, '') };
+    case 'supervisors':
+      return {
+        ...base, type, layout: pick(b.layout, ['columns', 'author-left'] as const, 'columns'),
+        label: text(b.label, 60, ''), academicLabel: text(b.academicLabel, 60, ''), corporateLabel: text(b.corporateLabel, 60, ''),
+        authorLabel: text(b.authorLabel, 60, ''), matriculeLabel: text(b.matriculeLabel, 60, ''), specialtyLabel: text(b.specialtyLabel, 60, ''),
+      };
+    case 'year-banner':
+      return { ...base, type, template: text(b.template, 160, ''), variant: pick(b.variant, ['band', 'rule', 'plain'] as const, 'plain') };
+    case 'spacer':
+      return { ...base, type, height: range(b.height, 2, 60, 1, 10), grow: bool(b.grow, false) };
+    case 'extra-lines':
+      return { ...base, type };
+    default:
+      return null;
+  }
+};
+
+// null = use the template's blocks. Unknown blocks are dropped, ids made unique.
+export const resolveCoverBlocks = (value: unknown): CoverBlock[] | null => {
+  if (!Array.isArray(value)) return null;
+  const seen = new Set<string>();
+  return value
+    .slice(0, COVER_MAX_BLOCKS)
+    .map(coverBlock)
+    .filter((block): block is CoverBlock => block !== null)
+    .map((block, index) => {
+      const id = seen.has(block.id) ? `${block.id.slice(0, 34)}-${index + 1}` : block.id;
+      seen.add(id);
+      return { ...block, id };
+    });
+};
 
 const SLOTS: readonly HeaderFooterSlot[] = ['none', 'title', 'chapter', 'author', 'school', 'page'];
 
@@ -249,6 +372,8 @@ export const resolveStyle = (input: unknown): DocumentStyle => {
         .slice(0, 6)
         .map((line) => ({ label: String(line.label).trim().slice(0, 60), value: String(line.value).trim().slice(0, 160) }))
         .filter((line) => line.label || line.value),
+      departmentLogoFileId: c.departmentLogoFileId === undefined ? base.cover.departmentLogoFileId : fileId(c.departmentLogoFileId),
+      blocks: c.blocks === undefined ? base.cover.blocks : resolveCoverBlocks(c.blocks),
     },
     tables: {
       style: pick(tb.style, ['grid', 'striped', 'minimal'] as const, base.tables.style),
@@ -280,6 +405,8 @@ export const applyStylePatch = (current: unknown, patch: DocumentStylePatch): Do
     fresh.cover.schoolLogoFileId = base.cover.schoolLogoFileId;
     fresh.cover.companyLogoFileId = base.cover.companyLogoFileId;
     fresh.cover.extraLines = base.cover.extraLines;
+    fresh.cover.departmentLogoFileId = base.cover.departmentLogoFileId;
+    fresh.cover.blocks = base.cover.blocks;
     fresh.headerFooter.authorLabel = base.headerFooter.authorLabel;
     return resolveStyle(fresh);
   }

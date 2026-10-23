@@ -1,4 +1,4 @@
-import { coverCss, coverDataFrom, coverHtml, escapeHtml, MARGINS_CM, styleToCss, toRoman } from './document-render';
+import { authorLine, coverCss, coverDataFrom, coverHtml, escapeHtml, MARGINS_CM, showsHeaderBand, styleToCss, toRoman } from './document-render';
 import { numberDocument, type CaptionEntry, type NumberedDocument, type TocEntry } from './document-numbering';
 import type { DocumentStyle, HeaderFooterSlot } from './document-style';
 import { findMarkerPages, stampPdf, type PageStamp } from './pdf-pagination';
@@ -16,7 +16,7 @@ export type PdfDocumentInput = {
   // Content already cleaned and with images inlined as data URIs.
   sections: { id: string; title: string; content_html: string }[];
   style: DocumentStyle;
-  logos?: { school?: LoadedLogo; company?: LoadedLogo };
+  logos?: { school?: LoadedLogo; company?: LoadedLogo; department?: LoadedLogo };
   watermark?: string | null;
 };
 
@@ -28,7 +28,7 @@ type EntryPages = Map<string, string>; // marker → page label
 const tocHtml = (entries: TocEntry[], pages: EntryPages | null) =>
   `<div class="toc">${entries
     .map(
-      (e) => `<div class="toc-line toc-l${e.level}"><span class="toc-text">${e.label ? `${escapeHtml(e.label)} ` : ''}${escapeHtml(e.text)}</span><span class="toc-dots"></span><span class="toc-page">${escapeHtml(pages?.get(e.marker) ?? '')}</span></div>`,
+      (e) => `<div class="toc-line toc-l${e.level}${e.chapter ? ' toc-chapter' : ''}"><span class="toc-text">${e.label ? `${escapeHtml(e.label)} ` : ''}${escapeHtml(e.text)}</span><span class="toc-dots"></span><span class="toc-page">${escapeHtml(pages?.get(e.marker) ?? '')}</span></div>`,
     )
     .join('')}</div>`;
 
@@ -54,11 +54,12 @@ const PRINT_CSS = `
   .toc-dots { flex: 1 1 auto; border-bottom: 1pt dotted #8A8F98; transform: translateY(-3pt); min-width: 12pt; }
   .toc-page { flex: 0 0 auto; min-width: 2.6em; text-align: right; }
   .toc-l0 { font-weight: 700; margin-top: 0.6em; }
+  .toc-chapter { font-weight: 700; padding-left: 0; }
   .toc-l1 { padding-left: 1.2em; }
   .toc-l2 { padding-left: 2.4em; font-size: 0.95em; }
   .list-title { font-size: 1.05em; margin: 1em 0 0.4em; }
   .list-empty { color: #6B7280; font-style: italic; text-indent: 0 !important; }
-  .doc-section[data-kind="dedication"] .doc-body { padding-top: 110mm; }
+  .doc-section[data-kind="dedication"] .doc-body { margin-top: 110mm; }
   .watermark { position: fixed; top: 46%; left: 8%; width: 84%; transform: rotate(-32deg); color: rgba(15, 23, 42, 0.12); font-size: 34pt; font-weight: 800; text-align: center; z-index: 9999; }
 `;
 
@@ -71,7 +72,7 @@ export const buildPdfHtml = (
   const marginCm = MARGINS_CM[style.page.margins];
   const coverHeight = `${297 - 2 * marginCm * 10 - 3}mm`;
   const cover = coverDataFrom(input.document.cover_data, input.document, style);
-  const logos = { school: dataUri(input.logos?.school), company: dataUri(input.logos?.company) };
+  const logos = { school: dataUri(input.logos?.school), company: dataUri(input.logos?.company), department: dataUri(input.logos?.department) };
   const mk = (marker: string) => (options.markers && marker ? `<span class="mk">${marker}</span>` : '');
   const tocEntries = numbered.toc.filter((e) => {
     const owner = numbered.sections.find((s) => s.sectionMarker === e.marker);
@@ -201,19 +202,30 @@ export const buildStamps = (input: PdfDocumentInput, layout: Layout): PageStamp[
         : hf.numberFormat === 'page-n' ? `Page ${label}` : hf.numberFormat === 'n-of-total' ? `${label} / ${layout.totalBody}` : label;
     const context = {
       title: cover.title,
-      author: cover.studentName || '',
+      author: authorLine(style, cover.studentName),
       school: cover.school || cover.university || '',
       section: layout.sectionAt[page],
       page: pageText,
     };
-    // Preliminary pages only carry their number; headers start with the body.
-    const only = (slot: HeaderFooterSlot) => (kind === 'prelim' ? (slot === 'page' ? pageText : '') : slotText(slot, context));
+    // Preliminary pages carry their number, and the author when the style has an
+    // author label (Module 24); the other header texts start with the body.
+    const labelled = Boolean(hf.authorLabel.trim());
+    const only = (slot: HeaderFooterSlot) =>
+      kind === 'prelim' ? (slot === 'page' ? pageText : slot === 'author' && labelled ? context.author : '') : slotText(slot, context);
+    const band = showsHeaderBand(kind === 'prelim' ? 'foreword' : 'body', style);
+    const footer = { left: only(hf.footerLeft), center: only(hf.footerCenter), right: only(hf.footerRight) };
+    const numberSlot = hf.footerRight === 'page' ? 'right' : hf.footerCenter === 'page' ? 'center' : hf.footerLeft === 'page' ? 'left' : undefined;
     return {
       border: pageBorder,
       header: { left: only(hf.headerLeft), right: only(hf.headerRight) },
-      footer: { left: only(hf.footerLeft), center: only(hf.footerCenter), right: only(hf.footerRight) },
+      footer,
       headerRule: kind === 'body' && hf.headerRule,
-      logo: kind === 'body' && hf.logoInHeader && Boolean(input.logos?.school),
+      logo: kind === 'body' && !band && hf.logoInHeader && Boolean(input.logos?.school),
+      band: band ? { color: style.page.bandColor, textColor: hf.headerTextColor, text: cover.title } : undefined,
+      footerRule: hf.footerRule,
+      numberFrame: hf.pageNumberFrame === 'box',
+      numberSlot,
+      wideFooterLeft: hf.footerLeft === 'author' && labelled && !footer.center,
     };
   });
 };

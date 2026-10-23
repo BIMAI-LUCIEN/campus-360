@@ -1,0 +1,24 @@
+{
+  "university": "Université Exemple",
+  "school": "Institut Exemple",
+  "faculty": "Département Exemple",
+  "kindLabel": "Rapport de stage",
+  "degree": "Diplôme Exemple",
+  "title": "Titre du rapport exemple",
+  "subtitle": "Sous-titre exemple",
+  "studentName": "Awa Test",
+  "matricule": "MAT-0001",
+  "specialty": "Filière Exemple",
+  "company": "Entreprise Exemple SA",
+  "period": "du 1er juin au 31 août",
+  "tutorCorporate": "M. Pro Exemple",
+  "tutorAcademic": "Dr Académique Exemple",
+  "year": "2025-2026",
+  "nationalHeader": true,
+  "extraLines": [
+    {
+      "label": "Jury",
+      "value": "Pr. Jury Exemple"
+    }
+  ]
+}

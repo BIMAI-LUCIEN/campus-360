@@ -3,10 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
-import { loadTs } from './helpers/load-ts.mjs';
+import { loadTs, loadTsWithPackages } from './helpers/load-ts.mjs';
 
 const { STUDY_FIELDS, outlineFor, fieldFromProfile } = await loadTs('lib/document-outlines.ts');
-const { classifySection } = await loadTs('lib/document-render.ts');
+const { classifySection } = await loadTsWithPackages('lib/document-render.ts', ['lib/document-style.ts', 'lib/document-cover.ts']);
 
 test('chaque filière a un plan complet pour le rapport et le mémoire', () => {
   for (const kind of ['stage', 'memoire']) {

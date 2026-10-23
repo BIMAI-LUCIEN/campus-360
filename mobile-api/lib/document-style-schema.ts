@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { STYLE_FONTS, STYLE_PRESETS } from './document-style';
+import { COVER_MAX_BLOCKS, STYLE_FONTS, STYLE_PRESETS } from './document-style';
 
 // Strict validation of a style change sent by the app: unknown keys, fonts outside
 // the list or malformed colours are rejected (400) instead of being stored.
@@ -8,6 +8,59 @@ import { STYLE_FONTS, STYLE_PRESETS } from './document-style';
 const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 const slot = z.enum(['none', 'title', 'chapter', 'author', 'school', 'page']);
 const fileId = z.string().uuid().nullable();
+
+// Cover blocks: same bounds as resolveStyle (document-style.ts).
+const logoSlot = z.enum(['school', 'company', 'department']).nullable();
+const blockBase = z.object({
+  id: z.string().regex(/^[a-z0-9-]{1,40}$/),
+  style: z
+    .object({
+      align: z.enum(['left', 'center', 'right']),
+      size: z.number().min(8).max(28),
+      bold: z.boolean(),
+      italic: z.boolean(),
+      uppercase: z.boolean(),
+      underline: z.boolean(),
+      color: hex.nullable(),
+    })
+    .strict(),
+});
+const label = z.string().max(60);
+const lines = z.array(z.string().max(120)).max(8);
+
+export const coverBlockSchema = z.discriminatedUnion('type', [
+  blockBase.extend({ type: z.literal('bilingual-header'), left: lines, right: lines, center: logoSlot }).strict(),
+  blockBase
+    .extend({
+      type: z.literal('logos'),
+      left: logoSlot,
+      center: logoSlot,
+      right: logoSlot,
+      height: z.number().min(20).max(120),
+      centerText: z.string().max(300),
+      rule: z.boolean(),
+    })
+    .strict(),
+  blockBase.extend({ type: z.literal('title-banner'), prefix: label, variant: z.enum(['band', 'frame', 'plain']) }).strict(),
+  blockBase.extend({ type: z.literal('heading'), text: z.string().max(160) }).strict(),
+  blockBase.extend({ type: z.literal('text'), template: z.string().max(300) }).strict(),
+  blockBase.extend({ type: z.literal('author'), label, matriculeLabel: label }).strict(),
+  blockBase
+    .extend({
+      type: z.literal('supervisors'),
+      layout: z.enum(['columns', 'author-left']),
+      label,
+      academicLabel: label,
+      corporateLabel: label,
+      authorLabel: label,
+      matriculeLabel: label,
+      specialtyLabel: label,
+    })
+    .strict(),
+  blockBase.extend({ type: z.literal('year-banner'), template: z.string().max(160), variant: z.enum(['band', 'rule', 'plain']) }).strict(),
+  blockBase.extend({ type: z.literal('spacer'), height: z.number().min(2).max(60), grow: z.boolean() }).strict(),
+  blockBase.extend({ type: z.literal('extra-lines') }).strict(),
+]);
 
 export const documentStylePatchSchema = z
   .object({
@@ -66,6 +119,8 @@ export const documentStylePatchSchema = z
         template: z.enum(['classic', 'modern', 'minimal', 'institutional']),
         schoolLogoFileId: fileId,
         companyLogoFileId: fileId,
+        departmentLogoFileId: fileId,
+        blocks: z.array(coverBlockSchema).max(COVER_MAX_BLOCKS).nullable(),
         extraLines: z
           .array(z.object({ label: z.string().max(60), value: z.string().max(160) }).strict())
           .max(6),

@@ -3,6 +3,7 @@ import {
   BorderStyle,
   HeadingLevel,
   ImageRun,
+  LevelFormat,
   PageBreak,
   Paragraph,
   ShadingType,
@@ -29,12 +30,31 @@ export type DocxRenderOptions = {
   // Word styles applied to captions, so Word can list figures and tables.
   figureCaptionStyle?: string;
   tableCaptionStyle?: string;
+  // Module 24: bullet shape, caption look, frame around every paragraph (dedication).
+  bullet?: 'disc' | 'diamond';
+  captionLook?: 'italic-center' | 'bold-left';
+  framed?: boolean;
 };
 
 // Numbering definition referenced by ordered lists (one `instance` per list restarts at 1).
 export const ORDERED_LIST_REFERENCE = 'campus360-ordered';
+// Bullets ❖ then • (style option "losange"). Segoe UI Symbol has the glyph on Windows.
+export const DIAMOND_BULLET_REFERENCE = 'campus360-bullets';
 export const docxNumberingConfig = {
   config: [
+    {
+      reference: DIAMOND_BULLET_REFERENCE,
+      levels: [0, 1, 2, 3].map((level) => ({
+        level,
+        format: LevelFormat.BULLET,
+        text: level === 0 ? '❖' : '•',
+        alignment: AlignmentType.START,
+        style: {
+          paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } },
+          ...(level === 0 ? { run: { font: 'Segoe UI Symbol' } } : {}),
+        },
+      })),
+    },
     {
       reference: ORDERED_LIST_REFERENCE,
       levels: [0, 1, 2, 3].map((level) => ({
@@ -287,7 +307,9 @@ const listBlocks = (node: { tag: string; children: HtmlNode[] }, ctx: Context, l
         children: toRuns(trimRuns(flatten(item.children))),
         ...(ordered
           ? { numbering: { reference: ORDERED_LIST_REFERENCE, level: Math.min(level, 3), instance } }
-          : { bullet: { level: Math.min(level, 3) } }),
+          : ctx.options.bullet === 'diamond'
+            ? { numbering: { reference: DIAMOND_BULLET_REFERENCE, level: Math.min(level, 3) } }
+            : { bullet: { level: Math.min(level, 3) } }),
         spacing: { after: 60 },
       }),
     );
@@ -296,6 +318,19 @@ const listBlocks = (node: { tag: string; children: HtmlNode[] }, ctx: Context, l
     }
   }
   return out;
+};
+
+// Caption look from the style: italic and centred (default) or bold on the left.
+const captionLayout = (ctx: Context) =>
+  ctx.options.captionLook === 'bold-left'
+    ? { alignment: AlignmentType.LEFT, format: { bold: true } as RunFormat }
+    : { alignment: AlignmentType.CENTER, format: { italics: true } as RunFormat };
+
+// Frame around a paragraph (framed dedication).
+const frameOf = (ctx: Context) => {
+  if (!ctx.options.framed) return undefined;
+  const side = { style: BorderStyle.SINGLE, size: 6, color: hexColor(ctx.options.accentColor, '1F2937'), space: 8 };
+  return { top: side, bottom: side, left: side, right: side };
 };
 
 // Block-level conversion. Runs of inline content between blocks become paragraphs.
@@ -327,14 +362,14 @@ const blocksOf = (nodes: HtmlNode[], ctx: Context, inheritedFormat: RunFormat = 
         if ((node.attrs.class || '').includes('doc-table-caption')) {
           out.push(new Paragraph({
             style: ctx.options.tableCaptionStyle,
-            alignment: AlignmentType.CENTER,
+            alignment: captionLayout(ctx).alignment,
             keepNext: true,
             spacing: { before: 160, after: 80 },
-            children: toRuns(trimRuns(node.children)),
+            children: toRuns(trimRuns(node.children), ctx.options.captionLook ? captionLayout(ctx).format : {}),
           }));
           break;
         }
-        out.push(new Paragraph({ children: toRuns(trimRuns(node.children), inheritedFormat), alignment, spacing: { after: 160 } }));
+        out.push(new Paragraph({ children: toRuns(trimRuns(node.children), inheritedFormat), alignment, spacing: { after: 160 }, border: frameOf(ctx) }));
         break;
       case 'h1':
       case 'h2':
@@ -375,12 +410,12 @@ const blocksOf = (nodes: HtmlNode[], ctx: Context, inheritedFormat: RunFormat = 
         if (image) out.push(image);
         const caption = findFirst(node.children, 'figcaption');
         if (caption && !isText(caption)) {
-          out.push(new Paragraph({ style: ctx.options.figureCaptionStyle, alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: toRuns(trimRuns(caption.children), { italics: true }) }));
+          out.push(new Paragraph({ style: ctx.options.figureCaptionStyle, alignment: captionLayout(ctx).alignment, spacing: { after: 200 }, children: toRuns(trimRuns(caption.children), captionLayout(ctx).format) }));
         }
         break;
       }
       case 'figcaption':
-        out.push(new Paragraph({ style: ctx.options.figureCaptionStyle, alignment: AlignmentType.CENTER, children: toRuns(trimRuns(node.children), { italics: true }) }));
+        out.push(new Paragraph({ style: ctx.options.figureCaptionStyle, alignment: captionLayout(ctx).alignment, children: toRuns(trimRuns(node.children), captionLayout(ctx).format) }));
         break;
       case 'hr':
         out.push(new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'CBD5E1', space: 4 } } }));

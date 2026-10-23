@@ -34,6 +34,14 @@ export type PageStamp = {
   border?: 'none' | 'single' | 'double';
   headerRule?: boolean;
   logo?: boolean;
+  // Module 24: coloured band across the top (replaces the header texts), line
+  // above the footer, frame around the page number (in the footer slot `numberSlot`).
+  band?: { color: string; textColor: string; text: string };
+  footerRule?: boolean;
+  numberFrame?: boolean;
+  numberSlot?: 'left' | 'center' | 'right';
+  // The left footer slot gets two thirds of the width (author label + name).
+  wideFooterLeft?: boolean;
 };
 
 export type StampOptions = {
@@ -88,6 +96,7 @@ const drawBorder = (page: PDFPage, kind: 'single' | 'double', inset: number, col
 export const stampPdf = async (pdf: Buffer, stamps: PageStamp[], options: StampOptions): Promise<Buffer> => {
   const doc = await PDFDocument.load(pdf);
   const font = await doc.embedFont(options.serif ? StandardFonts.TimesRoman : StandardFonts.Helvetica);
+  const bold = await doc.embedFont(options.serif ? StandardFonts.TimesRomanBold : StandardFonts.HelveticaBold);
   const color = rgb(0.33, 0.33, 0.33);
   const accent = toRgb(options.accentColor);
   let logo: PDFImage | null = null;
@@ -110,6 +119,12 @@ export const stampPdf = async (pdf: Buffer, stamps: PageStamp[], options: StampO
     if (stamp.border && stamp.border !== 'none') drawBorder(page, stamp.border, Math.max(12, m * 0.45), accent);
 
     const headerY = height - m / 2 - 2;
+    if (stamp.band) {
+      // Drawn before any text; 18 pt high around the header line, inside the margin.
+      page.drawRectangle({ x: m, y: headerY - 5, width: width - 2 * m, height: 18, color: toRgb(stamp.band.color) });
+      const text = fit(bold, stamp.band.text.toUpperCase(), size, width - 2 * m - 12);
+      page.drawText(text, { x: (width - bold.widthOfTextAtSize(text, size)) / 2, y: headerY, size, font: bold, color: toRgb(stamp.band.textColor) });
+    }
     let leftX = m;
     if (stamp.logo && logo) {
       const h = 16;
@@ -117,27 +132,37 @@ export const stampPdf = async (pdf: Buffer, stamps: PageStamp[], options: StampO
       page.drawImage(logo, { x: m, y: headerY - 4, width: w, height: h });
       leftX = m + w + 6;
     }
-    if (stamp.header?.left) {
+    if (stamp.header?.left && !stamp.band) {
       page.drawText(fit(font, stamp.header.left, size, half - (leftX - m)), { x: leftX, y: headerY, size, font, color });
     }
-    if (stamp.header?.right) {
+    if (stamp.header?.right && !stamp.band) {
       const text = fit(font, stamp.header.right, size, half);
       page.drawText(text, { x: width - m - font.widthOfTextAtSize(text, size), y: headerY, size, font, color });
     }
-    if (stamp.headerRule && (stamp.header?.left || stamp.header?.right || stamp.logo)) {
+    if (!stamp.band && stamp.headerRule && (stamp.header?.left || stamp.header?.right || stamp.logo)) {
       page.drawLine({ start: { x: m, y: headerY - 6 }, end: { x: width - m, y: headerY - 6 }, thickness: 0.5, color: accent });
     }
 
     const footerY = m / 2 - 4;
     const third = (width - 2 * m) / 3;
-    if (stamp.footer?.left) page.drawText(fit(font, stamp.footer.left, size, third), { x: m, y: footerY, size, font, color });
-    if (stamp.footer?.center) {
-      const text = fit(font, stamp.footer.center, size, third);
-      page.drawText(text, { x: (width - font.widthOfTextAtSize(text, size)) / 2, y: footerY, size, font, color });
+    if (stamp.footerRule) {
+      page.drawLine({ start: { x: m, y: footerY + 12 }, end: { x: width - m, y: footerY + 12 }, thickness: 0.5, color: accent });
     }
-    if (stamp.footer?.right) {
-      const text = fit(font, stamp.footer.right, size, third);
-      page.drawText(text, { x: width - m - font.widthOfTextAtSize(text, size), y: footerY, size, font, color });
+    // The page number is written last: readers of the PDF (and the tests) take
+    // the last text of a page as its number.
+    const slots: { key: 'left' | 'center' | 'right'; text: string; max: number; x: (w: number) => number }[] = [];
+    if (stamp.footer?.left) slots.push({ key: 'left', text: stamp.footer.left, max: stamp.wideFooterLeft ? 2 * third : third, x: () => m });
+    if (stamp.footer?.center) slots.push({ key: 'center', text: stamp.footer.center, max: third, x: (w) => (width - w) / 2 });
+    if (stamp.footer?.right) slots.push({ key: 'right', text: stamp.footer.right, max: third, x: (w) => width - m - w });
+    slots.sort((a, b) => Number(a.key === stamp.numberSlot) - Number(b.key === stamp.numberSlot));
+    for (const slot of slots) {
+      const text = fit(font, slot.text, size, slot.max);
+      const w = font.widthOfTextAtSize(text, size);
+      const x = slot.x(w);
+      if (stamp.numberFrame && slot.key === stamp.numberSlot) {
+        page.drawRectangle({ x: x - 4, y: footerY - 3.5, width: w + 8, height: size + 5, borderColor: accent, borderWidth: 0.75 });
+      }
+      page.drawText(text, { x, y: footerY, size, font, color });
     }
   });
 

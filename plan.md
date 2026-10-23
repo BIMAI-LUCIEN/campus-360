@@ -1,24 +1,24 @@
 # Plan de Développement MVP : Campus 360 (Lancement Flash & Spécifications Officielles)
 
-> **Progression globale :** 103/160 tâches validées (64%) — Module 25 (scraping des offres) : 13/18 ; Module 24 (galerie de modèles de rapports) : 1/12 ; Module 23 (préparation V1) : 0/26 ; Module 20 : 16/16 validées ; Module 21 : 9/9 validées ; Module 19 : 10 en cours ; hors Module 19 : 3 en cours, 2 ouvertes  
+> **Progression globale :** 110/161 tâches validées (68%) — Module 25 (scraping des offres) : 13/18 ; Module 24 (galerie de modèles de rapports) : 8/13 ; Module 23 (préparation V1) : 0/26 ; Module 20 : 16/16 validées ; Module 21 : 9/9 validées ; Module 19 : 10 en cours ; hors Module 19 : 3 en cours, 2 ouvertes  
 > **Couverture MVP :** 100% des fonctionnalités du cadrage `contexte.md` (Template CV Officiel, Ingestion n8n, Mobile Money, Onboarding Express, Suivi J+7, Expédition Automatisée WhatsApp/Email via Evolution API & N8N, Éditeur de documents §13, Style du document & rédaction §14)  
-> **Dernière mise à jour :** 2026-10-20 par /execute (module 25)
+> **Dernière mise à jour :** 2026-10-23 par /execute (module 24)
 
 ---
 ## Reprise
 - **Tâche en cours :** aucune
-- **Prochaine :** 24.2 — Page de garde modulable par blocs (prête, sans décision). Module 25 : décision utilisateur sur 25.18 (Option A démon PM2 vs Option B cron unique, et feu vert VPS) → `/execute 25.18`, puis 25.2 (accord lecture seule et étiquetage 50 offres)
-- **Reste :** 5 tâches `[!]` (bloquées 🔒) dans le Module 25 : 25.18 (prête à exécuter dès arbitrage), 25.2, 25.10, 25.15, 25.16 ; modules 23 et 24 : voir `Progression globale`
+- **Prochaine :** poser `ADMIN_SERVICE_SECRET` et `MOBILE_API_INTERNAL_URL` en local, puis parcours de l'atelier admin (24.10, session admin ouverte par l'utilisateur) → publier un modèle de test → parcours galerie (24.11) → 24.12. Module 25 : décision sur 25.18.
+- **Reste :** Module 24 : 24.6, 24.10, 24.11, 24.12 `[!]`, 24.13 `[ ]` ; Module 25 : 25.18, 25.2, 25.10, 25.15, 25.16 `[!]` ; modules 23 et 19 : voir `Progression globale`
 - **Points ouverts :**
-  - 🔒 **25.18 : Arbitrage du déclencheur unique VPS.** Guide d'exécution détaillé rédigé (8 rubriques complètes). L'utilisateur doit choisir entre l'Option A (démon PM2 `campus360-scraper-daemon`, recommandée) et l'Option B (cron unique 9h UTC), puis autoriser la mise à jour sur le VPS.
-  - 🔒 **25.2 : Accord lecture seule base partagée & étiquetage.** Accord requis pour extraire l'échantillon sans données personnelles, puis étiquetage manuel de 50 offres par l'utilisateur.
-  - 🔒 **25.10 : Sécurisation clé Treg.** Retrait de la valeur de repli dans `scripts/n8n/campus360_treg_full_workflow.json` et rotation de la clé par l'utilisateur.
-  - 🔒 **25.15 : Validation sur jeu réel.** Câblage et passage synthétique validés (code 0) ; le passage complet attend le jeu réel étiqueté de 25.2.
-  - 🔒 **25.16 : Accord mise en prod.** Accord explicite pour le déploiement sur VPS et le premier passage réel (appels Treg payants).
-  - **Migrations : toutes appliquées** (12, dont 0014 et 0015) le 2026-10-20 ; vérifié en base le 2026-10-21. `npm run migrate --dry-run` repasse sans rien réappliquer.
-- **Commit de référence :** commit « feat(documents): options de style du module 24 (tâche 24.1) », parent 9fec41d (`.gitattributes` et SQL renormalisés déjà commités dans 9fec41d).
-- **Dernière entrée journal :** 2026-10-23 · Tâche 24.1 · execute
-
+  - 🔒 **24.6 : ouvrir `.agent/screenshots/m24/exemple-reference.docx` dans Word** (bandeau, pied encadré, puces ❖, garde) et noter le retour.
+  - 🔒 **24.10 et 24.11 : parcours navigateur.** Session admin ouverte par l'utilisateur, un modèle publié de test, une session étudiante (expo-web, 375 px). Migration 0013 faite.
+  - 🔒 **24.12 : modèle IUT de Douala.** Téléchargement de la référence dans le scratchpad (autorisé, décision 22), import et retouche dans l'atelier avec l'utilisateur, publication, comparaison.
+  - **Variables à poser (VPS et local) :** `ADMIN_SERVICE_SECRET` (même valeur, 32 caractères aléatoires au moins) dans `mobile-api` et `recruiter-web`, `MOBILE_API_INTERNAL_URL=http://127.0.0.1:3002` dans `recruiter-web`. Sans elles, l'atelier répond 503.
+  - **24.13 (IA de vision) :** non commencée ; choix du modèle et premier appel payant à valider.
+  - 🔒 **Module 25 :** 25.18 (choix A/B et feu vert VPS), 25.2, 25.10, 25.15, 25.16 (inchangés).
+  - **Migrations :** toutes appliquées (0000, 0004 à 0015) ; 0013 le 2026-10-23.
+- **Commit de référence :** commit « feat(documents): galerie de modèles de rapports (tâches 24.2 à 24.11) », parent 6a106e3. Rien d'autre en attente pour le module 24.
+- **Dernière entrée journal :** 2026-10-23 · Tâche 24.3 (migration 0013) · execute
 ---
 
 ## 🏛️ HISTORIQUE DES MODULES DÉJÀ VALIDÉS (1 à 8)
@@ -1830,7 +1830,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
     - Le glyphe ❖ n'existe pas dans les polices standard de pdf-lib : il ne doit apparaître que dans le HTML (rendu par Chromium), jamais dans le tampon d'en-tête ou de pied.
   - **Dépendances :** aucune. Aucune décision utilisateur.
 
-- [ ] **Tâche 24.2 : Page de garde modulable par blocs**
+- [X] **Tâche 24.2 : Page de garde modulable par blocs** (npm test 216 : 198 réussis, 0 échec ; tsc app et mobile-api 0 ; lint:colors 189 ; non-régression du texte des 4 gardes contre des fixtures écrites avant le changement ; comparaison visuelle avant/après `.agent/screenshots/m24/cover-compare.png`. Écarts au guide : blocs `bilingual-header.center` (logo central), `logos.centerText` + `rule`, `supervisors.layout` (`columns` / `author-left`), `year-banner.variant: 'rule'`, `spacer.grow`, style `italic` et syntaxe `[optionnel]`, `**gras**`, `*italique*`, champ `{placeIntro}` : nécessaires pour exprimer les 4 gardes actuelles sans perte)
   - **Pourquoi :** les 4 pages de garde actuelles sont codées en dur ; la garde de la référence (en-tête bilingue, trois logos, bandeau « THÈME : », bloc auteur, encadreurs sur deux colonnes, bandeau d'année) ne peut pas être reproduite, ni réglée par l'admin.
   - **État actuel :**
     - `mobile-api/lib/document-render.ts` : `CoverData` (l.255-273 : `university, school, faculty, kindLabel, degree, title, subtitle, studentName, matricule, specialty, company, period, tutorCorporate, tutorAcademic, year, nationalHeader, extraLines`) ; `CoverLogos` (l.275 : `{ school?, company? }`, URL ou data URI) ; `coverDataFrom` (l.279-306) ; aides `line`, `logoImg`, `nationalHeader` (l.314-325, « RÉPUBLIQUE DU CAMEROUN » / « REPUBLIC OF CAMEROON » en dur), `institutionBlock`, `supervision` (l.330-342 : « Présenté par », « Sous la direction de »), `extraLines`, `placeLine` ; **`coverHtml(d, style, logos)`** (l.352-386, branches `modern`, `minimal`, `classic`/`institutional`) ; **`coverCss(style, pageHeight, withBorder)`** (l.391-433). Une ligne dont la valeur est vide disparaît déjà (`line()`).
@@ -1870,7 +1870,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
     - Les logos de l'aperçu sont des URL signées, ceux du PDF des data URI : `coverBlocksHtml` reçoit des chaînes déjà prêtes.
   - **Dépendances :** 24.1 (fichiers et test de parité). Aucune décision utilisateur.
 
-- [ ] **Tâche 24.3 : Table des modèles**
+- [X] **Tâche 24.3 : Table des modèles** (migration 0013 appliquée le 2026-10-23 avec `npm run migrate` (accord utilisateur) ; second `npm run migrate` : « déjà appliquée » ; réexécution du SQL dans une transaction annulée : sans erreur ; `information_schema` : `app_documents.template_id` 1 ligne, tables `app_document_templates` et `app_template_assets` présentes avec leurs 4 + 3 contraintes ; suivie dans `schema_migrations` ; 0 modèle en base. Code : `lib/template-rules.ts`, `lib/template-schema.ts`, `lib/templates-db.ts`, `template_id` dans `Document` ; `tests/templates-db.test.mjs` 5/5)
   - **Pourquoi :** il faut un endroit en base pour enregistrer un modèle (style complet, garde, plan des sections, logos, aperçu, statut de publication, trace de l'import) et savoir de quel modèle un document est parti.
   - **État actuel :** (recalé le 2026-10-23) migrations du dépôt `0000`, `0004` à `0012`, `0014`, `0015` : le numéro `0013` est libre et réservé à cette tâche ; `scripts/migrate.mjs` (`npm run migrate`) applique les fichiers non encore appliqués dans l'ordre des noms, donc `0013` passera même après `0015`. Type `Document` dans `mobile-api/lib/documents-db.ts` (l.4-25, sans `template_id`) ; `recruiter-web/lib/documents-db.ts` n'existe plus (supprimée par 23.22). `app_document_files.document_id` est `not null` (`0006_document_files.sql`) : impossible d'y ranger les logos d'un modèle.
   - **Fichiers :** créés : `mobile-api/sql/0013_document_templates.sql`, `mobile-api/lib/templates-db.ts`, `mobile-api/lib/template-schema.ts`, `mobile-api/tests/templates-db.test.mjs` ; modifiés : `mobile-api/lib/documents-db.ts` (type `Document`).
@@ -1898,7 +1898,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
   - **Dépendances :** 24.1 et 24.2 (le style complet avec `cover.blocks`). Aucune décision utilisateur.
 
 ### 2. Rendu fidèle partout
-- [ ] **Tâche 24.4 : Écran (éditeur et aperçu)**
+- [X] **Tâche 24.4 : Écran (éditeur et aperçu)** (tsc app 0 ; lint:colors 189 ; garde « aucune couleur en dur » ajoutée à `twin-files.test.mjs` ; `showsHeaderBand` et `authorLine` partagés dans `document-render.ts` ; logo du département dans le panneau et l'aperçu. Vérifié sur le HTML réel de `buildPreviewHtml` rendu par Chromium à 375 px (thème stubé) : `scrollWidth 375 = innerWidth`, capture `.agent/screenshots/m24/preview-375.png`. Non fait : l'app expo-web (session étudiante requise) et la capture de l'éditeur)
   - **Pourquoi :** l'étudiant doit voir dans l'éditeur et dans l'aperçu exactement ce que donneront le PDF et le Word : bandeau d'en-tête, pied auteur avec numéro encadré, titres CHAPITRE / SECTION / I., légendes, puces ❖, dédicace encadrée et garde par blocs.
   - **État actuel :** `src/features/documents/editorTemplate.ts` (785 l., aucun littéral hexadécimal, `const c = stitchColors` l.49) : `frameCss(style)` (l.52-108), `sectionAttributes` (l.110-115, pose `--chapter`), `buildWysiwygHtml` (l.117, `styleToCss(style, { cssNumbering: true })` l.196), `runningStrip(slots, values)` (l.664-668), `buildPreviewHtml(doc, sections, style, logos)` (l.671 et suivantes : valeurs des emplacements l.698-705, en-tête seulement dans le corps l.706, pied l.707, CSS l.720-740 dont `coverCss(style, 'auto', true)` l.728), `buildStyleSampleHtml(style)` (l.762-785). `DocumentEditorScreen.tsx` : `COVER_FIELDS` (l.44-58), logos de l'aperçu résolus par `resolveFileUrls` (l.476-487).
   - **Fichiers :** modifiés : `src/features/documents/editorTemplate.ts`, `src/features/documents/DocumentEditorScreen.tsx` (logo de département, champ « Libellé auteur » si besoin), `mobile-api/lib/document-render.ts` + `documentRender.ts` (règles CSS partagées seulement).
@@ -1915,7 +1915,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
     - À 375 px, la garde à deux colonnes (en-tête bilingue, encadreurs) doit se réduire sans déborder (texte qui passe à la ligne, pas de largeur fixe en px).
   - **Dépendances :** 24.1, 24.2. Aucune décision utilisateur.
 
-- [ ] **Tâche 24.5 : PDF**
+- [X] **Tâche 24.5 : PDF** (tests document-pdf 5/5 dont le cas « type référence » : bandeau sur toutes les pages sauf la garde, « Rédigé et présenté par : Awa Test » en pied, numéro encadré écrit en dernier, Figure 1 / Figure 2, SECTION 1 : / I. ; tsc 0 ; captures `.agent/screenshots/m24/pdf-pages.png`, `pdf-dedicace.png`. Sommaire : entrées de chapitre marquées `chapter` (classe `toc-chapter`). Logo du département transmis par la route d'export PDF. Correction : la dédicace est poussée par `margin-top` (et non `padding-top`) pour rester en bas de page avec le cadre)
   - **Pourquoi :** le PDF est le document que l'étudiant dépose : il doit porter le bandeau d'en-tête, le pied auteur avec numéro encadré, la garde par blocs, les légendes numérotées sur tout le document et un sommaire lisible (chapitres en gras, sections en retrait, vrais numéros).
   - **État actuel :**
     - `mobile-api/lib/pdf-pagination.ts` (145 l.) : `PageStamp` (l.31-37), `StampOptions` (l.39-44), `safeText` (l.52-68, remplace tout caractère hors WinAnsi par `?`), `fit` (l.70-75), **`stampPdf`** (l.88-145) : une seule police régulière Times ou Helvetica (l.90), texte gris 9 pt, en-tête à `height - m/2 - 2` (l.112), filet d'en-tête (l.127-129), pied en trois tiers (l.131-141). Ordre d'écriture : en-tête gauche, droite, pied gauche, centre, droite.
@@ -1943,7 +1943,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
     - Si le numéro encadré est dessiné avant le pied auteur, les tests `lastToken` échouent.
   - **Dépendances :** 24.1, 24.2. Aucune décision utilisateur.
 
-- [ ] **Tâche 24.6 : Word**
+- [!] **Tâche 24.6 : Word** (🔒 reste l'ouverture par l'utilisateur dans Word : fichier `.agent/screenshots/m24/exemple-reference.docx`. Fait : garde réécrite à partir des blocs (le Word suit désormais aussi les gardes `modern` et `minimal`), bandeau ombré en en-tête (préliminaires et corps), pied « libellé + nom » aussi en préliminaires, numéro encadré (`w:bdr`), filet au-dessus du pied, puces ❖ (`campus360-bullets`, Segoe UI Symbol), légendes selon le style, dédicace encadrée, logo du département dans la route d'export ; tests document-docx 6/6 et html-to-docx OK, tsc 0)
   - **Pourquoi :** beaucoup d'encadreurs demandent le fichier Word. Il doit reprendre le même modèle : en-tête ombré, pied auteur avec champ de page encadré, garde par blocs (colonnes, trois logos, bandeaux), légendes et puces du modèle.
   - **État actuel :** `mobile-api/lib/document-docx.ts` (369 l.) : `logoRun` (l.51-57), `centered` (l.59-64), `NO_BORDERS` / `twoColumns` (l.66-86), `coverBlocks` (l.91-148, deux logos seulement), `slotLine` (l.151-183, sans ombrage ; `ShadingType` n'est pas importé dans ce fichier), `pageChildren` (l.185-189), `buildDocumentDocx` (l.207-369 : sections garde / préliminaires en romain / corps ; styles `LegendeFigure`, `LegendeTableau` l.343-356 ; dédicace l.258-262). `mobile-api/lib/html-to-docx.ts` : `docxNumberingConfig` (l.35-49, une seule liste numérotée), puces `{ bullet: { level } }` (l.290), légendes (l.327-335, l.378, l.383). Route d'export : `app/api/mobile/documents/[id]/export/docx/route.ts` (logos `school`, `company` l.66-68).
   - **Fichiers :** modifiés : `mobile-api/lib/document-docx.ts`, `mobile-api/lib/html-to-docx.ts`, `app/api/mobile/documents/[id]/export/docx/route.ts` (logo de département), `mobile-api/tests/document-docx.test.mjs`.
@@ -1969,7 +1969,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
   - **Dépendances :** 24.1, 24.2. Aucune décision utilisateur.
 
 ### 3. Recopier un design (import)
-- [ ] **Tâche 24.7 : Import Word (.docx) → modèle**
+- [X] **Tâche 24.7 : Import Word (.docx) → modèle** (`jszip` ^3.10.2 en dépendance directe ; `lib/ooxml.ts` (sans import, DTD refusée), `lib/template-import-docx.ts` ; tests `template-import-docx.test.mjs` 4/4 : aller-retour du style classique (typographie, numérotation, marges, format du numéro), aller-retour « type référence » (bandeau, libellé auteur, pied, cadre, filet, puces ❖, garde : en-tête bilingue → logos ×3 → titre « THÈME : » → auteur → encadreurs → année), aucun texte propre au rapport recopié, refus d'un PDF et d'un fichier de 21 Mo ; tsc 0. Écart : pas de fixture `.docx` commitée, le document de test est produit par notre export dans le test)
   - **Pourquoi :** la plupart des établissements diffusent leur gabarit en Word. Lire ce fichier permet de recopier presque exactement sa mise en page (polices, titres, marges, en-tête, pied, garde) au lieu de la reconstruire à la main.
   - **État actuel :**
     - Dépendances de `mobile-api/package.json` : `docx`, `mammoth`, `pdf-lib`, `pdfjs-dist`, `puppeteer`, `zod`. **`jszip` n'est pas une dépendance directe** : elle n'est présente que comme dépendance de `docx` (lockfile) et `mobile-api/tests/document-docx.test.mjs` l'importe déjà.
@@ -2002,7 +2002,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
     - Ne jamais recopier un texte libre du document dans le modèle sauf s'il figure dans la liste fermée de libellés génériques.
   - **Dépendances :** 24.1, 24.2, 24.6 (pour l'aller-retour). Aucune décision utilisateur (choix de `jszip` acté ici).
 
-- [ ] **Tâche 24.8 : Import PDF → modèle (approché)**
+- [X] **Tâche 24.8 : Import PDF → modèle (approché)** (`lib/pdf-layout.ts` (mesures pures), `lib/template-import-pdf.ts` (texte, chemins remplis et tracés, images, matrice courante, confiance par réglage) ; tests `template-import-pdf.test.mjs` 3/3 : mesures synthétiques, PDF de notre export « type référence » → corps 12 pt (confiance ≥ 0,8), Times, bandeau #0F3D56 texte blanc, libellé auteur, numéro à droite encadré, i/ii puis 1/2, légendes sur le document, SECTION/I., plan, garde sans texte propre ; refus d'un non-PDF et d'un PDF de 61 pages ; tsc 0. Non fait : test du PDF protégé (pdf-lib ne chiffre pas) ; images des logos non extraites du PDF (signalé dans `missing`) ; IA de vision non branchée → tâche 24.13)
   - **Pourquoi :** souvent l'établissement ou l'étudiant n'a que le PDF d'un ancien rapport (c'est le cas du premier modèle). Analyser ses pages donne un brouillon proche que l'admin corrige, au lieu de tout régler à la main.
   - **État actuel :**
     - `mobile-api/lib/source-extraction.ts` l.37-76 : `await import('pdfjs-dist/legacy/build/pdf.mjs')`, `getDocument({ data, isEvalSupported: false, disableFontFace: true, useSystemFonts: false, verbosity: 0 })`, `MAX_PDF_PAGES = 200`, gestion de `PasswordException`. Aucun code ne lit aujourd'hui `fontName`, `transform`, `height` des éléments de texte, ni les opérateurs graphiques (`getOperatorList`) ni les images.
@@ -2024,8 +2024,13 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
     - L'image de la page 1 du rapport de référence contient des données personnelles : aucun envoi à un service externe sans accord écrit, aucun enregistrement dans les journaux.
   - **Dépendances :** 24.1, 24.2, 24.5 (PDF de test). **À demander à l'utilisateur avant d'écrire l'étape 3 :** accepte-t-il qu'une image de la page de garde soit envoyée à un modèle d'IA via OpenRouter (et lequel, `OPENROUTER_VISION_MODEL`) ? Sinon, l'import se fait sans vision.
 
+- [ ] **Tâche 24.13 : IA de vision pour la garde importée d'un PDF (décision 20)**
+  - **Pourquoi :** `importPdfTemplate` reconstitue la garde sans vision ; la décision 20 autorise l'envoi de l'image de la page de garde seule à un modèle via OpenRouter pour mieux reconnaître la disposition.
+  - **À faire :** rendre la page 1 en PNG (Puppeteer + pdf.js, réseau coupé) ; étendre `LlmMessage.content` aux parties image ; schéma Zod strict de la réponse ; n'utiliser la réponse que pour les blocs à faible confiance ; `OPENROUTER_VISION_MODEL` dans `.env.example` ; test avec un `fetch` simulé (aucun appel réel).
+  - **Dépendances :** 24.8. Le choix du modèle et le premier appel réel (payant) demandent l'accord de l'utilisateur.
+
 ### 4. Admin : atelier des modèles
-- [ ] **Tâche 24.9 : API admin des modèles**
+- [X] **Tâche 24.9 : API admin des modèles** (6 routes `mobile-api/app/api/admin/templates/**` passant toutes par `withAdmin` (`lib/admin-template-routes.ts`) : secret de service à temps constant (`lib/admin-service-check.ts`, 32 caractères minimum) puis rôle admin/super_admin lu en base (`lib/admin-service.ts`) ; aperçu `lib/template-preview.ts` ; vignette JPEG 360 px à la publication (`renderHtmlToJpeg` ajouté à `pdf-render.ts`) ; relais `recruiter-web/lib/mobile-api-proxy.ts` + `app/api/admin/templates/route.ts` et `[...path]/route.ts` (segments filtrés, cookies non transmis, corps en flux) ; `ADMIN_SERVICE_SECRET` dans `mobile-api/.env.example` (recruiter-web n'a pas de `.env.example` : variables `ADMIN_SERVICE_SECRET` et `MOBILE_API_INTERNAL_URL` à poser à la main). Preuves : `admin-templates.test.mjs` 5/5 (dont HTTP réel), tsc mobile-api et recruiter-web 0, `curl` : `:3002/api/admin/templates` sans en-têtes ou mauvais secret → 401, `:3001/api/admin/templates` et `.../abc/status` sans session → 401. Appel admin → 200 : à voir en 24.10 (session admin de l'utilisateur et migration 0013 requises))
   - **Pourquoi :** l'admin doit pouvoir créer, importer, retoucher, publier et archiver des modèles, sans qu'un étudiant ou un inconnu puisse le faire.
   - **État actuel :**
     - `recruiter-web/lib/access.ts` : `isAdmin` (l.83, rôle `admin`/`super_admin` ou e-mail dans `ADMIN_BOOTSTRAP_EMAIL`/`ADMIN_ALLOWED_EMAILS`), `requireAdminPage` (l.90), `requireAdminApi` (l.98, 401 sans session, 403 sans rôle). Exemple de route admin : `recruiter-web/app/api/admin/stages/route.ts` (`const { response, user } = await requireAdminApi(); if (response) return response;`).
@@ -2058,7 +2063,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
     - `mobile-api/middleware.ts` ajoute des en-têtes CORS : les routes admin ne sont appelées que de serveur à serveur, sans `Origin`.
   - **Dépendances :** 24.3, 24.7 (24.8 pour l'import PDF). Variables à poser par l'utilisateur sur le VPS (Actions utilisateur du Module 23, point 2). Aucune décision utilisateur.
 
-- [ ] **Tâche 24.10 : Écran « Modèles de rapport » dans l'admin**
+- [!] **Tâche 24.10 : Écran « Modèles de rapport » dans l'admin** (🔒 reste le parcours navigateur : session admin ouverte par l'utilisateur (migration 0013 faite). Fait : `app/admin/templates/` (`page.tsx`, `[id]/page.tsx` protégées par `requireAdminPage`, `TemplatesClient.tsx` liste/filtre/import/nouveau, `TemplateEditor.tsx` réglages + aperçu `iframe sandbox=""` rafraîchi à 400 ms, publier/brouillon/archiver avec confirmation, logos, plan ; `CoverBlocksEditor.tsx` avec alerte « nom propre » ; `ExtractionReport.tsx` ; `types.ts`), entrée de menu « Modèles de rapport » et fil d'Ariane dans `layout.tsx`. Preuves : tsc recruiter-web 0 ; `npm run build` 0 (CSS compilé, classes vérifiées dans `globals.compiled.css`))
   - **Pourquoi :** l'admin a besoin d'un atelier visuel pour importer un rapport, voir ce qui a été compris, corriger le style et la garde avec un aperçu en direct, puis publier.
   - **État actuel :**
     - Le shell réellement affiché est `recruiter-web/app/admin/layout.tsx` (`'use client'`) : `NAV_GROUPS` (l.11-41, icônes Material Symbols en texte, ex. `'menu_book'`) et `breadcrumbMap` (l.36 et suivantes, tableau ordonné `[RegExp, section, sous-titre]`). `recruiter-web/app/admin/AdminShell.tsx` n'est importé nulle part : **ne pas l'éditer**.
@@ -2082,7 +2087,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
   - **Dépendances :** 24.9. Aucune décision utilisateur ; l'utilisateur ouvre lui-même la session admin pour la vérification.
 
 ### 5. Étudiant : galerie
-- [ ] **Tâche 24.11 : Galerie et application d'un modèle**
+- [!] **Tâche 24.11 : Galerie et application d'un modèle** (🔒 reste le parcours expo-web à 375 px : un modèle publié de test et une session étudiante (migration 0013 faite). Fait : `lib/template-apply.ts` (`sameSection` : égalité ou préfixe sur une frontière de mot, « Introduction » ≈ « Introduction générale », « Chapitre 1 » ≠ « Chapitre 10 » ; `mergeOutline` ; `styleFromTemplate` ; `sectionsForNewDocument`), `lib/template-apply-service.ts` (transaction : ajout des sections manquantes vides, renumérotation, style, `template_id` ; jamais de `content_html` ni de `delete`), `getPublishedTemplate`, routes `GET /api/mobile/templates`, `GET /api/mobile/templates/[id]`, `POST /api/mobile/documents/[id]/apply-template`, `templateId` à la création (`documents/route.ts`, `createDocument`) ; app : `templatesApi.ts`, `TemplateGallery.tsx`, choix du modèle dans `DocumentsScreen.tsx`, « Changer de modèle d'établissement » dans `DocumentStylePanel.tsx` (rechargement via `loadReport`). **Écart voulu (décision 21) :** les logos d'un modèle ne sont jamais copiés chez l'étudiant ni montrés dans la galerie (vignette générée avec des emplacements vides) ; `copyTemplateLogos` n'est donc pas écrit. Preuves : `template-apply.test.mjs` 5/5, tsc app et mobile-api 0, lint:colors 189)
   - **Pourquoi :** l'étudiant doit pouvoir partir directement du modèle de son établissement à la création de son rapport ou mémoire, ou l'appliquer plus tard, sans perdre une ligne de ce qu'il a déjà écrit, puis tout modifier librement.
   - **État actuel :**
     - `mobile-api/app/api/mobile/documents/route.ts` : `createDocumentSchema` (l.25-31 : `title`, `description`, `templateType`/`type`, `field`, pas de `templateId`) ; `POST` (l.48-69) → `createDocument(userId, title, description, templateType, field)` (`lib/documents-db.ts` l.192-239, transaction, sections depuis `outlineFor` ou `TEMPLATE_SECTIONS`).
@@ -2109,7 +2114,7 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
   - **Dépendances :** 24.3, 24.9 (pour avoir des modèles publiés), 24.2. Aucune décision utilisateur.
 
 ### 6. Premier modèle et validation
-- [ ] **Tâche 24.12 : Modèle « IUT de Douala — Rapport de stage » et comparaison**
+- [!] **Tâche 24.12 : Modèle « IUT de Douala — Rapport de stage » et comparaison** (🔒 demande la session admin de l'utilisateur et sa présence pour relire l'import et les écarts ; non commencée)
   - **Pourquoi :** c'est le premier modèle demandé par l'utilisateur et la preuve que la chaîne complète (import, retouche, publication, rendu PDF et Word) recopie fidèlement une vraie mise en page.
   - **État actuel :** le rapport de référence est dans la table `documents` (catalogue), id `pdf_55f6da9bd04448a198`, `file_path` = URL Cloudinary (aucune trace dans le dépôt). `mobile-api/app/api/mobile/pdf/stream/route.ts` montre comment le récupérer : URL Cloudinary avec `Authorization: Basic base64(CLOUDINARY_API_KEY:CLOUDINARY_API_SECRET)`, `redirect: 'error'`, et nouvel essai en remplaçant `/image/upload/` par `/raw/upload/` si besoin (l.88-106) ; `mobile-api/lib/cloudinary.ts` (`getCloudinaryConfig` l.15, `isCloudinaryHost`). Aucun code de capture d'écran de PDF n'existe.
   - **Fichiers :** créés : `mobile-api/scripts/fetch-reference-pdf.mjs` (téléchargement vers le scratchpad), `mobile-api/scripts/pdf-page-captures.mjs` (captures PNG de pages d'un PDF), `.agent/screenshots/m24-compare-*.png` (rendus fictifs uniquement) ; le modèle lui-même vit en base (pas de fichier).

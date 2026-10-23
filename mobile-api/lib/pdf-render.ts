@@ -32,7 +32,7 @@ const firstExisting = (candidates: string[]) => candidates.find((p) => {
 
 const LAUNCH_ARGS = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--font-render-hinting=none'];
 
-const renderWithPuppeteer = async (html: string): Promise<Buffer> => {
+const launchBrowser = async () => {
   const { default: puppeteer } = await import('puppeteer');
   let executablePath: string | undefined;
   try {
@@ -41,17 +41,28 @@ const renderWithPuppeteer = async (html: string): Promise<Buffer> => {
   } catch {
     executablePath = firstExisting(SYSTEM_BROWSERS);
   }
-  const browser = await puppeteer.launch({ headless: true, executablePath, args: LAUNCH_ARGS, timeout: RENDER_TIMEOUT_MS });
+  return puppeteer.launch({ headless: true, executablePath, args: LAUNCH_ARGS, timeout: RENDER_TIMEOUT_MS });
+};
+
+type Browser = Awaited<ReturnType<typeof launchBrowser>>;
+
+// A page with the HTML loaded and every network request blocked (the page is self-contained).
+const offlinePage = async (browser: Browser, html: string) => {
+  const page = await browser.newPage();
+  await page.setRequestInterception(true);
+  page.on('request', (request) => {
+    const url = request.url();
+    if (url.startsWith('data:') || url === 'about:blank') request.continue();
+    else request.abort();
+  });
+  await page.setContent(html, { waitUntil: 'load', timeout: RENDER_TIMEOUT_MS });
+  return page;
+};
+
+const renderWithPuppeteer = async (html: string): Promise<Buffer> => {
+  const browser = await launchBrowser();
   try {
-    const page = await browser.newPage();
-    // The page is fully self-contained: block any network request it might attempt.
-    await page.setRequestInterception(true);
-    page.on('request', (request) => {
-      const url = request.url();
-      if (url.startsWith('data:') || url === 'about:blank') request.continue();
-      else request.abort();
-    });
-    await page.setContent(html, { waitUntil: 'load', timeout: RENDER_TIMEOUT_MS });
+    const page = await offlinePage(browser, html);
     await page.emulateMediaType('print');
     const pdf = await page.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true, timeout: RENDER_TIMEOUT_MS });
     return Buffer.from(pdf);
@@ -86,6 +97,19 @@ const renderWithCli = async (html: string): Promise<Buffer> => {
     return fs.readFileSync(pdfPath);
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
+  }
+};
+
+// JPEG of the top of a page (template previews, Module 24). Puppeteer only.
+export const renderHtmlToJpeg = async (html: string, width: number, height: number, quality = 70): Promise<Buffer> => {
+  const browser = await launchBrowser();
+  try {
+    const page = await offlinePage(browser, html);
+    await page.setViewport({ width, height, deviceScaleFactor: 1 });
+    const image = await page.screenshot({ type: 'jpeg', quality, clip: { x: 0, y: 0, width, height } });
+    return Buffer.from(image);
+  } finally {
+    await browser.close().catch(() => undefined);
   }
 };
 

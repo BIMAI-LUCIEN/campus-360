@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const style = resolveStyle(document.document_style);
     const storedSections = await getDocumentSections(id);
-    const logoIds = [style.cover.schoolLogoFileId, style.cover.companyLogoFileId].filter((v): v is string => Boolean(v));
+    const logoIds = [style.cover.schoolLogoFileId, style.cover.companyLogoFileId, style.cover.departmentLogoFileId].filter((v): v is string => Boolean(v));
     const loaded = await loadDocumentImages(
       [...storedSections.map((s) => s.content_html || ''), ...logoIds.map((logoId) => `<img data-file-id="${logoId}">`)].join('\n'),
       access.user.id,
@@ -65,7 +65,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       })),
       style,
       images,
-      logos: { school: logo(style.cover.schoolLogoFileId), company: logo(style.cover.companyLogoFileId) },
+      logos: {
+        school: logo(style.cover.schoolLogoFileId),
+        company: logo(style.cover.companyLogoFileId),
+        department: logo(style.cover.departmentLogoFileId),
+      },
     });
 
     return withCors(

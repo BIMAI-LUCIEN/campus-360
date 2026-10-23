@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
 import { DEFAULT_FIELD, fieldFromProfile, STUDY_FIELDS } from '@/lib/document-outlines';
 import { listUserDocuments, createDocument } from '@/lib/documents-db';
+import { getPublishedTemplate } from '@/lib/templates-db';
 
 export const runtime = 'nodejs';
 
@@ -30,6 +31,8 @@ const createDocumentSchema = z.object({
   type: z.enum(['stage', 'memoire', 'cv', 'lettre_motivation', 'blank']).optional(),
   // Field of study (reports and theses). Absent: guessed from the profile.
   field: z.enum(STUDY_FIELDS).optional(),
+  // Module 24: start from a published report template.
+  templateId: z.string().uuid().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -63,7 +66,19 @@ export async function POST(request: NextRequest) {
     const field = academic
       ? parsed.data.field ?? fieldFromProfile(access.user.faculty, access.user.level) ?? DEFAULT_FIELD
       : null;
-    const document = await createDocument(userId, title, description || '', templateType, field);
+    let template = null;
+    if (parsed.data.templateId) {
+      if (!academic) {
+        return withCors(NextResponse.json({ error: 'Un modèle s’applique à un rapport ou à un mémoire.' }, { status: 400 }), request);
+      }
+      const found = await getPublishedTemplate(parsed.data.templateId);
+      const fits = found && (found.kind === 'both' || found.kind === (templateType === 'memoire' ? 'memoire' : 'stage'));
+      if (!found || !fits) {
+        return withCors(NextResponse.json({ error: 'Modèle indisponible.' }, { status: 404 }), request);
+      }
+      template = { id: found.id, outline: found.outline, style: found.document_style };
+    }
+    const document = await createDocument(userId, title, description || '', templateType, field, template);
 
     return withCors(NextResponse.json({ document, id: document.id }), request);
   } catch (error) {

@@ -70,7 +70,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const storedSections = await getDocumentSections(id);
 
     // Uploaded images (and cover logos) are embedded as data URIs.
-    const logoIds = [style.cover.schoolLogoFileId, style.cover.companyLogoFileId].filter((v): v is string => Boolean(v));
+    const logoIds = [style.cover.schoolLogoFileId, style.cover.companyLogoFileId, style.cover.departmentLogoFileId].filter((v): v is string => Boolean(v));
     const images = await loadDocumentImages(
       [...storedSections.map((s) => s.content_html || ''), ...logoIds.map((logoId) => `<img data-file-id="${logoId}">`)].join('\n'),
       user.id,
@@ -102,7 +102,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
         document: { title: document.title, template_type: document.template_type, cover_data: document.cover_data || {} },
         sections,
         style,
-        logos: { school: logo(style.cover.schoolLogoFileId), company: logo(style.cover.companyLogoFileId) },
+        logos: {
+          school: logo(style.cover.schoolLogoFileId),
+          company: logo(style.cover.companyLogoFileId),
+          department: logo(style.cover.departmentLogoFileId),
+        },
         watermark,
       });
     }

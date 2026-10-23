@@ -10,6 +10,8 @@ import { authBaseUrl, authFetch, authClient, type StudentProfile } from '../auth
 import { stitchColors, stitchShadows, stitchRadius, fontFamilies } from '../../theme/stitch';
 import { GradientText } from '../../ui/GlassComponents';
 import { DocGenChat } from './DocGenChat';
+import { TemplateGallery } from './TemplateGallery';
+import type { TemplateCard } from './templatesApi';
 import { OfficialCvView } from '../stages/OfficialCvView';
 import { exportOfficialCvPdf } from '../stages/pdfExportService';
 import { missingCvFields } from '../stages/cvHtml';
@@ -133,6 +135,9 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [studyField, setStudyField] = useState<StudyField | null>(null);
+  // Module 24: report template of the student's school (optional).
+  const [pickedTemplate, setPickedTemplate] = useState<TemplateCard | null>(null);
+  const [galleryVisible, setGalleryVisible] = useState(false);
   const [creating, setCreating] = useState(false);
   const [iaCredits, setIaCredits] = useState<number | null>(null);
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
@@ -237,6 +242,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
     setLettreMotivation('');
     setSelectedType(null);
     setStudyField(null);
+    setPickedTemplate(null);
     setCreateStep(null);
   };
 
@@ -269,6 +275,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
           description: newDesc.trim(),
           templateType: selectedType,
           field: isAcademicType ? effectiveField : undefined,
+          templateId: isAcademicType && pickedTemplate ? pickedTemplate.id : undefined,
         }),
       });
       if (!createRes.ok) {
@@ -341,6 +348,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
           description: newDesc.trim(),
           templateType: selectedType,
           field: isAcademicType ? effectiveField : undefined,
+          templateId: isAcademicType && pickedTemplate ? pickedTemplate.id : undefined,
         }),
       });
 
@@ -665,6 +673,29 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
 
                 {isAcademicType && (
                   <>
+                    <Text style={styles.fieldLabel}>MODÈLE DE TON ÉTABLISSEMENT</Text>
+                    <Pressable style={styles.templatePick} onPress={() => setGalleryVisible(true)} accessibilityRole="button">
+                      <Text style={styles.templatePickText} numberOfLines={1}>
+                        {pickedTemplate ? pickedTemplate.name : 'Sans modèle (styles prêts)'}
+                      </Text>
+                      <Text style={styles.templatePickAction}>Choisir</Text>
+                    </Pressable>
+                    <Text style={styles.fieldHelp}>
+                      {pickedTemplate
+                        ? 'La mise en page, la page de garde et le plan suivent ce modèle. Tu pourras tout modifier.'
+                        : 'Un modèle reprend la mise en page exigée par ton établissement.'}
+                    </Text>
+                    <TemplateGallery
+                      visible={galleryVisible}
+                      onClose={() => setGalleryVisible(false)}
+                      establishment={studentProfile?.university}
+                      kind={selectedType === 'memoire' ? 'memoire' : 'stage'}
+                      onPick={(template) => {
+                        setPickedTemplate(template);
+                        setGalleryVisible(false);
+                      }}
+                    />
+
                     <Text style={styles.fieldLabel}>TA FILIÈRE</Text>
                     <View style={styles.fieldChips}>
                       {STUDY_FIELDS.map((key) => {
@@ -1276,6 +1307,9 @@ const styles = StyleSheet.create({
   fieldChipText: { fontSize: 13, color: stitchColors.inkSoft, fontWeight: '600' },
   fieldChipTextActive: { color: stitchColors.siennaDeep },
   fieldHelp: { fontSize: 12, color: stitchColors.inkMuted, lineHeight: 17, marginBottom: 12 },
+  templatePick: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderWidth: 1, borderColor: stitchColors.glassBorder, borderRadius: stitchRadius.DEFAULT, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: stitchColors.surface, marginBottom: 6 },
+  templatePickText: { flex: 1, fontSize: 14, color: stitchColors.ink },
+  templatePickAction: { fontSize: 13, fontWeight: '700', color: stitchColors.primary },
   tagChip: {
     paddingHorizontal: 10,
     paddingVertical: 6,
