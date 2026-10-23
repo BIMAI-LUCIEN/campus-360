@@ -952,7 +952,7 @@ export function AppShell() {
       const res = await topUpStudentWallet(amount, provider, rechargePhone.trim());
       const reference = res.reference;
       let attempts = 0;
-      const maxAttempts = 20;
+      const maxAttempts = 40;
       setPollingMessage('Demande envoyée. Veuillez valider le message de confirmation sur votre téléphone...');
       const pollInterval = setInterval(async () => {
         try {

@@ -159,6 +159,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
       let providerAmount: number | null = null;
 
       if (nyoleSecretKey) {
+        // Nyole's /v1/checkout/sessions/{id}/status endpoint is strictly for post-redirect
+        // or late webhook catch-up. Calling it while the USSD push is still waiting for the
+        // user's PIN causes Nyole to immediately abort the live USSD session as FAILED.
+        // During the first 3 minutes, rely on Nyole's real-time webhook updating the DB status.
+        const elapsedMs = Date.now() - new Date(transaction.created_at).getTime();
+        if (elapsedMs < 180_000) {
+          return withCors(NextResponse.json({ status: 'pending' }), request);
+        }
+
         const baseUrl = getNyoleBaseUrl();
         const statusRes = await fetch(
           `${baseUrl}/v1/checkout/sessions/${encodeURIComponent(reference)}/status`,

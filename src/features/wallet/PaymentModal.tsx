@@ -110,7 +110,7 @@ export function PaymentModal({
             stopPolling();
             setWaitingUssd(false);
             setNoticeMessage('Le paiement a été refusé ou annulé.');
-          } else if (attempts >= 20) {
+          } else if (attempts >= 40) {
             stopPolling();
             setWaitingUssd(false);
             setNoticeMessage("Paiement en attente. Ton solde sera mis à jour dès que l'opérateur confirme.");
