@@ -66,9 +66,12 @@ jobs:
       - name: Publish OTA update
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # Passed through env, never interpolated into the script: a commit message
+          # containing `${x}`, quotes or `$(...)` must not be run by the shell.
+          OTA_MESSAGE: ${{ github.event.inputs.message || github.event.head_commit.message || 'OTA update' }}
         run: |
           set -euxo pipefail
-          MESSAGE="${{ github.event.inputs.message || github.event.head_commit.message || 'OTA update' }}"
+          MESSAGE="$OTA_MESSAGE"
           # Keep the message single-line and bounded.
           MESSAGE=$(printf '%s' "$MESSAGE" | head -n 1 | cut -c1-140)
           npx --yes eas-cli@latest update \
