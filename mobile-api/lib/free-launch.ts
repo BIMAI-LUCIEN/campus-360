@@ -2,7 +2,7 @@
 // Everything is driven by environment variables and must be explicit in production:
 //   FREE_LAUNCH_MODE   'true' | 'false'  (required in production)
 //   FREE_LAUNCH_UNTIL  ISO date           (required in production when the mode is 'true')
-//   STARTING_COINS     coins given once at account creation (default 3000, 1 coin = 1 FCFA)
+//   STARTING_COINS     coins given once at account creation (default 5000, 1 coin = 1 FCFA)
 //   AI_COST_*          AI credits per action once the free launch is over
 // Errors are thrown on first use, never at import time (next build has no env).
 // This file exists twice, identical: mobile-api/lib/free-launch.ts and
@@ -53,7 +53,7 @@ const boundedInt = (raw: string | undefined, fallback: number, max: number, mess
 };
 
 export const resolveStartingCoins = (env: Env): number =>
-  boundedInt(env.STARTING_COINS, 3000, 100000, 'STARTING_COINS doit être un entier entre 0 et 100000.');
+  boundedInt(env.STARTING_COINS, 5000, 100000, 'STARTING_COINS doit être un entier entre 0 et 100000.');
 
 export type AiCostKind = 'passage' | 'careerDoc' | 'fullDoc';
 

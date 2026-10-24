@@ -1,5 +1,5 @@
 // ── Grille Tarifaire Officielle Campus 360 (Pay-Per-Action en FCFA) ─────
-export const PRICE_STAGE_APPLY = 500; // Candidature 1-clic RH (1ère offerte)
+export const PRICE_STAGE_APPLY = 500; // Candidature à une offre non rémunérée (1 000 si rémunérée, voir features/stages/stagePricing.ts)
 export const PRICE_REPORT = 2000;      // Rédaction Rapport de stage IA (25-45 pages)
 export const PRICE_THESIS = 5000;      // Rédaction Mémoire de fin d'études IA (50-100 pages)
 export const PRICE_PDF = 250;          // Document / épreuve (annales gratuites)
@@ -61,6 +61,8 @@ export type StageJob = {
   duration?: string; // ex: '3 mois', '6 mois'
   contractType?: string; // ex: 'Stage PFE', 'Premier Emploi', 'Alternance'
   stipend?: string; // ex: 'Rémunéré (50 000 FCFA/mois)', 'Non rémunéré'
+  isPaid?: boolean; // offre rémunérée (envoyé par le serveur)
+  applyPriceCoins?: number; // prix de la candidature en coins (1 coin = 1 FCFA)
   company?: StageCompany;
   matchScore?: number; // Calculé dynamiquement (ex: 85)
   matchHeadline?: string; // ex: 'Match Exceptionnel (95%)'

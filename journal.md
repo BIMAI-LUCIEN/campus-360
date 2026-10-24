@@ -4,6 +4,28 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 
 ---
 
+**2026-10-24 · hors plan · (direct) · non commité · Paiement à l'acte des candidatures, 5 000 coins de lancement, descriptions intégrales**
+
+- **Décisions utilisateur :** candidature 1 000 coins si l'offre est rémunérée (ou emploi), 500 sinon ou si la rémunération n'est pas précisée ; tout payant, sans 1ère offerte (`FREE_LAUNCH_MODE=false` à poser sur le VPS) ; 5 000 coins pour les nouveaux comptes et complément unique à 5 000 pour les anciens ; fiche LinkedIn complète via Treg (`harvestapi.linkedin.job.get`, ~0,001 $).
+- **Serveur :** `lib/stage-pricing.ts` (règles pures, copie identique `src/features/stages/stagePricing.ts`), `lib/stage-charge.ts` (débit une fois par offre et par utilisateur, wallet verrouillé, 409 si solde insuffisant, remboursement si l'envoi échoue) branché dans `stages/apply` et `stages/dispatch` ; chaque offre renvoie `isPaid` et `applyPriceCoins` ; `STARTING_COINS` par défaut 5000 (les deux `free-launch.ts`) ; ingest n8n : plus de description, durée, rémunération ni compétences inventées, description jusqu'à 20 000 caractères.
+- **Migrations :** `0017_launch_bonus_5000.sql` (type `bonus`, complément tracé `launch-bonus-5000`), `0018_stage_jobs_full_description.sql` (limite 2 000 → 20 000). **Non appliquées.**
+- **App :** prix de candidature sur la carte d'offre, la fiche détaillée et la fenêtre de candidature (`applyPrice.ts`).
+- **Scraping :** `job_store.py` enregistre le texte source et non plus le résumé IA ; plus de coupe à 1 200 caractères dans les collecteurs ; `TregLinkedInAgent.fetch_details` (plafond `TREG_MAX_DETAIL_CALLS_PER_RUN`, 20) ; la rémunération LinkedIn alimente le prix.
+- **Preuves :** `npm test` (mobile-api) 260 tests, 0 échec ; `python -m unittest` (agents) 63 OK ; `tsc` mobile-api 0.
+- **Points ouverts :** migrations 0017/0018 et `FREE_LAUNCH_MODE=false` sur le VPS ; non vérifié dans le navigateur ; offres déjà en base gardent leur résumé (relancer `reprocess_existing.py` ne récupère pas le texte d'origine).
+
+---
+
+**2026-10-24 · 26.6 · vps-deploy · 525c3f1 → 014b254 → 85cb5db · Livraison paiement Nyole + numéros MTN/Orange (VPS + OTA)**
+
+- **Push :** `525c3f1` (26.6), `014b254` (correctif workflow OTA), `85cb5db` (correctif script de déploiement) sur `origin/main`.
+- **OTA :** échec sur `525c3f1` (`eas-update.yml` collait le message de commit dans le script bash : `${t}` → `unbound variable`, et injection possible) ; corrigé en passant le message par variable d'environnement ; OTA publiée sur `014b254` (branche `production`, Android + iOS, runtime 1.2.0, groupe `ceadcbaf-b326-4222-a2d8-edf5c113bb93`).
+- **VPS :** deux runs `deploy-vps.yml` annulés et revenus à `3fa6572` : `scripts/deploy-vps.sh` lisait `puppeteer.executablePath()` (Promise en puppeteer 25) → « Chromium introuvable ». Corrigé (`85cb5db`), mais le workflow exécute le script déjà présent sur le VPS : déploiement fait à la main (`git reset --hard origin/main`, `npm ci`, `migrate` sans nouvelle migration, `npm run build`, `pm2 restart campus360-mobile-api`, `pm2 save`). Les prochains runs utiliseront le script corrigé.
+- **Preuves :** VPS sur `85cb5db`, PM2 `online` ; `api/health` 200 `db: connected`, admin 200, landing 200 ; `POST /api/mobile/payments/initiate` et `/payments/webhook` 401 sans session ni signature ; message « ni MTN ni Orange » présent dans le build.
+- **Points ouverts :** export PDF cassé en production (antérieur) : Chrome 149/150 ne démarre pas, 12 bibliothèques système manquantes (`libatk-1.0.so.0`, `libgbm.so.1`, `libcups.so.2`…), installation `apt-get` à valider ; `HEALTH_PDF_SECRET` absent donc pas de contrôle PDF au déploiement ; `vercel-mobile-api.yml` échoue à chaque push depuis au moins 6 commits ; clé Nyole **live** dans `mobile-api/.env.local` (pas de clé de test en local) ; parcours navigateur de 26.6 en attente de la connexion de l'utilisateur.
+
+---
+
 **2026-10-24 · 26.6 · execute · non commité (base 3fa6572) · Validation numéros camerounais MTN/Orange & alignement doc Nyole**
 
 - **Fichiers :** `mobile-api/lib/cameroon-phone.ts` + jumeau `src/features/wallet/cameroonPhone.ts` (nouveaux), `mobile-api/lib/payments.ts`, `mobile-api/lib/payment-rules.ts`, `mobile-api/app/api/mobile/wallet/topup/route.ts`, `mobile-api/app/api/mobile/wallet/topup/[reference]/route.ts`, `src/features/wallet/PaymentModal.tsx`, `src/features/wallet/walletApi.ts`, `src/AppShell.tsx`, `mobile-api/tests/cameroon-phone.test.mjs` (nouveau), `mobile-api/tests/payments.test.mjs`.

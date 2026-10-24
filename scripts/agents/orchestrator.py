@@ -93,6 +93,8 @@ class ScraperOrchestrator:
                 if self.treg_linkedin_agent.live and self.treg_linkedin_agent.is_configured():
                     li_items.extend(self.treg_linkedin_agent.search_jobs(query=query, kind="stage", max_results=limit_per_platform))
                     li_items.extend(self.treg_linkedin_agent.search_jobs(query=query, kind="emploi", max_results=limit_per_platform))
+                    # Full posting, word for word (description, salary): one detail call per offer.
+                    self.treg_linkedin_agent.fetch_details(li_items)
                 elif "LINKEDIN" in platforms and not self.treg_linkedin_agent.is_configured():
                     logger.info("LinkedIn : Treg non configuré, passage aux sources de secours.")
                 if not li_items and self.apify_agent.is_configured():

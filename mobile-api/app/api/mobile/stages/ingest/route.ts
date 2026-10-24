@@ -24,7 +24,7 @@ const ingestSchema = z
     videoUrl: z.string().url().optional().or(z.literal('')),
     contactWhatsapp: z.string().trim().optional(),
     contactEmail: z.string().trim().email('Email invalide').optional().or(z.literal('')),
-    description: z.string().trim().max(2000).optional(),
+    description: z.string().trim().max(20000).optional(),
     source: z.enum(['INTERNAL', 'SCRAPED']).optional().default('SCRAPED'),
     expiresInDays: z.number().int().min(1).max(90).optional().default(30),
   })

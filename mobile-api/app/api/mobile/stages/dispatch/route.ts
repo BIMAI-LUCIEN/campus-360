@@ -15,6 +15,8 @@ import {
 } from '@/lib/mobile-access';
 import { stageErrorStatus } from '@/lib/stages-errors';
 import { missingDispatchTarget } from '@/lib/dispatch-target';
+import { MobileApiError } from '@/lib/mobile-error';
+import { chargeStageApplication, refundStageApplication } from '@/lib/stage-charge';
 import {
   dispatchStageApplicationRecord,
   ensureStageStudent,
@@ -74,6 +76,8 @@ const patchSchema = z.object({
  * 5. Returns JSON response with applicationId, status SENT_PENDING, cvUrl, and message.
  */
 export async function POST(request: NextRequest) {
+  // Set once the wallet is debited: any later failure gives the coins back.
+  let refundIfFailed: (() => Promise<void>) | null = null;
   try {
     const access = await requireMobileUser(request, { readBudgetPerMinute: 30 });
     if (access.response || !access.user) return withCors(access.response!, request);
@@ -139,6 +143,10 @@ export async function POST(request: NextRequest) {
     if (missingTarget) {
       return withCors(NextResponse.json({ error: missingTarget }, { status: 422 }), request);
     }
+
+    // Pay-per-action: debited once per offer, given back below if delivery fails.
+    const payment = await chargeStageApplication(user.id, job);
+    if (payment.charged > 0) refundIfFailed = () => refundStageApplication(user.id, input.jobId);
 
     // Persist CV PDF to Supabase Storage if base64 provided
     let cvPdfUrl = input.cvPdfUrl;
@@ -241,6 +249,11 @@ export async function POST(request: NextRequest) {
       await updateApplicationDispatchStatus(applicationId, 'FAILED').catch((statusErr) => {
         console.warn('[dispatch route] Could not mark application FAILED:', statusErr);
       });
+      const refund = refundIfFailed;
+      refundIfFailed = null;
+      await refund?.().catch((refundErr) => {
+        console.error('[dispatch route] Refund failed:', refundErr);
+      });
       return withCors(
         NextResponse.json(
           { error: "L'envoi de ta candidature a échoué. Réessaie dans quelques minutes.", applicationId, status: 'FAILED' },
@@ -260,17 +273,24 @@ export async function POST(request: NextRequest) {
         success: true,
         applicationId,
         status: 'SENT_PENDING' as const,
+        payment,
         ...(cvPdfUrl ? { cvUrl: cvPdfUrl } : {}),
         message,
       }),
       request,
     );
   } catch (error) {
+    await refundIfFailed?.().catch((refundErr) => {
+      console.error('[dispatch route] Refund failed:', refundErr);
+    });
     if (error instanceof z.ZodError) {
       return withCors(
         NextResponse.json({ error: 'Données de formulaire invalides.' }, { status: 400 }),
         request,
       );
+    }
+    if (error instanceof MobileApiError) {
+      return withCors(NextResponse.json({ error: error.message }, { status: error.status }), request);
     }
     console.error('[dispatch route] Error during application dispatch:', error);
     return withCors(

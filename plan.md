@@ -6,11 +6,12 @@
 
 ---
 ## Reprise
-- **Tâche en cours :** aucune (26.6 validée le 2026-10-24, non commitée)
+- **Tâche en cours :** aucune (26.6 livrée le 2026-10-24 : VPS `85cb5db`, OTA `014b254`)
 - **Prochaine :** poser `ADMIN_SERVICE_SECRET` et `MOBILE_API_INTERNAL_URL` en local, puis parcours de l'atelier admin (24.10, session admin ouverte par l'utilisateur) → publier un modèle de test → parcours galerie (24.11) → 24.12. Module 25 : décision sur 25.18.
 - **Reste :** Module 24 : 24.6, 24.10, 24.11, 24.12 `[!]`, 24.13 `[ ]` ; Module 25 : 25.18, 25.2, 25.10, 25.15, 25.16 `[!]` ; modules 23 et 19 : voir `Progression globale`
 - **Points ouverts :**
-  - **26.6 (paiement Nyole) :** non vérifié dans le navigateur (connexion requise, aucun compte de test fourni) ; à tester avec un compte de test et une clé `af_test_sec_` : numéro Orange saisi en MTN → bascule auto, `+33…` refusé, session test + bouton Sandbox. Préfixes MTN/Orange non confirmés par une source officielle ART (table unique dans `cameroon-phone.ts`). Webhook Nyole : cocher `payment.cancelled` dans « API et journaux ». Diff non commité, pas d'OTA.
+  - **26.6 (paiement Nyole) :** non vérifié dans le navigateur (connexion requise, aucun compte de test fourni) ; à tester avec un compte de test et une clé `af_test_sec_` : numéro Orange saisi en MTN → bascule auto, `+33…` refusé, session test + bouton Sandbox. Préfixes MTN/Orange non confirmés par une source officielle ART (table unique dans `cameroon-phone.ts`). Webhook Nyole : cocher `payment.cancelled` dans « API et journaux ». Livré (VPS `85cb5db`, OTA `014b254`).
+  - **Export PDF en production :** Chrome ne démarre pas sur le VPS (bibliothèques système manquantes, `libatk-1.0.so.0`…) ; installation `apt-get` à valider par l'utilisateur.
   - 🔒 **24.6 : ouvrir `.agent/screenshots/m24/exemple-reference.docx` dans Word** (bandeau, pied encadré, puces ❖, garde) et noter le retour.
   - 🔒 **24.10 et 24.11 : parcours navigateur.** Session admin ouverte par l'utilisateur, un modèle publié de test, une session étudiante (expo-web, 375 px). Migration 0013 faite.
   - 🔒 **24.12 : relire la liste des écarts** (rubans de la garde, puces, sommaire) et décider s'il faut aller plus loin ; supprimer `reference-privee/` quand la comparaison est close.
@@ -22,7 +23,7 @@
   - 🔒 **Module 25 :** 25.18 (choix A/B et feu vert VPS), 25.2, 25.10, 25.15, 25.16 (inchangés).
   - **Migrations :** toutes appliquées (0000, 0004 à 0015) ; 0013 le 2026-10-23.
 - **Commit de référence :** commit « feat(documents): modèle IUT de Douala fidèle au rapport de référence », parent af05514.
-- **Dernière entrée journal :** 2026-10-24 · 26.6 numéros MTN/Orange & doc Nyole · execute
+- **Dernière entrée journal :** 2026-10-24 · Livraison 26.6 (VPS + OTA) · vps-deploy
 ---
 
 ## 🏛️ HISTORIQUE DES MODULES DÉJÀ VALIDÉS (1 à 8)

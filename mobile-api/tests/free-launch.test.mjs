@@ -25,8 +25,8 @@ test('hors production, l’absence de variable garde le gratuit', () => {
   assert.equal(m.resolveFreeLaunch({ NODE_ENV: 'development' }).active, true);
 });
 
-test('solde de départ : 3 000 coins par défaut, borné', () => {
-  assert.equal(m.resolveStartingCoins({}), 3000);
+test('solde de départ : 5 000 coins par défaut, borné', () => {
+  assert.equal(m.resolveStartingCoins({}), 5000);
   assert.equal(m.resolveStartingCoins({ STARTING_COINS: '2500' }), 2500);
   assert.throws(() => m.resolveStartingCoins({ STARTING_COINS: '-1' }));
   assert.throws(() => m.resolveStartingCoins({ STARTING_COINS: 'abc' }));

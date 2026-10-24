@@ -28,6 +28,10 @@ class FakeTreg:
         self.calls.append(kind)
         return [dict(item, kind_hint=kind) for item in self.items]
 
+    def fetch_details(self, items):
+        self.detail_batches = getattr(self, "detail_batches", 0) + 1
+        return items
+
 
 class FakeSource:
     def __init__(self, items=None, configured=False):
@@ -117,6 +121,7 @@ class OrchestratorLinkedInTests(unittest.TestCase):
         self.assertEqual(treg.calls, ["stage", "emploi"])
         self.assertEqual(process.call_count, 2)
         self.assertEqual(rss.calls, 0)
+        self.assertEqual(treg.detail_batches, 1)
         self.assertEqual(treg.resets, 1)
 
     def test_dry_run_never_enables_paid_source(self):

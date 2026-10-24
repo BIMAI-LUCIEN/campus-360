@@ -1,4 +1,6 @@
 import { databasePool } from './database';
+import { isFreeLaunch } from './free-launch';
+import { isPaidOffer, stageApplyPrice } from './stage-pricing';
 
 export type StageStatus =
   | 'PENDING'
@@ -100,6 +102,8 @@ const mapJob = (row: StageJobRow) => ({
   location: row.location ?? undefined,
   duration: row.duration ?? undefined,
   stipend: row.stipend ?? undefined,
+  isPaid: isPaidOffer(row),
+  applyPriceCoins: stageApplyPrice(row, isFreeLaunch()),
   flyerUrl: row.flyer_url ?? undefined,
   videoUrl: row.video_url ?? undefined,
   createdAt: new Date(row.created_at).toISOString(),
@@ -313,10 +317,9 @@ export const ingestStageJob = async (input: IngestJobInput): Promise<{
     );
 
     const applyMethod = compWhatsapp ? 'WHATSAPP' : 'EMAIL';
-    const defaultDesc = input.description?.trim() ||
-      `Offre de stage "${normalizedTitle}" chez ${compName}. Profils recherchés : ${(input.requirements || []).join(', ') || 'étudiants motivés'}. Candidature certifiée via Campus 360.`;
-    const safeDesc = defaultDesc.length > 1990 ? defaultDesc.slice(0, 1990) + '...' : defaultDesc;
-    const reqs = input.requirements && input.requirements.length > 0 ? input.requirements : ['Motivation', 'Rigueur'];
+    // The description is stored as published by the source: never summarized nor padded.
+    const safeDesc = (input.description ?? '').trim();
+    const reqs = input.requirements ?? [];
     const days = input.expiresInDays && input.expiresInDays > 0 ? input.expiresInDays : 30;
 
     let jobId: string;
@@ -354,8 +357,8 @@ export const ingestStageJob = async (input: IngestJobInput): Promise<{
           applyMethod,
           input.source || 'SCRAPED',
           compLocation,
-          input.duration || '3 à 6 mois',
-          input.stipend || 'Indemnité de stage',
+          input.duration || null,
+          input.stipend || null,
           input.flyerUrl || null,
           input.videoUrl || null,
           days,

@@ -18,6 +18,7 @@ from verifier_agent import normalize_company
 logger = logging.getLogger("JobStore")
 DEFAULT_LIFETIME_DAYS = 30
 UNKNOWN_COMPANY = "Entreprise à identifier (voir la source)"
+MAX_DESCRIPTION_CHARS = 20000  # same limit as the stage_jobs check (migration 0018)
 
 
 class JobStore:
@@ -174,7 +175,8 @@ class JobStore:
                 (
                     company_id,
                     (fields.get("title") or item.get("title") or "")[:200],
-                    (fields.get("summary") or item.get("snippet") or "")[:1900],
+                    # Full text as published by the source, never the AI summary.
+                    (item.get("description") or item.get("snippet") or "")[:MAX_DESCRIPTION_CHARS],
                     fields.get("skills") or [],
                     apply_method,
                     fields.get("city"),

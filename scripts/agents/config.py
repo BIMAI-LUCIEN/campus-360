@@ -57,6 +57,8 @@ TREG_BASE_URL = os.getenv("TREG_BASE_URL", "https://treg.to").rstrip("/")
 TREG_CLI = os.getenv("TREG_CLI", "/opt/treg-cli/bin/treg")
 TREG_MAX_CALLS_PER_RUN = _positive_int("TREG_MAX_CALLS_PER_RUN", 4)
 TREG_MAX_COST_PER_CALL_USD = os.getenv("TREG_MAX_COST_PER_CALL_USD", "0.01")
+# Full posting (description, salary) fetched per LinkedIn offer: ~$0.001 per call, capped per run.
+TREG_MAX_DETAIL_CALLS_PER_RUN = _positive_int("TREG_MAX_DETAIL_CALLS_PER_RUN", 20)
 
 # Reference list of sources, shared by the orchestrator, run_scraper and the scheduler.
 DEFAULT_PLATFORMS = ["CAMEROON_JOBS", "LINKEDIN", "FACEBOOK", "TIKTOK", "ACADEMIC_WEB"]

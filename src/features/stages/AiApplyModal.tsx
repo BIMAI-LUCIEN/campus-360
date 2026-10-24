@@ -46,6 +46,7 @@ import { WhatsAppPairingModal } from '../whatsapp/WhatsAppPairingModal';
 import { getStoredWhatsAppStatus, cleanPhoneNumber } from '../whatsapp/whatsappService';
 import { stitchColors, fontFamilies, stitchRadius } from '../../theme/stitch';
 import { isFreeLaunch } from '../../config/launch';
+import { applyPriceLabel, jobApplyPrice, jobIsPaid } from './applyPrice';
 import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from './contactTargets';
 
 interface AiApplyModalProps {
@@ -875,6 +876,11 @@ export function AiApplyModal({
                 {/* Actions Box: Canaux d'expédition et 1-Clic */}
                 <View style={styles.actionsBox}>
                   <Text style={styles.actionsTitle}>Canal d'expédition :</Text>
+                  <Text style={styles.applyPriceBanner} testID="apply-modal-price">
+                    {jobApplyPrice(job) === 0
+                      ? 'Cette candidature est gratuite.'
+                      : `Cette candidature coûte ${applyPriceLabel(job)} (${jobIsPaid(job) ? 'offre rémunérée' : 'offre non rémunérée'}), débités une seule fois à l'envoi. Rendus si l'envoi échoue.`}
+                  </Text>
 
                   {/* Segmented Channel Selector */}
                   <View style={styles.channelSegmentContainer}>
@@ -1129,7 +1135,7 @@ export function AiApplyModal({
       <PaymentModal
         visible={showPaymentModal}
         defaultPhone={currentProfile.phoneWhatsapp || ''}
-        reasonMessage="Candidature 1-Clic RH (500 FCFA). Rechargez votre portefeuille Mobile Money pour continuer."
+        reasonMessage={`Candidature (${job ? applyPriceLabel(job) : ''}). Recharge ton portefeuille Mobile Money pour continuer.`}
         onClose={() => {
           setShowPaymentModal(false);
           if (currentProfile.tokens !== undefined && currentProfile.tokens <= 0) {
@@ -1784,6 +1790,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: stitchColors.inkMuted,
     textDecorationLine: 'underline',
+  },
+  applyPriceBanner: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 12,
+    fontWeight: '700',
+    color: stitchColors.sienna,
+    marginBottom: 8,
   },
   subHintText: {
     fontFamily: fontFamilies.inter,

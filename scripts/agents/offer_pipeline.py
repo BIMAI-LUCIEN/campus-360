@@ -46,7 +46,7 @@ def structured_evaluation(item: dict) -> tuple:
         "city": city,
         "deadline": None,
         "duration": None,
-        "stipend": None,
+        "stipend": item.get("stipend") or None,
         "contact_email": item.get("contact_email") or None,
         "contact_whatsapp": item.get("contact_whatsapp") or None,
         "apply_url": item.get("url") or None,
@@ -54,7 +54,7 @@ def structured_evaluation(item: dict) -> tuple:
         "summary": "",
     }
     # Each value is a verbatim part of the item, so it is its own evidence.
-    evidence = {key: fields[key] for key in ("title", "company", "city", "apply_url") if fields[key]}
+    evidence = {key: fields[key] for key in ("title", "company", "city", "apply_url", "stipend") if fields[key]}
     return classification, {"fields": fields, "evidence": evidence}
 
 

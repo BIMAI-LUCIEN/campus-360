@@ -83,7 +83,8 @@ class LinkedInScraperAgent:
                         "title": clean_title,
                         "url": raw_link,
                         "file_url": file_url,
-                        "snippet": f"Publié le {pub_date}. {clean_desc}"[:1200],
+                        "snippet": f"Publié le {pub_date}. {clean_desc}",
+                        "description": clean_desc,
                         "pub_date": pub_date
                     })
         except Exception as e:

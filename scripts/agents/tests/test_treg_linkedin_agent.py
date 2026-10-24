@@ -177,5 +177,48 @@ class CliTests(unittest.TestCase):
         self.assertEqual(agent.search_jobs("emploi"), [])
 
 
+
+class FakeGet:
+    def __init__(self, status=200, body=None):
+        self.status, self.body, self.calls = status, body, []
+
+    def __call__(self, url, params=None, headers=None, timeout=None):
+        self.calls.append({"url": url, "params": params})
+        return SimpleNamespace(status_code=self.status, json=lambda: self.body)
+
+
+class DetailTests(unittest.TestCase):
+    ITEM = {"source_id": "linkedin:4465308031", "snippet": "Stagiaire — ACME — Douala", "description": None, "stipend": None}
+
+    def test_full_description_and_salary_are_kept_word_for_word(self):
+        text = "Missions :\n- Développer l'API\n- Rédiger les tests\n" + "x" * 3000
+        get = FakeGet(body={"output": {"element": {"descriptionText": text, "salary": {"text": "150 000 FCFA/mois"}}}})
+        agent = TregLinkedInAgent(api_key=FAKE_KEY, get=get, cli_path="", live=True)
+        item = dict(self.ITEM)
+        agent.fetch_details([item])
+        self.assertEqual(item["description"], text)
+        self.assertIn(text, item["snippet"])
+        self.assertEqual(item["stipend"], "150 000 FCFA/mois")
+        self.assertTrue(get.calls[0]["url"].endswith("/call/harvestapi.linkedin.job.get"))
+        self.assertEqual(get.calls[0]["params"], {"jobId": "4465308031"})
+
+    def test_detail_cap_and_not_live(self):
+        get = FakeGet(body={"element": {"descriptionText": "texte"}})
+        agent = TregLinkedInAgent(api_key=FAKE_KEY, get=get, cli_path="", live=True, max_detail_calls=1)
+        items = [dict(self.ITEM), dict(self.ITEM)]
+        agent.fetch_details(items)
+        self.assertEqual(len(get.calls), 1)
+        self.assertIsNone(items[1]["description"])
+        offline = TregLinkedInAgent(api_key=FAKE_KEY, get=get, cli_path="", live=False)
+        offline.fetch_details([dict(self.ITEM)])
+        self.assertEqual(len(get.calls), 1)
+
+    def test_failed_detail_keeps_item(self):
+        agent = TregLinkedInAgent(api_key=FAKE_KEY, get=FakeGet(status=500), cli_path="", live=True)
+        item = dict(self.ITEM)
+        agent.fetch_details([item])
+        self.assertIsNone(item["description"])
+
+
 if __name__ == "__main__":
     unittest.main()

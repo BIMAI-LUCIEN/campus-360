@@ -6,7 +6,9 @@ Endpoint `anyapi.linkedin.search.jobs`, validated by real calls on 2026-10-20:
   alone returns offers from outside Cameroon and is never used);
 - jobs: location "Cameroon", no type filter.
 The answer has no description, salary or contact: only id, title, company,
-location, createdUtc, url. Nothing is ever invented to fill the gaps.
+location, createdUtc, url. `fetch_details` then reads each posting in full
+(`harvestapi.linkedin.job.get`, ~$0.001): the description is kept word for word,
+never summarized. Nothing is ever invented to fill the gaps.
 
 Every call costs money (~$0.00066), so the agent calls nothing unless `live` is set,
 stops at `max_calls` per run and stops for the run after a quota answer (429).
@@ -24,6 +26,8 @@ import config
 logger = logging.getLogger("TregLinkedInAgent")
 
 ENDPOINT = "anyapi.linkedin.search.jobs"
+DETAIL_ENDPOINT = "harvestapi.linkedin.job.get"
+MAX_DESCRIPTION_CHARS = 20000
 QUOTA_STATUS = 429
 
 
@@ -34,7 +38,8 @@ def _is_cameroon(location: str) -> bool:
 
 class TregLinkedInAgent:
     def __init__(self, api_key=None, live=False, max_calls=None, post=None, run_cli=None,
-                 cli_path=None, base_url=None, max_cost_usd=None, timeout=60):
+                 cli_path=None, base_url=None, max_cost_usd=None, timeout=60, get=None,
+                 max_detail_calls=None):
         self.api_key = config.TREG_API_KEY if api_key is None else api_key
         self.live = live
         self.max_calls = config.TREG_MAX_CALLS_PER_RUN if max_calls is None else max_calls
@@ -42,6 +47,9 @@ class TregLinkedInAgent:
         self.max_cost_usd = max_cost_usd or config.TREG_MAX_COST_PER_CALL_USD
         self.timeout = timeout
         self._post = post
+        self._get = get
+        self.max_detail_calls = config.TREG_MAX_DETAIL_CALLS_PER_RUN if max_detail_calls is None else max_detail_calls
+        self.detail_calls = 0
         self._run_cli = run_cli or subprocess.run
         self.cli_path = self._find_cli(cli_path)
         self.calls = 0
@@ -60,6 +68,7 @@ class TregLinkedInAgent:
 
     def reset_run(self):
         self.calls = 0
+        self.detail_calls = 0
         self.exhausted = False
 
     def search_jobs(self, query: str, kind: str = "emploi", location: str = "Cameroon", max_results: int = 10) -> list:
@@ -99,6 +108,76 @@ class TregLinkedInAgent:
                 break
         logger.info(f"Treg LinkedIn ({kind}) : {len(items)} offre(s) au Cameroun sur {len(raw_items)} reçue(s).")
         return items
+
+    def fetch_details(self, items: list) -> list:
+        """Adds the full posting (description, salary) to each LinkedIn item, in place.
+        An item whose detail cannot be read is kept as it was."""
+        for item in items:
+            if not self.live or self.exhausted or self.detail_calls >= self.max_detail_calls:
+                if self.detail_calls >= self.max_detail_calls:
+                    logger.warning(f"Treg : plafond de {self.max_detail_calls} fiches détaillées atteint pour ce passage.")
+                break
+            job_id = (item.get("source_id") or "").split("linkedin:", 1)[-1]
+            if not job_id.isdigit():
+                continue
+            self.detail_calls += 1
+            element = self._detail(job_id)
+            if element:
+                self._apply_detail(item, element)
+        return items
+
+    @staticmethod
+    def _apply_detail(item: dict, element: dict):
+        description = (element.get("descriptionText") or "").strip()
+        if description:
+            item["description"] = description[:MAX_DESCRIPTION_CHARS]
+            item["snippet"] = f"{item.get('snippet', '')}\n{description}"[:MAX_DESCRIPTION_CHARS]
+        salary = element.get("salary") or {}
+        if isinstance(salary, dict) and (salary.get("text") or "").strip():
+            item["stipend"] = salary["text"].strip()
+
+    def _detail(self, job_id: str):
+        if self.api_key:
+            payload = self._request_http_get(DETAIL_ENDPOINT, {"jobId": job_id})
+        else:
+            payload = self._request_cli_detail(job_id)
+        if not isinstance(payload, dict):
+            return None
+        element = payload.get("element")
+        if not isinstance(element, dict):
+            element = ((payload.get("output") or {}).get("element")) if isinstance(payload.get("output"), dict) else None
+        return element if isinstance(element, dict) else None
+
+    def _request_http_get(self, endpoint: str, params: dict):
+        try:
+            get = self._get
+            if get is None:
+                import requests
+                get = requests.get
+            response = get(
+                f"{self.base_url}/call/{endpoint}",
+                params=params,
+                headers={"X-Treg-Token": self.api_key, "X-Treg-Route-Max-Cost": str(self.max_cost_usd)},
+                timeout=self.timeout,
+            )
+        except Exception as error:
+            logger.warning(f"Treg LinkedIn (fiche) : échec ({type(error).__name__}).")
+            return None
+        return self._read_answer(response.status_code, lambda: response.json())
+
+    def _request_cli_detail(self, job_id: str):
+        command = [
+            self.cli_path, "--json", "call", DETAIL_ENDPOINT, "--query", f"jobId={job_id}",
+            "--header", f"X-Treg-Route-Max-Cost: {self.max_cost_usd}",
+        ]
+        try:
+            done = self._run_cli(command, capture_output=True, text=True, timeout=self.timeout)
+            wrapped = json.loads(done.stdout or "")
+        except Exception as error:
+            logger.warning(f"Treg LinkedIn (fiche) : échec du CLI ({type(error).__name__}).")
+            return None
+        status = (wrapped.get("_treg") or {}).get("http_status") or (200 if done.returncode == 0 else 0)
+        return self._read_answer(status, lambda: wrapped.get("result"))
 
     # --- transport ---------------------------------------------------------------
 
@@ -187,7 +266,9 @@ class TregLinkedInAgent:
             "company": company,
             "location": location,
             "url": url,
-            "snippet": snippet[:1200],
+            "snippet": snippet,
+            "description": None,
+            "stipend": None,
             "flyer_url": None,
             "contact_email": None,
             "contact_whatsapp": None,

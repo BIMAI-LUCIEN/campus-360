@@ -57,6 +57,7 @@ import {
   isLinkApply,
   safeApplyUrl,
 } from '../../features/stages/applyTarget';
+import { applyPriceLine } from '../../features/stages/applyPrice';
 
 interface StagesScreenProps {
   studentProfile: {
@@ -660,6 +661,9 @@ export function StagesScreen({
                       <Text style={styles.stipendAmount}>
                         {job.stipend ? job.stipend.replace(/\(.*\)/, '').trim() : 'Rémunération non précisée'}
                       </Text>
+                      <Text style={styles.applyPriceText} testID={`apply-price-${job.id}`}>
+                        {applyPriceLine(job, isLinkApply(job))}
+                      </Text>
                     </View>
 
                     <Pressable
@@ -1161,6 +1165,9 @@ export function StagesScreen({
                   </Text>
                   {selectedDetailJob.stipend ? <Text style={styles.stipendPeriod}> /mois</Text> : null}
                 </View>
+                <Text style={styles.applyPriceText} testID="detail-apply-price">
+                  {applyPriceLine(selectedDetailJob, isLinkApply(selectedDetailJob))}
+                </Text>
               </View>
 
               <Pressable
@@ -1560,6 +1567,12 @@ const styles = StyleSheet.create({
   },
   stipendCol: {
     flex: 1,
+  },
+  applyPriceText: {
+    fontSize: 10.5,
+    color: stitchColors.sienna,
+    fontWeight: '700',
+    marginTop: 3,
   },
   stipendLabel: {
     fontSize: 9.5,

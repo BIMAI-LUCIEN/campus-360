@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { createStageApplication, ensureStageStudent, getStageJob } from '@/lib/stages-db';
-import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
+import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
+import { chargeStageApplication, refundStageApplication } from '@/lib/stage-charge';
 import { stageErrorStatus } from '@/lib/stages-errors';
 
 const applySchema = z.object({
@@ -32,11 +33,18 @@ export async function POST(request: NextRequest) {
       );
     }
     const studentId = await ensureStageStudent(access.user!);
-    const application = await createStageApplication({ ...input, studentId });
-    return withCors(NextResponse.json({ success: true, application }), request);
+    const payment = await chargeStageApplication(access.user!.id, job);
+    const application = await createStageApplication({ ...input, studentId }).catch(async (error) => {
+      if (payment.charged > 0) await refundStageApplication(access.user!.id, job.id).catch(() => undefined);
+      throw error;
+    });
+    return withCors(NextResponse.json({ success: true, application, payment }), request);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return withCors(NextResponse.json({ error: 'Requête invalide.' }, { status: 400 }), request);
+    }
+    if (error instanceof MobileApiError) {
+      return withCors(NextResponse.json({ error: error.message }, { status: error.status }), request);
     }
     console.warn('[apply route] Stage application failed:', error);
     return withCors(
