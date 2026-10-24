@@ -108,6 +108,8 @@ import { StagesScreen } from './ui/screens/StagesScreen';
 import { ApplicationsTimelineScreen } from './ui/screens/ApplicationsTimelineScreen';
 import { ResourcesScreen } from './ui/screens/ResourcesScreen';
 import { setFreeLaunch } from './config/launch';
+import { OPERATOR_LABELS, operatorMismatchMessage, parseCameroonMobile } from './features/wallet/cameroonPhone';
+import { ORANGE_MONEY_APPROVAL_USSD } from './features/wallet/PaymentModal';
 
 const logo = require('../assets/icon.png');
 const ONBOARDING_COMPLETED_KEY = 'campus360_onboarding_completed_permanent';
@@ -409,9 +411,20 @@ export function AppShell() {
 
   React.useEffect(() => {
     if (rechargeVisible) {
-      setRechargePhone(studentProfile?.phone || studentProfile?.whatsappPhone || '');
+      const profilePhone = studentProfile?.phone || studentProfile?.whatsappPhone || '';
+      setRechargePhone(profilePhone);
+      const parsed = parseCameroonMobile(profilePhone);
+      if (parsed.ok) setProvider(OPERATOR_LABELS[parsed.operator] as 'MTN MoMo' | 'Orange Money');
     }
   }, [rechargeVisible, studentProfile]);
+
+  // The number decides the operator: switch the toggle as soon as it is recognised.
+  const handleRechargePhoneChange = (value: string) => {
+    setRechargePhone(value);
+    const parsed = parseCameroonMobile(value);
+    if (parsed.ok) setProvider(OPERATOR_LABELS[parsed.operator] as 'MTN MoMo' | 'Orange Money');
+  };
+  const rechargePhoneCheck = parseCameroonMobile(rechargePhone);
 
   React.useEffect(() => {
     const sub = Notifications.addNotificationReceivedListener((notif) => {
@@ -947,11 +960,14 @@ export function AppShell() {
     const amount = Number.parseInt(rechargeAmount, 10);
     if (!Number.isFinite(amount) || amount < 500) { Alert.alert('Montant invalide', 'Le minimum de recharge est 500 FCFA.'); return; }
     if (!studentSession) { setAuthMode('sign-in'); setAuthNotice('Connecte-toi pour recharger ton wallet PDF.'); setAuthVisible(true); return; }
-    if (!rechargePhone.trim()) { Alert.alert('Numéro requis', 'Veuillez saisir votre numéro de téléphone Mobile Money.'); return; }
+    const parsedPhone = parseCameroonMobile(rechargePhone);
+    if (!parsedPhone.ok) { Alert.alert('Numéro invalide', parsedPhone.error); return; }
+    const mismatch = operatorMismatchMessage(parsedPhone.operator, provider === 'Orange Money' ? 'orange' : 'mtn');
+    if (mismatch) { Alert.alert('Opérateur différent', mismatch); return; }
     try {
       setRechargeLoading(true);
       setPollingMessage('Initialisation de la transaction...');
-      const res = await topUpStudentWallet(amount, provider, rechargePhone.trim());
+      const res = await topUpStudentWallet(amount, provider, parsedPhone.e164);
       const reference = res.reference;
       setRechargePaymentUrl(res.paymentUrl || null);
       let attempts = 0;
@@ -990,7 +1006,9 @@ export function AppShell() {
             Alert.alert(
               'Paiement non validé',
               statusRes.failureMessage ||
-                'La transaction a été rejetée ou a expiré. Pour Orange Money, composez #150*50# pour valider, ou ouvrez la page de paiement Nyole.',
+                provider === 'Orange Money'
+                  ? `La transaction a été rejetée ou a expiré. Avec Orange Money, compose ${ORANGE_MONEY_APPROVAL_USSD} pour valider, ou rouvre la page de paiement Nyole.`
+                  : 'La transaction a été rejetée ou a expiré. Vérifie ton solde MTN MoMo, ou rouvre la page de paiement Nyole.',
             );
           } else if (attempts >= maxAttempts) {
             clearInterval(pollInterval);
@@ -1491,7 +1509,12 @@ export function AppShell() {
             </View>
             <View style={{ marginBottom: 12 }}>
               <Text style={{ ...stitchTypography.labelSm, color: stitchColors.onSurfaceVariant, fontWeight: '600', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Numéro Mobile Money</Text>
-              <TextInput keyboardType="phone-pad" placeholder="Ex: +237680000000" placeholderTextColor={stitchColors.inkSubtle} value={rechargePhone} onChangeText={setRechargePhone} style={{ backgroundColor: stitchColors.surfaceContainerLow, borderWidth: 1, borderColor: stitchColors.outlineVariant, borderRadius: stitchRadius.md, paddingVertical: 14, paddingHorizontal: 16, fontSize: 16, color: stitchColors.onSurface, outlineStyle: 'none', outlineWidth: 0 } as any} />
+              <TextInput keyboardType="phone-pad" placeholder="Ex. 6XX XX XX XX" placeholderTextColor={stitchColors.inkSubtle} value={rechargePhone} onChangeText={handleRechargePhoneChange} style={{ backgroundColor: stitchColors.surfaceContainerLow, borderWidth: 1, borderColor: stitchColors.outlineVariant, borderRadius: stitchRadius.md, paddingVertical: 14, paddingHorizontal: 16, fontSize: 16, color: stitchColors.onSurface, outlineStyle: 'none', outlineWidth: 0 } as any} />
+              {rechargePhone.replace(/\D/g, '').length >= 9 ? (
+                <Text style={{ marginTop: 6, fontSize: 12, fontWeight: '600', color: rechargePhoneCheck.ok ? stitchColors.emeraldTone : stitchColors.error }}>
+                  {rechargePhoneCheck.ok ? `Numéro ${OPERATOR_LABELS[rechargePhoneCheck.operator]} détecté (${rechargePhoneCheck.e164})` : rechargePhoneCheck.error}
+                </Text>
+              ) : null}
             </View>
             {rechargeLoading ? (
               <View style={{ paddingVertical: 12, alignItems: 'center', gap: 8 }}>

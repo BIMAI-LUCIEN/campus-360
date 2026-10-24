@@ -88,41 +88,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const nyoleSecretKey = process.env.NYOLE_SECRET_KEY?.trim();
       const legacyPrivateKey = process.env.NOTCHPAY_PRIVATE_KEY?.trim();
 
-      if (transaction.status === 'failed') {
-        let failureMessage = transaction.failure_message || 'La transaction a été rejetée ou a expiré.';
-        if (
-          (!transaction.failure_message || failureMessage === 'La transaction a été rejetée ou a expiré.') &&
-          nyoleSecretKey &&
-          !reference.startsWith('mock_')
-        ) {
-          try {
-            const baseUrl = getNyoleBaseUrl();
-            const sRes = await fetch(
-              `${baseUrl}/v1/checkout/sessions/${encodeURIComponent(reference)}/status`,
-              {
-                headers: {
-                  Authorization: `Bearer ${nyoleSecretKey}`,
-                  Accept: 'application/json',
-                },
-              },
-            );
-            if (sRes.ok) {
-              const sData = (await sRes.json()) as {
-                failure_message?: string;
-                data?: { failure_message?: string };
-              };
-              const msg = sData.failure_message || sData.data?.failure_message;
-              if (msg) {
-                failureMessage = msg;
-                await client.query(
-                  "update public.app_wallet_transactions set failure_message = $2 where id = $1",
-                  [transaction.id, msg],
-                ).catch(() => {});
-              }
-            }
-          } catch {}
-        }
-        return withCors(NextResponse.json({ status: 'failed', failureMessage }), request);
+      const storedFailure: string =
+        transaction.failure_message || 'La transaction a été rejetée ou a expiré.';
+      const isLocallyFailed = transaction.status === 'failed';
+      const failedResponse = (message: string) =>
+        withCors(NextResponse.json({ status: 'failed', failureMessage: message }), request);
+
+      // Nyole keeps a FAILED session payable: re-check it so a retry that succeeded is credited.
+      if (isLocallyFailed && (!nyoleSecretKey || reference.startsWith('mock_'))) {
+        return failedResponse(storedFailure);
       }
 
       if (isMock) {
@@ -209,7 +183,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
         );
 
         if (!statusRes.ok) {
-          return withCors(NextResponse.json({ status: 'pending' }), request);
+          return isLocallyFailed
+            ? failedResponse(storedFailure)
+            : withCors(NextResponse.json({ status: 'pending' }), request);
         }
 
         const statusData = (await statusRes.json()) as {
@@ -229,6 +205,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         // If Nyole reports failure during the initial 8s window, keep pending
         // in case the telecom operator push is still in flight.
         if (
+          !isLocallyFailed &&
           (providerStatus === 'failed' || providerStatus === 'canceled' || providerStatus === 'cancelled') &&
           elapsedMs < 8_000
         ) {
@@ -282,13 +259,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
             'select status from public.app_wallet_transactions where id = $1 for update',
             [transaction.id],
           );
-          if (locked.rows[0]?.status !== 'pending') {
+          const lockedStatus = locked.rows[0]?.status;
+          if (lockedStatus !== 'pending' && lockedStatus !== 'failed') {
             await client.query('rollback');
-            return withCors(NextResponse.json({ status: locked.rows[0]?.status ?? 'pending' }), request);
+            return withCors(NextResponse.json({ status: lockedStatus ?? 'pending' }), request);
           }
 
           await client.query(
-            "update public.app_wallet_transactions set status = 'success' where id = $1",
+            "update public.app_wallet_transactions set status = 'success', failure_message = null where id = $1",
             [transaction.id],
           );
 
@@ -331,6 +309,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
           await client.query('rollback');
           throw err;
         }
+      }
+
+      if (isLocallyFailed) {
+        return failedResponse(storedFailure);
       }
 
       if (

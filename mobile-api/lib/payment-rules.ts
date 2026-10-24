@@ -85,23 +85,12 @@ export const verifyNyoleSignature = (
     const cleanSig = v1Signature.trim().toLowerCase();
     const cleanComputed = computed.trim().toLowerCase();
 
-    if (Buffer.byteLength(cleanSig) === Buffer.byteLength(cleanComputed)) {
-      if (crypto.timingSafeEqual(Buffer.from(cleanSig, 'utf8'), Buffer.from(cleanComputed, 'utf8'))) {
-        return true;
-      }
+    // Only `${timestamp}.${rawBody}` is accepted (nyole.com/docs/webhooks/signature): a signature
+    // that does not cover the timestamp could be replayed with a fresh timestamp.
+    if (Buffer.byteLength(cleanSig) !== Buffer.byteLength(cleanComputed)) {
+      return false;
     }
-
-    // Direct rawBody fallback if header signature was calculated without timestamp prefix
-    const fallbackComputed = crypto
-      .createHmac('sha256', secret)
-      .update(rawBody)
-      .digest('hex');
-    const cleanFallback = fallbackComputed.trim().toLowerCase();
-    if (Buffer.byteLength(cleanSig) === Buffer.byteLength(cleanFallback)) {
-      return crypto.timingSafeEqual(Buffer.from(cleanSig, 'utf8'), Buffer.from(cleanFallback, 'utf8'));
-    }
-
-    return false;
+    return crypto.timingSafeEqual(Buffer.from(cleanSig, 'utf8'), Buffer.from(cleanComputed, 'utf8'));
   } catch {
     return false;
   }
@@ -142,16 +131,21 @@ export const verifyNotchSignature = (
 
 /**
  * Pure decision engine for webhook processing.
+ *
+ * Nyole: a FAILED session stays payable (the customer can retry on the same page), so a later
+ * success on a transaction stored as 'failed' is still credited. Non-terminal events
+ * (`payment.updated` back to PENDING, REFUNDED) are ignored: `failed` must be explicit.
  */
 export const decideWebhookCredit = (
   tx: { status: string; amount_coins: number },
-  paid: { amount: number | null | undefined; success: boolean },
+  paid: { amount: number | null | undefined; success: boolean; failed?: boolean },
 ): 'credit' | 'ignore-already-processed' | 'reject-amount' | 'mark-failed' => {
-  if (tx.status !== 'pending') {
+  if (tx.status !== 'pending' && tx.status !== 'failed') {
     return 'ignore-already-processed';
   }
   if (!paid.success) {
-    return 'mark-failed';
+    const failed = paid.failed ?? true;
+    return tx.status === 'pending' && failed ? 'mark-failed' : 'ignore-already-processed';
   }
   if (
     paid.amount === null ||

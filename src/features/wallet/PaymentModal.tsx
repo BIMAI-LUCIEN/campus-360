@@ -30,6 +30,10 @@ import {
   pollPaymentStatus,
 } from './walletApi';
 import { stitchColors } from '../../theme/stitch';
+import { OPERATOR_LABELS, operatorMismatchMessage, parseCameroonMobile } from './cameroonPhone';
+
+/** Code USSD Orange Money Cameroun pour valider un débit en attente. */
+export const ORANGE_MONEY_APPROVAL_USSD = '#150*50#';
 
 interface PaymentModalProps {
   visible: boolean;
@@ -56,6 +60,18 @@ export function PaymentModal({
   const [simulating, setSimulating] = useState(false);
   const [success, setSuccess] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+  const [testMode, setTestMode] = useState(false);
+  const [instruction, setInstruction] = useState<string | null>(null);
+  const parsedPhone = parseCameroonMobile(phone);
+  const showPhoneHint = phone.replace(/\D/g, '').length >= 9;
+
+  const handlePhoneChange = (value: string) => {
+    setPhone(value);
+    setNoticeMessage(null);
+    const parsed = parseCameroonMobile(value);
+    // The number decides the operator: switch the toggle instead of failing later.
+    if (parsed.ok) setOperator(parsed.operator);
+  };
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopPolling = () => {
@@ -84,9 +100,14 @@ export function PaymentModal({
   }, [visible]);
 
   const handleInitiate = async () => {
-    const cleanPhone = phone.trim();
-    if (!cleanPhone || cleanPhone.length < 8) {
-      setNoticeMessage('Veuillez entrer un numéro de téléphone valide.');
+    const parsed = parseCameroonMobile(phone);
+    if (!parsed.ok) {
+      setNoticeMessage(parsed.error);
+      return;
+    }
+    const mismatch = operatorMismatchMessage(parsed.operator, operator);
+    if (mismatch) {
+      setNoticeMessage(mismatch);
       return;
     }
 
@@ -100,11 +121,13 @@ export function PaymentModal({
         packType: selectedPack.id,
         amount: selectedPack.priceFcfa,
         operator,
-        phone: cleanPhone,
+        phone: parsed.e164,
       });
 
       setLoading(false);
       setCurrentRef(response.reference);
+      setTestMode(response.testMode === true);
+      setInstruction(response.message || null);
       setPaymentUrl(response.paymentUrl || null);
       setWaitingUssd(true);
 
@@ -139,7 +162,9 @@ export function PaymentModal({
             } catch {}
             setNoticeMessage(
               statusRes.failureMessage ||
-                'Le paiement a été refusé ou a expiré. Pour Orange Money, composez #150*50#.',
+                (operator === 'orange'
+                  ? `Le paiement a été refusé ou a expiré. Avec Orange Money, valide le débit en composant ${ORANGE_MONEY_APPROVAL_USSD} puis réessaie.`
+                  : 'Le paiement a été refusé ou a expiré. Vérifie ton solde MTN MoMo puis réessaie.'),
             );
           } else if (attempts >= maxAttempts) {
             stopPolling();
@@ -190,6 +215,8 @@ export function PaymentModal({
     setPaymentUrl(null);
     setSuccess(false);
     setNoticeMessage(null);
+    setTestMode(false);
+    setInstruction(null);
     onClose();
   };
 
@@ -248,21 +275,24 @@ export function PaymentModal({
           ) : waitingUssd ? (
             <View style={styles.waitingContainer}>
               <ActivityIndicator size="large" color={stitchColors.secondary} style={{ marginBottom: 16 }} />
-              <Text style={styles.waitingTitle}>Validation USSD en cours...</Text>
+              <Text style={styles.waitingTitle}>Paiement {OPERATOR_LABELS[operator]} en attente</Text>
               <Text style={styles.waitingText}>
-                Un message de confirmation a été envoyé sur le{' '}
-                <Text style={{ fontWeight: '700', color: stitchColors.ink }}>{phone}</Text>.
+                {instruction ||
+                  `Termine le paiement sur la page Nyole, puis valide le débit avec ton code secret ${OPERATOR_LABELS[operator]}.`}
               </Text>
               <View style={styles.pinInstructionBox}>
                 <Text style={styles.pinInstructionText}>
-                  👉 Tapez votre code secret Mobile Money sur votre téléphone pour valider le débit de{' '}
+                  {operator === 'orange'
+                    ? `Orange Money : si aucune fenêtre ne s'affiche, compose ${ORANGE_MONEY_APPROVAL_USSD} pour valider le débit de `
+                    : "MTN MoMo : si aucune fenêtre ne s'affiche, compose *126# pour valider le débit de "}
                   <Text style={{ fontWeight: '700', color: stitchColors.emerald }}>
                     {selectedPack.priceFcfa} FCFA
                   </Text>.
                 </Text>
               </View>
 
-              {/* Bouton de simulation directe en mode test Sandbox */}
+              {/* Simulation proposée seulement pour une session Nyole créée avec une clé de test */}
+              {testMode ? (
               <Pressable
                 style={[styles.simulateBtn, simulating && { opacity: 0.6 }]}
                 onPress={handleSimulateSandbox}
@@ -277,6 +307,7 @@ export function PaymentModal({
                   </>
                 )}
               </Pressable>
+              ) : null}
 
               {paymentUrl ? (
                 <Pressable
@@ -365,11 +396,18 @@ export function PaymentModal({
                   placeholder="Ex. 6XX XX XX XX"
                   placeholderTextColor={stitchColors.inkMuted}
                   value={phone}
-                  onChangeText={setPhone}
+                  onChangeText={handlePhoneChange}
                   keyboardType="phone-pad"
                   editable={!loading}
                 />
               </View>
+              {showPhoneHint ? (
+                <Text style={parsedPhone.ok ? styles.phoneHintOk : styles.errorNoticeText}>
+                  {parsedPhone.ok
+                    ? `Numéro ${OPERATOR_LABELS[parsedPhone.operator]} détecté (${parsedPhone.e164})`
+                    : parsedPhone.error}
+                </Text>
+              ) : null}
 
               {noticeMessage && (
                 <Text style={styles.errorNoticeText}>{noticeMessage}</Text>
@@ -401,7 +439,7 @@ export function PaymentModal({
               <View style={styles.securityRow}>
                 <ShieldCheck size={14} color={stitchColors.inkMuted} />
                 <Text style={styles.securityText}>
-                  Paiement chiffré et sécurisé via Nyole. Débit immédiat par confirmation USSD.
+                  Paiement sécurisé via Nyole. Numéros MTN et Orange du Cameroun uniquement.
                 </Text>
               </View>
             </ScrollView>
@@ -589,6 +627,12 @@ const styles = StyleSheet.create({
     color: stitchColors.ink,
     fontSize: 14,
   },
+  phoneHintOk: {
+    fontSize: 12,
+    color: stitchColors.emerald,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
   errorNoticeText: {
     fontSize: 12,
     color: stitchColors.error,
@@ -646,7 +690,7 @@ const styles = StyleSheet.create({
   },
   pinInstructionText: {
     fontSize: 12.5,
-    color: '#D1FAE5',
+    color: stitchColors.emerald,
     lineHeight: 18,
     textAlign: 'center',
   },

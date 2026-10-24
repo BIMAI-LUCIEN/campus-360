@@ -73,6 +73,8 @@ export interface InitiatePaymentResponse {
   paymentUrl?: string;
   directDebitPrompt: boolean;
   message: string;
+  /** Session created with a Nyole test key: only then may the sandbox simulation be offered. */
+  testMode?: boolean;
 }
 
 /**

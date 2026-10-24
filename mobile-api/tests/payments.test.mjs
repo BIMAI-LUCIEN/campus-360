@@ -112,13 +112,23 @@ test('decideWebhookCredit : règles strictes de crédit, rejeu et rejet de monta
     'mark-failed',
   );
 
-  // Déjà traité (success ou failed) -> ignore-already-processed (rejeu idempotent)
+  // Déjà crédité -> ignore-already-processed (rejeu idempotent)
   assert.equal(
     decideWebhookCredit({ status: 'success', amount_coins: 1000 }, { amount: 1000, success: true }),
     'ignore-already-processed',
   );
+  // Nyole : une session FAILED reste payable, un succès ultérieur est crédité
   assert.equal(
     decideWebhookCredit({ status: 'failed', amount_coins: 1000 }, { amount: 1000, success: true }),
+    'credit',
+  );
+  assert.equal(
+    decideWebhookCredit({ status: 'failed', amount_coins: 1000 }, { amount: 1000, success: false, failed: true }),
+    'ignore-already-processed',
+  );
+  // Événement non terminal (payment.updated PENDING / REFUNDED) -> aucun effet
+  assert.equal(
+    decideWebhookCredit({ status: 'pending', amount_coins: 1000 }, { amount: 1000, success: false, failed: false }),
     'ignore-already-processed',
   );
 });
@@ -142,6 +152,7 @@ test('Enregistrement KO -> pas d’appel Nyole (atomicité et protection)', asyn
     'lib/database.ts',
     'lib/db-ssl.ts',
     'lib/payment-rules.ts',
+    'lib/cameroon-phone.ts',
     'lib/mobile-error.ts',
     'lib/automations.ts',
     'lib/mailer.ts',
@@ -169,7 +180,7 @@ test('Enregistrement KO -> pas d’appel Nyole (atomicité et protection)', asyn
         {
           studentId: 'test-user-id',
           phone: '690123456',
-          operator: 'mtn',
+          operator: 'orange',
           packType: 'recharge_500',
         },
         { pool: failingPool, fetch: mockFetch },
@@ -221,6 +232,7 @@ test('Initialisation Nyole : crée la session Checkout, met à jour reference_id
     'lib/database.ts',
     'lib/db-ssl.ts',
     'lib/payment-rules.ts',
+    'lib/cameroon-phone.ts',
     'lib/mobile-error.ts',
     'lib/automations.ts',
     'lib/mailer.ts',
@@ -247,6 +259,11 @@ test('Initialisation Nyole : crée la session Checkout, met à jour reference_id
     assert.equal(res.paymentUrl, 'https://app.nyole.com/checkout/cmvk0qbw900ixpotx0mk5i16l');
     assert.equal(res.status, 'pending');
     assert.equal(res.mock, false);
+    assert.equal(res.testMode, true, 'livemode: false -> session de test');
+    const sentBody = JSON.parse(fetchCalls[0].init.body);
+    assert.equal(sentBody.customer_phone, '+237690123456');
+    assert.equal(sentBody.currency, 'XAF');
+    assert.equal(sentBody.metadata.operator, 'orange');
     assert.equal(queries.length, 2, '1 insert pending + 1 update reference_id');
     assert.match(queries[0].sql, /insert into public\.app_wallet_transactions/i);
     assert.match(queries[1].sql, /update public\.app_wallet_transactions set reference_id/i);
@@ -311,6 +328,7 @@ test('Traitement webhook payment.failed : vérifie signature Nyole, persiste fai
     'lib/database.ts',
     'lib/db-ssl.ts',
     'lib/payment-rules.ts',
+    'lib/cameroon-phone.ts',
     'lib/mobile-error.ts',
     'lib/automations.ts',
     'lib/mailer.ts',
@@ -393,6 +411,7 @@ test('Traitement webhook payment.completed : vérifie signature Nyole, crédite 
     'lib/database.ts',
     'lib/db-ssl.ts',
     'lib/payment-rules.ts',
+    'lib/cameroon-phone.ts',
     'lib/mobile-error.ts',
     'lib/automations.ts',
     'lib/mailer.ts',
@@ -439,4 +458,117 @@ test('Traitement webhook payment.completed : vérifie signature Nyole, crédite 
   } finally {
     process.env.NYOLE_SECRET_KEY = oldSecret;
   }
+});
+
+const PAYMENT_DEPS = [
+  'lib/database.ts',
+  'lib/db-ssl.ts',
+  'lib/payment-rules.ts',
+  'lib/cameroon-phone.ts',
+  'lib/mobile-error.ts',
+  'lib/automations.ts',
+  'lib/mailer.ts',
+  'lib/match-score.ts',
+  'lib/push.ts',
+];
+
+test('Initialisation : numéro étranger, Nexttel ou opérateur incohérent -> 400 sans écriture ni appel Nyole', async () => {
+  const paymentsModule = await loadTsWithPackages('lib/payments.ts', PAYMENT_DEPS);
+  let dbCalled = false;
+  let fetchCalled = false;
+  const pool = { query: async () => { dbCalled = true; return { rows: [] }; } };
+  const fetch = async () => { fetchCalled = true; return new Response('{}', { status: 201 }); };
+
+  const oldNyoleKey = process.env.NYOLE_SECRET_KEY;
+  process.env.NYOLE_SECRET_KEY = 'af_test_sec_dummy';
+  try {
+    for (const [phone, operator, pattern] of [
+      ['+33612345678', 'mtn', /camerounais/],
+      ['661234567', 'mtn', /ni MTN ni Orange/],
+      ['699123456', 'mtn', /numéro Orange Money/],
+      ['677123456', 'orange', /numéro MTN MoMo/],
+    ]) {
+      await assert.rejects(
+        paymentsModule.initiateMobileMoneyPayment(
+          { studentId: 'u1', phone, operator, packType: 'recharge_500' },
+          { pool, fetch },
+        ),
+        (error) => error.status === 400 && pattern.test(error.message),
+        phone,
+      );
+    }
+    assert.equal(dbCalled, false);
+    assert.equal(fetchCalled, false);
+  } finally {
+    process.env.NYOLE_SECRET_KEY = oldNyoleKey;
+  }
+});
+
+const runSignedWebhook = async (txStatus, payloadObject) => {
+  const queries = [];
+  const fakeClient = {
+    query: async (sql, params) => {
+      queries.push({ sql, params });
+      if (sql.includes('select id, user_id')) {
+        return {
+          rows: [
+            { id: 'tx-1', user_id: 'user-1', type: 'topup', pack_type: 'recharge_500', amount_coins: 500, status: txStatus },
+          ],
+        };
+      }
+      return { rowCount: 1, rows: [] };
+    },
+    release: () => {},
+  };
+  globalThis.campusDatabasePool = {
+    connect: async () => fakeClient,
+    query: async (sql, params) => fakeClient.query(sql, params),
+    on: () => {},
+  };
+  const paymentsModule = await loadTsWithPackages('lib/payments.ts', PAYMENT_DEPS);
+  const secret = 'af_test_sec_nyole_secret_test';
+  const oldSecret = process.env.NYOLE_SECRET_KEY;
+  process.env.NYOLE_SECRET_KEY = secret;
+  try {
+    const ts = String(Math.floor(Date.now() / 1000));
+    const payload = JSON.stringify(payloadObject);
+    const signature = crypto.createHmac('sha256', secret).update(`${ts}.${payload}`).digest('hex');
+    const result = await paymentsModule.processNyoleWebhook(
+      payload,
+      new Headers({ 'x-afriflow-signature': `t=${ts},v1=${signature}`, 'x-afriflow-timestamp': ts }),
+    );
+    return { result, queries };
+  } finally {
+    process.env.NYOLE_SECRET_KEY = oldSecret;
+  }
+};
+
+test('Webhook payment.updated (retour PENDING) : ne marque pas la transaction en échec', async () => {
+  const { result, queries } = await runSignedWebhook('pending', {
+    event: 'payment.updated',
+    livemode: false,
+    data: { id: 'cm_pending', status: 'PENDING', amount: 500 },
+  });
+  assert.equal(result.status, 200);
+  assert.equal(queries.some((q) => /set status =/.test(q.sql)), false);
+});
+
+test('Webhook payment.completed après un échec (nouvel essai sur la même session) : crédite le wallet', async () => {
+  const { result, queries } = await runSignedWebhook('failed', {
+    event: 'payment.completed',
+    livemode: false,
+    data: { id: 'cm_retry', status: 'SUCCESS', amount: 500 },
+  });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.success, true);
+  assert.ok(queries.find((q) => q.sql.includes("status = 'success'")));
+  assert.ok(queries.find((q) => q.sql.includes('app_wallets')));
+});
+
+test('Signature Nyole : un HMAC du corps seul (sans horodatage) est refusé', () => {
+  const secret = 'af_test_sec_x';
+  const body = '{"event":"payment.completed"}';
+  const ts = String(Math.floor(Date.now() / 1000));
+  const bodyOnly = crypto.createHmac('sha256', secret).update(body).digest('hex');
+  assert.equal(verifyNyoleSignature(body, `t=${ts},v1=${bodyOnly}`, ts, secret), false);
 });

@@ -4,6 +4,7 @@ import net from 'node:net';
 import { notifyAdmin, sendTopUpReceipt } from './automations';
 import { databasePool } from './database';
 import { MobileApiError } from './mobile-error';
+import { operatorMismatchMessage, parseCameroonMobile } from './cameroon-phone';
 import {
   PAYMENT_PACKS,
   PaymentPackType,
@@ -42,39 +43,24 @@ export interface PaymentInitiationResult {
   directDebitPrompt: boolean;
   message: string;
   mock: boolean;
+  /** true when Nyole created the session with a test key (`livemode: false`). */
+  testMode: boolean;
 }
 
-export const formatPhoneForOperator = (raw: string): string => {
-  let cleaned = raw.replace(/[\s()\-]/g, '');
-  if (!cleaned.startsWith('+')) {
-    if (cleaned.startsWith('237')) {
-      cleaned = `+${cleaned}`;
-    } else {
-      // Default to Cameroon prefix if 9 digits starting with 6
-      cleaned = `+237${cleaned}`;
-    }
-  }
-  return cleaned;
-};
-
 /**
- * Automatically detects the Cameroon Mobile Money operator from the phone prefix
- * so a user with an Orange number (69x, 655-659, 685-689) or MTN number (67x, 650-654, 680-684)
- * never gets rejected by PawaPay due to a mismatched UI toggle.
+ * Validates a Cameroon MTN / Orange number and checks it matches the selected operator.
+ * Throws a 400 before anything is stored or sent to the provider.
  */
-export const detectCameroonOperator = (
-  rawPhone: string,
-  fallback: PaymentOperator = 'mtn',
-): PaymentOperator => {
-  const digits = rawPhone.replace(/\D/g, '');
-  const national = digits.startsWith('237') && digits.length >= 12 ? digits.slice(3) : digits;
-  if (/^6(9\d|5[5-9]|8[5-9])\d{6}$/.test(national)) {
-    return 'orange';
+export const requireCameroonMobileMoney = (rawPhone: string, operator: PaymentOperator) => {
+  const parsed = parseCameroonMobile(rawPhone);
+  if (!parsed.ok) {
+    throw new MobileApiError(parsed.error, 400);
   }
-  if (/^6(7\d|5[0-4]|8[0-4])\d{6}$/.test(national)) {
-    return 'mtn';
+  const mismatch = operatorMismatchMessage(parsed.operator, operator);
+  if (mismatch) {
+    throw new MobileApiError(mismatch, 400);
   }
-  return fallback;
+  return parsed;
 };
 
 /**
@@ -101,13 +87,16 @@ export async function initiateMobileMoneyPayment(
     throw new MobileApiError('Paiement indisponible pour le moment.', 503);
   }
 
-  const formattedPhone = formatPhoneForOperator(params.phone);
-  const effectiveOperator = detectCameroonOperator(formattedPhone, params.operator);
+  const { e164: formattedPhone, operator: effectiveOperator } = requireCameroonMobileMoney(
+    params.phone,
+    params.operator,
+  );
   const currency = 'XAF';
   const description = `Campus 360 - Recharge Portefeuille (${amount} FCFA)`;
 
   let reference = `c360_${params.packType}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   let paymentUrl: string | undefined;
+  let testMode = false;
 
   // Insert pending row before contacting payment gateway (atomic & tracked)
   await pool.query(
@@ -131,8 +120,8 @@ export async function initiateMobileMoneyPayment(
         body: JSON.stringify({
           amount,
           currency,
-          customer_name: params.studentName || 'Étudiant Campus 360',
-          customer_email: params.studentEmail || 'etudiant@campus360b.site',
+          ...(params.studentName ? { customer_name: params.studentName } : {}),
+          ...(params.studentEmail ? { customer_email: params.studentEmail } : {}),
           customer_phone: formattedPhone,
           description,
           merchant_name: 'Campus 360',
@@ -159,7 +148,9 @@ export async function initiateMobileMoneyPayment(
         order_id?: string;
         reference?: string;
         authorization_url?: string;
+        livemode?: boolean;
       };
+      testMode = initData.livemode === false;
 
       const gatewayRef = initData.id || initData.reference;
       if (gatewayRef && gatewayRef !== reference) {
@@ -232,7 +223,7 @@ export async function initiateMobileMoneyPayment(
       }
       paymentUrl = initData.authorization_url;
 
-      const channel = params.operator === 'orange' ? 'cm.orange' : 'cm.mtn';
+      const channel = effectiveOperator === 'orange' ? 'cm.orange' : 'cm.mtn';
       await doFetch(`https://api.notchpay.co/payments/${reference}`, {
         method: 'POST',
         headers: {
@@ -259,9 +250,12 @@ export async function initiateMobileMoneyPayment(
     reference,
     status: 'pending',
     paymentUrl,
-    directDebitPrompt: true,
-    message: `Une notification de validation de débit (${amount} ${currency}) a été envoyée sur votre téléphone ${formattedPhone}. Veuillez saisir votre code PIN Mobile Money.`,
+    directDebitPrompt: !paymentUrl,
+    message: paymentUrl
+      ? `Termine le paiement de ${amount} ${currency} sur la page Nyole : choisis ${effectiveOperator === 'orange' ? 'Orange Money' : 'MTN MoMo'}, puis valide avec ton code secret sur le ${formattedPhone}.`
+      : `Valide le débit de ${amount} ${currency} avec ton code secret Mobile Money sur le ${formattedPhone}.`,
     mock: !hasProviderKey,
+    testMode,
   };
 }
 
@@ -422,14 +416,17 @@ export async function processNyoleWebhook(
     const tx = txRes.rows[0];
     const decision = decideWebhookCredit(
       { status: tx.status, amount_coins: Number(tx.amount_coins) },
-      { amount, success: isSuccess },
+      { amount, success: isSuccess, failed: isFailedEvent },
     );
 
     if (decision === 'ignore-already-processed') {
       await client.query('rollback');
       return {
         status: 200,
-        body: { ok: true, message: 'Transaction déjà traitée.' },
+        body: {
+          ok: true,
+          message: isSuccess || isFailedEvent ? 'Transaction déjà traitée.' : 'Événement sans effet sur le solde.',
+        },
       };
     }
 
@@ -477,7 +474,7 @@ export async function processNyoleWebhook(
 
     // decision === 'credit'
     await client.query(
-      `update public.app_wallet_transactions set status = 'success' where id = $1`,
+      `update public.app_wallet_transactions set status = 'success', failure_message = null where id = $1`,
       [tx.id],
     );
 

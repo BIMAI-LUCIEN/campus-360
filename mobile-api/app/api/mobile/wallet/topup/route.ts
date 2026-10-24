@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { databasePool } from '@/lib/database';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { isMockAllowed } from '@/lib/payment-rules';
-import { detectCameroonOperator, formatPhoneForOperator, getNyoleBaseUrl } from '@/lib/payments';
+import { getNyoleBaseUrl, requireCameroonMobileMoney } from '@/lib/payments';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
@@ -76,10 +76,20 @@ export async function POST(request: NextRequest) {
       throw new MobileApiError('Paiement indisponible pour le moment.', 503);
     }
 
+    // Validate the number (Cameroon, MTN or Orange, matching the chosen operator) before storing anything.
+    const selectedOperator = input.providerName.toLowerCase().includes('orange') ? 'orange' : 'mtn';
+    if (isRealPayment && !input.phoneNumber) {
+      throw new MobileApiError('Le numero de telephone est requis pour ce moyen de paiement.', 400);
+    }
+    const phone = input.phoneNumber
+      ? requireCameroonMobileMoney(input.phoneNumber, selectedOperator)
+      : null;
+
     let reference = isRealPayment
       ? `c360_topup_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`
       : `mock_pay_${crypto.randomUUID().replace(/-/g, '')}`;
     let paymentUrl: string | undefined;
+    let testMode = false;
 
     // Insert pending transaction BEFORE provider call (no swallowed errors)
     await databasePool.query(
@@ -88,18 +98,9 @@ export async function POST(request: NextRequest) {
       [user.id, input.amountCoins, reference],
     );
 
-    if (isRealPayment) {
-      if (!input.phoneNumber) {
-        await databasePool.query(
-          `update public.app_wallet_transactions set status = 'failed' where reference_id = $1`,
-          [reference],
-        );
-        throw new MobileApiError('Le numero de telephone est requis pour ce moyen de paiement.', 400);
-      }
-
-      const formattedPhone = formatPhoneForOperator(input.phoneNumber);
-      const fallbackOp = input.providerName.toLowerCase().includes('orange') ? 'orange' : 'mtn';
-      const isOrange = detectCameroonOperator(formattedPhone, fallbackOp) === 'orange';
+    if (isRealPayment && phone) {
+      const formattedPhone = phone.e164;
+      const isOrange = phone.operator === 'orange';
 
       try {
         if (nyoleSecretKey) {
@@ -115,8 +116,8 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify({
               amount: input.amountCoins,
               currency: 'XAF',
-              customer_name: user.name || 'Étudiant Campus 360',
-              customer_email: user.email || 'etudiant@campus360b.site',
+              ...(user.name ? { customer_name: user.name } : {}),
+              ...(user.email ? { customer_email: user.email } : {}),
               customer_phone: formattedPhone,
               description: `Recharge Campus 360 - ${input.amountCoins} Coins`,
               merchant_name: 'Campus 360',
@@ -137,7 +138,9 @@ export async function POST(request: NextRequest) {
             url?: string;
             reference?: string;
             authorization_url?: string;
+            livemode?: boolean;
           };
+          testMode = initData.livemode === false;
 
           const providerRef = initData.id || initData.reference || '';
           if (providerRef && providerRef !== reference) {
@@ -163,7 +166,7 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify({
               amount: input.amountCoins,
               currency: 'XAF',
-              email: user.email || 'etudiant@campus360b.site',
+              email: user.email,
               description: `Recharge Campus 360 - ${input.amountCoins} Coins`,
             }),
           });
@@ -231,6 +234,7 @@ export async function POST(request: NextRequest) {
         paymentUrl,
         status: 'pending',
         mock: !isRealPayment,
+        testMode,
       }),
       request,
     );

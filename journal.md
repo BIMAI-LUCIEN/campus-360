@@ -4,6 +4,16 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 
 ---
 
+**2026-10-24 · 26.6 · execute · non commité (base 3fa6572) · Validation numéros camerounais MTN/Orange & alignement doc Nyole**
+
+- **Fichiers :** `mobile-api/lib/cameroon-phone.ts` + jumeau `src/features/wallet/cameroonPhone.ts` (nouveaux), `mobile-api/lib/payments.ts`, `mobile-api/lib/payment-rules.ts`, `mobile-api/app/api/mobile/wallet/topup/route.ts`, `mobile-api/app/api/mobile/wallet/topup/[reference]/route.ts`, `src/features/wallet/PaymentModal.tsx`, `src/features/wallet/walletApi.ts`, `src/AppShell.tsx`, `mobile-api/tests/cameroon-phone.test.mjs` (nouveau), `mobile-api/tests/payments.test.mjs`.
+- **Preuve :** `npm test` (mobile-api) 235 pass / 0 fail / 19 skip ; tests ciblés 16/16 ; `tsc --noEmit` app et API code 0 ; `lint:colors` 189/189 (le code USSD `#150` était compté comme couleur : centralisé dans `ORANGE_MONEY_APPROVAL_USSD`, et `#D1FAE5` illisible sur fond clair remplacé par `stitchColors.emerald`).
+- **Doc Nyole lue (nyole.com/docs) :** session `POST /v1/checkout/sessions`, statut `GET /v1/checkout/sessions/{id}/status` (PENDING/SUCCESS/FAILED/CANCELLED/REFUNDED, FAILED = rejouable), webhooks `payment.completed|failed|cancelled|updated`, signature `X-Afriflow-Signature: t=…,v1=<hex>` sur `${t}.${corps}`, sandbox `POST /api/checkout/sandbox`.
+- **Points ouverts :** parcours navigateur non fait (connexion requise) ; préfixes MTN/Orange non confirmés par l'ART ; `payment.cancelled` à cocher dans le tableau de bord Nyole ; commit, déploiement VPS et OTA non faits.
+- **À reporter dans contexte-code.md :** §6 paiements : nouveau fichier jumeau `lib/cameroon-phone.ts` ↔ `src/features/wallet/cameroonPhone.ts` ; `formatPhoneForOperator`/`detectCameroonOperator` remplacés par `requireCameroonMobileMoney` ; `verifyNyoleSignature` n'accepte plus le HMAC du corps seul ; `decideWebhookCredit` crédite aussi une transaction `failed`.
+
+---
+
 **2026-10-23 · vps-deploy · Déploiement production VPS sur commit ed520e4 (Module 24 App Docs & Module 26 Nyole)**
 
 - **Pre-flight local :** `tsc --noEmit` ×4 (app, `mobile-api`, `recruiter-web`, `landing-site`) = code 0.

@@ -6,10 +6,11 @@
 
 ---
 ## Reprise
-- **Tâche en cours :** aucune
+- **Tâche en cours :** aucune (26.6 validée le 2026-10-24, non commitée)
 - **Prochaine :** poser `ADMIN_SERVICE_SECRET` et `MOBILE_API_INTERNAL_URL` en local, puis parcours de l'atelier admin (24.10, session admin ouverte par l'utilisateur) → publier un modèle de test → parcours galerie (24.11) → 24.12. Module 25 : décision sur 25.18.
 - **Reste :** Module 24 : 24.6, 24.10, 24.11, 24.12 `[!]`, 24.13 `[ ]` ; Module 25 : 25.18, 25.2, 25.10, 25.15, 25.16 `[!]` ; modules 23 et 19 : voir `Progression globale`
 - **Points ouverts :**
+  - **26.6 (paiement Nyole) :** non vérifié dans le navigateur (connexion requise, aucun compte de test fourni) ; à tester avec un compte de test et une clé `af_test_sec_` : numéro Orange saisi en MTN → bascule auto, `+33…` refusé, session test + bouton Sandbox. Préfixes MTN/Orange non confirmés par une source officielle ART (table unique dans `cameroon-phone.ts`). Webhook Nyole : cocher `payment.cancelled` dans « API et journaux ». Diff non commité, pas d'OTA.
   - 🔒 **24.6 : ouvrir `.agent/screenshots/m24/exemple-reference.docx` dans Word** (bandeau, pied encadré, puces ❖, garde) et noter le retour.
   - 🔒 **24.10 et 24.11 : parcours navigateur.** Session admin ouverte par l'utilisateur, un modèle publié de test, une session étudiante (expo-web, 375 px). Migration 0013 faite.
   - 🔒 **24.12 : relire la liste des écarts** (rubans de la garde, puces, sommaire) et décider s'il faut aller plus loin ; supprimer `reference-privee/` quand la comparaison est close.
@@ -21,7 +22,7 @@
   - 🔒 **Module 25 :** 25.18 (choix A/B et feu vert VPS), 25.2, 25.10, 25.15, 25.16 (inchangés).
   - **Migrations :** toutes appliquées (0000, 0004 à 0015) ; 0013 le 2026-10-23.
 - **Commit de référence :** commit « feat(documents): modèle IUT de Douala fidèle au rapport de référence », parent af05514.
-- **Dernière entrée journal :** 2026-10-23 · Livraison module 24 (variables VPS) · deploy-and-push
+- **Dernière entrée journal :** 2026-10-24 · 26.6 numéros MTN/Orange & doc Nyole · execute
 ---
 
 ## 🏛️ HISTORIQUE DES MODULES DÉJÀ VALIDÉS (1 à 8)
@@ -2829,6 +2830,14 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
     - Support de la signature brute hexadécimale (sans préfixe `v1=`) et des horodatages secondes / millisecondes dans `verifyNyoleSignature`.
     - Persistance du motif d'échec (`failure_message`) en base pour un diagnostic transparent côté étudiant et indication claire du code de validation Orange Money `#150*50#`.
   - **DoD :** 9/9 tests unitaires passés, `tsc --noEmit` à la racine et dans `mobile-api` à 0 erreur.
+
+- [X] **Tâche 26.6 : Validation des numéros camerounais MTN / Orange et alignement sur la doc Nyole** - validée le 2026-10-24 (navigateur non vérifié, voir Reprise)
+  - **Fichiers :** `mobile-api/lib/cameroon-phone.ts` et son jumeau `src/features/wallet/cameroonPhone.ts` (nouveaux, contenu identique), `mobile-api/lib/payments.ts`, `mobile-api/lib/payment-rules.ts`, `mobile-api/app/api/mobile/wallet/topup/route.ts`, `mobile-api/app/api/mobile/wallet/topup/[reference]/route.ts`, `src/features/wallet/PaymentModal.tsx`, `src/features/wallet/walletApi.ts`, `src/AppShell.tsx`, `mobile-api/tests/cameroon-phone.test.mjs` (nouveau), `mobile-api/tests/payments.test.mjs`.
+  - **Contenu :**
+    - Numéro : seuls les mobiles camerounais (+237, 9 chiffres commençant par 6) MTN (67x, 650-654, 680-684) ou Orange (69x, 655-659, 685-689) sont acceptés ; étrangers, fixes, Nexttel (66x) et Camtel refusés ; opérateur choisi ≠ opérateur du numéro → 400. Contrôle fait avant toute écriture en base et tout appel Nyole, sur `/payments/initiate` et `/wallet/topup`.
+    - App : l'opérateur se sélectionne seul à la saisie d'un numéro reconnu, message « Numéro MTN MoMo détecté (+237…) » ou erreur sous le champ, envoi bloqué si invalide.
+    - Doc Nyole : une session FAILED reste payable, donc un succès ultérieur est crédité (webhook et polling) ; `payment.updated` (retour PENDING, REFUNDED) ne marque plus la transaction en échec ; signature acceptée seulement sur `${t}.${corps}` (repli « corps seul » retiré) ; plus d'e-mail inventé envoyé à Nyole ; bouton « Simuler (Sandbox) » affiché seulement si la session est en `livemode: false` ; textes d'attente honnêtes (page Nyole puis code secret, `#150*50#` Orange, `*126#` MTN).
+  - **DoD :** `cd mobile-api && npm test` 235 pass / 0 fail / 19 skip ; `node --test tests/cameroon-phone.test.mjs tests/payments.test.mjs` 16/16 ; `npm run typecheck` (app et `mobile-api`) code 0 ; `npm run lint:colors` 189/189.
 
 ---
 
