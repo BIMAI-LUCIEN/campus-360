@@ -129,11 +129,11 @@ if echo "$CHANGED_FILES" | grep -q "^mobile-api/" || [ "$FORCE_FLAG" = true ] ||
     npm run migrate
 
     # Ensure Chromium is installed for PDF export
-    CHROME=$(node -e "import('puppeteer').then(p => process.stdout.write(p.default.executablePath())).catch(() => {})")
+    CHROME=$(node -e "import('puppeteer').then(p => p.default.executablePath()).then(x => process.stdout.write(String(x))).catch(() => {})")
     if [ ! -x "$CHROME" ]; then
         echo "Chromium introuvable, installation automatique via puppeteer..."
         npx puppeteer browsers install chrome || true
-        CHROME=$(node -e "import('puppeteer').then(p => process.stdout.write(p.default.executablePath())).catch(() => {})")
+        CHROME=$(node -e "import('puppeteer').then(p => p.default.executablePath()).then(x => process.stdout.write(String(x))).catch(() => {})")
     fi
     if [ ! -x "$CHROME" ]; then
         echo "Chromium introuvable : export PDF impossible."
