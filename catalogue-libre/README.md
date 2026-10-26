@@ -68,3 +68,12 @@ Sans `--apply`, il ne fait qu'un essai à blanc.
 ```bash
 node recruiter-web/scripts/import-free-pdfs.mjs --dir catalogue-libre/pdf --manifest catalogue-libre/manifest.json
 ```
+
+## Versions compressées
+
+Quatre PDF dépassaient la limite de 10 Mo du stockage Cloudinary. Ils ont été compressés avec Ghostscript (images rééchantillonnées à 60 dpi, JPEG qualité 25). Le texte et le nombre de pages sont identiques aux originaux, mais les images sont moins détaillées. Les fichiers sont marqués `derived` dans [manifest.json](manifest.json).
+
+- Cours de calcul infinitésimal (322 pages)
+- Cours de langue française : les premiers pas (164 pages)
+- Cours de mathématiques appliquées (242 pages)
+- Nouveau cours français (304 pages)
