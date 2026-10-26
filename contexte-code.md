@@ -82,7 +82,7 @@
 
 
 
-| **Backend API mobile** | `mobile-api/` | Next.js 15 App Router : Better Auth, Postgres direct, IA OpenRouter, paiements NotchPay, WhatsApp Evolution API | 3002 | `https://api.campus360b.site` (VPS) |
+| **Backend API mobile** | `mobile-api/` | Next.js 15 App Router : Better Auth, Postgres direct, IA OpenRouter, paiements SasPay (replis Nyole/NotchPay), WhatsApp Evolution API | 3002 | `https://api.campus360b.site` (VPS) |
 
 
 
@@ -434,7 +434,7 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-- **But :** portefeuille en coins (1 coin = 1 FCFA), achats PDF et packs, crédits IA, recharge Mobile Money (**Nyole** en passerelle principale, repli legacy NotchPay), mode gratuit de lancement.
+- **But :** portefeuille en coins (1 coin = 1 FCFA), achats PDF et packs, crédits IA, recharge Mobile Money (**SasPay** en passerelle principale, replis Nyole et NotchPay), mode gratuit de lancement.
 
 
 
@@ -450,9 +450,9 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-  - `mobile-api/lib/payment-rules.ts` — règles pures de paiement : `verifyNyoleSignature` (validation HMAC-SHA256 sur `${timestamp}.${rawBody}` ou raw hex via `X-Afriflow-Signature` + `X-Afriflow-Timestamp`, support timestamps s/ms, fenêtre anti-rejeu 300s, `timingSafeEqual`), `verifyNotchSignature` (repli legacy), `decideWebhookCredit` et `isMockAllowed`.
+  - `mobile-api/lib/payment-rules.ts` — règles pures de paiement : `verifySaspaySignature` (validation HMAC-SHA256 sur `${timestamp}.${rawBody}` via `X-Webhook-Signature` + `X-Webhook-Timestamp` ou `X-Afriflow-Signature`, fenêtre anti-rejeu 300s, `timingSafeEqual`), `verifyNyoleSignature` (alias rétrocompatible), `verifyNotchSignature` (repli legacy), `decideWebhookCredit` et `isMockAllowed`.
 
-  - `mobile-api/lib/payments.ts` — initiation Nyole Checkout (`POST /v1/checkout/sessions` et ouverture hébergée sécurisée in-app via `WebBrowser.openBrowserAsync`), traitement transactionnel atomique du webhook (`processNyoleWebhook` / `processNotchWebhook`) avec gestion de `failure_message` et séparation stricte des états de paiement.
+  - `mobile-api/lib/payments.ts` — initiation SasPay Checkout Sessions (`POST /checkout-sessions/` vers `https://api.saspay.me/api/v1` et ouverture hébergée sécurisée in-app via `WebBrowser.openBrowserAsync`), traitement transactionnel atomique du webhook (`processSaspayWebhook` / `processNyoleWebhook` / `processNotchWebhook`) avec gestion de `failure_message` et séparation stricte des états de paiement.
 
 
 
@@ -464,7 +464,7 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-  - `src/features/wallet/PaymentModal.tsx`, `walletApi.ts`, `paymentStatus.ts` — recharge avec suivi réel (polling 3 s, 20 essais sur `/v1/checkout/sessions/{id}/status`) et lien direct vers la page de paiement hébergée Nyole (`paymentUrl`).
+  - `src/features/wallet/PaymentModal.tsx`, `walletApi.ts`, `paymentStatus.ts` — recharge avec suivi réel (polling 3 s, 60 essais sur `/checkout-sessions/{id}/status/` ou webhook) et lien direct vers la page de paiement hébergée SasPay (`paymentUrl`).
 
 
 
@@ -1669,6 +1669,14 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 
 ## 13. Journal des mises à jour
+
+- **2026-10-25** — **Migration Passerelle de Paiement vers SasPay (docs.saspay.me).**
+  - Passerelle principale configurée sur SasPay avec la clé live fournie.
+  - Implémentation de `POST https://api.saspay.me/api/v1/checkout-sessions/` (Cameroun `CM`, devise `XAF`, MTN MoMo et Orange Money).
+  - Validation HMAC-SHA256 des webhooks SasPay (`X-Webhook-Signature` + `X-Webhook-Timestamp`, fenêtre anti-rejeu 300s, comparaison en temps constant).
+  - Polling de statut sur `GET /checkout-sessions/{id}/status/` avec crédit atomique PostgreSQL du portefeuille.
+  - Rétro-compatibilité et replis préservés pour Nyole et NotchPay.
+  - Tests unitaires (14/14 pass) et typechecks (app racine, `mobile-api`, `recruiter-web`) à 0 erreur.
 
 - **2026-10-23** `/vps-deploy` — **Déploiement en production sur le VPS du commit `10e2be2` (Module 26 : durcissement intégration Checkout Nyole).**
   - Vérifications pré-vol locales : 9/9 tests unitaires passés dans `mobile-api/tests/payments.test.mjs`, `tsc --noEmit` à 0 erreur (racine, `mobile-api`, `recruiter-web`).

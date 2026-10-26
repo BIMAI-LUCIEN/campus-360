@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 240" width="960" height="240">
+  <!-- Logotype : « Campus » en ink, « 360 » en violet royal (Outfit, à charger côté app/web) -->
+  <rect x="0" y="0" width="960" height="240" fill="#FFFFFF"/>
+  <text x="48" y="168" font-family="Outfit, Inter, sans-serif" font-size="150" font-weight="700" letter-spacing="-4" fill="#0F172A">Campus <tspan fill="#7C3AED">360</tspan></text>
+</svg>

@@ -1,0 +1,32 @@
+/* Campus 360 — couleurs de marque */
+:root {
+  --c360-violet-50: #F5F3FF;
+  --c360-violet-100: #EDE9FE;
+  --c360-violet-200: #DDD6FE;
+  --c360-violet-300: #C4B5FD;
+  --c360-violet-400: #A78BFA;
+  --c360-violet-500: #8B5CF6;
+  --c360-violet-600: #7C3AED;
+  --c360-violet-700: #6D28D9;
+  --c360-violet-800: #5B21B6;
+  --c360-violet-900: #4C1D95;
+  --c360-violet-950: #2E1065;
+  --c360-paper: #FFFFFF;
+  --c360-neutre-50: #F8FAFC;
+  --c360-neutre-100: #F1F5F9;
+  --c360-neutre-200: #E2E8F0;
+  --c360-neutre-300: #CBD5E1;
+  --c360-neutre-400: #94A3B8;
+  --c360-neutre-500: #64748B;
+  --c360-neutre-700: #334155;
+  --c360-ink: #0F172A;
+  --c360-soleil-fond: #FFF8DB;
+  --c360-soleil: #FFD43B;
+  --c360-soleil-texte: #7A5600;
+  --c360-corail-fond: #FFF0EB;
+  --c360-corail: #FF7A59;
+  --c360-corail-texte: #B4401F;
+  --c360-menthe-fond: #E7F8F1;
+  --c360-menthe: #10B981;
+  --c360-menthe-texte: #047857;
+}

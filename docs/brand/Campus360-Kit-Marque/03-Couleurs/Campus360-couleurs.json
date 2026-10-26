@@ -1,0 +1,37 @@
+{
+  "Violet": {
+    "Violet 50": "#F5F3FF",
+    "Violet 100": "#EDE9FE",
+    "Violet 200": "#DDD6FE",
+    "Violet 300": "#C4B5FD",
+    "Violet 400": "#A78BFA",
+    "Violet 500": "#8B5CF6",
+    "Violet 600 (marque)": "#7C3AED",
+    "Violet 700": "#6D28D9",
+    "Violet 800": "#5B21B6",
+    "Violet 900": "#4C1D95",
+    "Violet 950": "#2E1065"
+  },
+  "Neutres": {
+    "Paper": "#FFFFFF",
+    "Neutre 50": "#F8FAFC",
+    "Neutre 100": "#F1F5F9",
+    "Neutre 200": "#E2E8F0",
+    "Neutre 300": "#CBD5E1",
+    "Neutre 400": "#94A3B8",
+    "Neutre 500": "#64748B",
+    "Neutre 700": "#334155",
+    "Ink": "#0F172A"
+  },
+  "Accents": {
+    "Soleil fond": "#FFF8DB",
+    "Soleil": "#FFD43B",
+    "Soleil texte": "#7A5600",
+    "Corail fond": "#FFF0EB",
+    "Corail": "#FF7A59",
+    "Corail texte": "#B4401F",
+    "Menthe fond": "#E7F8F1",
+    "Menthe": "#10B981",
+    "Menthe texte": "#047857"
+  }
+}

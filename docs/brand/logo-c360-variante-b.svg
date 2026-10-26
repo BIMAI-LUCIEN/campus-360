@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="c360b-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#6D28D9"/>
+    </linearGradient>
+  </defs>
+  <!-- Fond : carré arrondi violet royal -->
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#c360b-bg)"/>
+  <!-- C ouvert : le parcours étudiant -->
+  <path d="M362.07 362.07 A150 150 0 1 1 362.07 149.93" fill="none" stroke="#FFFFFF" stroke-width="56"/>
+  <!-- Chevron ascendant dans l'ouverture : la progression vers le stage -->
+  <path d="M300 300 L362 238 L424 300" fill="none" stroke="#FFFFFF" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

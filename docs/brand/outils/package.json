@@ -1,0 +1,14 @@
+{
+  "name": "campus360-kit-marque",
+  "private": true,
+  "type": "module",
+  "description": "Génère docs/brand/Campus360-Kit-Marque depuis docs/brand/brandbook.html",
+  "scripts": {
+    "kit": "node generer-kit.mjs"
+  },
+  "dependencies": {
+    "@expo-google-fonts/instrument-serif": "^0.4.1",
+    "@expo-google-fonts/sora": "^0.4.2",
+    "opentype.js": "1.3.4"
+  }
+}

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campus 360 — Piste Orbite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --violet: #7C3AED;
+    --violet-deep: #6D28D9;
+    --lavender: #C4B5FD;
+    --ink: #0F172A;
+    --muted: #64748B;
+    --line: #E2E8F0;
+    --paper: #FFFFFF;
+    --paper-soft: #F8FAFC;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper-soft); color: var(--ink); font-family: Inter, system-ui, sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 48px 16px 80px; }
+  h1 { font-family: Sora, sans-serif; font-weight: 700; font-size: 36px; letter-spacing: -1.2px; margin: 0 0 8px; }
+  .lead { color: var(--muted); margin: 0 0 40px; max-width: 680px; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 24px; overflow: hidden; --c1: var(--violet); --c2: var(--ink); --bg: var(--paper); }
+  .head { padding: 20px 24px 0; }
+  .tag { font: 700 11px/1 ui-monospace, monospace; letter-spacing: 1.5px; color: var(--violet); text-transform: uppercase; }
+  .head h2 { margin: 8px 0 4px; font-size: 20px; }
+  .head p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; min-height: 63px; }
+  .hero { display: flex; align-items: center; justify-content: center; padding: 28px 24px; }
+  .hero svg { width: 150px; height: 150px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 0 24px 20px; flex-wrap: wrap; }
+  .icon { display: none; }
+  .icon svg { width: 46px; height: 46px; }
+  .icon.violet { background: linear-gradient(135deg, #8B5CF6, var(--violet-deep)); --c1: #fff; --c2: var(--lavender); --bg: #7C3AED; }
+  .icon.dark { background: var(--ink); --c1: #A78BFA; --c2: #fff; --bg: var(--ink); }
+  .small { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+  .small svg:nth-child(1) { width: 40px; height: 40px; }
+  .small svg:nth-child(2) { width: 28px; height: 28px; }
+  .small svg:nth-child(3) { width: 18px; height: 18px; }
+  .lockup { display: flex; align-items: center; gap: 10px; padding: 20px 24px; border-top: 1px solid var(--line); font-family: Sora, sans-serif; }
+  .lockup svg { width: 40px; height: 40px; flex: none; }
+  .lockup span { font-size: 30px; line-height: 1; font-weight: 700; letter-spacing: -1.3px; }
+  .lockup .num { color: var(--violet); font-weight: 400; }
+  .lockup.inv { background: var(--ink); color: #fff; border-top: 0; --c1: #A78BFA; --c2: #fff; --bg: var(--ink); }
+  .lockup.inv .num { color: #A78BFA; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- 2A. Orbite épurée : sans le point central (c'est lui qui faisait lire un « G ») -->
+  <symbol id="o-a" viewBox="0 0 120 120">
+    <path d="M83.1 32.4 A36 36 0 1 0 87.6 83.1" fill="none" stroke="var(--c1)" stroke-width="17" stroke-linecap="round"/>
+    <path d="M100.5 67.5 L100.4 94.5 L74.6 72.9 Z" fill="var(--c1)" stroke="var(--c1)" stroke-width="5" stroke-linejoin="round"/>
+  </symbol>
+  <!-- 2B. Trois étapes : apprendre, postuler, décrocher ; l'orbite se densifie jusqu'à la flèche -->
+  <symbol id="o-b" viewBox="0 0 120 120">
+    <path d="M83.1 32.4 A36 36 0 0 0 36.9 32.4" fill="none" stroke="var(--c1)" stroke-width="15" opacity="0.4"/>
+    <path d="M30.5 39.3 A36 36 0 0 0 34.5 85.5" fill="none" stroke="var(--c1)" stroke-width="15" opacity="0.7"/>
+    <path d="M42 91.2 A36 36 0 0 0 87.6 83.1" fill="none" stroke="var(--c1)" stroke-width="15"/>
+    <path d="M99.2 69.3 L99.1 92.7 L76.1 73.5 Z" fill="var(--c1)" stroke="var(--c1)" stroke-width="4" stroke-linejoin="round"/>
+    <circle cx="60" cy="60" r="9" fill="var(--c2)"/>
+  </symbol>
+  <!-- 2C. Envol : le parcours fait le tour puis s'échappe en flèche vers le haut -->
+  <symbol id="o-c" viewBox="0 0 120 120">
+    <path d="M92 74 A32 32 0 1 1 37.4 51.4 L72.8 16" fill="none" stroke="var(--c1)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M50.2 16 L72.8 16 L72.8 38.6" fill="none" stroke="var(--c1)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="60" cy="74" r="9" fill="var(--c2)"/>
+  </symbol>
+</svg>
+
+<main>
+  <h1>Piste Orbite — affinage</h1>
+  <p class="lead">La version d'origine se lisait comme un « G » à petite taille, à cause du point central et de la flèche placée comme la barre du G. Trois corrections possibles, toutes avec Sora.</p>
+
+  <div class="grid">
+    <article class="card">
+      <div class="head"><div class="tag">2A · Épurée</div><h2>Orbite sans point</h2><p>On retire le point central : il reste le C et sa flèche montante. Verdict : se lit toujours comme un « G », et rappelle l'icône « actualiser ». Écartée.</p></div>
+      <div class="hero"><svg><use href="#o-a"/></svg></div>
+      <div class="row">
+        <div class="icon violet"><svg><use href="#o-a"/></svg></div>
+        <div class="icon dark"><svg><use href="#o-a"/></svg></div>
+        <div class="small"><svg><use href="#o-a"/></svg><svg><use href="#o-a"/></svg><svg><use href="#o-a"/></svg></div>
+      </div>
+      <div class="lockup"><svg><use href="#o-a"/></svg><span>Campus<span class="num">360</span></span></div>
+      <div class="lockup inv"><svg><use href="#o-a"/></svg><span>Campus<span class="num">360</span></span></div>
+    </article>
+
+    <article class="card">
+      <div class="head"><div class="tag">2B · Trois étapes</div><h2>Apprendre, postuler, décrocher</h2><p>L'orbite se coupe en trois segments de plus en plus intenses. Verdict : les coupures cassent la lecture « G » et racontent le parcours. Recommandée.</p></div>
+      <div class="hero"><svg><use href="#o-b"/></svg></div>
+      <div class="row">
+        <div class="icon violet"><svg><use href="#o-b"/></svg></div>
+        <div class="icon dark"><svg><use href="#o-b"/></svg></div>
+        <div class="small"><svg><use href="#o-b"/></svg><svg><use href="#o-b"/></svg><svg><use href="#o-b"/></svg></div>
+      </div>
+      <div class="lockup"><svg><use href="#o-b"/></svg><span>Campus<span class="num">360</span></span></div>
+      <div class="lockup inv"><svg><use href="#o-b"/></svg><span>Campus<span class="num">360</span></span></div>
+    </article>
+
+    <article class="card">
+      <div class="head"><div class="tag">2C · Envol</div><h2>Sortir du campus</h2><p>Le trait fait le tour de l'étudiant puis s'échappe en flèche vers le haut : du campus vers l'emploi. Verdict : on ne lit plus le C, la forme évoque un crochet. Écartée.</p></div>
+      <div class="hero"><svg><use href="#o-c"/></svg></div>
+      <div class="row">
+        <div class="icon violet"><svg><use href="#o-c"/></svg></div>
+        <div class="icon dark"><svg><use href="#o-c"/></svg></div>
+        <div class="small"><svg><use href="#o-c"/></svg><svg><use href="#o-c"/></svg><svg><use href="#o-c"/></svg></div>
+      </div>
+      <div class="lockup"><svg><use href="#o-c"/></svg><span>Campus<span class="num">360</span></span></div>
+      <div class="lockup inv"><svg><use href="#o-c"/></svg><span>Campus<span class="num">360</span></span></div>
+    </article>
+  </div>
+</main>
+</body>
+</html>

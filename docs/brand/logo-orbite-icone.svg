@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Campus 360 — icône d'application : monogramme Orbite violet sur fond blanc plein, sans carré dessiné.
+       Android et iOS appliquent eux-mêmes leur forme (cercle, squircle) au fond blanc. -->
+  <rect width="512" height="512" fill="#FFFFFF"/>
+  <g transform="translate(76 76) scale(3)">
+    <path d="M83.1 32.4 A36 36 0 0 0 36.9 32.4" fill="none" stroke="#7C3AED" stroke-width="15" opacity="0.4"/>
+    <path d="M30.5 39.3 A36 36 0 0 0 34.5 85.5" fill="none" stroke="#7C3AED" stroke-width="15" opacity="0.7"/>
+    <path d="M42 91.2 A36 36 0 0 0 87.6 83.1" fill="none" stroke="#7C3AED" stroke-width="15"/>
+    <path d="M99.2 69.3 L99.1 92.7 L76.1 73.5 Z" fill="#7C3AED" stroke="#7C3AED" stroke-width="4" stroke-linejoin="round"/>
+    <circle cx="60" cy="60" r="9" fill="#0F172A"/>
+  </g>
+</svg>
