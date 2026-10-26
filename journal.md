@@ -4,7 +4,13 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 
 ---
 
-**2026-10-24 · hors plan · (direct) · non commité · Paiement à l'acte des candidatures, 5 000 coins de lancement, descriptions intégrales**
+**2026-10-24 · Livraison 35f8228 · vps-deploy · 35f8228 · Paiement à l'acte, 5 000 coins, descriptions intégrales en production**
+
+- **VPS :** `deploy-vps.yml` réussi sur `35f8228` (migrations 0017 et 0018 appliquées par le script) ; `FREE_LAUNCH_MODE=false` et `STARTING_COINS=5000` posés dans `mobile-api/.env.local` et `recruiter-web/.env.production` (sauvegardes `.bak-<horodatage>`) ; `pm2 restart --update-env` + `pm2 save`.
+- **Preuves :** `api/health` 200 `db: connected`, admin 200, landing 200 ; 3 bonus `launch-bonus-5000` (1 750 coins au total), 0 étudiant sous 5 000 sur 10 ; contrainte description `<= 20000` ; `/api/mobile/stages` : 28 offres, 25 à 1 000 (rémunérées), 3 à 500, donc gratuit coupé. OTA `eas-update.yml` réussie.
+- **Hors sujet, déjà en échec avant :** workflows Vercel (backend et mobile-api) en échec sur les 4 derniers commits.
+
+**2026-10-24 · hors plan · (direct) · 35f8228 · Paiement à l'acte des candidatures, 5 000 coins de lancement, descriptions intégrales**
 
 - **Décisions utilisateur :** candidature 1 000 coins si l'offre est rémunérée (ou emploi), 500 sinon ou si la rémunération n'est pas précisée ; tout payant, sans 1ère offerte (`FREE_LAUNCH_MODE=false` à poser sur le VPS) ; 5 000 coins pour les nouveaux comptes et complément unique à 5 000 pour les anciens ; fiche LinkedIn complète via Treg (`harvestapi.linkedin.job.get`, ~0,001 $).
 - **Serveur :** `lib/stage-pricing.ts` (règles pures, copie identique `src/features/stages/stagePricing.ts`), `lib/stage-charge.ts` (débit une fois par offre et par utilisateur, wallet verrouillé, 409 si solde insuffisant, remboursement si l'envoi échoue) branché dans `stages/apply` et `stages/dispatch` ; chaque offre renvoie `isPaid` et `applyPriceCoins` ; `STARTING_COINS` par défaut 5000 (les deux `free-launch.ts`) ; ingest n8n : plus de description, durée, rémunération ni compétences inventées, description jusqu'à 20 000 caractères.
