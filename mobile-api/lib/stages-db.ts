@@ -27,17 +27,28 @@ type StageStudentInput = {
 
 export const ensureStageStudent = async (user: StageStudentInput): Promise<string> => {
   try {
+    // phone_whatsapp is unique: a number already held by another student is not
+    // copied (kept as is on update, null on insert) instead of failing the application.
     const result = await databasePool.query<{ id: string }>(
-      `with updated as (
+      `with taken as (
+         select exists (
+           select 1 from public.stage_students o
+            where o.phone_whatsapp = $4
+              and o.auth_id is distinct from $1
+              and lower(coalesce(o.email, '')) <> lower($5)
+         ) as phone_taken
+       ), updated as (
          update public.stage_students set
-           auth_id = $1, app_user_id = $2, full_name = $3, phone_whatsapp = $4,
+           auth_id = $1, app_user_id = $2, full_name = $3,
+           phone_whatsapp = case when (select phone_taken from taken) then phone_whatsapp else $4 end,
            email = $5, education_level = $6, major = $7
          where auth_id = $1 or lower(email) = lower($5)
          returning id
        ), inserted as (
          insert into public.stage_students (
            auth_id, app_user_id, full_name, phone_whatsapp, email, education_level, major
-         ) select $1, $2, $3, $4, $5, $6, $7 where not exists (select 1 from updated)
+         ) select $1, $2, $3, case when (select phone_taken from taken) then null else $4 end, $5, $6, $7
+           where not exists (select 1 from updated)
          returning id
        )
        select id from updated union all select id from inserted limit 1`,
