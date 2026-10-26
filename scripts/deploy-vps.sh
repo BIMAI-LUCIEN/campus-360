@@ -7,6 +7,15 @@ set -euo pipefail
 echo "=== [DEPLOY-VPS] Starting deployment on VPS ==="
 cd /opt/campus-360
 
+# One deployment at a time: two concurrent `npm ci` in the same folder leave node_modules
+# half-installed (this took the API down on 2026-10-26).
+mkdir -p /var/lock
+exec 9>/var/lock/campus360-deploy.lock
+if ! flock -w 900 9; then
+  echo "ERREUR : un autre déploiement tient le verrou depuis plus de 15 min." >&2
+  exit 1
+fi
+
 TARGET_REF=""
 FORCE_FLAG=false
 
@@ -64,6 +73,35 @@ check_health() {
   return 0
 }
 
+# Every dependency declared in package.json must be installed, plus the next binary.
+# `npm ci` can exit 0 and still leave packages empty (e.g. a package with only LICENSE/README).
+deps_complete() {
+  node -e '
+    const fs = require("fs");
+    const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+    const names = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
+    const missing = names.filter((n) => !fs.existsSync(`node_modules/${n}/package.json`));
+    if (!fs.existsSync("node_modules/.bin/next")) missing.push(".bin/next");
+    if (missing.length) { console.error("Dépendances manquantes : " + missing.join(", ")); process.exit(1); }
+  '
+}
+
+# npm ci, checked; one clean retry if the install is incomplete.
+install_deps() {
+  local app="$1"
+  if npm ci --no-audit --no-fund && deps_complete; then
+    return 0
+  fi
+  echo "Installation incomplète pour $app, nouvel essai après nettoyage..." >&2
+  rm -rf node_modules
+  npm cache verify >/dev/null 2>&1 || true
+  if npm ci --no-audit --no-fund && deps_complete; then
+    return 0
+  fi
+  echo "ERREUR : dépendances de $app toujours incomplètes." >&2
+  return 1
+}
+
 # Automated rollback function in case of failure
 rollback_and_exit() {
   local short_sha="${PREV_SHA:0:7}"
@@ -73,17 +111,17 @@ rollback_and_exit() {
 
   if echo "$CHANGED_FILES" | grep -q "^landing-site/" || [ "$FORCE_FLAG" = true ]; then
     echo "Reconstruction rollback landing-site..."
-    cd /opt/campus-360/landing-site && npm ci --no-audit --no-fund && npm run build && (pm2 restart campus360-landing-site || true)
+    cd /opt/campus-360/landing-site && install_deps landing-site && npm run build && (pm2 restart campus360-landing-site || true)
   fi
 
   if echo "$CHANGED_FILES" | grep -q "^mobile-api/" || [ "$FORCE_FLAG" = true ]; then
     echo "Reconstruction rollback mobile-api..."
-    cd /opt/campus-360/mobile-api && npm ci --no-audit --no-fund && npm run build && (pm2 restart campus360-mobile-api || true)
+    cd /opt/campus-360/mobile-api && install_deps mobile-api && npm run build && (pm2 restart campus360-mobile-api || true)
   fi
 
   if echo "$CHANGED_FILES" | grep -q "^recruiter-web/" || [ "$FORCE_FLAG" = true ]; then
     echo "Reconstruction rollback recruiter-web..."
-    cd /opt/campus-360/recruiter-web && npm ci --no-audit --no-fund && npm run build && (pm2 restart campus360-recruiter-web || true)
+    cd /opt/campus-360/recruiter-web && install_deps recruiter-web && npm run build && (pm2 restart campus360-recruiter-web || true)
   fi
 
   pm2 save || true
@@ -110,7 +148,9 @@ git lfs pull
 if echo "$CHANGED_FILES" | grep -q "^landing-site/" || [ "$FORCE_FLAG" = true ] || [ ! -d "/opt/campus-360/landing-site/.next" ]; then
     echo "=== Updating landing-site ==="
     cd /opt/campus-360/landing-site
-    npm ci --no-audit --no-fund
+    if ! install_deps landing-site; then
+      rollback_and_exit
+    fi
     if ! npm run build; then
       rollback_and_exit
     fi
@@ -125,8 +165,13 @@ fi
 if echo "$CHANGED_FILES" | grep -q "^mobile-api/" || [ "$FORCE_FLAG" = true ] || [ ! -d "/opt/campus-360/mobile-api/.next" ]; then
     echo "=== Updating mobile-api ==="
     cd /opt/campus-360/mobile-api
-    npm ci --no-audit --no-fund
-    npm run migrate
+    if ! install_deps mobile-api; then
+      rollback_and_exit
+    fi
+    # Migrations are additive: rolling the code back leaves an applied one in place, harmlessly.
+    if ! npm run migrate; then
+      rollback_and_exit
+    fi
 
     # Ensure Chromium is installed for PDF export
     CHROME=$(node -e "import('puppeteer').then(p => p.default.executablePath()).then(x => process.stdout.write(String(x))).catch(() => {})")
@@ -169,7 +214,9 @@ fi
 if echo "$CHANGED_FILES" | grep -q "^recruiter-web/" || [ "$FORCE_FLAG" = true ] || [ ! -d "/opt/campus-360/recruiter-web/.next" ]; then
     echo "=== Updating recruiter-web ==="
     cd /opt/campus-360/recruiter-web
-    npm ci --no-audit --no-fund
+    if ! install_deps recruiter-web; then
+      rollback_and_exit
+    fi
     if ! npm run build; then
       rollback_and_exit
     fi
