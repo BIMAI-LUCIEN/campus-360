@@ -4,7 +4,7 @@ import { databasePool } from '@/lib/database';
 import { sendTopUpReceipt } from '@/lib/automations';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { isMockAllowed } from '@/lib/payment-rules';
-import { getNyoleBaseUrl } from '@/lib/payments';
+import { getSaspayBaseUrl } from '@/lib/payments';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
@@ -85,8 +85,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         );
       }
 
-      const nyoleSecretKey = process.env.NYOLE_SECRET_KEY?.trim();
-      const legacyPrivateKey = process.env.NOTCHPAY_PRIVATE_KEY?.trim();
+      const saspayApiKey = process.env.SASPAY_API_KEY?.trim();
 
       const storedFailure: string =
         transaction.failure_message || 'La transaction a été rejetée ou a expiré.';
@@ -94,8 +93,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const failedResponse = (message: string) =>
         withCors(NextResponse.json({ status: 'failed', failureMessage: message }), request);
 
-      // Nyole keeps a FAILED session payable: re-check it so a retry that succeeded is credited.
-      if (isLocallyFailed && (!nyoleSecretKey || reference.startsWith('mock_'))) {
+      // SasPay keeps a FAILED session payable: re-check it so a retry that succeeded is credited.
+      if (isLocallyFailed && (!saspayApiKey || reference.startsWith('mock_'))) {
         return failedResponse(storedFailure);
       }
 
@@ -158,7 +157,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         return withCors(NextResponse.json({ status: 'pending' }), request);
       }
 
-      if (!nyoleSecretKey && !legacyPrivateKey) {
+      if (!saspayApiKey) {
         return withCors(NextResponse.json({ status: 'pending' }), request);
       }
 
@@ -167,16 +166,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
       let providerAmount: number | null = null;
       let failureMessage = 'La transaction a été rejetée ou a expiré.';
 
-      const elapsedMs = Date.now() - new Date(transaction.created_at).getTime();
-
-      if (nyoleSecretKey) {
-        const baseUrl = getNyoleBaseUrl();
+      if (saspayApiKey) {
+        const baseUrl = getSaspayBaseUrl();
         const statusRes = await fetch(
-          `${baseUrl}/v1/checkout/sessions/${encodeURIComponent(reference)}/status`,
+          `${baseUrl}/payments/${encodeURIComponent(reference)}/verify/`,
           {
             method: 'GET',
             headers: {
-              Authorization: `Bearer ${nyoleSecretKey}`,
+              Authorization: `Bearer ${saspayApiKey}`,
               Accept: 'application/json',
             },
           },
@@ -190,54 +187,28 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
         const statusData = (await statusRes.json()) as {
           status?: string;
-          paid?: boolean;
-          amount?: number;
-          failure_message?: string;
-          data?: { status?: string; paid?: boolean; amount?: number; failure_message?: string };
+          data?: { status?: string };
         };
-        providerStatus = String(statusData.status || statusData.data?.status || '').toLowerCase();
-        providerPaid = statusData.paid ?? statusData.data?.paid;
-        const rawAmount = statusData.amount ?? statusData.data?.amount;
-        providerAmount = rawAmount !== null && rawAmount !== undefined ? Number(rawAmount) : null;
-        const msg = statusData.failure_message || statusData.data?.failure_message;
-        if (msg) failureMessage = msg;
+        const rawStatus = String(statusData.data?.status || statusData.status || '').toUpperCase();
 
-        // If Nyole reports failure during the initial 8s window, keep pending
-        // in case the telecom operator push is still in flight.
-        if (
-          !isLocallyFailed &&
-          (providerStatus === 'failed' || providerStatus === 'canceled' || providerStatus === 'cancelled') &&
-          elapsedMs < 8_000
-        ) {
-          return withCors(NextResponse.json({ status: 'pending' }), request);
+        if (rawStatus === 'SUCCESS') {
+          providerStatus = 'success';
+          providerPaid = true;
+          // verify ne renvoie pas le montant : on compare au montant de la transaction locale.
+          providerAmount = Number(transaction.amount_coins);
+        } else if (rawStatus === 'FAILED' || rawStatus === 'CANCELLED') {
+          providerStatus = 'failed';
+          providerPaid = false;
+        } else {
+          providerStatus = 'pending';
         }
-      } else if (legacyPrivateKey) {
-        const npRes = await fetch(`https://api.notchpay.co/payments/${reference}`, {
-          method: 'GET',
-          headers: {
-            Authorization: legacyPrivateKey,
-            Accept: 'application/json',
-          },
-        });
-
-        if (!npRes.ok) {
-          return withCors(NextResponse.json({ status: 'pending' }), request);
-        }
-
-        const npData = (await npRes.json()) as {
-          status?: string;
-          amount?: number;
-          data?: { status?: string; amount?: number };
-        };
-        providerStatus = String(npData.status || npData.data?.status || '').toLowerCase();
-        const rawAmount = npData.amount ?? npData.data?.amount;
-        providerAmount = rawAmount !== null && rawAmount !== undefined ? Number(rawAmount) : null;
       }
 
       const isSuccessStatus =
         (providerStatus === 'complete' ||
           providerStatus === 'completed' ||
           providerStatus === 'confirmed' ||
+          providerStatus === 'paid' ||
           providerStatus === 'success') &&
         providerPaid !== false;
 

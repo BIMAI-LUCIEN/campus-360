@@ -10,8 +10,7 @@ import {
   PaymentPackType,
   decideWebhookCredit,
   isMockAllowed,
-  verifyNotchSignature,
-  verifyNyoleSignature,
+  verifySaspaySignature,
 } from './payment-rules';
 
 try {
@@ -23,8 +22,17 @@ try {
 export { PAYMENT_PACKS, type PaymentPackType };
 export type PaymentOperator = 'mtn' | 'orange';
 
-export const getNyoleBaseUrl = (): string =>
-  (process.env.NYOLE_API_URL?.trim() || 'https://app.nyole.com/api').replace(/\/+$/, '');
+export const getSaspayBaseUrl = (): string =>
+  (process.env.SASPAY_API_URL?.trim() || 'https://api.saspay.me/api/v1').replace(/\/+$/, '');
+
+/** Découpe un nom complet en prénom / nom pour le champ `customer` de SasPay (softpay). */
+export const splitCustomerName = (fullName?: string) => {
+  const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] || 'Étudiant',
+    lastName: parts.slice(1).join(' ') || 'Campus 360',
+  };
+};
 
 export interface InitiatePaymentParams {
   studentId: string;
@@ -43,7 +51,7 @@ export interface PaymentInitiationResult {
   directDebitPrompt: boolean;
   message: string;
   mock: boolean;
-  /** true when Nyole created the session with a test key (`livemode: false`). */
+  /** true when the session was created with a sandbox/test key. */
   testMode: boolean;
 }
 
@@ -64,7 +72,7 @@ export const requireCameroonMobileMoney = (rawPhone: string, operator: PaymentOp
 };
 
 /**
- * Initiates direct Mobile Money payment (MTN MoMo or Orange Money) via Nyole Checkout API.
+ * Initiates direct Mobile Money payment (MTN MoMo or Orange Money) via SasPay.
  * Inserts the pending transaction BEFORE calling the provider. Any provider failure marks status 'failed'.
  */
 export async function initiateMobileMoneyPayment(
@@ -78,9 +86,8 @@ export async function initiateMobileMoneyPayment(
     throw new MobileApiError('Pack de recharge invalide.', 400);
   }
 
-  const nyoleSecretKey = process.env.NYOLE_SECRET_KEY?.trim();
-  const legacyPrivateKey = process.env.NOTCHPAY_PRIVATE_KEY?.trim();
-  const hasProviderKey = Boolean(nyoleSecretKey || legacyPrivateKey);
+  const saspayApiKey = process.env.SASPAY_API_KEY?.trim();
+  const hasProviderKey = Boolean(saspayApiKey);
   const mockAllowed = isMockAllowed(process.env);
 
   if (!hasProviderKey && !mockAllowed) {
@@ -106,25 +113,30 @@ export async function initiateMobileMoneyPayment(
     [params.studentId, params.packType, amount, reference],
   );
 
-  if (nyoleSecretKey) {
-    const baseUrl = getNyoleBaseUrl();
+  if (saspayApiKey) {
+    const baseUrl = getSaspayBaseUrl();
+    const { firstName, lastName } = splitCustomerName(params.studentName);
     try {
-      const initRes = await doFetch(`${baseUrl}/v1/checkout/sessions`, {
+      const initRes = await doFetch(`${baseUrl}/payments/softpay/`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${nyoleSecretKey}`,
+          Authorization: `Bearer ${saspayApiKey}`,
           Accept: 'application/json',
           'Content-Type': 'application/json',
           'Idempotency-Key': reference,
         },
         body: JSON.stringify({
-          amount,
+          amount: `${amount}.00`,
           currency,
-          ...(params.studentName ? { customer_name: params.studentName } : {}),
-          ...(params.studentEmail ? { customer_email: params.studentEmail } : {}),
-          customer_phone: formattedPhone,
+          country: 'CM',
           description,
-          merchant_name: 'Campus 360',
+          customer: {
+            email: params.studentEmail || `${params.studentId}@campus360.app`,
+            first_name: firstName,
+            last_name: lastName,
+            phone: formattedPhone,
+          },
+          network: effectiveOperator === 'orange' ? 'orange_cm' : 'mtn_cm',
           metadata: {
             reference,
             student_id: params.studentId,
@@ -135,6 +147,8 @@ export async function initiateMobileMoneyPayment(
       });
 
       if (!initRes.ok) {
+        const errText = await initRes.text().catch(() => '');
+        console.error('[Saspay Softpay Error]', initRes.status, errText);
         await pool.query(
           `update public.app_wallet_transactions set status = 'failed' where reference_id = $1`,
           [reference],
@@ -144,15 +158,12 @@ export async function initiateMobileMoneyPayment(
 
       const initData = (await initRes.json()) as {
         id?: string;
-        url?: string;
-        order_id?: string;
-        reference?: string;
-        authorization_url?: string;
-        livemode?: boolean;
+        checkout_url?: string;
       };
-      testMode = initData.livemode === false;
 
-      const gatewayRef = initData.id || initData.reference;
+      testMode = saspayApiKey.startsWith('sk_test_');
+
+      const gatewayRef = initData.id;
       if (gatewayRef && gatewayRef !== reference) {
         await pool.query(
           `update public.app_wallet_transactions set reference_id = $1 where reference_id = $2`,
@@ -161,81 +172,8 @@ export async function initiateMobileMoneyPayment(
         reference = gatewayRef;
       }
 
-      paymentUrl =
-        initData.url ||
-        initData.authorization_url ||
-        (initData.id ? `https://app.nyole.com/checkout/${initData.id}` : undefined);
-    } catch (error) {
-      if (error instanceof MobileApiError) throw error;
-      await pool.query(
-        `update public.app_wallet_transactions set status = 'failed' where reference_id = $1`,
-        [reference],
-      );
-      throw new MobileApiError("L'opérateur n'a pas répondu. Réessaie.", 502);
-    }
-  } else if (legacyPrivateKey) {
-    try {
-      const initRes = await doFetch('https://api.notchpay.co/payments', {
-        method: 'POST',
-        headers: {
-          Authorization: legacyPrivateKey,
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount,
-          currency,
-          email: params.studentEmail || 'etudiant@campus360.app',
-          description,
-          customer: {
-            name: params.studentName || 'Étudiant Campus 360',
-            phone: formattedPhone,
-          },
-        }),
-      });
-
-      if (!initRes.ok) {
-        await pool.query(
-          `update public.app_wallet_transactions set status = 'failed' where reference_id = $1`,
-          [reference],
-        );
-        throw new MobileApiError("L'opérateur n'a pas répondu. Réessaie.", 502);
-      }
-
-      const initData = (await initRes.json()) as {
-        reference?: string;
-        data?: { reference?: string };
-        transaction?: { reference?: string };
-        authorization_url?: string;
-      };
-
-      const gatewayRef =
-        initData.reference ||
-        initData.data?.reference ||
-        initData.transaction?.reference;
-
-      if (gatewayRef && gatewayRef !== reference) {
-        await pool.query(
-          `update public.app_wallet_transactions set reference_id = $1 where reference_id = $2`,
-          [gatewayRef, reference],
-        );
-        reference = gatewayRef;
-      }
-      paymentUrl = initData.authorization_url;
-
-      const channel = effectiveOperator === 'orange' ? 'cm.orange' : 'cm.mtn';
-      await doFetch(`https://api.notchpay.co/payments/${reference}`, {
-        method: 'POST',
-        headers: {
-          Authorization: legacyPrivateKey,
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          channel,
-          data: { account_number: formattedPhone },
-        }),
-      }).catch((err) => console.warn('[Payment Direct Push]', err));
+      // checkout_url vide = push envoyé directement sur le téléphone du client.
+      paymentUrl = initData.checkout_url || undefined;
     } catch (error) {
       if (error instanceof MobileApiError) throw error;
       await pool.query(
@@ -252,72 +190,43 @@ export async function initiateMobileMoneyPayment(
     paymentUrl,
     directDebitPrompt: !paymentUrl,
     message: paymentUrl
-      ? `Termine le paiement de ${amount} ${currency} sur la page Nyole : choisis ${effectiveOperator === 'orange' ? 'Orange Money' : 'MTN MoMo'}, puis valide avec ton code secret sur le ${formattedPhone}.`
+      ? `Termine le paiement de ${amount} ${currency} sur la page de paiement sécurisée SasPay : choisis ${effectiveOperator === 'orange' ? 'Orange Money' : 'MTN MoMo'}, puis valide avec ton code secret sur le ${formattedPhone}.`
       : `Valide le débit de ${amount} ${currency} avec ton code secret Mobile Money sur le ${formattedPhone}.`,
     mock: !hasProviderKey,
     testMode,
   };
 }
 
-export interface NotchWebhookResult {
+export interface SaspayWebhookResult {
   status: number;
   body: Record<string, unknown>;
 }
 
-export type NyoleWebhookResult = NotchWebhookResult;
-
 /**
- * Unified webhook handler for both /api/mobile/payments/webhook and /api/mobile/wallet/webhook.
- * Supports Nyole (`X-Afriflow-Signature` + `X-Afriflow-Timestamp`) and legacy HMAC headers.
+ * Webhook SasPay (`X-Webhook-Signature` + `X-Webhook-Timestamp`).
+ * Used by /api/mobile/payments/webhook and /api/mobile/wallet/webhook.
  */
-export async function processNyoleWebhook(
+export async function processSaspayWebhook(
   rawBody: string,
   headers: Headers | { get(name: string): string | null },
-): Promise<NyoleWebhookResult> {
-  const primaryNyoleSecret =
-    process.env.NYOLE_WEBHOOK_SECRET?.trim() ||
-    process.env.NYOLE_SECRET_KEY?.trim();
-  const fallbackNyoleSecret = process.env.NYOLE_SECRET_KEY?.trim();
-  const legacySecret = process.env.NOTCHPAY_WEBHOOK_SECRET?.trim();
+): Promise<SaspayWebhookResult> {
+  const saspaySecret =
+    process.env.SASPAY_WEBHOOK_SECRET?.trim() ||
+    process.env.SASPAY_API_KEY?.trim();
 
-  if (!primaryNyoleSecret && !legacySecret) {
-    console.error('[processNyoleWebhook] NYOLE_SECRET_KEY / NYOLE_WEBHOOK_SECRET missing.');
+  if (!saspaySecret) {
+    console.error('[processWebhook] SASPAY_API_KEY missing.');
     return {
       status: 503,
       body: { error: 'Webhook non configuré.' },
     };
   }
 
-  const afriflowSignature = headers.get('x-afriflow-signature');
-  const afriflowTimestamp = headers.get('x-afriflow-timestamp');
-  const legacySignature =
-    headers.get('x-notch-signature') ||
-    headers.get('x-cinetpay-signature') ||
-    headers.get('x-webhook-signature');
-
-  let signatureValid = false;
-  if (afriflowSignature && primaryNyoleSecret) {
-    signatureValid = verifyNyoleSignature(
-      rawBody,
-      afriflowSignature,
-      afriflowTimestamp,
-      primaryNyoleSecret,
-    );
-    if (!signatureValid && fallbackNyoleSecret && fallbackNyoleSecret !== primaryNyoleSecret) {
-      signatureValid = verifyNyoleSignature(
-        rawBody,
-        afriflowSignature,
-        afriflowTimestamp,
-        fallbackNyoleSecret,
-      );
-    }
-  } else if (legacySignature && (legacySecret || primaryNyoleSecret)) {
-    signatureValid = verifyNotchSignature(
-      rawBody,
-      legacySignature,
-      (legacySecret || primaryNyoleSecret)!,
-    );
-  }
+  const signature = headers.get('x-webhook-signature');
+  const timestamp = headers.get('x-webhook-timestamp');
+  const signatureValid = Boolean(
+    signature && verifySaspaySignature(rawBody, signature, timestamp, saspaySecret),
+  );
 
   if (!signatureValid) {
     return {
@@ -337,16 +246,18 @@ export async function processNyoleWebhook(
   }
 
   const reference =
-    eventPayload.data?.id ||
-    eventPayload.data?.reference ||
     eventPayload.data?.metadata?.reference ||
+    eventPayload.data?.id ||
+    eventPayload.data?.transaction_reference ||
+    eventPayload.data?.reference ||
+    eventPayload.id ||
     eventPayload.reference ||
     eventPayload.transaction?.reference;
 
   const fallbackMetaReference =
     typeof eventPayload.data?.metadata?.reference === 'string'
       ? eventPayload.data.metadata.reference
-      : null;
+      : (typeof eventPayload.data?.id === 'string' ? eventPayload.data.id : null);
 
   if (!reference || typeof reference !== 'string' || reference.length > 200) {
     return {
@@ -355,11 +266,18 @@ export async function processNyoleWebhook(
     };
   }
 
-  const status = String(eventPayload.status || eventPayload.data?.status || '').toLowerCase();
+  const status = String(
+    eventPayload.status ||
+    eventPayload.data?.status ||
+    eventPayload.data?.transaction_status ||
+    '',
+  ).toLowerCase();
   const event = String(eventPayload.event || '').toLowerCase();
   const paidFlag = eventPayload.paid ?? eventPayload.data?.paid;
   const isExplicitlyUnpaid = paidFlag === false;
   const isFailedEvent =
+    event === 'transaction.failed' ||
+    event === 'transaction.cancelled' ||
     event === 'payment.failed' ||
     event === 'charge.failed' ||
     event === 'payment.cancelled' ||
@@ -372,17 +290,22 @@ export async function processNyoleWebhook(
   const isSuccess =
     !isExplicitlyUnpaid &&
     !isFailedEvent &&
-    (status === 'complete' ||
+    (status === 'paid' ||
+      status === 'complete' ||
       status === 'completed' ||
       status === 'confirmed' ||
       status === 'success' ||
       status === 'successful' ||
+      event === 'transaction.success' ||
       event === 'payment.completed' ||
       event === 'payment.complete' ||
       event === 'payment.confirmed');
 
-  const rawAmount = eventPayload.amount ?? eventPayload.data?.amount;
-  const amount = rawAmount !== null && rawAmount !== undefined ? Number(rawAmount) : null;
+  const rawAmount =
+    eventPayload.amount ??
+    eventPayload.data?.amount ??
+    eventPayload.data?.net_amount;
+  const amount = rawAmount !== null && rawAmount !== undefined ? Math.round(Number(rawAmount)) : null;
 
   const client = await databasePool.connect();
   try {
@@ -520,8 +443,6 @@ export async function processNyoleWebhook(
   }
 }
 
-export const processNotchWebhook = processNyoleWebhook;
-
 /**
  * Backward compatibility alias for existing callers.
  */
@@ -531,16 +452,13 @@ export async function verifyAndProcessMobilePaymentWebhook(params: {
   timestamp?: string | null;
   eventPayload?: any;
 }) {
-  const result = await processNyoleWebhook(params.rawBody, {
+  const result = await processSaspayWebhook(params.rawBody, {
     get: (name: string) => {
       const lower = name.toLowerCase();
-      if (lower === 'x-afriflow-timestamp') {
+      if (lower === 'x-webhook-timestamp') {
         return params.timestamp ?? null;
       }
-      if (lower === 'x-afriflow-signature') {
-        return params.signature ?? null;
-      }
-      if (lower.includes('signature')) {
+      if (lower === 'x-webhook-signature') {
         return params.signature ?? null;
       }
       return null;

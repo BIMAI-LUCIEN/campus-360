@@ -972,7 +972,7 @@ export function AppShell() {
       setRechargePaymentUrl(res.paymentUrl || null);
       let attempts = 0;
       const maxAttempts = 60;
-      setPollingMessage('Ouverture du paiement sécurisé Nyole... Validez sur votre téléphone une fois sur la page.');
+      setPollingMessage('Ouverture du paiement sécurisé SasPay... Validez sur votre téléphone une fois sur la page.');
 
       if (res.paymentUrl) {
         try {
@@ -1007,8 +1007,8 @@ export function AppShell() {
               'Paiement non validé',
               statusRes.failureMessage ||
                 provider === 'Orange Money'
-                  ? `La transaction a été rejetée ou a expiré. Avec Orange Money, compose ${ORANGE_MONEY_APPROVAL_USSD} pour valider, ou rouvre la page de paiement Nyole.`
-                  : 'La transaction a été rejetée ou a expiré. Vérifie ton solde MTN MoMo, ou rouvre la page de paiement Nyole.',
+                  ? `La transaction a été rejetée ou a expiré. Avec Orange Money, compose ${ORANGE_MONEY_APPROVAL_USSD} pour valider, ou rouvre la page de paiement SasPay.`
+                  : 'La transaction a été rejetée ou a expiré. Vérifie ton solde MTN MoMo, ou rouvre la page de paiement SasPay.',
             );
           } else if (attempts >= maxAttempts) {
             clearInterval(pollInterval);
@@ -1521,7 +1521,7 @@ export function AppShell() {
                 <ActivityIndicator size="small" color={stitchColors.emeraldTone} />
                 <Text style={{ color: stitchColors.emeraldTone, fontSize: 13, fontWeight: '700', textAlign: 'center' }}>{pollingMessage}</Text>
                 {rechargePaymentUrl ? (
-                  <PrimaryButtonLocal label="Ouvrir la page de paiement Nyole" variant="secondary" fluid onPress={() => { Linking.openURL(rechargePaymentUrl).catch(() => {}); }} />
+                  <PrimaryButtonLocal label="Ouvrir la page de paiement SasPay" variant="secondary" fluid onPress={() => { Linking.openURL(rechargePaymentUrl).catch(() => {}); }} />
                 ) : null}
                 <PrimaryButtonLocal label="Annuler" variant="secondary" fluid onPress={cancelRechargePolling} />
               </View>

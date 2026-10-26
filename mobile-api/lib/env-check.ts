@@ -56,14 +56,10 @@ export const missingProductionEnv = (env: Env): string[] => {
     missing.push('RESEND_API_KEY');
   }
 
-  // NYOLE_SECRET_KEY: required unless PAYMENTS_ENABLED === 'false'
+  // SASPAY_API_KEY: required unless PAYMENTS_ENABLED === 'false'
   if (env.PAYMENTS_ENABLED?.trim() !== 'false') {
-    const hasNyole = Boolean(env.NYOLE_SECRET_KEY?.trim());
-    const hasLegacyNotch =
-      Boolean(env.NOTCHPAY_PRIVATE_KEY?.trim()) &&
-      Boolean(env.NOTCHPAY_WEBHOOK_SECRET?.trim());
-    if (!hasNyole && !hasLegacyNotch) {
-      missing.push('NYOLE_SECRET_KEY');
+    if (!env.SASPAY_API_KEY?.trim()) {
+      missing.push('SASPAY_API_KEY');
     }
   }
 

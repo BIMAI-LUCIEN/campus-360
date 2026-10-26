@@ -21,7 +21,6 @@ import {
   ArrowRight,
   ExternalLink,
 } from 'lucide-react-native';
-import { authFetchRaw } from '../auth/betterAuth';
 import {
   PAYMENT_PACKS,
   type PaymentPack,
@@ -57,10 +56,8 @@ export function PaymentModal({
   const [waitingUssd, setWaitingUssd] = useState(false);
   const [currentRef, setCurrentRef] = useState<string | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
-  const [simulating, setSimulating] = useState(false);
   const [success, setSuccess] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
-  const [testMode, setTestMode] = useState(false);
   const [instruction, setInstruction] = useState<string | null>(null);
   const parsedPhone = parseCameroonMobile(phone);
   const showPhoneHint = phone.replace(/\D/g, '').length >= 9;
@@ -126,7 +123,6 @@ export function PaymentModal({
 
       setLoading(false);
       setCurrentRef(response.reference);
-      setTestMode(response.testMode === true);
       setInstruction(response.message || null);
       setPaymentUrl(response.paymentUrl || null);
       setWaitingUssd(true);
@@ -189,22 +185,6 @@ export function PaymentModal({
     }
   };
 
-  const handleSimulateSandbox = async () => {
-    if (!currentRef) return;
-    setSimulating(true);
-    try {
-      await authFetchRaw('/api/mobile/payments/sandbox-simulate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference: currentRef }),
-      });
-    } catch {
-      // Polling will handle resolution or timeout
-    } finally {
-      setSimulating(false);
-    }
-  };
-
   const handleResetAndClose = () => {
     stopPolling();
     try {
@@ -215,7 +195,6 @@ export function PaymentModal({
     setPaymentUrl(null);
     setSuccess(false);
     setNoticeMessage(null);
-    setTestMode(false);
     setInstruction(null);
     onClose();
   };
@@ -278,7 +257,7 @@ export function PaymentModal({
               <Text style={styles.waitingTitle}>Paiement {OPERATOR_LABELS[operator]} en attente</Text>
               <Text style={styles.waitingText}>
                 {instruction ||
-                  `Termine le paiement sur la page Nyole, puis valide le débit avec ton code secret ${OPERATOR_LABELS[operator]}.`}
+                  `Termine le paiement sur la page sécurisée SasPay, puis valide le débit avec ton code secret ${OPERATOR_LABELS[operator]}.`}
               </Text>
               <View style={styles.pinInstructionBox}>
                 <Text style={styles.pinInstructionText}>
@@ -291,24 +270,6 @@ export function PaymentModal({
                 </Text>
               </View>
 
-              {/* Simulation proposée seulement pour une session Nyole créée avec une clé de test */}
-              {testMode ? (
-              <Pressable
-                style={[styles.simulateBtn, simulating && { opacity: 0.6 }]}
-                onPress={handleSimulateSandbox}
-                disabled={simulating}
-              >
-                {simulating ? (
-                  <ActivityIndicator size="small" color={stitchColors.secondary} />
-                ) : (
-                  <>
-                    <Sparkles size={14} color={stitchColors.secondary} style={{ marginRight: 6 }} />
-                    <Text style={styles.simulateBtnText}>Simuler le paiement test (Mode Sandbox)</Text>
-                  </>
-                )}
-              </Pressable>
-              ) : null}
-
               {paymentUrl ? (
                 <Pressable
                   style={styles.checkoutLinkBtn}
@@ -317,7 +278,7 @@ export function PaymentModal({
                   }}
                 >
                   <ExternalLink size={15} color={stitchColors.primary} style={{ marginRight: 6 }} />
-                  <Text style={styles.checkoutLinkText}>Ouvrir la page de paiement Nyole</Text>
+                  <Text style={styles.checkoutLinkText}>Ouvrir la page de paiement SasPay</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -439,7 +400,7 @@ export function PaymentModal({
               <View style={styles.securityRow}>
                 <ShieldCheck size={14} color={stitchColors.inkMuted} />
                 <Text style={styles.securityText}>
-                  Paiement sécurisé via Nyole. Numéros MTN et Orange du Cameroun uniquement.
+                  Paiement sécurisé via SasPay. Numéros MTN et Orange du Cameroun uniquement.
                 </Text>
               </View>
             </ScrollView>

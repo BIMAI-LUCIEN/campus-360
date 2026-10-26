@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { processNotchWebhook } from '@/lib/payments';
+import { processSaspayWebhook } from '@/lib/payments';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payload trop volumineux.' }, { status: 413 });
     }
 
-    const result = await processNotchWebhook(rawBody, request.headers);
+    const result = await processSaspayWebhook(rawBody, request.headers);
 
     return NextResponse.json(result.body, { status: result.status });
   } catch (error) {

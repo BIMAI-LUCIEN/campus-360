@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { databasePool } from '@/lib/database';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { isMockAllowed } from '@/lib/payment-rules';
-import { getNyoleBaseUrl, requireCameroonMobileMoney } from '@/lib/payments';
+import { getSaspayBaseUrl, requireCameroonMobileMoney, splitCustomerName } from '@/lib/payments';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
@@ -67,9 +67,8 @@ export async function POST(request: NextRequest) {
 
     const input = bodySchema.parse(await request.json().catch(() => ({})));
 
-    const nyoleSecretKey = process.env.NYOLE_SECRET_KEY?.trim();
-    const legacyPrivateKey = process.env.NOTCHPAY_PRIVATE_KEY?.trim();
-    const isRealPayment = Boolean(nyoleSecretKey || legacyPrivateKey);
+    const saspayApiKey = process.env.SASPAY_API_KEY?.trim();
+    const isRealPayment = Boolean(saspayApiKey);
     const mockAllowed = isMockAllowed(process.env);
 
     if (!isRealPayment && !mockAllowed) {
@@ -103,24 +102,29 @@ export async function POST(request: NextRequest) {
       const isOrange = phone.operator === 'orange';
 
       try {
-        if (nyoleSecretKey) {
-          const baseUrl = getNyoleBaseUrl();
-          const initRes = await fetch(`${baseUrl}/v1/checkout/sessions`, {
+        if (saspayApiKey) {
+          const baseUrl = getSaspayBaseUrl();
+          const { firstName, lastName } = splitCustomerName(user.name);
+          const initRes = await fetch(`${baseUrl}/payments/softpay/`, {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${nyoleSecretKey}`,
+              Authorization: `Bearer ${saspayApiKey}`,
               Accept: 'application/json',
               'Content-Type': 'application/json',
               'Idempotency-Key': reference,
             },
             body: JSON.stringify({
-              amount: input.amountCoins,
+              amount: `${input.amountCoins}.00`,
               currency: 'XAF',
-              ...(user.name ? { customer_name: user.name } : {}),
-              ...(user.email ? { customer_email: user.email } : {}),
-              customer_phone: formattedPhone,
+              country: 'CM',
               description: `Recharge Campus 360 - ${input.amountCoins} Coins`,
-              merchant_name: 'Campus 360',
+              customer: {
+                email: user.email || `${user.id}@campus360.app`,
+                first_name: firstName,
+                last_name: lastName,
+                phone: formattedPhone,
+              },
+              network: isOrange ? 'orange_cm' : 'mtn_cm',
               metadata: {
                 reference,
                 student_id: user.id,
@@ -135,14 +139,11 @@ export async function POST(request: NextRequest) {
 
           const initData = (await initRes.json()) as {
             id?: string;
-            url?: string;
-            reference?: string;
-            authorization_url?: string;
-            livemode?: boolean;
+            checkout_url?: string;
           };
-          testMode = initData.livemode === false;
+          testMode = saspayApiKey.startsWith('sk_test_');
 
-          const providerRef = initData.id || initData.reference || '';
+          const providerRef = initData.id || '';
           if (providerRef && providerRef !== reference) {
             await databasePool.query(
               `update public.app_wallet_transactions set reference_id = $1 where reference_id = $2`,
@@ -151,73 +152,7 @@ export async function POST(request: NextRequest) {
             reference = providerRef;
           }
 
-          paymentUrl =
-            initData.url ||
-            initData.authorization_url ||
-            (initData.id ? `https://app.nyole.com/checkout/${initData.id}` : undefined);
-        } else if (legacyPrivateKey) {
-          const initRes = await fetch('https://api.notchpay.co/payments', {
-            method: 'POST',
-            headers: {
-              Authorization: legacyPrivateKey,
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              amount: input.amountCoins,
-              currency: 'XAF',
-              email: user.email,
-              description: `Recharge Campus 360 - ${input.amountCoins} Coins`,
-            }),
-          });
-
-          if (!initRes.ok) {
-            throw new MobileApiError("Impossible d'initialiser le paiement.", 502);
-          }
-
-          const initData = (await initRes.json()) as {
-            reference?: string;
-            data?: { reference?: string };
-            transaction?: { reference?: string };
-            authorization_url?: string;
-          };
-
-          const providerRef =
-            initData.reference ||
-            initData.data?.reference ||
-            initData.transaction?.reference ||
-            (initData.authorization_url ? initData.authorization_url.split('/').pop() : '') ||
-            '';
-
-          if (providerRef && providerRef !== reference) {
-            await databasePool.query(
-              `update public.app_wallet_transactions set reference_id = $1 where reference_id = $2`,
-              [providerRef, reference],
-            );
-            reference = providerRef;
-          }
-          paymentUrl = initData.authorization_url;
-
-          const channel = isOrange ? 'cm.orange' : 'cm.mtn';
-          const chargeRes = await fetch(`https://api.notchpay.co/payments/${reference}`, {
-            method: 'POST',
-            headers: {
-              Authorization: legacyPrivateKey,
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              channel,
-              data: { account_number: formattedPhone },
-            }),
-          });
-
-          if (!chargeRes.ok) {
-            throw new MobileApiError(
-              'Erreur lors du traitement du debit direct. Verifiez le numero de telephone.',
-              400,
-            );
-          }
+          paymentUrl = initData.checkout_url || undefined;
         }
       } catch (err) {
         await databasePool.query(
