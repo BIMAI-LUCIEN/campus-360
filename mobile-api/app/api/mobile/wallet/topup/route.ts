@@ -5,7 +5,12 @@ import { z } from 'zod';
 import { databasePool } from '@/lib/database';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { isMockAllowed } from '@/lib/payment-rules';
-import { getSaspayBaseUrl, requireCameroonMobileMoney, splitCustomerName } from '@/lib/payments';
+import {
+  getSaspayBaseUrl,
+  readSaspayError,
+  requireCameroonMobileMoney,
+  splitCustomerName,
+} from '@/lib/payments';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
@@ -134,7 +139,17 @@ export async function POST(request: NextRequest) {
           });
 
           if (!initRes.ok) {
-            throw new MobileApiError("Impossible d'initialiser le paiement.", 502);
+            const providerMessage = await readSaspayError(initRes, 'Softpay Error');
+            await databasePool.query(
+              `update public.app_wallet_transactions set failure_message = $2 where reference_id = $1`,
+              [reference, providerMessage || null],
+            );
+            throw new MobileApiError(
+              providerMessage
+                ? `Paiement refusé par l'opérateur : ${providerMessage}`
+                : "Impossible d'initialiser le paiement.",
+              502,
+            );
           }
 
           const initData = (await initRes.json()) as {

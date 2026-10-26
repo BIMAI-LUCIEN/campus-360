@@ -25,6 +25,30 @@ export type PaymentOperator = 'mtn' | 'orange';
 export const getSaspayBaseUrl = (): string =>
   (process.env.SASPAY_API_URL?.trim() || 'https://api.saspay.me/api/v1').replace(/\/+$/, '');
 
+/**
+ * Lit le corps d'une réponse SasPay en échec, le journalise et renvoie un message lisible
+ * (`message`, `detail`, `error`, `code` ou premier message de validation).
+ */
+export const readSaspayError = async (res: Response, context: string): Promise<string> => {
+  const raw = await res.text().catch(() => '');
+  console.error(`[Saspay ${context}]`, res.status, raw.slice(0, 1000));
+  let message = '';
+  try {
+    const body = JSON.parse(raw) as Record<string, unknown>;
+    const pick = (value: unknown): string => {
+      if (typeof value === 'string') return value;
+      if (Array.isArray(value)) return pick(value[0]);
+      if (value && typeof value === 'object') return pick(Object.values(value)[0]);
+      return '';
+    };
+    message =
+      pick(body.message) || pick(body.detail) || pick(body.error) || pick(body.errors) || pick(body.code);
+  } catch {
+    // corps non JSON
+  }
+  return message.trim().slice(0, 200);
+};
+
 /** Découpe un nom complet en prénom / nom pour le champ `customer` de SasPay (softpay). */
 export const splitCustomerName = (fullName?: string) => {
   const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
@@ -147,13 +171,17 @@ export async function initiateMobileMoneyPayment(
       });
 
       if (!initRes.ok) {
-        const errText = await initRes.text().catch(() => '');
-        console.error('[Saspay Softpay Error]', initRes.status, errText);
+        const providerMessage = await readSaspayError(initRes, 'Softpay Error');
         await pool.query(
-          `update public.app_wallet_transactions set status = 'failed' where reference_id = $1`,
-          [reference],
+          `update public.app_wallet_transactions set status = 'failed', failure_message = $2 where reference_id = $1`,
+          [reference, providerMessage || null],
         );
-        throw new MobileApiError("L'opérateur n'a pas répondu. Réessaie.", 502);
+        throw new MobileApiError(
+          providerMessage
+            ? `Paiement refusé par l'opérateur : ${providerMessage}`
+            : "L'opérateur n'a pas répondu. Réessaie.",
+          502,
+        );
       }
 
       const initData = (await initRes.json()) as {
