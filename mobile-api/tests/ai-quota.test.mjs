@@ -48,7 +48,7 @@ test('reserveDailyAiCall : réservation atomique avec contrôle de plafond 24h',
   assert.equal(resultAllowed, true, 'Doit renvoyer true quand le quota permet la réservation');
 });
 
-test('Garde de source : présence de enforceAiQuota sur chacune des 9 routes IA', () => {
+test('Garde de source : présence de enforceAiQuota sur chacune des 10 routes IA', () => {
   const routes = [
     'app/api/mobile/documents/generate/route.ts',
     'app/api/mobile/documents/generate-full/route.ts',
@@ -59,6 +59,7 @@ test('Garde de source : présence de enforceAiQuota sur chacune des 9 routes IA'
     'app/api/mobile/documents/[id]/chat/route.ts',
     'app/api/mobile/documents/[id]/sections/[sectionId]/interview/route.ts',
     'app/api/ai/pdf-chat/route.ts',
+    'app/api/mobile/stages/cv/route.ts',
   ];
 
   for (const rel of routes) {

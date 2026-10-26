@@ -68,7 +68,7 @@ test('le PDF de candidature n’a plus de badge « AI Verified »', () => {
 });
 
 test('chaque gabarit du CV garde le contenu et la photo, et échappe les valeurs', () => {
-  for (const template of ['classic', 'modern', 'elegant']) {
+  for (const template of ['classic', 'prestige', 'ingenieur', 'etudiant']) {
     const cv = emptyCv();
     cv.detailsPersonnels = { nom: 'Ndi', prenom: 'Awa', email: 'awa@exemple.cm', telephone: '237600000000' };
     cv.competences.professionnelles = ['<b>ok</b>'];
@@ -79,8 +79,26 @@ test('chaque gabarit du CV garde le contenu et la photo, et échappe les valeurs
     assert.ok(html.includes('<img src="data:image/jpeg;base64,AAAA"'), template);
     assert.ok(!html.includes('<b>ok</b>'), template);
   }
-  const modern = m.generateOfficialCvHtml(emptyCv(), 'modern');
-  assert.ok(modern.includes('[à compléter]'));
-  assert.ok(!modern.includes('<img'));
-  assert.deepEqual(m.CV_TEMPLATES.map(t => t.id), ['classic', 'modern', 'elegant']);
+  for (const template of ['prestige', 'ingenieur', 'etudiant']) {
+    const empty = m.generateOfficialCvHtml(emptyCv(), template);
+    assert.ok(empty.includes('[à compléter]'), template);
+    assert.ok(!empty.includes('<img'), template);
+  }
+  assert.deepEqual(m.CV_TEMPLATES.map(t => t.id), ['classic', 'prestige', 'ingenieur', 'etudiant']);
+});
+
+test('le profil rédigé par l’IA est échappé et affiché dans chaque gabarit', () => {
+  for (const { id } of m.CV_TEMPLATES) {
+    const cv = emptyCv();
+    cv.profil = 'Étudiante <script>x</script> en comptabilité';
+    const html = m.generateOfficialCvHtml(cv, id);
+    assert.ok(html.includes('Étudiante &lt;script&gt;x&lt;/script&gt; en comptabilité'), id);
+  }
+});
+
+test('un identifiant de gabarit inconnu (ancienne version) retombe sur le gabarit officiel', () => {
+  const html = m.generateOfficialCvHtml(emptyCv(), 'modern');
+  assert.ok(html.includes('Détails personnels'));
+  assert.equal(m.isCvTemplateId('modern'), false);
+  assert.equal(m.isCvTemplateId('etudiant'), true);
 });

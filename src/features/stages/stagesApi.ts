@@ -225,12 +225,84 @@ export type GeneratedApplicationResult = {
   recipientWhatsapp?: string;
 };
 
+const orTodo = (text: string) => text.trim() || '[à compléter]';
+
+// Plain-text version of the CV (copy, "Modifier" tab, application record).
+export const buildCvText = (officialCv: OfficialCvData): string => {
+  const { nom, prenom, email, telephone } = officialCv.detailsPersonnels;
+  return `CURRICULUM VITAE — ${nom} ${prenom}
+${officialCv.titrePoste.toUpperCase()}${officialCv.profil ? `
+
+PROFIL :
+${officialCv.profil}` : ''}
+
+DÉTAILS PERSONNELS :
+Nom : ${nom} | Prénom : ${prenom}
+Email : ${email || '[à compléter]'} | Téléphone : ${telephone || '[à compléter]'}
+
+EXPÉRIENCE PROFESSIONNELLE :
+${orTodo(officialCv.experiences.map(e => `• ${e.poste} — ${e.entreprise}, ${e.ville} (${e.periode})\n  ${e.missions.map(m => '- ' + m).join('\n  ')}`).join('\n'))}
+
+FORMATION :
+${orTodo(officialCv.formations.map(f => `• ${[f.diplome, f.etablissement, f.ville].filter(Boolean).join(' — ')} (${f.periode})`).join('\n'))}
+
+COMPÉTENCES PROFESSIONNELLES :
+${orTodo(officialCv.competences.professionnelles.map(x => '• ' + x).join('\n'))}
+
+HABILITÉS PERSONNELLES ET RELATIONNELLES :
+${orTodo(officialCv.competences.habilitesRelationnelles.join(', '))}
+
+MAÎTRISE DES LOGICIELS :
+${orTodo(officialCv.competences.logiciels.map(l => `• ${l.categorie} : ${l.items.join(', ')}`).join('\n'))}
+
+LANGUES :
+${orTodo(officialCv.langues.map(l => `• ${l.langue}${l.niveau ? ` : ${l.niveau}` : ''}`).join('\n'))}
+
+AUTRES INFORMATIONS IMPORTANTES :
+Loisirs : ${orTodo(officialCv.loisirs.join(', '))}`.trim();
+};
+
+/**
+ * Asks the AI to fill the CV from the profile and the student's notes, targeted
+ * at the offer (mobile-api /api/mobile/stages/cv). Only the written parts come
+ * back: merge them with mergeAiCv. Throws when the AI is unavailable.
+ */
+export async function fillCvWithAi(
+  job: StageJob,
+  student: { fullName: string; university?: string; major: string; educationLevel: string; skills: string[] },
+  notes: string,
+): Promise<Partial<OfficialCvData>> {
+  const response = await authFetch('/api/mobile/stages/cv', {
+    method: 'POST',
+    body: JSON.stringify({
+      job: {
+        title: job.title,
+        company: job.company?.name,
+        description: job.description?.slice(0, 4000),
+        requirements: job.requirements?.slice(0, 30),
+      },
+      student: {
+        fullName: student.fullName,
+        university: student.university || undefined,
+        major: student.major && student.major !== 'Non renseigné' ? student.major : undefined,
+        educationLevel: student.educationLevel || undefined,
+        skills: student.skills.slice(0, 40),
+      },
+      notes: notes.trim().slice(0, 4000) || undefined,
+    }),
+  });
+  const payload = (await response.json()) as { cv?: Partial<OfficialCvData> };
+  if (!payload.cv) throw new Error("L'IA n'a pas pu remplir le CV.");
+  return payload.cv;
+}
+
 export async function generateIaApplication(
   job: StageJob,
   student: {
     fullName: string;
     email: string;
     phoneWhatsapp?: string;
+    university?: string;
     major: string;
     educationLevel: string;
     skills: string[];
@@ -262,7 +334,7 @@ export async function generateIaApplication(
     },
     experiences: [],
     formations: level || major
-      ? [{ diplome: [level, major].filter(Boolean).join(' en '), etablissement: '', ville: '', periode: 'En cours' }]
+      ? [{ diplome: [level, major].filter(Boolean).join(' en '), etablissement: student.university?.trim() || '', ville: '', periode: 'En cours' }]
       : [],
     competences: {
       professionnelles: student.skills,
@@ -273,34 +345,7 @@ export async function generateIaApplication(
     loisirs: [],
   };
 
-  const orTodo = (text: string) => text.trim() || '[à compléter]';
-  const cvText = `CURRICULUM VITAE — ${nom} ${prenom}
-${job.title.toUpperCase()}
-
-DÉTAILS PERSONNELS :
-Nom : ${nom} | Prénom : ${prenom}
-Email : ${student.email || '[à compléter]'} | Téléphone : ${officialCv.detailsPersonnels.telephone || '[à compléter]'}
-
-EXPÉRIENCE PROFESSIONNELLE :
-${orTodo(officialCv.experiences.map(e => `• ${e.poste} — ${e.entreprise}, ${e.ville} (${e.periode})\n  ${e.missions.map(m => '- ' + m).join('\n  ')}`).join('\n'))}
-
-FORMATION :
-${orTodo(officialCv.formations.map(f => `• ${[f.diplome, f.etablissement, f.ville].filter(Boolean).join(' — ')} (${f.periode})`).join('\n'))}
-
-COMPÉTENCES PROFESSIONNELLES :
-${orTodo(officialCv.competences.professionnelles.map(x => '• ' + x).join('\n'))}
-
-HABILITÉS PERSONNELLES ET RELATIONNELLES :
-${orTodo(officialCv.competences.habilitesRelationnelles.join(', '))}
-
-MAÎTRISE DES LOGICIELS :
-${orTodo(officialCv.competences.logiciels.map(l => `• ${l.categorie} : ${l.items.join(', ')}`).join('\n'))}
-
-LANGUES :
-${orTodo(officialCv.langues.map(l => `• ${l.langue} : ${l.niveau}`).join('\n'))}
-
-AUTRES INFORMATIONS IMPORTANTES :
-Loisirs : ${orTodo(officialCv.loisirs.join(', '))}`.trim();
+  const cvText = buildCvText(officialCv);
 
   const letterText = `À l'attention du Responsable des Recrutements,
 ${companyName}

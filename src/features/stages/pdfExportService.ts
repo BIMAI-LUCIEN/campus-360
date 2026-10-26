@@ -75,7 +75,7 @@ export async function exportOfficialCvPdf(cv: OfficialCvData, template: CvTempla
  */
 export async function exportApplicationPdf(data: DocumentExportData): Promise<boolean> {
   if (data.officialCv) {
-    return exportOfficialCvPdf(data.officialCv);
+    return exportOfficialCvPdf(data.officialCv, data.cvTemplate);
   }
 
   const htmlContent = buildApplicationHtml(data);
@@ -177,7 +177,7 @@ export async function generateCvPdfBase64(
     } else {
       const docData = data as DocumentExportData;
       htmlContent = docData.officialCv
-        ? generateOfficialCvHtml(docData.officialCv)
+        ? generateOfficialCvHtml(docData.officialCv, docData.cvTemplate)
         : buildApplicationHtml(docData);
     }
 

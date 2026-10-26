@@ -1668,7 +1668,7 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 16. **Ordre de mise en production du scraping :** appliquer 0014 **avant** de déployer le code du module 25 ; sinon expiration et journal échouent (journalisé, non bloquant) et le plafond reste actif.
 
-17. **Scraping : déclencheur unique (fait le 2026-10-26, tâche 25.18).** Les 4 crons `--dry-run` du VPS sont remplacés par une seule ligne `0 9,10 * * * /usr/local/bin/campus360-scraper-daily.sh` : le script ne continue qu'à 10 h heure de Douala (le serveur est en Europe/Berlin), passe en `--live` avec `flock`, et écrit dans `/var/log/campus-scraper.log`. Sauvegarde : `/root/crontab.bak-20261026-112106`. Reste à faire : désactiver le cron GitHub `daily-scraper.yml` (9 h UTC, sans `--live`).
+17. **Scraping : déclencheur unique (fait le 2026-10-26, tâche 25.18).** Les 4 crons `--dry-run` du VPS sont remplacés par une seule ligne `0 9,10 * * * /usr/local/bin/campus360-scraper-daily.sh` : le script ne continue qu'à 10 h heure de Douala (le serveur est en Europe/Berlin), passe en `--live` avec `flock`, et écrit dans `/var/log/campus-scraper.log`. Sauvegarde : `/root/crontab.bak-20261026-112106`. Le cron GitHub `daily-scraper.yml` est désactivé (lancement manuel seulement).
 
 
 

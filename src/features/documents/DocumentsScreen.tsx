@@ -22,6 +22,7 @@ import { DocGenChat } from './DocGenChat';
 import { TemplateGallery } from './TemplateGallery';
 import type { TemplateCard } from './templatesApi';
 import { CvTemplatePreview } from '../stages/CvTemplatePreview';
+import { CvTemplateGallery } from '../stages/CvTemplateGallery';
 import { exportOfficialCvPdf } from '../stages/pdfExportService';
 import { CV_TEMPLATES, missingCvFields, type CvTemplateId } from '../stages/cvHtml';
 import { deleteCvPhoto, fetchCvPhoto, pickCvPhoto, saveCvPhoto } from '../stages/cvPhoto';
@@ -235,25 +236,6 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       setPhotoBusy(false);
     }
   };
-
-  const renderTemplateChips = () => (
-    <View style={styles.cvTemplateRow}>
-      {CV_TEMPLATES.map((t) => {
-        const active = t.id === cvTemplate;
-        return (
-          <Pressable
-            key={t.id}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            style={[styles.cvTemplateChip, active && styles.cvTemplateChipActive]}
-            onPress={() => setCvTemplate(t.id)}
-          >
-            <Text style={[styles.cvTemplateChipText, active && styles.cvTemplateChipTextActive]}>{t.label}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
 
   const renderPhotoControls = () => (
     <View style={styles.cvPhotoRow}>
@@ -524,7 +506,9 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         <Text style={styles.cvShowcaseDesc}>
           Choisis la mise en page, ajoute ta photo. Ce qui manque reste marqué [à compléter].
         </Text>
-        {renderTemplateChips()}
+        <View style={styles.cvTemplateGallery}>
+          <CvTemplateGallery value={cvTemplate} onChange={setCvTemplate} />
+        </View>
         {renderPhotoControls()}
         <View style={styles.cvShowcaseActions}>
           <Pressable
@@ -909,7 +893,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
             </View>
 
             <View style={styles.cvPreviewControls}>
-              {renderTemplateChips()}
+              <CvTemplateGallery layout="strip" value={cvTemplate} onChange={setCvTemplate} />
               {renderPhotoControls()}
             </View>
 
@@ -1237,19 +1221,7 @@ const styles = StyleSheet.create({
   },
 
   // Choix du gabarit et photo du CV
-  cvTemplateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
-  cvTemplateChip: {
-    paddingHorizontal: 12,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: stitchColors.paperSoft,
-    backgroundColor: stitchColors.white,
-    justifyContent: 'center',
-  },
-  cvTemplateChipActive: { backgroundColor: stitchColors.primary, borderColor: stitchColors.primary },
-  cvTemplateChipText: { fontSize: 12, fontWeight: '700', color: stitchColors.inkSoft },
-  cvTemplateChipTextActive: { color: stitchColors.white },
+  cvTemplateGallery: { marginTop: 12 },
   cvPhotoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 },
   cvPhotoBtn: {
     flexDirection: 'row',

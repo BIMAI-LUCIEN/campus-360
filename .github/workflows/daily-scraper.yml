@@ -1,9 +1,8 @@
 name: Daily AI Scraper Cameroon Jobs & Stage Reports
 
 on:
-  schedule:
-    # 09:00 UTC = 10:00 WAT (Heure locale du Cameroun) tous les jours
-    - cron: '0 9 * * *'
+  # No schedule (task 25.18): the only daily trigger is the VPS cron
+  # (/usr/local/bin/campus360-scraper-daily.sh, 10:00 Douala time, --live). Manual runs only.
   workflow_dispatch:
     inputs:
       query:

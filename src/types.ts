@@ -231,6 +231,8 @@ export type CvLangue = {
 export type OfficialCvData = {
   titrePoste: string;
   photoUrl?: string;
+  /** Short professional summary (3-4 sentences), written by the AI from the student's facts. */
+  profil?: string;
   detailsPersonnels: CvPersonalDetails;
   experiences: CvExperience[];
   formations: CvFormation[];

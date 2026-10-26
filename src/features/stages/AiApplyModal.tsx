@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Modal,
   View,
@@ -26,10 +26,13 @@ import {
   Zap,
   AlertCircle,
   MessageSquare,
+  Sparkles,
 } from 'lucide-react-native';
-import type { StageJob, OfficialCvData } from '../../types';
+import type { StageJob } from '../../types';
 import {
   generateIaApplication,
+  fillCvWithAi,
+  buildCvText,
   submitStageApplication,
   dispatchStageApplication,
   type GeneratedApplicationResult,
@@ -37,7 +40,9 @@ import {
 import { analyzeJobMatch, type MatchAnalysis } from './aiMatchEngine';
 import { APPLY_LINK_NOTICE, isLinkApply } from './applyTarget';
 import { exportApplicationPdf, buildWhatsAppPitch, generateCvPdfBase64 } from './pdfExportService';
-import { missingCvFields } from './cvHtml';
+import { mergeAiCv, missingCvFields, type CvTemplateId } from './cvHtml';
+import { CvTemplateGallery } from './CvTemplateGallery';
+import { CvTemplatePreview } from './CvTemplatePreview';
 import { StudentProfileExpressModal } from './StudentProfileExpressModal';
 import { getStudentAccount, updateStudentProfile } from '../auth/betterAuth';
 import { PaymentModal } from '../wallet/PaymentModal';
@@ -77,122 +82,6 @@ export interface ApplicationProfilePatch {
   skills: string[];
 }
 
-function OfficialCvCardPreview({ cv }: { cv: OfficialCvData }) {
-  const nom = cv.detailsPersonnels.nom.toUpperCase();
-  const prenom = cv.detailsPersonnels.prenom;
-
-  return (
-    <View style={styles.officialCvBox}>
-      {/* En-tête avec nom et photo */}
-      <View style={styles.officialCvHeaderRow}>
-        <View style={{ flex: 1, paddingRight: 10 }}>
-          <Text style={styles.officialCvFullName}>{nom} {prenom}</Text>
-          <Text style={styles.officialCvJobTitle}>{cv.titrePoste}</Text>
-        </View>
-        <View style={styles.officialCvPhotoFrame}>
-          <Text style={styles.officialCvPhotoInitials}>
-            {nom.slice(0, 1)}{prenom.slice(0, 1)}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.officialCvBlueDivider} />
-
-      {/* 1. Détails personnels */}
-      <Text style={styles.officialCvSectionHeader}>Détails personnels</Text>
-      <View style={styles.officialCvTwoCols}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.officialCvField}>
-            <Text style={styles.officialCvLabel}>Nom : </Text>{cv.detailsPersonnels.nom}
-          </Text>
-          <Text style={styles.officialCvField}>
-            <Text style={styles.officialCvLabel}>Prénom : </Text>{cv.detailsPersonnels.prenom}
-          </Text>
-          <Text style={styles.officialCvField}>
-            <Text style={styles.officialCvLabel}>Nationalité : </Text>{cv.detailsPersonnels.nationalite}
-          </Text>
-          <Text style={styles.officialCvField}>
-            <Text style={styles.officialCvLabel}>Âge : </Text>{cv.detailsPersonnels.age}
-          </Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.officialCvField} numberOfLines={1}>
-            <Text style={styles.officialCvLabel}>Email : </Text>{cv.detailsPersonnels.email}
-          </Text>
-          <Text style={styles.officialCvField}>
-            <Text style={styles.officialCvLabel}>Tél : </Text>{cv.detailsPersonnels.telephone}
-          </Text>
-          <Text style={styles.officialCvField}>
-            <Text style={styles.officialCvLabel}>Adresse : </Text>{cv.detailsPersonnels.adresse}
-          </Text>
-        </View>
-      </View>
-
-      {/* 2. Expérience professionnelle */}
-      <Text style={styles.officialCvSectionHeader}>Expérience professionnelle</Text>
-      {cv.experiences.map((exp, idx) => (
-        <View key={idx} style={styles.officialCvBlock}>
-          <Text style={styles.officialCvItemTitle}>{exp.poste}</Text>
-          <View style={styles.officialCvRowBetween}>
-            <Text style={styles.officialCvItemSubtitle}>{exp.entreprise}, {exp.ville}</Text>
-            <Text style={styles.officialCvItemDate}>{exp.periode}</Text>
-          </View>
-          {exp.missions.map((m, mIdx) => (
-            <Text key={mIdx} style={styles.officialCvBullet}>• {m}</Text>
-          ))}
-        </View>
-      ))}
-
-      {/* 3. Formation */}
-      <Text style={styles.officialCvSectionHeader}>Formation</Text>
-      {cv.formations.map((form, idx) => (
-        <View key={idx} style={styles.officialCvBlock}>
-          <View style={styles.officialCvRowBetween}>
-            <Text style={styles.officialCvItemTitle}>{form.diplome}</Text>
-            <Text style={styles.officialCvItemDate}>{form.periode}</Text>
-          </View>
-          <Text style={styles.officialCvItemSubtitle}>{form.etablissement}, {form.ville}</Text>
-        </View>
-      ))}
-
-      {/* 4. Compétences */}
-      <Text style={styles.officialCvSectionHeader}>Compétences</Text>
-      <Text style={styles.officialCvSubheading}>Compétences professionnelles</Text>
-      {cv.competences.professionnelles.map((comp, idx) => (
-        <Text key={idx} style={styles.officialCvBullet}>• {comp}</Text>
-      ))}
-
-      <Text style={styles.officialCvSubheading}>Habilités personnelles et relationnelles :</Text>
-      <Text style={styles.officialCvInlineText}>
-        {cv.competences.habilitesRelationnelles.join(', ')}
-      </Text>
-
-      <Text style={styles.officialCvSubheading}>Maîtrise des logiciels</Text>
-      {cv.competences.logiciels.map((log, idx) => (
-        <Text key={idx} style={styles.officialCvBullet}>
-          • {log.categorie ? `${log.categorie} : ` : ''}{log.items.join(', ')}
-        </Text>
-      ))}
-
-      {/* 5. Langues */}
-      <Text style={styles.officialCvSectionHeader}>Langues</Text>
-      {cv.langues.map((l, idx) => (
-        <Text key={idx} style={styles.officialCvInlineText}>
-          {l.langue}: {l.niveau}
-        </Text>
-      ))}
-
-      {/* 6. Autres informations importantes */}
-      <Text style={styles.officialCvSectionHeader}>Autres informations importantes</Text>
-      <Text style={styles.officialCvInlineText}>
-        Loisirs : {cv.loisirs.join(', ')}
-      </Text>
-
-      <Text style={styles.officialCvPageNumber}>1</Text>
-    </View>
-  );
-}
-
 export function AiApplyModal({
   visible,
   job,
@@ -202,7 +91,13 @@ export function AiApplyModal({
   onRecharge,
   onProfileSaved,
 }: AiApplyModalProps) {
-  const [step, setStep] = useState<'generating' | 'preview' | 'sent'>('generating');
+  // template: the student picks the CV layout and tells the AI what is not in the profile.
+  const [step, setStep] = useState<'template' | 'generating' | 'preview' | 'sent'>('template');
+  const [cvTemplate, setCvTemplate] = useState<CvTemplateId>('classic');
+  // Kept while the screen lives, so the next application starts from the same notes.
+  const [cvNotes, setCvNotes] = useState('');
+  const [cvAiNotice, setCvAiNotice] = useState<string | null>(null);
+  const progressTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [progressMsg, setProgressMsg] = useState("Analyse de l'offre et correspondance des compétences...");
   const [result, setResult] = useState<GeneratedApplicationResult | null>(null);
   const [activePreviewTab, setActivePreviewTab] = useState<'letter' | 'cv' | 'match'>('letter');
@@ -304,39 +199,54 @@ export function AiApplyModal({
       // If student has 0 tokens, prompt Mobile Money payment modal
       // Free during the V1 launch: no credit gate.
       if (!isFreeLaunch() && currentProfile.tokens !== undefined && currentProfile.tokens <= 0) {
+  useEffect(() => () => progressTimers.current.forEach(clearTimeout), []);
+
+  // Letter and match are written on the device; the CV is filled by the AI
+  // (/api/mobile/stages/cv) and falls back to the profile alone when it fails.
+  const startGeneration = async () => {
+    if (!job) return;
+    setStep('generating');
+    setCvAiNotice(null);
+    setProgressMsg("Lecture de ton profil et de l'offre...");
+    progressTimers.current.forEach(clearTimeout);
+    progressTimers.current = [
+      setTimeout(() => setProgressMsg("L'IA remplit ton CV et rédige ta lettre..."), 1200),
+      setTimeout(() => setProgressMsg('Mise en page dans le modèle choisi...'), 4000),
+    ];
+    try {
+      const [res, aiCv] = await Promise.all([
+        generateIaApplication(job, currentProfile),
+        fillCvWithAi(job, currentProfile, cvNotes).catch((err) => {
+          console.warn('[AiApplyModal] AI CV fill failed:', err);
+          return null;
+        }),
+      ]);
+      const officialCv = res.officialCv ? mergeAiCv(res.officialCv, aiCv) : undefined;
+      const cvText = officialCv ? buildCvText(officialCv) : res.cvText;
+      setResult({ ...res, officialCv, cvText });
+      setEditableLetter(res.letterText);
+      setEditableCv(cvText);
+      if (!aiCv) {
+        setCvAiNotice("L'IA n'a pas pu compléter ton CV pour le moment : il reprend les informations de ton profil.");
+      }
+      setActivePreviewTab('cv');
+      setStep('preview');
+    } catch (err) {
+      AppAlert.alert('Erreur', err instanceof Error ? err.message : 'Impossible de générer la candidature. Réessayez.');
+      setStep('template');
+    } finally {
+      progressTimers.current.forEach(clearTimeout);
+    }
+  };
+
         setShowPaymentModal(true);
         return;
       }
 
-      setStep('generating');
+      setStep('template');
       setResult(null);
       setIsEditing(false);
       setCopiedPitch(false);
-
-      const t1 = setTimeout(() => {
-        setProgressMsg('Rédaction du CV et de la lettre personnalisée...');
-      }, 700);
-
-      const t2 = setTimeout(() => {
-        setProgressMsg('Mise en page et alignement avec les critères du poste...');
-      }, 1400);
-
-      generateIaApplication(job, currentProfile)
-        .then((res) => {
-          setResult(res);
-          setEditableLetter(res.letterText);
-          setEditableCv(res.cvText);
-          setStep('preview');
-        })
-        .catch(() => {
-          AppAlert.alert('Erreur', 'Impossible de générer la candidature. Réessayez.');
-          onClose();
-        });
-
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-      };
     }
   }, [visible, job, currentProfile, isProfileIncomplete]);
 
@@ -429,6 +339,7 @@ export function AiApplyModal({
     }
     setDownloadingPdf(true);
     try {
+        cvTemplate,
       await exportApplicationPdf({
         studentName: currentProfile.fullName,
         studentEmail: currentProfile.email,
@@ -460,6 +371,7 @@ export function AiApplyModal({
     setDispatchReceipt(null);
     try {
       const studentPhone = linkedPhone || currentProfile.phoneWhatsapp || '';
+        cvTemplate,
       const pdfBase64 = await generateCvPdfBase64({
         studentName: currentProfile.fullName,
         studentEmail: currentProfile.email,
@@ -700,6 +612,49 @@ export function AiApplyModal({
               <View style={styles.previewContainer}>
                 {/* Tab Bar */}
                 <View style={styles.tabBar}>
+            {/* Étape 0 : Choix du modèle de CV et notes pour l'IA */}
+            {step === 'template' && (
+              <View style={styles.previewContainer}>
+                <ScrollView
+                  style={styles.previewScroll}
+                  contentContainerStyle={styles.templateStepContent}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <Text style={styles.templateStepTitle}>Choisis le modèle de ton CV</Text>
+                  <Text style={styles.templateStepSubtitle}>
+                    L'IA le remplit avec ton profil et l'adapte à cette offre. Tu pourras encore changer de modèle avant l'envoi.
+                  </Text>
+                  <CvTemplateGallery value={cvTemplate} onChange={setCvTemplate} />
+
+                  <Text style={styles.notesLabel}>Ce que l'IA doit savoir (facultatif)</Text>
+                  <TextInput
+                    testID="cv-notes-input"
+                    style={styles.notesInput}
+                    multiline
+                    maxLength={4000}
+                    value={cvNotes}
+                    onChangeText={setCvNotes}
+                    placeholder="Stages, jobs, projets, associations, langues parlées, loisirs… Ex : stage de 2 mois au service client d'Orange à Douala en 2025. Je parle anglais."
+                    placeholderTextColor={stitchColors.inkSubtle}
+                    textAlignVertical="top"
+                  />
+                  <Text style={styles.notesHint}>
+                    L'IA n'utilise que ton profil et ce que tu écris ici : elle n'invente ni entreprise, ni diplôme, ni langue.
+                  </Text>
+                </ScrollView>
+                <View style={styles.templateFooter}>
+                  <Pressable
+                    testID="btn-generate-cv"
+                    style={({ pressed }) => [styles.primaryOneClickBtn, styles.generateCvBtn, pressed && { opacity: 0.9 }]}
+                    onPress={startGeneration}
+                  >
+                    <Sparkles size={16} color={stitchColors.white} />
+                    <Text style={styles.primaryOneClickBtnText}>Générer mon CV et ma lettre</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
                   <View style={styles.tabGroup}>
                     <Pressable
                       testID="tab-letter"
@@ -820,14 +775,21 @@ export function AiApplyModal({
                         <Text style={styles.strategicText}>{matchAnalysis.strategicAdvice}</Text>
                       </View>
                     </View>
-                  ) : activePreviewTab === 'cv' && !isEditing && result?.officialCv ? (
-                    <OfficialCvCardPreview cv={result.officialCv} />
                   ) : isEditing ? (
                     <TextInput
                       style={styles.editorTextInput}
                       multiline
                       value={activePreviewTab === 'letter' ? editableLetter : editableCv}
                       onChangeText={
+                {activePreviewTab === 'cv' && !isEditing && result.officialCv ? (
+                  <View style={styles.cvPreviewArea}>
+                    {cvAiNotice && <Text style={styles.cvAiNotice}>{cvAiNotice}</Text>}
+                    <CvTemplateGallery layout="strip" value={cvTemplate} onChange={setCvTemplate} />
+                    <View style={styles.cvPreviewPage}>
+                      <CvTemplatePreview cv={result.officialCv} template={cvTemplate} />
+                    </View>
+                  </View>
+                ) : (
                         activePreviewTab === 'letter' ? setEditableLetter : setEditableCv
                       }
                       placeholderTextColor={stitchColors.inkMuted}
@@ -873,6 +835,7 @@ export function AiApplyModal({
                   </Pressable>
                 </View>
 
+                )}
                 {/* Actions Box: Canaux d'expédition et 1-Clic */}
                 <View style={styles.actionsBox}>
                   <Text style={styles.actionsTitle}>Canal d'expédition :</Text>
@@ -1482,6 +1445,80 @@ const styles = StyleSheet.create({
     borderColor: stitchColors.primary,
     minHeight: 220,
     textAlignVertical: 'top',
+  templateStepContent: {
+    paddingTop: 14,
+    paddingBottom: 24,
+  },
+  templateStepTitle: {
+    fontFamily: fontFamilies.display,
+    fontSize: 18,
+    color: stitchColors.ink,
+  },
+  templateStepSubtitle: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 13,
+    lineHeight: 19,
+    color: stitchColors.inkMuted,
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  notesLabel: {
+    fontFamily: fontFamilies.interSemi,
+    fontSize: 13.5,
+    color: stitchColors.ink,
+    marginTop: 20,
+    marginBottom: 6,
+  },
+  notesInput: {
+    minHeight: 104,
+    borderWidth: 1,
+    borderColor: stitchColors.outlineVariant,
+    borderRadius: stitchRadius.sm,
+    backgroundColor: stitchColors.white,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontFamily: fontFamilies.inter,
+    fontSize: 13.5,
+    lineHeight: 19,
+    color: stitchColors.ink,
+  },
+  notesHint: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: stitchColors.inkMuted,
+    marginTop: 6,
+  },
+  templateFooter: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: stitchColors.outlineVariant,
+  },
+  cvPreviewArea: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    gap: 8,
+  },
+  cvAiNotice: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 12,
+    lineHeight: 17,
+    color: stitchColors.warningDeep,
+    backgroundColor: stitchColors.warningBg,
+    borderRadius: stitchRadius.DEFAULT,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  cvPreviewPage: {
+    flex: 1,
+    minHeight: 260,
+    borderRadius: stitchRadius.DEFAULT,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: stitchColors.outlineVariant,
+  },
   },
 
   // Match Tab
@@ -1700,6 +1737,10 @@ const styles = StyleSheet.create({
   },
   unlinkedWarningTitle: {
     fontFamily: fontFamilies.outfit,
+  generateCvBtn: {
+    backgroundColor: stitchColors.primary,
+    shadowColor: stitchColors.primary,
+  },
     fontSize: 12.5,
     fontWeight: '700',
     color: stitchColors.warning,
@@ -2020,129 +2061,4 @@ const styles = StyleSheet.create({
   },
 
   // Official CV Card Preview styles (Gabarit 2 Colonnes)
-  officialCvBox: {
-    backgroundColor: stitchColors.white,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
-    padding: 16,
-    marginBottom: 12,
-  },
-  officialCvHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  officialCvFullName: {
-    fontFamily: fontFamilies.outfit,
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#111827',
-    letterSpacing: -0.2,
-  },
-  officialCvJobTitle: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#4B5563',
-    marginTop: 2,
-  },
-  officialCvPhotoFrame: {
-    width: 48,
-    height: 58,
-    borderWidth: 1,
-    borderColor: stitchColors.outline,
-    backgroundColor: stitchColors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 3,
-  },
-  officialCvPhotoInitials: {
-    fontFamily: fontFamilies.outfit,
-    fontSize: 14,
-    fontWeight: '700',
-    color: stitchColors.inkSubtle,
-  },
-  officialCvBlueDivider: {
-    height: 2,
-    backgroundColor: '#005691',
-    marginVertical: 10,
-  },
-  officialCvSectionHeader: {
-    fontFamily: fontFamilies.outfit,
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#005691',
-    borderBottomWidth: 1,
-    borderBottomColor: '#005691',
-    paddingBottom: 2,
-    marginTop: 10,
-    marginBottom: 6,
-  },
-  officialCvTwoCols: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  officialCvField: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 10,
-    color: '#1F2937',
-    marginBottom: 3,
-  },
-  officialCvLabel: {
-    fontWeight: '700',
-    color: '#111827',
-  },
-  officialCvBlock: {
-    marginBottom: 6,
-  },
-  officialCvRowBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-  },
-  officialCvItemTitle: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  officialCvItemSubtitle: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 10,
-    fontStyle: 'italic',
-    color: '#4B5563',
-  },
-  officialCvItemDate: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 9.5,
-    color: '#6B7280',
-  },
-  officialCvBullet: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 9.5,
-    color: '#374151',
-    marginLeft: 4,
-    marginBottom: 2,
-  },
-  officialCvSubheading: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#111827',
-    marginTop: 4,
-    marginBottom: 2,
-  },
-  officialCvInlineText: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 9.5,
-    color: '#374151',
-    marginBottom: 4,
-  },
-  officialCvPageNumber: {
-    textAlign: 'center',
-    fontSize: 9.5,
-    color: stitchColors.inkSubtle,
-    marginTop: 12,
-  },
 });

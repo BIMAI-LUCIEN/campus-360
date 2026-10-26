@@ -20,6 +20,7 @@ export const AI_ROUTE_LIMITS = {
   'document-chat': { max: 40, windowMs: 600_000 },
   'section-interview-draft': { max: 20, windowMs: 600_000 },
   'ai-pdf-chat': { max: 60, windowMs: 60_000 },
+  'cv-fill': { max: 10, windowMs: 600_000 },
 } as const;
 
 export type AiRoute = keyof typeof AI_ROUTE_LIMITS;
