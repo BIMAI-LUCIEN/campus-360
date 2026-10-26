@@ -5,6 +5,7 @@ import * as SecureStore from 'expo-secure-store';
 import { analyzeJobMatch } from './aiMatchEngine';
 import { fitSecureStoreBudget, getUtf8ByteLength, pruneBulkyApplicationFields, purgeFakeApplications } from './applicationsCache';
 import { companyEmail, companyWhatsapp } from './contactTargets';
+import { fetchCvPhoto } from './cvPhoto';
 
 export { fitSecureStoreBudget, getUtf8ByteLength, pruneBulkyApplicationFields, purgeFakeApplications };
 
@@ -196,7 +197,8 @@ export async function generateIaApplication(
   // Only what the student told us. Missing parts print as "[à compléter]" in the CV.
   const officialCv: OfficialCvData = {
     titrePoste: job.title,
-    photoUrl: undefined,
+    // The photo is optional: an unreachable account never blocks the application.
+    photoUrl: await fetchCvPhoto().catch(() => null) || undefined,
     detailsPersonnels: {
       nom,
       prenom,

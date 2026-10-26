@@ -66,3 +66,21 @@ test('le PDF de candidature n’a plus de badge « AI Verified »', () => {
   assert.ok(!html.includes('AI Verified'));
   assert.ok(!html.includes('<i>Awa</i>'));
 });
+
+test('chaque gabarit du CV garde le contenu et la photo, et échappe les valeurs', () => {
+  for (const template of ['classic', 'modern', 'elegant']) {
+    const cv = emptyCv();
+    cv.detailsPersonnels = { nom: 'Ndi', prenom: 'Awa', email: 'awa@exemple.cm', telephone: '237600000000' };
+    cv.competences.professionnelles = ['<b>ok</b>'];
+    cv.photoUrl = 'data:image/jpeg;base64,AAAA';
+    const html = m.generateOfficialCvHtml(cv, template);
+    assert.ok(html.includes('NDI'), template);
+    assert.ok(html.includes('awa@exemple.cm'), template);
+    assert.ok(html.includes('<img src="data:image/jpeg;base64,AAAA"'), template);
+    assert.ok(!html.includes('<b>ok</b>'), template);
+  }
+  const modern = m.generateOfficialCvHtml(emptyCv(), 'modern');
+  assert.ok(modern.includes('[à compléter]'));
+  assert.ok(!modern.includes('<img'));
+  assert.deepEqual(m.CV_TEMPLATES.map(t => t.id), ['classic', 'modern', 'elegant']);
+});

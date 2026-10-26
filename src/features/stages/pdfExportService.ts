@@ -2,15 +2,15 @@ import { Platform, Alert } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import type { OfficialCvData } from '../../types';
-import { buildApplicationHtml, generateOfficialCvHtml, type DocumentExportData } from './cvHtml';
+import { buildApplicationHtml, generateOfficialCvHtml, type CvTemplateId, type DocumentExportData } from './cvHtml';
 
 export type { DocumentExportData } from './cvHtml';
 
 /**
  * Déclenche l'export ou l'impression PDF selon la plateforme pour le CV Officiel
  */
-export async function exportOfficialCvPdf(cv: OfficialCvData): Promise<boolean> {
-  const htmlContent = generateOfficialCvHtml(cv);
+export async function exportOfficialCvPdf(cv: OfficialCvData, template: CvTemplateId = 'classic'): Promise<boolean> {
+  const htmlContent = generateOfficialCvHtml(cv, template);
   const fullName = `${cv.detailsPersonnels.nom}_${cv.detailsPersonnels.prenom}`.replace(/\s+/g, '_');
   const filename = `CV_${fullName}.pdf`;
 

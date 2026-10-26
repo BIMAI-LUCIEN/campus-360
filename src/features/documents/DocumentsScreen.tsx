@@ -12,9 +12,10 @@ import { GradientText } from '../../ui/GlassComponents';
 import { DocGenChat } from './DocGenChat';
 import { TemplateGallery } from './TemplateGallery';
 import type { TemplateCard } from './templatesApi';
-import { OfficialCvView } from '../stages/OfficialCvView';
+import { CvTemplatePreview } from '../stages/CvTemplatePreview';
 import { exportOfficialCvPdf } from '../stages/pdfExportService';
-import { missingCvFields } from '../stages/cvHtml';
+import { CV_TEMPLATES, missingCvFields, type CvTemplateId } from '../stages/cvHtml';
+import { deleteCvPhoto, fetchCvPhoto, pickCvPhoto, saveCvPhoto } from '../stages/cvPhoto';
 import type { OfficialCvData } from '../../types';
 import { freeLabel, isFreeLaunch } from '../../config/launch';
 
@@ -164,6 +165,10 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   const [genChatVisible, setGenChatVisible] = useState(false);
   const [generatingFull, setGeneratingFull] = useState(false);
   const [cvPreviewVisible, setCvPreviewVisible] = useState(false);
+  // Layout of the official CV and the student's photo (kept for this session only).
+  const [cvTemplate, setCvTemplate] = useState<CvTemplateId>('classic');
+  const [cvPhoto, setCvPhoto] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
 
   // Only what the profile really knows: missing fields print "[à compléter]".
   const officialCvData: OfficialCvData = useMemo(() => {
@@ -172,7 +177,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
     const faculty = studentProfile?.faculty?.trim() || '';
     return {
       titrePoste: faculty ? `Étudiant en ${faculty}` : '',
-      photoUrl: undefined,
+      photoUrl: cvPhoto || undefined,
       detailsPersonnels: {
         nom: nameParts[0] || '',
         prenom: nameParts.slice(1).join(' '),
@@ -191,7 +196,72 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       langues: [],
       loisirs: [],
     };
-  }, [studentProfile]);
+  }, [studentProfile, cvPhoto]);
+
+  const selectedTemplate = CV_TEMPLATES.find((t) => t.id === cvTemplate) ?? CV_TEMPLATES[0];
+
+  const onPickPhoto = async () => {
+    try {
+      setPhotoBusy(true);
+      const dataUri = await pickCvPhoto();
+      if (!dataUri) return;
+      await saveCvPhoto(dataUri);
+      setCvPhoto(dataUri);
+    } catch (err: any) {
+      Alert.alert('Photo', err?.message || 'Impossible d’ajouter la photo.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const onRemovePhoto = async () => {
+    try {
+      setPhotoBusy(true);
+      await deleteCvPhoto();
+      setCvPhoto(null);
+    } catch (err: any) {
+      Alert.alert('Photo', err?.message || 'Impossible de retirer la photo.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const renderTemplateChips = () => (
+    <View style={styles.cvTemplateRow}>
+      {CV_TEMPLATES.map((t) => {
+        const active = t.id === cvTemplate;
+        return (
+          <Pressable
+            key={t.id}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            style={[styles.cvTemplateChip, active && styles.cvTemplateChipActive]}
+            onPress={() => setCvTemplate(t.id)}
+          >
+            <Text style={[styles.cvTemplateChipText, active && styles.cvTemplateChipTextActive]}>{t.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+
+  const renderPhotoControls = () => (
+    <View style={styles.cvPhotoRow}>
+      <Pressable
+        style={({ pressed }) => [styles.cvPhotoBtn, pressed && { opacity: 0.88 }, photoBusy && styles.buttonDisabled]}
+        onPress={onPickPhoto}
+        disabled={photoBusy}
+      >
+        {photoBusy ? <ActivityIndicator size="small" color={stitchColors.primary} /> : null}
+        <Text style={styles.cvPhotoBtnText}>{cvPhoto ? 'Changer ma photo' : 'Ajouter ma photo'}</Text>
+      </Pressable>
+      {cvPhoto ? (
+        <Pressable onPress={onRemovePhoto} disabled={photoBusy} style={styles.cvPhotoRemove}>
+          <Text style={styles.cvPhotoRemoveText}>Retirer</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
 
   const guessedField = useMemo(
     () => fieldFromProfile(studentProfile?.faculty, studentProfile?.level, studentProfile?.university),
@@ -230,6 +300,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   useEffect(() => {
     fetchDocuments();
     fetchIaCredits();
+    fetchCvPhoto().then(setCvPhoto).catch(() => {});
   }, []);
 
   // ─── Reset form ───────────────────────────────────────────────────────────────
@@ -430,19 +501,21 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         </View>
       </View>
 
-      {/* ── Vitrine CV Officiel RH 2 Colonnes ─────────────────────────── */}
+      {/* ── Vitrine CV Officiel RH : choix du gabarit et de la photo ──── */}
       <View style={styles.cvShowcaseCard}>
         <View style={styles.cvShowcaseHeader}>
           <View style={styles.cvShowcaseBadge}>
             <Sparkles size={11} color={stitchColors.primary} />
-            <Text style={styles.cvShowcaseBadgeText}>Modèle 2 colonnes</Text>
+            <Text style={styles.cvShowcaseBadgeText}>Modèle {selectedTemplate.label}</Text>
           </View>
-          <Text style={styles.cvShowcaseFormat}>Format 2 Colonnes</Text>
+          <Text style={styles.cvShowcaseFormat}>{selectedTemplate.description}</Text>
         </View>
         <Text style={styles.cvShowcaseTitle}>Curriculum vitae</Text>
         <Text style={styles.cvShowcaseDesc}>
-          Ton CV en deux colonnes, rempli à partir de ton profil. Ce qui manque reste marqué [à compléter].
+          Choisis la mise en page, ajoute ta photo. Ce qui manque reste marqué [à compléter].
         </Text>
+        {renderTemplateChips()}
+        {renderPhotoControls()}
         <View style={styles.cvShowcaseActions}>
           <Pressable
             style={({ pressed }) => [styles.cvPreviewBtn, pressed && { opacity: 0.88 }]}
@@ -815,7 +888,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
             <View style={styles.officialCvModalHeader}>
               <View>
                 <Text style={styles.officialCvModalTitle}>Ton CV</Text>
-                <Text style={styles.officialCvModalSub}>Modèle 2 colonnes</Text>
+                <Text style={styles.officialCvModalSub}>Modèle {selectedTemplate.label}</Text>
               </View>
               <Pressable
                 style={({ pressed }) => [styles.officialCvCloseBtn, pressed && { opacity: 0.8 }]}
@@ -825,13 +898,14 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
               </Pressable>
             </View>
 
-            <ScrollView
-              style={styles.officialCvScroll}
-              contentContainerStyle={styles.officialCvScrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <OfficialCvView cv={officialCvData} />
-            </ScrollView>
+            <View style={styles.cvPreviewControls}>
+              {renderTemplateChips()}
+              {renderPhotoControls()}
+            </View>
+
+            <View style={styles.officialCvPreviewBox}>
+              <CvTemplatePreview cv={officialCvData} template={cvTemplate} />
+            </View>
 
             <View style={styles.officialCvFooter}>
               <Pressable
@@ -843,7 +917,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                     return;
                   }
                   try {
-                    const done = await exportOfficialCvPdf(officialCvData);
+                    const done = await exportOfficialCvPdf(officialCvData, cvTemplate);
                     if (done) Alert.alert('CV exporté', 'Ton CV a été exporté en PDF.');
                   } catch {
                     Alert.alert('Erreur', 'Impossible d’exporter le CV.');
@@ -1151,6 +1225,37 @@ const styles = StyleSheet.create({
     fontFamily: SANS,
     maxWidth: 280,
   },
+
+  // Choix du gabarit et photo du CV
+  cvTemplateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  cvTemplateChip: {
+    paddingHorizontal: 12,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchColors.paperSoft,
+    backgroundColor: stitchColors.white,
+    justifyContent: 'center',
+  },
+  cvTemplateChipActive: { backgroundColor: stitchColors.primary, borderColor: stitchColors.primary },
+  cvTemplateChipText: { fontSize: 12, fontWeight: '700', color: stitchColors.inkSoft },
+  cvTemplateChipTextActive: { color: stitchColors.white },
+  cvPhotoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 },
+  cvPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 36,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: stitchColors.primary,
+  },
+  cvPhotoBtnText: { fontSize: 13, fontWeight: '700', color: stitchColors.primary },
+  cvPhotoRemove: { height: 36, justifyContent: 'center' },
+  cvPhotoRemoveText: { fontSize: 13, fontWeight: '600', color: stitchColors.inkMuted },
+  cvPreviewControls: { paddingHorizontal: 16, paddingBottom: 4 },
+  officialCvPreviewBox: { flex: 1, marginHorizontal: 12, marginBottom: 8, borderRadius: 12, overflow: 'hidden', backgroundColor: stitchColors.white },
 
   // Modale CV Officiel RH
   officialCvModalOverlay: {

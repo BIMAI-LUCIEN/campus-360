@@ -168,10 +168,20 @@ ${d.cvText}
 </html>`;
 }
 
+// Layouts the student can pick for the official CV. "classic" is the 2-column
+// template; "modern" and "elegant" are the sidebar layouts (see generateSidebarCvHtml).
+export const CV_TEMPLATES = [
+  { id: 'classic', label: 'Classique', description: 'Deux colonnes, sobre' },
+  { id: 'modern', label: 'Moderne', description: 'Colonne bleue, photo ronde' },
+  { id: 'elegant', label: 'Élégant', description: 'Photo carrée, bandeau clair' },
+] as const;
+export type CvTemplateId = (typeof CV_TEMPLATES)[number]['id'];
+
 /**
- * Génère le code HTML conforme au Template CV Officiel (Gabarit 2 Colonnes)
+ * Génère le code HTML du CV Officiel. Le gabarit "classic" est le 2 colonnes d'origine.
  */
-export function generateOfficialCvHtml(cv: OfficialCvData): string {
+export function generateOfficialCvHtml(cv: OfficialCvData, template: CvTemplateId = 'classic'): string {
+  if (template !== 'classic') return generateSidebarCvHtml(cv, template);
   const c = escapeDeep(cv);
   const p = c.detailsPersonnels;
   const nom = (p.nom || '').toUpperCase();
@@ -429,6 +439,133 @@ export function generateOfficialCvHtml(cv: OfficialCvData): string {
   </div>
 
   <div class="page-footer-num">1</div>
+</body>
+</html>`;
+}
+
+// Colours of the sidebar layouts. Kept here (not in the RN components) because
+// they only exist in the printed HTML.
+const SIDEBAR_THEMES = {
+  modern: { navy: '#0B2545', light: '#FFFFFF', photoRadius: '50%' },
+  elegant: { navy: '#13315C', light: '#F1F5F9', photoRadius: '0' },
+} as const;
+
+/**
+ * Gabarits "modern" (photo ronde dans une colonne bleue) et "elegant"
+ * (photo carrée en bandeau, colonne bleue en bas). Même contenu que le classique.
+ */
+function generateSidebarCvHtml(cv: OfficialCvData, template: Exclude<CvTemplateId, 'classic'>): string {
+  const c = escapeDeep(cv);
+  const p = c.detailsPersonnels;
+  const theme = SIDEBAR_THEMES[template];
+  const nom = (p.nom || '').toUpperCase();
+  const prenom = p.prenom || '';
+  const fullName = `${nom} ${prenom}`.trim() || TO_COMPLETE;
+  const photo = safeImageUrl(cv.photoUrl);
+  const photoClass = template === 'modern' ? 'photo round' : 'photo square';
+  const photoBlock = photo
+    ? `<img src="${escapeHtml(photo)}" alt="" class="${photoClass}" />`
+    : `<div class="${photoClass} photo-initials">${nom.slice(0, 1)}${prenom.slice(0, 1)}</div>`;
+
+  const contact = `
+    <div class="side-title">Contact</div>
+    <div class="side-line">${todo(p.telephone)}</div>
+    <div class="side-line">${todo(p.email)}</div>
+    <div class="side-line">${todo(p.adresse)}</div>
+    <div class="side-line">Nationalité : ${todo(p.nationalite)}</div>
+    <div class="side-line">Âge : ${todo(p.age)}</div>`;
+  const skills = `
+    <div class="side-title">Compétences</div>
+    <ul class="side-list">
+      ${list(c.competences.professionnelles, comp => `<li>${comp}</li>`, `<li>${TO_COMPLETE}</li>`)}
+      ${c.competences.habilitesRelationnelles.map(h => `<li>${h}</li>`).join('')}
+    </ul>
+    ${c.competences.logiciels.length ? `<div class="side-subtitle">Logiciels</div><ul class="side-list">${c.competences.logiciels.map(log => `<li>${log.categorie ? `${log.categorie} : ` : ''}${log.items.join(', ')}</li>`).join('')}</ul>` : ''}`;
+  const langues = `
+    <div class="side-title">Langues</div>
+    ${list(c.langues, lang => `<div class="side-line">${lang.langue} : ${lang.niveau}</div>`, `<div class="side-line">${TO_COMPLETE}</div>`)}`;
+  const loisirs = `
+    <div class="side-title">Centres d'intérêt</div>
+    <div class="side-line">${todo(c.loisirs.join(', '))}</div>`;
+  const experiences = `
+    <div class="main-title">Expérience professionnelle</div>
+    ${list(c.experiences, exp => `
+      <div class="exp-item">
+        <div class="item-main-title">${exp.poste}</div>
+        <div class="item-top-row">
+          <span class="item-sub-title">${exp.entreprise}, ${exp.ville}</span>
+          <span class="item-date-right">${exp.periode}</span>
+        </div>
+        <ul class="cv-bullet-list">${exp.missions.map(m => `<li>${m}</li>`).join('')}</ul>
+      </div>`)}`;
+  const formations = `
+    <div class="main-title">Formation</div>
+    ${list(c.formations, form => `
+      <div class="form-item">
+        <div class="item-top-row">
+          <span class="item-main-title">${form.diplome}</span>
+          <span class="item-date-right">${form.periode}</span>
+        </div>
+        <div class="item-sub-title">${form.etablissement}, ${form.ville}</div>
+      </div>`)}`;
+  const heading = `
+    <h1 class="cv-name">${fullName}</h1>
+    <div class="cv-job-title">${todo(c.titrePoste)}</div>`;
+
+  // modern: photo and contact in the blue column, name on the right.
+  // elegant: photo and name in a header band, the blue column below.
+  const body = template === 'modern'
+    ? `<div class="page">
+         <aside class="side">${photoBlock}${contact}${skills}${langues}${loisirs}</aside>
+         <main class="main">${heading}${experiences}${formations}</main>
+       </div>`
+    : `<header class="top">${photoBlock}<div class="top-text">${heading}</div></header>
+       <div class="page">
+         <aside class="side">${contact}${skills}${langues}${loisirs}</aside>
+         <main class="main">${experiences}${formations}</main>
+       </div>`;
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Curriculum Vitae — ${fullName}</title>
+  <style>
+    @page { size: A4 portrait; margin: 0; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #111827; line-height: 1.45; font-size: 10pt; margin: 0; background: #FFFFFF;
+    }
+    .page { display: flex; min-height: 297mm; }
+    .side { width: 34%; flex: 0 0 34%; background: ${theme.navy}; color: #FFFFFF; padding: 12mm 8mm; }
+    .main { flex: 1; padding: 12mm 12mm; }
+    .top { display: flex; align-items: center; gap: 8mm; padding: 12mm 12mm 8mm; background: ${theme.light}; }
+    .top-text { flex: 1; }
+    .photo { object-fit: cover; display: block; border: 2px solid #FFFFFF; background: #E2E8F0; }
+    .photo.round { width: 38mm; height: 38mm; border-radius: ${theme.photoRadius}; margin: 0 auto 6mm; }
+    .photo.square { width: 34mm; height: 42mm; border-radius: 0; flex: 0 0 34mm; border: 0; }
+    .photo-initials { display: flex; align-items: center; justify-content: center; font-size: 20pt; font-weight: 700; color: ${theme.navy}; }
+    .cv-name { font-size: 22pt; font-weight: 800; margin: 0; color: ${template === 'modern' ? theme.navy : '#111827'}; letter-spacing: -0.3px; }
+    .cv-job-title { font-size: 12pt; color: #374151; margin-top: 2mm; }
+    .side-title { font-size: 10.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6mm; padding-bottom: 1.5mm; border-bottom: 1px solid rgba(255,255,255,0.5); }
+    .side-subtitle { font-weight: 700; margin-top: 2mm; }
+    .side-line { font-size: 9.5pt; margin-top: 1.5mm; word-break: break-word; }
+    ul.side-list { list-style: none; margin: 2mm 0 0 0; padding: 0; }
+    ul.side-list li { font-size: 9.5pt; margin-bottom: 1.2mm; }
+    .main-title { font-size: 11pt; font-weight: 700; color: ${theme.navy}; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1.5px solid ${theme.navy}; padding-bottom: 1.5mm; margin: 6mm 0 3mm; }
+    .exp-item, .form-item { margin-bottom: 4mm; }
+    .item-top-row { display: flex; justify-content: space-between; align-items: baseline; gap: 4mm; }
+    .item-main-title { font-weight: 700; font-size: 10pt; }
+    .item-sub-title { font-style: italic; color: #4B5563; font-size: 9.5pt; }
+    .item-date-right { color: #6B7280; font-size: 9pt; text-align: right; white-space: nowrap; }
+    ul.cv-bullet-list { margin: 2mm 0 0 18px; padding: 0; }
+    ul.cv-bullet-list li { font-size: 9.5pt; color: #374151; margin-bottom: 1mm; }
+  </style>
+</head>
+<body>
+  ${body}
 </body>
 </html>`;
 }
