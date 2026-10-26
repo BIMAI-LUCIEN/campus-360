@@ -4,3 +4,6 @@ landing-site/public/downloads/*.ipa filter=lfs diff=lfs merge=lfs -text
 
 # SQL migrations are checksummed after being applied: LF everywhere.
 *.sql text eol=lf
+
+# Catalogue libre : PDF sous licence ouverte (voir catalogue-libre/README.md)
+catalogue-libre/pdf/*.pdf filter=lfs diff=lfs merge=lfs -text
