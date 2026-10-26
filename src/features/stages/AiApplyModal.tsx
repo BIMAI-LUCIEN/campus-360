@@ -199,6 +199,17 @@ export function AiApplyModal({
       // If student has 0 tokens, prompt Mobile Money payment modal
       // Free during the V1 launch: no credit gate.
       if (!isFreeLaunch() && currentProfile.tokens !== undefined && currentProfile.tokens <= 0) {
+        setShowPaymentModal(true);
+        return;
+      }
+
+      setStep('template');
+      setResult(null);
+      setIsEditing(false);
+      setCopiedPitch(false);
+    }
+  }, [visible, job, currentProfile, isProfileIncomplete]);
+
   useEffect(() => () => progressTimers.current.forEach(clearTimeout), []);
 
   // Letter and match are written on the device; the CV is filled by the AI
@@ -238,17 +249,6 @@ export function AiApplyModal({
       progressTimers.current.forEach(clearTimeout);
     }
   };
-
-        setShowPaymentModal(true);
-        return;
-      }
-
-      setStep('template');
-      setResult(null);
-      setIsEditing(false);
-      setCopiedPitch(false);
-    }
-  }, [visible, job, currentProfile, isProfileIncomplete]);
 
   if (!visible || !job) return null;
 
@@ -339,7 +339,6 @@ export function AiApplyModal({
     }
     setDownloadingPdf(true);
     try {
-        cvTemplate,
       await exportApplicationPdf({
         studentName: currentProfile.fullName,
         studentEmail: currentProfile.email,
@@ -351,6 +350,7 @@ export function AiApplyModal({
         letterText: editableLetter,
         cvText: editableCv,
         officialCv: result?.officialCv,
+        cvTemplate,
       });
     } finally {
       setDownloadingPdf(false);
@@ -371,7 +371,6 @@ export function AiApplyModal({
     setDispatchReceipt(null);
     try {
       const studentPhone = linkedPhone || currentProfile.phoneWhatsapp || '';
-        cvTemplate,
       const pdfBase64 = await generateCvPdfBase64({
         studentName: currentProfile.fullName,
         studentEmail: currentProfile.email,
@@ -383,6 +382,7 @@ export function AiApplyModal({
         letterText: editableLetter,
         cvText: editableCv,
         officialCv: result.officialCv,
+        cvTemplate,
       });
 
       if (!pdfBase64 && Platform.OS === 'web') {
@@ -577,41 +577,6 @@ export function AiApplyModal({
               </Text>
             </View>
 
-            {/* Étape 1 : Génération & Analyse de correspondance */}
-            {step === 'generating' && (
-              <View style={styles.loadingContainer}>
-                <View style={styles.loadingOrb}>
-                  <ActivityIndicator size="large" color={stitchColors.primary} />
-                </View>
-                <Text style={styles.loadingTitle}>Préparation de votre dossier</Text>
-                <Text style={styles.loadingSubtitle}>{progressMsg}</Text>
-
-                {matchAnalysis && (
-                  <View style={styles.matchBriefCard}>
-                    <View style={styles.matchBriefHeader}>
-                      <Text style={styles.matchBriefTitle}>
-                        Correspondance de profil : {matchAnalysis.score}%
-                      </Text>
-                    </View>
-                    {matchAnalysis.matchedPoints.slice(0, 2).map((point, idx) => (
-                      <View key={idx} style={styles.matchPointRow}>
-                        <CheckCircle2 size={13} color={stitchColors.emeraldDeep} />
-                        <Text style={styles.matchPointText}>{point}</Text>
-                      </View>
-                    ))}
-                    <Text style={styles.matchAdviceText}>
-                      Conseil : {matchAnalysis.strategicAdvice}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
-
-            {/* Étape 2 : Prévisualisation, Onglets, Édition & Sorties */}
-            {step === 'preview' && result && (
-              <View style={styles.previewContainer}>
-                {/* Tab Bar */}
-                <View style={styles.tabBar}>
             {/* Étape 0 : Choix du modèle de CV et notes pour l'IA */}
             {step === 'template' && (
               <View style={styles.previewContainer}>
@@ -655,6 +620,41 @@ export function AiApplyModal({
               </View>
             )}
 
+            {/* Étape 1 : Génération & Analyse de correspondance */}
+            {step === 'generating' && (
+              <View style={styles.loadingContainer}>
+                <View style={styles.loadingOrb}>
+                  <ActivityIndicator size="large" color={stitchColors.primary} />
+                </View>
+                <Text style={styles.loadingTitle}>Préparation de votre dossier</Text>
+                <Text style={styles.loadingSubtitle}>{progressMsg}</Text>
+
+                {matchAnalysis && (
+                  <View style={styles.matchBriefCard}>
+                    <View style={styles.matchBriefHeader}>
+                      <Text style={styles.matchBriefTitle}>
+                        Correspondance de profil : {matchAnalysis.score}%
+                      </Text>
+                    </View>
+                    {matchAnalysis.matchedPoints.slice(0, 2).map((point, idx) => (
+                      <View key={idx} style={styles.matchPointRow}>
+                        <CheckCircle2 size={13} color={stitchColors.emeraldDeep} />
+                        <Text style={styles.matchPointText}>{point}</Text>
+                      </View>
+                    ))}
+                    <Text style={styles.matchAdviceText}>
+                      Conseil : {matchAnalysis.strategicAdvice}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Étape 2 : Prévisualisation, Onglets, Édition & Sorties */}
+            {step === 'preview' && result && (
+              <View style={styles.previewContainer}>
+                {/* Tab Bar */}
+                <View style={styles.tabBar}>
                   <View style={styles.tabGroup}>
                     <Pressable
                       testID="tab-letter"
@@ -748,6 +748,15 @@ export function AiApplyModal({
                 )}
 
                 {/* Main Content Area */}
+                {activePreviewTab === 'cv' && !isEditing && result.officialCv ? (
+                  <View style={styles.cvPreviewArea}>
+                    {cvAiNotice && <Text style={styles.cvAiNotice}>{cvAiNotice}</Text>}
+                    <CvTemplateGallery layout="strip" value={cvTemplate} onChange={setCvTemplate} />
+                    <View style={styles.cvPreviewPage}>
+                      <CvTemplatePreview cv={result.officialCv} template={cvTemplate} />
+                    </View>
+                  </View>
+                ) : (
                 <ScrollView
                   style={styles.previewScroll}
                   contentContainerStyle={styles.previewScrollContent}
@@ -781,15 +790,6 @@ export function AiApplyModal({
                       multiline
                       value={activePreviewTab === 'letter' ? editableLetter : editableCv}
                       onChangeText={
-                {activePreviewTab === 'cv' && !isEditing && result.officialCv ? (
-                  <View style={styles.cvPreviewArea}>
-                    {cvAiNotice && <Text style={styles.cvAiNotice}>{cvAiNotice}</Text>}
-                    <CvTemplateGallery layout="strip" value={cvTemplate} onChange={setCvTemplate} />
-                    <View style={styles.cvPreviewPage}>
-                      <CvTemplatePreview cv={result.officialCv} template={cvTemplate} />
-                    </View>
-                  </View>
-                ) : (
                         activePreviewTab === 'letter' ? setEditableLetter : setEditableCv
                       }
                       placeholderTextColor={stitchColors.inkMuted}
@@ -800,6 +800,7 @@ export function AiApplyModal({
                     </Text>
                   )}
                 </ScrollView>
+                )}
 
                 {/* Quick Utility Actions Row: Copier WhatsApp & Télécharger PDF */}
                 <View style={styles.utilRow}>
@@ -835,7 +836,6 @@ export function AiApplyModal({
                   </Pressable>
                 </View>
 
-                )}
                 {/* Actions Box: Canaux d'expédition et 1-Clic */}
                 <View style={styles.actionsBox}>
                   <Text style={styles.actionsTitle}>Canal d'expédition :</Text>
@@ -1422,29 +1422,6 @@ const styles = StyleSheet.create({
   previewScrollContent: {
     paddingVertical: 10,
   },
-  previewText: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 13.5,
-    lineHeight: 22,
-    color: '#1E293B',
-    backgroundColor: stitchColors.background,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: stitchColors.glassBorder,
-  },
-  editorTextInput: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 13.5,
-    lineHeight: 22,
-    color: stitchColors.ink,
-    backgroundColor: stitchColors.white,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: stitchColors.primary,
-    minHeight: 220,
-    textAlignVertical: 'top',
   templateStepContent: {
     paddingTop: 14,
     paddingBottom: 24,
@@ -1519,6 +1496,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: stitchColors.outlineVariant,
   },
+  previewText: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 13.5,
+    lineHeight: 22,
+    color: '#1E293B',
+    backgroundColor: stitchColors.background,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+  },
+  editorTextInput: {
+    fontFamily: fontFamilies.inter,
+    fontSize: 13.5,
+    lineHeight: 22,
+    color: stitchColors.ink,
+    backgroundColor: stitchColors.white,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: stitchColors.primary,
+    minHeight: 220,
+    textAlignVertical: 'top',
   },
 
   // Match Tab
@@ -1714,6 +1714,10 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+  generateCvBtn: {
+    backgroundColor: stitchColors.primary,
+    shadowColor: stitchColors.primary,
+  },
   primaryOneClickBtnText: {
     fontFamily: fontFamilies.outfit,
     fontSize: 14,
@@ -1737,10 +1741,6 @@ const styles = StyleSheet.create({
   },
   unlinkedWarningTitle: {
     fontFamily: fontFamilies.outfit,
-  generateCvBtn: {
-    backgroundColor: stitchColors.primary,
-    shadowColor: stitchColors.primary,
-  },
     fontSize: 12.5,
     fontWeight: '700',
     color: stitchColors.warning,
