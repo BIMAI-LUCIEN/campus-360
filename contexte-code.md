@@ -588,6 +588,10 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
+- **Texte complet des offres :** `offer_page_reader.py` (`OfferPageReader.enrich`, appelé par l'orchestrateur avant le pipeline) : une offre dont la description fait moins de 600 caractères (résumé du flux RSS Google News) est remplacée par le texte de sa vraie page. Le lien Google News est décodé vers l'adresse de l'éditeur (cookie de consentement, requête signée `batchexecute`), puis le bloc principal est lu en direct (gratuit, bibliothèque standard). Si le site bloque (emploi.cm répond 403) ou demande une connexion, lecture via Exa par Treg (`exa.web.contents.get`, 0,001 $, rien en cas d'échec, seulement en `--live`, plafond `TREG_MAX_PAGE_READS_PER_RUN` = 30). L'adresse réelle remplace le lien Google dans `source_url` ; email et WhatsApp trouvés sur la page sont ajoutés. Les posts Facebook restent souvent illisibles (résumé conservé).
+
+
+
 - **Documents académiques :** `ai_analyzer_agent.py` puis `database_ingestor.py` (`save_stage_report`).
 
 
@@ -700,7 +704,7 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-1. `run_scraper.py` ou `daily_scheduler.py` → `orchestrator.py` (collecte).
+1. Cron VPS unique (`/usr/local/bin/campus360-scraper-daily.sh`, 10 h heure de Douala, `--live`) ou `daily_scheduler.py` → `orchestrator.py` (collecte, puis texte complet de chaque offre via `offer_page_reader.py`).
 
 
 
@@ -1414,7 +1418,7 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 
 
-`DATABASE_URL`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `SCRAPER_MODEL`, `SCRAPER_FALLBACK_MODEL`, `APIFY_API_TOKEN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `TREG_API_KEY`, `TREG_BASE_URL`, `TREG_CLI`, `TREG_MAX_CALLS_PER_RUN`, `TREG_MAX_COST_PER_CALL_USD`, `TREG_MAX_VERIFY_CALLS_PER_RUN`, `DAILY_OFFER_CAP`.
+`DATABASE_URL`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `SCRAPER_MODEL`, `SCRAPER_FALLBACK_MODEL`, `APIFY_API_TOKEN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `TREG_API_KEY`, `TREG_BASE_URL`, `TREG_CLI`, `TREG_MAX_CALLS_PER_RUN`, `TREG_MAX_COST_PER_CALL_USD`, `TREG_MAX_VERIFY_CALLS_PER_RUN`, `TREG_MAX_PAGE_READS_PER_RUN`, `DAILY_OFFER_CAP`.
 
 
 
@@ -1664,7 +1668,7 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 16. **Ordre de mise en production du scraping :** appliquer 0014 **avant** de déployer le code du module 25 ; sinon expiration et journal échouent (journalisé, non bloquant) et le plafond reste actif.
 
-17. **Scraping : déclencheurs en doublon et à vide sur le VPS.** Les 4 crons du VPS tournent en `--dry-run` (aucune écriture) et sans `--live`. Le workflow GitHub `daily-scraper.yml` (9 h UTC) tourne en parallèle sans `--live`. Il faut supprimer les 4 crons VPS et désactiver le cron GitHub pour ne garder qu'un seul déclencheur effectif (démon PM2 `daily_scheduler.py` ou cron unique) (Tâche 25.18).
+17. **Scraping : déclencheur unique (fait le 2026-10-26, tâche 25.18).** Les 4 crons `--dry-run` du VPS sont remplacés par une seule ligne `0 9,10 * * * /usr/local/bin/campus360-scraper-daily.sh` : le script ne continue qu'à 10 h heure de Douala (le serveur est en Europe/Berlin), passe en `--live` avec `flock`, et écrit dans `/var/log/campus-scraper.log`. Sauvegarde : `/root/crontab.bak-20261026-112106`. Reste à faire : désactiver le cron GitHub `daily-scraper.yml` (9 h UTC, sans `--live`).
 
 
 

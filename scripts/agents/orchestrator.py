@@ -25,6 +25,7 @@ from database_ingestor import DatabaseIngestor
 from job_store import JobStore
 from offer_pipeline import process as process_offer
 from company_check_agent import CompanyCheckAgent
+from offer_page_reader import OfferPageReader
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("ScraperOrchestrator")
@@ -41,6 +42,7 @@ class ScraperOrchestrator:
         self.ai_agent = AIAnalyzerAgent()
         self.db_ingestor = DatabaseIngestor()
         self.company_checker = CompanyCheckAgent()
+        self.page_reader = OfferPageReader()
 
     def run_full_pipeline(self, query: str = "informatique", platforms: list = None, limit_per_platform: int = 5, city: str = None, dry_run: bool = False, live: bool = False, use_db: bool = True, preloaded_items: list = None) -> dict:
         """
@@ -144,6 +146,9 @@ class ScraperOrchestrator:
         self.company_checker.live = live and not dry_run
         self.company_checker.known_company = getattr(store, "known_company", None)
         self.company_checker.reset_run()
+        # Full offer text: free direct read, paid Exa read (blocked sites) only on a real --live run.
+        self.page_reader.live = live and not dry_run
+        self.page_reader.reset_run()
 
         try:
             for idx, item in enumerate(collected_items, start=1):
@@ -168,6 +173,10 @@ class ScraperOrchestrator:
                         cap_reached = True
                         logger.info(f"Plafond quotidien de {cap} offres atteint : éléments restants non traités.")
                         break
+                    # Feed summaries (Google News RSS) are replaced by the offer's full page text.
+                    # Offline runs (tests, --from-fixture) never touch the network.
+                    if preloaded_items is None:
+                        self._enrich_with_full_page(item)
                     result = process_offer(item, store, existing, checker=self.company_checker)
                     statuses[result["status"]] = statuses.get(result["status"], 0) + 1
                     if result["status"] in ("published", "pending_review"):
@@ -217,6 +226,13 @@ class ScraperOrchestrator:
                 item["snippet"] = f"{item.get('snippet', '')}\n{extracted}"
         except Exception as ocr_err:
             logger.debug(f"Erreur OCR flyer ignorée : {ocr_err}")
+
+    def _enrich_with_full_page(self, item: dict):
+        try:
+            if self.page_reader.enrich(item):
+                logger.info(f"   Texte complet lu sur la page de l'offre ({len(item['description'])} caractères).")
+        except Exception as page_err:
+            logger.debug(f"Lecture de la page de l'offre ignorée : {page_err}")
 
     def _notify_published(self, result: dict, item: dict):
         try:

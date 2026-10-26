@@ -61,6 +61,8 @@ TREG_MAX_COST_PER_CALL_USD = os.getenv("TREG_MAX_COST_PER_CALL_USD", "0.01")
 TREG_MAX_DETAIL_CALLS_PER_RUN = _positive_int("TREG_MAX_DETAIL_CALLS_PER_RUN", 20)
 # Google search per company by the field-check agent (company_check_agent.py): ~$0.0009 per call, capped per run.
 TREG_MAX_VERIFY_CALLS_PER_RUN = _positive_int("TREG_MAX_VERIFY_CALLS_PER_RUN", 20)
+# Full offer page read through Exa when the site blocks robots (offer_page_reader.py): $0.001 per page, capped per run.
+TREG_MAX_PAGE_READS_PER_RUN = _positive_int("TREG_MAX_PAGE_READS_PER_RUN", 30)
 
 # Reference list of sources, shared by the orchestrator, run_scraper and the scheduler.
 DEFAULT_PLATFORMS = ["CAMEROON_JOBS", "LINKEDIN", "FACEBOOK", "TIKTOK", "ACADEMIC_WEB"]

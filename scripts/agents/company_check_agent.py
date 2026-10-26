@@ -144,6 +144,15 @@ def location_ok(fields: dict, item: dict) -> bool:
     return "cameroun" in location or "cameroon" in location
 
 
+EXPIRED_ON = re.compile(r"\b(expir[ée]e|cl[ôo]tur[ée]e)\s+le\s+\d{1,2}[./-]\d{1,2}[./-]\d{2,4}", re.IGNORECASE)
+
+
+def _says_closed(text: str) -> bool:
+    """Job boards write 'Expirée le 30.08.2026' on a closed offer."""
+    lowered = text.lower()
+    return bool(EXPIRED_ON.search(text)) or any(marker in lowered for marker in CLOSED_MARKERS)
+
+
 def offer_age_days(item: dict, now: datetime = None):
     raw = item.get("published_at")
     if not raw:
@@ -197,6 +206,8 @@ class CompanyCheckAgent:
         doubts = []
 
         link = self.link_status(fields.get("apply_url") or item.get("url"))
+        if link != "closed" and _says_closed(item.get("description") or ""):
+            link = "closed"  # the full page text, read at collection, says the offer expired
         if link == "closed":
             return {**decision, "status": "rejected", "confidence": 0.0, "reason": "offre fermée ou retirée par la source",
                     "company_check": {"link": link}}

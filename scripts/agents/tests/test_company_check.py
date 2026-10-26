@@ -96,6 +96,12 @@ class ReviewTests(unittest.TestCase):
         decision = agent(page=page).review(PUBLISHED, ITEM, offer(), NOW)
         self.assertEqual(decision["status"], "rejected")
 
+    def test_full_text_saying_expired_is_rejected(self):
+        # emploi.cm blocks direct reads (403: link unknown) but its text, read at collection, says it.
+        item = {**ITEM, "description": "Stagiaire QHSE\nExpirée le 30.08.2026\nRésumé du poste"}
+        decision = agent(page=Response(status_code=403)).review(PUBLISHED, item, offer(), NOW)
+        self.assertEqual(decision["status"], "rejected")
+
     def test_dead_link_is_rejected(self):
         decision = agent(page=Response(status_code=404)).review(PUBLISHED, ITEM, offer(), NOW)
         self.assertEqual(decision["status"], "rejected")
