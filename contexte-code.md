@@ -584,7 +584,7 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-- **Pipeline d'offre (4 agents, `offer_pipeline.py`) :** `filter_agent.py` (règles déterministes, sans IA) → `classifier_agent.py` (stage / emploi / concours / formation / bruit) → `extractor_agent.py` (champs avec preuves) → `verifier_agent.py` (décision finale). Si le LLM est indisponible, l'offre passe en `deferred` (aucune supposition). Un item avec `kind_hint` (source structurée, LinkedIn) passe par `structured_evaluation` : type donné par la source, champs recopiés, **sans appel d'IA**, puis vérificateur.
+- **Pipeline d'offre (4 agents, `offer_pipeline.py`) :** `filter_agent.py` (règles déterministes, sans IA) → `classifier_agent.py` (stage / emploi / concours / formation / bruit) → `extractor_agent.py` (champs avec preuves) → `verifier_agent.py` (décision finale) → `company_check_agent.py` (agent 5, contrôle terrain, seulement en `--live` : recherche Google Treg `anyapi.google.serp.organic` pour trouver site / page Facebook / page LinkedIn de l'entreprise → `kyb_score` et statut `VERIFIED` dans `stage_companies` ; lien de l'offre testé (404/410 ou « plus de candidatures » → rejet) ; contact, ville au Cameroun et âge de l'annonce vérifiés ; tout doute fait passer une offre publiée en `pending_review` ; preuves dans `stage_jobs.evidence.company_check` ; une recherche par entreprise et par passage, entreprises déjà vérifiées non recherchées). Si le LLM est indisponible, l'offre passe en `deferred` (aucune supposition). Un item avec `kind_hint` (source structurée, LinkedIn) passe par `structured_evaluation` : type donné par la source, champs recopiés, **sans appel d'IA**, puis vérificateur.
 
 
 
@@ -704,7 +704,7 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-2. `offer_pipeline.py` : filtre → classifieur → extracteur → vérificateur.
+2. `offer_pipeline.py` : filtre → classifieur → extracteur → vérificateur → contrôle terrain (`company_check_agent.py`).
 
 
 
@@ -1414,7 +1414,7 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 
 
-`DATABASE_URL`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `SCRAPER_MODEL`, `SCRAPER_FALLBACK_MODEL`, `APIFY_API_TOKEN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `TREG_API_KEY`, `TREG_BASE_URL`, `TREG_CLI`, `TREG_MAX_CALLS_PER_RUN`, `TREG_MAX_COST_PER_CALL_USD`, `DAILY_OFFER_CAP`.
+`DATABASE_URL`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `SCRAPER_MODEL`, `SCRAPER_FALLBACK_MODEL`, `APIFY_API_TOKEN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `TREG_API_KEY`, `TREG_BASE_URL`, `TREG_CLI`, `TREG_MAX_CALLS_PER_RUN`, `TREG_MAX_COST_PER_CALL_USD`, `TREG_MAX_VERIFY_CALLS_PER_RUN`, `DAILY_OFFER_CAP`.
 
 
 

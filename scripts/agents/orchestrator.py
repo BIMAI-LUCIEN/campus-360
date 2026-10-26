@@ -24,6 +24,7 @@ from ai_analyzer_agent import AIAnalyzerAgent
 from database_ingestor import DatabaseIngestor
 from job_store import JobStore
 from offer_pipeline import process as process_offer
+from company_check_agent import CompanyCheckAgent
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("ScraperOrchestrator")
@@ -39,6 +40,7 @@ class ScraperOrchestrator:
         self.ocr_agent = OCRFlyerAgent()
         self.ai_agent = AIAnalyzerAgent()
         self.db_ingestor = DatabaseIngestor()
+        self.company_checker = CompanyCheckAgent()
 
     def run_full_pipeline(self, query: str = "informatique", platforms: list = None, limit_per_platform: int = 5, city: str = None, dry_run: bool = False, live: bool = False, use_db: bool = True, preloaded_items: list = None) -> dict:
         """
@@ -138,6 +140,10 @@ class ScraperOrchestrator:
         statuses = {"published": 0, "pending_review": 0, "rejected": 0, "deferred": 0}
         existing = store.recent_offers()
         run_error = None
+        # Field check (agent 5): paid Google search per company, so only on a real --live run.
+        self.company_checker.live = live and not dry_run
+        self.company_checker.known_company = getattr(store, "known_company", None)
+        self.company_checker.reset_run()
 
         try:
             for idx, item in enumerate(collected_items, start=1):
@@ -162,7 +168,7 @@ class ScraperOrchestrator:
                         cap_reached = True
                         logger.info(f"Plafond quotidien de {cap} offres atteint : éléments restants non traités.")
                         break
-                    result = process_offer(item, store, existing)
+                    result = process_offer(item, store, existing, checker=self.company_checker)
                     statuses[result["status"]] = statuses.get(result["status"], 0) + 1
                     if result["status"] in ("published", "pending_review"):
                         added_today += 1

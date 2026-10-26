@@ -1,5 +1,5 @@
 """
-Campus 360 — Offer pipeline: Filter -> Classifier -> Extractor -> Verifier -> store.
+Campus 360 — Offer pipeline: Filter -> Classifier -> Extractor -> Verifier -> Field check -> store.
 
 When the models are unavailable the post is kept for human review instead of being guessed.
 """
@@ -88,10 +88,16 @@ def evaluate(item: dict, existing: list) -> dict:
     return {"stage": "verifier", "decision": decide(classification, extraction, existing), "extraction": extraction}
 
 
-def process(item: dict, store, existing: list) -> dict:
-    """Evaluates then persists. Returns the decision with the stage that produced it."""
+def process(item: dict, store, existing: list, checker=None) -> dict:
+    """Evaluates, runs the field check (agent 5) when given, then persists.
+    Returns the decision with the stage that produced it."""
     result = evaluate(item, existing)
     decision = result["decision"]
+    if checker is not None and result.get("extraction") and decision["status"] in ("published", "pending_review"):
+        checked = checker.review(decision, item, result["extraction"])
+        if checked is not decision:
+            result["stage"] = "company_check" if checked["status"] != decision["status"] else result["stage"]
+            decision = result["decision"] = checked
     if decision["status"] == "rejected":
         store.log_rejection(result["stage"], decision["reason"], item)
     elif result.get("extraction") is None:

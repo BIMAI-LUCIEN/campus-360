@@ -11,6 +11,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import orchestrator  # noqa: E402
 from orchestrator import ScraperOrchestrator  # noqa: E402
+from company_check_agent import CompanyCheckAgent  # noqa: E402
 
 
 class FakeTreg:
@@ -89,6 +90,7 @@ def make(treg, linkedin_rss=None, cameroon=None):
     orch.ocr_agent = FakeSource()
     orch.ai_agent = FakeSource()
     orch.db_ingestor = FakeSource()
+    orch.company_checker = CompanyCheckAgent(api_key="", cli_path="")
     return orch
 
 

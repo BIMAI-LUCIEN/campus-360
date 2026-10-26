@@ -13,6 +13,7 @@ import psycopg2.extras
 
 from config import DATABASE_URL
 from daily_cap import cameroon_day_start_utc
+from company_check_agent import VERIFIED_SCORE
 from verifier_agent import normalize_company
 
 logger = logging.getLogger("JobStore")
@@ -128,16 +129,40 @@ class JobStore:
                 (stage, reason[:500], item.get("platform"), item.get("url"), (item.get("title") or "")[:300], (item.get("snippet") or "")[:4000]),
             )
 
-    def _company_id(self, cur, name: str, fields: dict, industry: str) -> str:
+    def known_company(self, name: str):
+        """{'status', 'kyb_score'} of an already stored company, or None. Read by the field-check agent."""
+        if not self.conn:
+            return None
         normalized = normalize_company(name)
+        with self.conn.cursor() as cur:
+            cur.execute("select name, status::text, kyb_score from public.stage_companies")
+            for existing_name, status, kyb_score in cur.fetchall():
+                if normalize_company(existing_name) == normalized:
+                    return {"status": status, "kyb_score": kyb_score}
+        return None
+
+    def _company_id(self, cur, name: str, fields: dict, industry: str, check: dict = None) -> str:
+        normalized = normalize_company(name)
+        # Field check (agent 5): online presence score; never lowers a status set by an admin.
+        kyb = (check or {}).get("kyb_score")
+        verified = kyb is not None and kyb >= VERIFIED_SCORE
         cur.execute("select id, name from public.stage_companies")
         for company_id, existing_name in cur.fetchall():
             if normalize_company(existing_name) == normalized:
+                if kyb is not None:
+                    cur.execute(
+                        """update public.stage_companies
+                              set kyb_score = greatest(kyb_score, %s),
+                                  status = case when %s and status = 'UNVERIFIED' then 'VERIFIED'::company_status else status end
+                            where id = %s""",
+                        (kyb, verified, company_id),
+                    )
                 return company_id
         cur.execute(
             """insert into public.stage_companies (name, industry, address, contact_email, contact_whatsapp, status, kyb_score)
-               values (%s, %s, %s, %s, %s, 'UNVERIFIED', 0) returning id""",
-            (name, industry or "Non précisé", fields.get("city") or "", fields.get("contact_email") or "", fields.get("contact_whatsapp")),
+               values (%s, %s, %s, %s, %s, %s, %s) returning id""",
+            (name, industry or "Non précisé", fields.get("city") or "", fields.get("contact_email") or "", fields.get("contact_whatsapp"),
+             "VERIFIED" if verified else "UNVERIFIED", kyb or 0),
         )
         return cur.fetchone()[0]
 
@@ -164,7 +189,7 @@ class JobStore:
         with self.conn, self.conn.cursor() as cur:
             # Only pending offers can lack a company; the reviewer identifies it from the source.
             company_name = fields.get("company") or UNKNOWN_COMPANY
-            company_id = self._company_id(cur, company_name, fields, item.get("field"))
+            company_id = self._company_id(cur, company_name, fields, item.get("field"), decision.get("company_check"))
             cur.execute(
                 """insert into public.stage_jobs (
                      company_id, title, description, requirements, apply_method, source, location, duration, stipend,
@@ -188,7 +213,8 @@ class JobStore:
                     decision["status"],
                     decision["confidence"],
                     decision["reason"][:500] if decision["status"] != "published" else None,
-                    json.dumps({**evidence, "contact_email": fields.get("contact_email"), "apply_url": fields.get("apply_url")}),
+                    json.dumps({**evidence, "contact_email": fields.get("contact_email"), "apply_url": fields.get("apply_url"),
+                                "company_check": decision.get("company_check")}),
                     item.get("url"),
                     item.get("published_at"),
                     normalize_company(company_name),
