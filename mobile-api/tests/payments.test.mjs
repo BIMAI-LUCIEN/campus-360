@@ -348,3 +348,38 @@ test('Webhook payment.completed après un échec (nouvel essai sur la même sess
   assert.ok(queries.find((q) => q.sql.includes("status = 'success'")));
   assert.ok(queries.find((q) => q.sql.includes('app_wallets')));
 });
+
+test('Softpay accepté mais FAILED (réponse enveloppée dans data) : 402 avec le motif, transaction en échec', async () => {
+  const queries = [];
+  const pool = {
+    query: async (sql, params) => {
+      queries.push({ sql, params });
+      return { rowCount: 1, rows: [] };
+    },
+  };
+  const fetch = async () =>
+    new Response(
+      JSON.stringify({
+        success: true,
+        data: { id: 'pay_failed_1', status: 'FAILED', failure_message: 'Solde insuffisant' },
+      }),
+      { status: 201, headers: { 'Content-Type': 'application/json' } },
+    );
+  const paymentsModule = await loadTsWithPackages('lib/payments.ts', PAYMENT_DEPS);
+  const oldSaspayKey = process.env.SASPAY_API_KEY;
+  process.env.SASPAY_API_KEY = 'sk_test_dummy';
+  try {
+    await assert.rejects(
+      paymentsModule.initiateMobileMoneyPayment(
+        { studentId: 'u1', phone: '670123456', operator: 'mtn', packType: 'recharge_1000' },
+        { pool, fetch },
+      ),
+      (error) => error.status === 402 && /Solde insuffisant/.test(error.message),
+    );
+    const failedUpdate = queries.find((q) => /set status = 'failed', failure_message/.test(q.sql));
+    assert.ok(failedUpdate, 'transaction marquée failed avec motif');
+    assert.equal(failedUpdate.params[1], 'Solde insuffisant');
+  } finally {
+    process.env.SASPAY_API_KEY = oldSaspayKey;
+  }
+});

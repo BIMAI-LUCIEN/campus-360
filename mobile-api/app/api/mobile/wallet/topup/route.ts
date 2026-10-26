@@ -8,6 +8,7 @@ import { isMockAllowed } from '@/lib/payment-rules';
 import {
   getSaspayBaseUrl,
   readSaspayError,
+  readSoftpayResponse,
   requireCameroonMobileMoney,
   splitCustomerName,
 } from '@/lib/payments';
@@ -152,13 +153,20 @@ export async function POST(request: NextRequest) {
             );
           }
 
-          const initData = (await initRes.json()) as {
-            id?: string;
-            checkout_url?: string;
-          };
+          const softpay = await readSoftpayResponse(initRes);
           testMode = saspayApiKey.startsWith('sk_test_');
 
-          const providerRef = initData.id || '';
+          if (softpay.status === 'FAILED' || softpay.status === 'CANCELLED') {
+            const failureMessage =
+              softpay.failureMessage || "L'opérateur a refusé le paiement. Vérifie ton solde et réessaie.";
+            await databasePool.query(
+              `update public.app_wallet_transactions set failure_message = $2 where reference_id = $1`,
+              [reference, failureMessage],
+            );
+            throw new MobileApiError(`Paiement refusé par l'opérateur : ${failureMessage}`, 402);
+          }
+
+          const providerRef = softpay.id || '';
           if (providerRef && providerRef !== reference) {
             await databasePool.query(
               `update public.app_wallet_transactions set reference_id = $1 where reference_id = $2`,
@@ -167,7 +175,7 @@ export async function POST(request: NextRequest) {
             reference = providerRef;
           }
 
-          paymentUrl = initData.checkout_url || undefined;
+          paymentUrl = softpay.checkoutUrl;
         }
       } catch (err) {
         await databasePool.query(

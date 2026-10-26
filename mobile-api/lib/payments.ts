@@ -49,6 +49,51 @@ export const readSaspayError = async (res: Response, context: string): Promise<s
   return message.trim().slice(0, 200);
 };
 
+export interface SoftpayResult {
+  id?: string;
+  checkoutUrl?: string;
+  status: string;
+  failureMessage?: string;
+}
+
+/**
+ * Lit la réponse d'un softpay accepté (2xx). SasPay peut renvoyer les champs à la racine
+ * (`{ id, status, checkout_url }`) ou dans `data` (`{ success, data: { id, status, ... } }`),
+ * et une transaction peut déjà être `FAILED` à ce stade : on le journalise avec le motif.
+ */
+export const readSoftpayResponse = async (res: Response): Promise<SoftpayResult> => {
+  const raw = await res.text().catch(() => '');
+  let body: Record<string, any> = {};
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    // corps non JSON
+  }
+  const data: Record<string, any> = body.data && typeof body.data === 'object' ? body.data : body;
+  const status = String(data.status || body.status || '').toUpperCase();
+  const pickText = (...values: unknown[]) =>
+    values.find((value): value is string => typeof value === 'string' && value.trim().length > 0)?.trim();
+  const failureMessage = pickText(
+    data.failure_message,
+    data.failure_reason,
+    data.error?.message,
+    body.error?.message,
+    data.gateway_message,
+    data.message !== 'Payment pushed successfully' ? data.message : undefined,
+  );
+  if (status === 'FAILED' || status === 'CANCELLED') {
+    console.error('[Saspay Softpay Failed]', res.status, raw.slice(0, 1500));
+  } else {
+    console.log('[Saspay Softpay]', res.status, status || 'UNKNOWN', String(data.id || ''));
+  }
+  return {
+    id: typeof data.id === 'string' ? data.id : undefined,
+    checkoutUrl: pickText(data.checkout_url, body.checkout_url),
+    status,
+    failureMessage: failureMessage?.slice(0, 200),
+  };
+};
+
 /** Découpe un nom complet en prénom / nom pour le champ `customer` de SasPay (softpay). */
 export const splitCustomerName = (fullName?: string) => {
   const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
@@ -184,14 +229,21 @@ export async function initiateMobileMoneyPayment(
         );
       }
 
-      const initData = (await initRes.json()) as {
-        id?: string;
-        checkout_url?: string;
-      };
+      const softpay = await readSoftpayResponse(initRes);
 
       testMode = saspayApiKey.startsWith('sk_test_');
 
-      const gatewayRef = initData.id;
+      if (softpay.status === 'FAILED' || softpay.status === 'CANCELLED') {
+        const failureMessage =
+          softpay.failureMessage || "L'opérateur a refusé le paiement. Vérifie ton solde et réessaie.";
+        await pool.query(
+          `update public.app_wallet_transactions set status = 'failed', failure_message = $2 where reference_id = $1`,
+          [reference, failureMessage],
+        );
+        throw new MobileApiError(`Paiement refusé par l'opérateur : ${failureMessage}`, 402);
+      }
+
+      const gatewayRef = softpay.id;
       if (gatewayRef && gatewayRef !== reference) {
         await pool.query(
           `update public.app_wallet_transactions set reference_id = $1 where reference_id = $2`,
@@ -201,7 +253,7 @@ export async function initiateMobileMoneyPayment(
       }
 
       // checkout_url vide = push envoyé directement sur le téléphone du client.
-      paymentUrl = initData.checkout_url || undefined;
+      paymentUrl = softpay.checkoutUrl;
     } catch (error) {
       if (error instanceof MobileApiError) throw error;
       await pool.query(
@@ -282,10 +334,14 @@ export async function processSaspayWebhook(
     eventPayload.reference ||
     eventPayload.transaction?.reference;
 
+  // The stored reference_id is the SasPay payment id once softpay succeeded, or our own
+  // metadata reference when it did not: match either one.
   const fallbackMetaReference =
-    typeof eventPayload.data?.metadata?.reference === 'string'
-      ? eventPayload.data.metadata.reference
-      : (typeof eventPayload.data?.id === 'string' ? eventPayload.data.id : null);
+    typeof eventPayload.data?.id === 'string' && eventPayload.data.id !== reference
+      ? eventPayload.data.id
+      : (typeof eventPayload.data?.metadata?.reference === 'string'
+        ? eventPayload.data.metadata.reference
+        : null);
 
   if (!reference || typeof reference !== 'string' || reference.length > 200) {
     return {
