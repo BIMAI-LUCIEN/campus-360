@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Linking,
   Pressable,
   ScrollView,
@@ -17,6 +16,7 @@ import { stitchColors } from '../../theme/stitch';
 import type { DocumentFile, SourceCitation } from './documentFilesApi';
 import { htmlToReadable, insertableHtml, textToHtml } from './aiHtml';
 import { SectionInterview } from './SectionInterview';
+import { AppAlert } from '../../ui/AppAlert';
 
 // Assistant tab of the editor. Two modes: « Rédiger avec moi » (interview, then a
 // draft in the student's voice) and « Discuter » (chat that answers from the
@@ -128,7 +128,7 @@ export function EditorAiChat({
     const heading = `[${c.label}] ${c.title}${c.page ? ` · page ${c.page}` : ''}`;
     const buttons: { text: string; onPress?: () => void; style?: 'cancel' }[] = [{ text: 'Fermer', style: 'cancel' }];
     if (c.sourceUrl) buttons.push({ text: 'Ouvrir la page', onPress: () => Linking.openURL(c.sourceUrl!).catch(() => undefined) });
-    Alert.alert(heading, `« ${c.excerpt.trim()}${c.excerpt.length >= 400 ? '…' : ''} »`, buttons);
+    AppAlert.alert(heading, `« ${c.excerpt.trim()}${c.excerpt.length >= 400 ? '…' : ''} »`, buttons);
   };
 
   const sourceCount = selectedSources.length;
@@ -255,7 +255,7 @@ export function EditorAiChat({
                         <Pressable
                           style={styles.replaceBtn}
                           onPress={() =>
-                            Alert.alert('Remplacer la section', 'Le contenu actuel de la section sera remplacé.', [
+                            AppAlert.alert('Remplacer la section', 'Le contenu actuel de la section sera remplacé.', [
                               { text: 'Annuler', style: 'cancel' },
                               { text: 'Remplacer', style: 'destructive', onPress: () => onReplaceSection(toInsertableHtml(m)) },
                             ])

@@ -5,7 +5,6 @@ import { createElement, useEffect, useMemo, useState } from 'react';
 import { authWebBaseUrl, mobileApiBaseUrl } from '../auth/betterAuth';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -27,6 +26,7 @@ import { FormattedMarkdown } from '../../components/FormattedMarkdown';
 import { FileText, Sparkles, Calendar, HelpCircle, MessageSquare, Lock, RotateCcw } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { stitchColors, brandGradient } from '../../theme/stitch';
+import { AppAlert } from '../../ui/AppAlert';
 
 // ─── Editorial colour tokens — aliased onto the shared theme, not duplicated ──
 const $ = {
@@ -505,7 +505,7 @@ export function PdfStudentSection({
 
   const handleClearChat = () => {
     if (!readerDocument || assistantMessages.length === 0) return;
-    Alert.alert(
+    AppAlert.alert(
       'Nouvelle discussion',
       'Veux-tu réinitialiser cette discussion et effacer l’historique des messages pour ce document ?',
       [

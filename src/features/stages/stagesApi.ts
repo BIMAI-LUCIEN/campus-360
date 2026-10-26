@@ -11,6 +11,13 @@ export { fitSecureStoreBudget, getUtf8ByteLength, pruneBulkyApplicationFields, p
 
 // Applications created during this session; the server stays the source of truth.
 let localApplications: StageApplication[] = [];
+// Set once the server list has been read, so screens can show it again instantly.
+let applicationsLoaded = false;
+
+/** Applications already read from the server during this session, or null before the first load. */
+export function peekStudentApplications(): StageApplication[] | null {
+  return applicationsLoaded ? localApplications : null;
+}
 
 export function calculateMatchScore(
   userSkills: string[] = [],
@@ -64,7 +71,7 @@ export function calculateMatchScore(
   };
 }
 
-export async function fetchStageJobs(params?: {
+export type StageJobsParams = {
   query?: string;
   sector?: string;
   contractType?: string;
@@ -78,23 +85,71 @@ export async function fetchStageJobs(params?: {
     location?: string;
     address?: string;
   };
-}): Promise<StageJob[]> {
+  /** Skip the cache (pull-to-refresh). */
+  force?: boolean;
+};
+
+// Offers change a few times a day: keep the server list in memory so switching
+// tabs shows it instantly instead of refetching every time.
+const STAGE_JOBS_TTL_MS = 5 * 60 * 1000;
+const stageJobsCache = new Map<string, { at: number; jobs: StageJob[] }>();
+const stageJobsInFlight = new Map<string, Promise<StageJob[]>>();
+
+const stageJobsSuffix = (params?: StageJobsParams) => {
   const search = new URLSearchParams();
   if (params?.query?.trim()) search.set('q', params.query.trim());
   if (params?.sector && params.sector !== 'Tous') search.set('sector', params.sector);
-  const suffix = search.toString() ? `?${search.toString()}` : '';
+  return search.toString() ? `?${search.toString()}` : '';
+};
 
-  let response: Response;
+async function loadServerStageJobs(suffix: string, force: boolean): Promise<StageJob[]> {
+  const cached = stageJobsCache.get(suffix);
+  if (!force && cached && Date.now() - cached.at < STAGE_JOBS_TTL_MS) return cached.jobs;
+  const pending = stageJobsInFlight.get(suffix);
+  if (pending) return pending;
+
+  const request = (async () => {
+    let response: Response;
+    try {
+      response = await authFetchRaw(`/api/mobile/stages${suffix}`);
+    } catch {
+      throw new Error('Pas de connexion au serveur. Vérifie ta connexion et réessaie.');
+    }
+    const payload = (await response.json().catch(() => ({}))) as { jobs?: StageJob[]; error?: string };
+    if (!response.ok) {
+      throw new Error(payload.error || 'Offres indisponibles pour le moment.');
+    }
+    const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+    stageJobsCache.set(suffix, { at: Date.now(), jobs });
+    return jobs;
+  })();
+  stageJobsInFlight.set(suffix, request);
   try {
-    response = await authFetchRaw(`/api/mobile/stages${suffix}`);
-  } catch {
-    throw new Error('Pas de connexion au serveur. Vérifie ta connexion et réessaie.');
+    return await request;
+  } finally {
+    stageJobsInFlight.delete(suffix);
   }
-  const payload = (await response.json().catch(() => ({}))) as { jobs?: StageJob[]; error?: string };
-  if (!response.ok) {
-    throw new Error(payload.error || 'Offres indisponibles pour le moment.');
-  }
-  let jobsList: StageJob[] = Array.isArray(payload.jobs) ? payload.jobs : [];
+}
+
+/** Ranked offers already in memory for these filters, or null when nothing is cached yet. */
+export function peekStageJobs(params?: StageJobsParams): StageJob[] | null {
+  const cached = stageJobsCache.get(stageJobsSuffix(params));
+  return cached ? rankStageJobs(cached.jobs, params) : null;
+}
+
+/** True when the cached list for these filters is recent enough to skip the network. */
+export function isStageJobsCacheFresh(params?: StageJobsParams): boolean {
+  const cached = stageJobsCache.get(stageJobsSuffix(params));
+  return Boolean(cached && Date.now() - cached.at < STAGE_JOBS_TTL_MS);
+}
+
+export async function fetchStageJobs(params?: StageJobsParams): Promise<StageJob[]> {
+  const jobs = await loadServerStageJobs(stageJobsSuffix(params), Boolean(params?.force));
+  return rankStageJobs(jobs, params);
+}
+
+function rankStageJobs(source: StageJob[], params?: StageJobsParams): StageJob[] {
+  let jobsList = source;
 
   // Filtrage local par mot-clé
   if (params?.query?.trim()) {
@@ -487,6 +542,7 @@ export async function fetchStudentApplications(): Promise<StageApplication[]> {
   }
   // The server is the source of truth, including when the student has no application yet.
   localApplications = payload.applications;
+  applicationsLoaded = true;
   persistApplicationsLocally(localApplications);
   return payload.applications;
 }

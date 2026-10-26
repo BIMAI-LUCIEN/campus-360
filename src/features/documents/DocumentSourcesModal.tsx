@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   AlertCircle,
   CheckSquare,
@@ -26,6 +26,7 @@ import {
   type DocumentFile,
   type PickedFile,
 } from './documentFilesApi';
+import { AppAlert } from '../../ui/AppAlert';
 
 // Sources tab of the editor: files from the phone, web pages and pasted notes.
 // Ticked sources are the only ones the assistant reads; the choice is kept per
@@ -144,7 +145,7 @@ export function DocumentSourcesPanel({ documentId, onSelectionChange }: Document
       const picked = await pickSourceFromPhone();
       if (picked) await upload(picked);
     } catch (error) {
-      Alert.alert('Source', error instanceof Error ? error.message : 'Impossible d’ouvrir vos fichiers.');
+      AppAlert.alert('Source', error instanceof Error ? error.message : 'Impossible d’ouvrir vos fichiers.');
     }
   };
 
@@ -195,14 +196,14 @@ export function DocumentSourcesPanel({ documentId, onSelectionChange }: Document
       await deleteSource(documentId, source).catch(() => undefined);
       setSources((prev) => [fresh, ...prev.filter((s) => s.id !== source.id && s.id !== fresh.id)]);
     } catch (error) {
-      Alert.alert('Page web', error instanceof Error ? error.message : 'Nouvel essai impossible.');
+      AppAlert.alert('Page web', error instanceof Error ? error.message : 'Nouvel essai impossible.');
     } finally {
       setAdding(false);
     }
   };
 
   const handleDelete = (source: DocumentFile) => {
-    Alert.alert('Retirer la source', `« ${source.title} » ne sera plus utilisée par l’assistant.`, [
+    AppAlert.alert('Retirer la source', `« ${source.title} » ne sera plus utilisée par l’assistant.`, [
       { text: 'Annuler', style: 'cancel' },
       {
         text: 'Retirer',
@@ -212,7 +213,7 @@ export function DocumentSourcesPanel({ documentId, onSelectionChange }: Document
             await deleteSource(documentId, source);
             setSources((prev) => prev.filter((s) => s.id !== source.id));
           } catch (error) {
-            Alert.alert('Erreur', error instanceof Error ? error.message : 'Suppression impossible.');
+            AppAlert.alert('Erreur', error instanceof Error ? error.message : 'Suppression impossible.');
           }
         },
       },

@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Image,
   Modal,
-  Alert,
   Platform,
   Linking,
   Share,
@@ -38,7 +37,7 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { StageJob } from '../../types';
-import { fetchStageJobs } from '../../features/stages/stagesApi';
+import { fetchStageJobs, isStageJobsCacheFresh, peekStageJobs } from '../../features/stages/stagesApi';
 import { AiApplyModal, type ApplicationProfilePatch } from '../../features/stages/AiApplyModal';
 import { analyzeJobMatch } from '../../features/stages/aiMatchEngine';
 import { cleanPhoneNumber } from '../../features/whatsapp/whatsappService';
@@ -58,6 +57,7 @@ import {
   safeApplyUrl,
 } from '../../features/stages/applyTarget';
 import { applyPriceLine } from '../../features/stages/applyPrice';
+import { AppAlert } from '../AppAlert';
 
 interface StagesScreenProps {
   studentProfile: {
@@ -216,8 +216,13 @@ export function StagesScreen({
   onOpenWallet,
   onProfileSaved,
 }: StagesScreenProps) {
-  const [jobs, setJobs] = useState<StageJob[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Offers already loaded in this session are shown at once; the network only refreshes them.
+  const [jobs, setJobs] = useState<StageJob[]>(
+    () => peekStageJobs({ userSkills: studentProfile.skills, studentProfile }) ?? [],
+  );
+  const [loading, setLoading] = useState(
+    () => peekStageJobs({ userSkills: studentProfile.skills, studentProfile }) === null,
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSector, setActiveSector] = useState('Tous');
@@ -231,34 +236,64 @@ export function StagesScreen({
   const [selectedPreviewPhoto, setSelectedPreviewPhoto] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const loadData = async () => {
+  // The server is only asked once the student stops typing.
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // The parent rebuilds the skills array on every render: depend on its content, not its identity.
+  const skillsKey = (studentProfile.skills ?? []).join('|');
+  const requestId = React.useRef(0);
+
+  const loadData = async (force = false) => {
+    const params = {
+      query: debouncedQuery,
+      sector: activeSector,
+      kind: activeKind,
+      userSkills: studentProfile.skills,
+      studentProfile,
+    };
+    const cached = peekStageJobs(params);
+    if (cached) {
+      setJobs(cached);
+      setLoading(false);
+      setLoadError(null);
+      if (!force && isStageJobsCacheFresh(params)) {
+        setRefreshing(false);
+        return;
+      }
+    }
+    const current = ++requestId.current;
     setLoadError(null);
     try {
-      const data = await fetchStageJobs({
-        query: searchQuery,
-        sector: activeSector,
-        kind: activeKind,
-        userSkills: studentProfile.skills,
-        studentProfile,
-      });
+      const data = await fetchStageJobs({ ...params, force });
+      if (current !== requestId.current) return;
       setJobs(data);
     } catch (e) {
+      if (current !== requestId.current) return;
       console.warn('[StagesScreen] loading jobs failed:', e);
-      setJobs([]);
-      setLoadError(e instanceof Error ? e.message : 'Offres indisponibles pour le moment.');
+      // Keep the offers already on screen; only an empty list shows the error.
+      if (!cached) {
+        setJobs([]);
+        setLoadError(e instanceof Error ? e.message : 'Offres indisponibles pour le moment.');
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (current === requestId.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
   useEffect(() => {
     loadData();
-  }, [searchQuery, activeSector, activeKind, studentProfile.skills]);
+  }, [debouncedQuery, activeSector, activeKind, skillsKey]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadData();
+    loadData(true);
   };
 
   const toggleFavorite = (jobId: string) => {
@@ -304,7 +339,7 @@ export function StagesScreen({
     );
     const url = `https://wa.me/${clean}?text=${textMsg}`;
     Linking.openURL(url).catch(() => {
-      Alert.alert('WhatsApp', 'Impossible d\'ouvrir WhatsApp. Vérifiez que l\'application est installée.');
+      AppAlert.alert('WhatsApp', 'Impossible d\'ouvrir WhatsApp. Vérifiez que l\'application est installée.');
     });
   };
 
@@ -318,7 +353,7 @@ export function StagesScreen({
     );
     const url = `mailto:${email}?subject=${subject}&body=${body}`;
     Linking.openURL(url).catch(() => {
-      Alert.alert('Email', 'Impossible d\'ouvrir votre client de messagerie.');
+      AppAlert.alert('Email', 'Impossible d\'ouvrir votre client de messagerie.');
     });
   };
 
@@ -326,11 +361,11 @@ export function StagesScreen({
   const openApplyLink = (job: StageJob) => {
     const url = safeApplyUrl(job.sourceUrl);
     if (!url) {
-      Alert.alert('Lien indisponible', APPLY_LINK_MISSING);
+      AppAlert.alert('Lien indisponible', APPLY_LINK_MISSING);
       return;
     }
     Linking.openURL(url).catch(() => {
-      Alert.alert('Lien indisponible', "Impossible d'ouvrir le site de l'offre.");
+      AppAlert.alert('Lien indisponible', "Impossible d'ouvrir le site de l'offre.");
     });
   };
 
@@ -355,7 +390,7 @@ export function StagesScreen({
   };
 
   const handleShareReferral = (job: StageJob) => {
-    Alert.alert(
+    AppAlert.alert(
       'Lien de Partage Copié ! 🎁',
       `Partage cette offre avec tes contacts :\nhttps://campus360.app/stages/${job.id}?ref=${studentProfile.email || 'etudiant'}\n\nDès l'inscription d'un ami, vous gagnez chacun 1 jeton IA gratuit !`
     );
@@ -518,7 +553,7 @@ export function StagesScreen({
               style={styles.resetFiltersBtn}
               onPress={() => {
                 setLoading(true);
-                loadData();
+                loadData(true);
               }}
             >
               <Text style={styles.resetFiltersBtnText}>Réessayer</Text>

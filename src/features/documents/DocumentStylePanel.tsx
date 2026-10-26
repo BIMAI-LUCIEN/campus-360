@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   Pressable,
@@ -32,6 +31,7 @@ import { buildStyleSampleHtml } from './editorTemplate';
 import { TemplateGallery } from './TemplateGallery';
 import { applyTemplate } from './templatesApi';
 import { EditorSurface } from './EditorSurface';
+import { AppAlert } from '../../ui/AppAlert';
 
 // « Style du document » : pick one of the four ready styles, then adjust each
 // part. Every change is applied and saved at once (the parent sends the patch).
@@ -164,7 +164,7 @@ export function DocumentStylePanel({ visible, onClose, documentId, style, onChan
   const pickTemplate = (template: { id: string; name: string } | null) => {
     setGalleryVisible(false);
     if (!template) return;
-    Alert.alert(
+    AppAlert.alert(
       template.name,
       'Le style, la page de garde et les sections manquantes du modèle seront ajoutés. Ton texte ne change pas.',
       [
@@ -176,9 +176,9 @@ export function DocumentStylePanel({ visible, onClose, documentId, style, onChan
             try {
               const { addedSections } = await applyTemplate(documentId, template.id);
               onTemplateApplied?.();
-              Alert.alert('Modèle appliqué', addedSections ? `${addedSections} section(s) ajoutée(s), vides.` : 'Aucune section à ajouter.');
+              AppAlert.alert('Modèle appliqué', addedSections ? `${addedSections} section(s) ajoutée(s), vides.` : 'Aucune section à ajouter.');
             } catch (error) {
-              Alert.alert('Modèle', error instanceof Error ? error.message : 'Application impossible.');
+              AppAlert.alert('Modèle', error instanceof Error ? error.message : 'Application impossible.');
             } finally {
               setApplying(false);
             }
@@ -209,7 +209,7 @@ export function DocumentStylePanel({ visible, onClose, documentId, style, onChan
       const file = await uploadDocumentFile(documentId, picked, 'image');
       onChange({ cover: { [LOGO_KEYS[which]]: file.id } });
     } catch (error) {
-      Alert.alert('Logo', error instanceof Error ? error.message : 'Envoi impossible.');
+      AppAlert.alert('Logo', error instanceof Error ? error.message : 'Envoi impossible.');
     } finally {
       setUploading(null);
     }

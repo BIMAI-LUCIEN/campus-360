@@ -5,9 +5,18 @@
  */
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
-  StyleSheet, View, Text, Pressable, SafeAreaView, ScrollView,
-  TextInput, ActivityIndicator, Alert, Modal,
-  Platform, KeyboardAvoidingView, Switch
+  StyleSheet,
+  View,
+  Text,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  TextInput,
+  ActivityIndicator,
+  Modal,
+  Platform,
+  KeyboardAvoidingView,
+  Switch,
 } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -25,6 +34,7 @@ import {
   Sparkles, Send, ArrowLeft, Plus, Trash2, FileText, Image as ImageIcon, BookOpen, Eye
 } from 'lucide-react-native';
 import { stitchColors } from '../../theme/stitch';
+import { AppAlert } from '../../ui/AppAlert';
 
 type Document = {
   id: string;
@@ -289,7 +299,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
   const handleRunAi = async (promptToSend: string) => {
     const prompt = promptToSend.trim();
     if (!prompt) {
-      Alert.alert('Prompt requis', 'Décrivez ce que vous souhaitez rédiger.');
+      AppAlert.alert('Prompt requis', 'Décrivez ce que vous souhaitez rédiger.');
       return;
     }
 
@@ -313,10 +323,10 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
       if (generatedHtml) {
         editorSurfaceRef.current?.injectJavaScript(`insertAiContent(${JSON.stringify(generatedHtml)}); true;`);
         setAiPrompt('');
-        Alert.alert('✨ IA', 'Contenu rédigé et inséré dans votre document !');
+        AppAlert.alert('✨ IA', 'Contenu rédigé et inséré dans votre document !');
       }
     } catch (err: any) {
-      Alert.alert('Erreur IA', err.message);
+      AppAlert.alert('Erreur IA', err.message);
     } finally {
       setAiLoading(false);
     }
@@ -341,7 +351,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
       setShowAddSection(false);
       handleSelectSection(newSec.id);
     } catch (err: any) {
-      Alert.alert('Erreur', err.message);
+      AppAlert.alert('Erreur', err.message);
     } finally {
       setAddingSection(false);
     }
@@ -352,10 +362,10 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
     const sec = sections.find(s => s.id === sectionId);
     if (!sec) return;
     if (sec.is_system) {
-      Alert.alert('Section obligatoire', 'Cette section fait partie du modèle officiel.');
+      AppAlert.alert('Section obligatoire', 'Cette section fait partie du modèle officiel.');
       return;
     }
-    Alert.alert(
+    AppAlert.alert(
       'Supprimer la section',
       `Voulez-vous supprimer "${sec.title}" ?`,
       [
@@ -373,7 +383,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
                 handleSelectSection(remaining[0]?.id ?? '');
               }
             } catch {
-              Alert.alert('Erreur', 'Impossible de supprimer cette section.');
+              AppAlert.alert('Erreur', 'Impossible de supprimer cette section.');
             }
           }
         }
@@ -414,7 +424,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
         });
       }
     } catch (error: any) {
-      Alert.alert('Erreur', error.message || 'Impossible de générer le PDF.');
+      AppAlert.alert('Erreur', error.message || 'Impossible de générer le PDF.');
     } finally {
       setExporting(false);
     }
@@ -453,7 +463,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
         });
       }
     } catch (error: any) {
-      Alert.alert('Erreur', error.message || 'Impossible de générer le document Word.');
+      AppAlert.alert('Erreur', error.message || 'Impossible de générer le document Word.');
     } finally {
       setExporting(false);
     }
@@ -511,7 +521,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
         body: JSON.stringify({ document_style: patch }),
       });
     } catch (err) {
-      Alert.alert('Style du document', err instanceof Error ? err.message : 'Réglage non enregistré.');
+      AppAlert.alert('Style du document', err instanceof Error ? err.message : 'Réglage non enregistré.');
     }
   };
 

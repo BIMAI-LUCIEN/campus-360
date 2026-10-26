@@ -25,7 +25,7 @@ import {
 } from 'lucide-react-native';
 
 import { type StudentProfile } from '../../features/auth/betterAuth';
-import { fetchStageJobs, fetchStudentApplications } from '../../features/stages/stagesApi';
+import { fetchStageJobs, fetchStudentApplications, peekStageJobs, peekStudentApplications } from '../../features/stages/stagesApi';
 import { AiApplyModal, type ApplicationProfilePatch } from '../../features/stages/AiApplyModal';
 import type { StageApplication, StageJob, Transaction } from '../../types';
 import {
@@ -83,9 +83,10 @@ export function HomeScreen({
   onProfile: _onProfile,
   onProfileSaved,
 }: HomeScreenProps) {
-  const [jobs, setJobs] = useState<StageJob[]>([]);
-  const [_recentApp, setRecentApp] = useState<StageApplication | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Data already loaded in this session is shown at once when coming back to the tab.
+  const [jobs, setJobs] = useState<StageJob[]>(() => peekStageJobs({ userSkills: studentSkills }) ?? []);
+  const [_recentApp, setRecentApp] = useState<StageApplication | null>(() => peekStudentApplications()?.[0] ?? null);
+  const [loading, setLoading] = useState(() => peekStageJobs() === null);
   const [applyingJob, setApplyingJob] = useState<StageJob | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
 
@@ -99,7 +100,9 @@ export function HomeScreen({
     let active = true;
 
     const loadData = async () => {
-      setLoading(true);
+      const cached = peekStageJobs({ userSkills: effectiveSkills });
+      if (cached) setJobs(cached);
+      setLoading(!cached);
       try {
         const [jobsRes, appsRes] = await Promise.allSettled([
           fetchStageJobs({ userSkills: effectiveSkills }),
@@ -125,7 +128,7 @@ export function HomeScreen({
     return () => {
       active = false;
     };
-  }, [effectiveSkills]);
+  }, [effectiveSkills.join('|')]);
 
   // Same profile mapping as the Stages tab, so both screens show the same score.
   const matchProfile = useMemo(

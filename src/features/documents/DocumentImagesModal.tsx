@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   Pressable,
@@ -25,6 +24,7 @@ import {
   type DocumentImageRecord,
   type PickedFile,
 } from './documentFilesApi';
+import { AppAlert } from '../../ui/AppAlert';
 
 export type FigureWidth = 'fig-full' | 'fig-half' | 'fig-small';
 
@@ -112,12 +112,12 @@ export function DocumentImagesModal({ visible, onClose, documentId, onInsertFigu
       const picked = await pickImageFromPhone();
       if (picked) await upload(picked);
     } catch (error) {
-      Alert.alert('Image', error instanceof Error ? error.message : 'Impossible d’ouvrir vos photos.');
+      AppAlert.alert('Image', error instanceof Error ? error.message : 'Impossible d’ouvrir vos photos.');
     }
   };
 
   const handleDelete = (img: DocumentImageRecord) => {
-    Alert.alert('Supprimer l’image', 'Cette image sera retirée de la galerie du document. Les figures déjà insérées ne s’afficheront plus.', [
+    AppAlert.alert('Supprimer l’image', 'Cette image sera retirée de la galerie du document. Les figures déjà insérées ne s’afficheront plus.', [
       { text: 'Annuler', style: 'cancel' },
       {
         text: 'Supprimer',
@@ -129,7 +129,7 @@ export function DocumentImagesModal({ visible, onClose, documentId, onInsertFigu
             setImages(next);
             onImagesUpdated?.(next.length);
           } catch (error) {
-            Alert.alert('Erreur', error instanceof Error ? error.message : 'Suppression impossible.');
+            AppAlert.alert('Erreur', error instanceof Error ? error.message : 'Suppression impossible.');
           }
         },
       },
@@ -140,7 +140,7 @@ export function DocumentImagesModal({ visible, onClose, documentId, onInsertFigu
     const caption = (captions[img.id] ?? img.suggested_caption ?? img.file_name).trim() || img.file_name;
     const displayUrl = img.file_id ? previews[img.file_id] : img.image_url;
     if (!displayUrl) {
-      Alert.alert('Image', 'Cette image n’est pas encore disponible. Réessayez dans un instant.');
+      AppAlert.alert('Image', 'Cette image n’est pas encore disponible. Réessayez dans un instant.');
       return;
     }
     if (caption !== img.suggested_caption) {

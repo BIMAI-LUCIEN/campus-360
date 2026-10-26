@@ -1,7 +1,6 @@
 import { createElement, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -36,6 +35,7 @@ import { loadPdfChatHistory, savePdfChatHistory, clearPdfChatHistory } from './c
 import { FormattedMarkdown } from '../../components/FormattedMarkdown';
 import type { CampusDocument } from '../../types';
 import { stitchColors } from '../../theme/stitch';
+import { AppAlert } from '../../ui/AppAlert';
 
 type ReaderTool = 'pdf' | 'summary' | 'plan' | 'quiz' | 'assistant';
 
@@ -125,7 +125,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
 
   const handleClearChat = () => {
     if (!document || assistantMessages.length === 0) return;
-    Alert.alert(
+    AppAlert.alert(
       'Nouvelle discussion',
       'Veux-tu réinitialiser cette discussion et effacer l’historique des messages pour ce document ?',
       [

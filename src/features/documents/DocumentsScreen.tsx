@@ -1,8 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { DEFAULT_FIELD, fieldFromProfile, STUDY_FIELDS, STUDY_FIELD_LABELS, type StudyField } from './documentOutlines';
 import {
-  StyleSheet, View, Text, Pressable, ScrollView,
-  ActivityIndicator, Alert, Modal, TextInput, Linking, KeyboardAvoidingView, Platform
+  StyleSheet,
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  ActivityIndicator,
+  Modal,
+  TextInput,
+  Linking,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 
 import { FileText, Mail, Briefcase, GraduationCap, Sparkles, Edit3, Download, Trash2, Eye, X } from 'lucide-react-native';
@@ -18,6 +27,7 @@ import { CV_TEMPLATES, missingCvFields, type CvTemplateId } from '../stages/cvHt
 import { deleteCvPhoto, fetchCvPhoto, pickCvPhoto, saveCvPhoto } from '../stages/cvPhoto';
 import type { OfficialCvData } from '../../types';
 import { freeLabel, isFreeLaunch } from '../../config/launch';
+import { AppAlert } from '../../ui/AppAlert';
 
 const getDocBadgeTheme = (type: string) => {
   switch (type) {
@@ -208,7 +218,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       await saveCvPhoto(dataUri);
       setCvPhoto(dataUri);
     } catch (err: any) {
-      Alert.alert('Photo', err?.message || 'Impossible d’ajouter la photo.');
+      AppAlert.alert('Photo', err?.message || 'Impossible d’ajouter la photo.');
     } finally {
       setPhotoBusy(false);
     }
@@ -220,7 +230,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       await deleteCvPhoto();
       setCvPhoto(null);
     } catch (err: any) {
-      Alert.alert('Photo', err?.message || 'Impossible de retirer la photo.');
+      AppAlert.alert('Photo', err?.message || 'Impossible de retirer la photo.');
     } finally {
       setPhotoBusy(false);
     }
@@ -320,11 +330,11 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   // ─── Create + generate the WHOLE document from the onboarding chat ──────────
   const openGenChat = () => {
     if (!newTitle.trim()) {
-      Alert.alert('Titre requis', 'Donne un titre à ton document.');
+      AppAlert.alert('Titre requis', 'Donne un titre à ton document.');
       return;
     }
     if (!isFreeLaunch() && iaCredits !== null && iaCredits < IA_CREDITS_PER_GEN) {
-      Alert.alert(
+      AppAlert.alert(
         'Crédits IA insuffisants',
         `Il te faut ${IA_CREDITS_PER_GEN} crédits IA pour générer ce document. Tu en as ${iaCredits}.`,
       );
@@ -387,13 +397,13 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       } else {
         // Document exists — open it anyway so the work isn't lost.
         const err = await genRes.json().catch(() => ({ error: '' }));
-        Alert.alert(
+        AppAlert.alert(
           'Génération partielle',
           err.error || "L'IA n'a pas pu tout rédiger. Le document est créé, tu peux le compléter.",
         );
       }
     } catch (err: any) {
-      Alert.alert('Erreur', err.message || 'Une erreur est survenue.');
+      AppAlert.alert('Erreur', err.message || 'Une erreur est survenue.');
     } finally {
       setGeneratingFull(false);
       setGenChatVisible(false);
@@ -406,7 +416,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   // ─── Create without AI ──────────────────────────────────────────────────────
   const handleCreate = async () => {
     if (!selectedType || !newTitle.trim()) {
-      Alert.alert('Titre requis', 'Donne un titre à ton document.');
+      AppAlert.alert('Titre requis', 'Donne un titre à ton document.');
       return;
     }
 
@@ -433,7 +443,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       fetchDocuments();
       onEditDocument(doc.id);
     } catch (err: any) {
-      Alert.alert('Erreur de création', err.message);
+      AppAlert.alert('Erreur de création', err.message);
     } finally {
       setCreating(false);
     }
@@ -570,13 +580,13 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                     <Text style={styles.editButtonText}>Éditer</Text>
                   </Pressable>
                   <Pressable style={[styles.actionButton, styles.pdfButton]} onPress={() => {
-                    Alert.alert('Ouvrir', 'Veuillez ouvrir le document en cliquant sur "Éditer" pour générer et exporter le PDF nativement.');
+                    AppAlert.alert('Ouvrir', 'Veuillez ouvrir le document en cliquant sur "Éditer" pour générer et exporter le PDF nativement.');
                   }}>
                     <Download size={13} color="#38BDF8" strokeWidth={2.2} style={{ marginRight: 6 }} />
                     <Text style={styles.pdfButtonText}>PDF</Text>
                   </Pressable>
                   <Pressable style={[styles.actionButton, styles.deleteButton]} onPress={() => {
-                    Alert.alert('Confirmer', `Supprimer "${doc.title}" ?`, [
+                    AppAlert.alert('Confirmer', `Supprimer "${doc.title}" ?`, [
                       { text: 'Annuler', style: 'cancel' },
                       {
                         text: 'Supprimer', style: 'destructive',
@@ -584,7 +594,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                           try {
                             await authFetch(`/api/mobile/documents/${doc.id}`, { method: 'DELETE' });
                             setDocuments((p) => p.filter((d) => d.id !== doc.id));
-                          } catch { Alert.alert('Erreur', 'Suppression impossible.'); }
+                          } catch { AppAlert.alert('Erreur', 'Suppression impossible.'); }
                         },
                       },
                     ]);
@@ -913,14 +923,14 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                 onPress={async () => {
                   const missing = missingCvFields(officialCvData);
                   if (missing.length > 0) {
-                    Alert.alert('Profil incomplet', `Complète ton nom et ton contact (e-mail ou téléphone) dans ton profil avant d'exporter ton CV. Manque : ${missing.join(', ')}.`);
+                    AppAlert.alert('Profil incomplet', `Complète ton nom et ton contact (e-mail ou téléphone) dans ton profil avant d'exporter ton CV. Manque : ${missing.join(', ')}.`);
                     return;
                   }
                   try {
                     const done = await exportOfficialCvPdf(officialCvData, cvTemplate);
-                    if (done) Alert.alert('CV exporté', 'Ton CV a été exporté en PDF.');
+                    if (done) AppAlert.alert('CV exporté', 'Ton CV a été exporté en PDF.');
                   } catch {
-                    Alert.alert('Erreur', 'Impossible d’exporter le CV.');
+                    AppAlert.alert('Erreur', 'Impossible d’exporter le CV.');
                   }
                 }}
               >

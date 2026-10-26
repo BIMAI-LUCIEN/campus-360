@@ -15,7 +15,6 @@ import {
   useWindowDimensions,
   View,
   ActivityIndicator,
-  Alert,
   Switch,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
@@ -110,6 +109,7 @@ import { ResourcesScreen } from './ui/screens/ResourcesScreen';
 import { setFreeLaunch } from './config/launch';
 import { OPERATOR_LABELS, operatorMismatchMessage, parseCameroonMobile } from './features/wallet/cameroonPhone';
 import { ORANGE_MONEY_APPROVAL_USSD } from './features/wallet/PaymentModal';
+import { AppAlert, AppAlertHost } from './ui/AppAlert';
 
 const logo = require('../assets/icon.png');
 const ONBOARDING_COMPLETED_KEY = 'campus360_onboarding_completed_permanent';
@@ -282,6 +282,7 @@ export function AppShell() {
     return false;
   });
   const [notificationsVisible, setNotificationsVisible] = React.useState(false);
+  const [notificationsSeenAt, setNotificationsSeenAt] = React.useState(0);
   const [notificationsSettingsVisible, setNotificationsSettingsVisible] = React.useState(false);
   const [editingDocumentId, setEditingDocumentId] = React.useState<string | null>(null);
   const [securitySettingsVisible, setSecuritySettingsVisible] = React.useState(false);
@@ -374,40 +375,41 @@ export function AppShell() {
   }>>([]);
 
   // ── Effects ──────────────────────────────────────────────────────────────
+  // Asks the phone for permission (once) and sends the Expo push token to the API.
+  const registerForPush = React.useCallback(async (askPermission: boolean) => {
+    if (Platform.OS === 'web') return;
+    try {
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'Campus 360',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: stitchColors.sienna,
+        });
+      }
+      const current = await Notifications.getPermissionsAsync();
+      let granted = current.granted;
+      if (!granted && askPermission && current.canAskAgain) {
+        granted = (await Notifications.requestPermissionsAsync()).granted;
+      }
+      setNotifPermission(granted ? 'granted' : 'denied');
+      if (!granted) return;
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ??
+        Constants.easConfig?.projectId;
+      if (!projectId) return;
+      const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
+      await registerPushToken(
+        tokenResult.data,
+        Platform.OS === 'android' ? 'Android Device' : Platform.OS === 'ios' ? 'iOS Device' : 'Web Device',
+        Platform.OS === 'android' ? 'android' : Platform.OS === 'ios' ? 'ios' : 'web',
+      );
+    } catch {}
+  }, []);
+
   React.useEffect(() => {
-    if (studentSession) {
-      (async () => {
-        if (Platform.OS === 'web') return;
-        try {
-          if (Platform.OS === 'android') {
-            await Notifications.setNotificationChannelAsync('default', {
-              name: 'default',
-              importance: Notifications.AndroidImportance.MAX,
-              vibrationPattern: [0, 250, 250, 250],
-              lightColor: '#FF231F7A',
-            });
-          }
-          const { status } = await Notifications.getPermissionsAsync();
-          let finalStatus = status;
-          if (status !== 'granted') {
-            const { status: reqStatus } = await Notifications.requestPermissionsAsync();
-            finalStatus = reqStatus;
-          }
-          if (finalStatus !== 'granted') return;
-          const projectId =
-            Constants.expoConfig?.extra?.eas?.projectId ??
-            Constants.easConfig?.projectId;
-          if (!projectId) return;
-          const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
-          await registerPushToken(
-            tokenResult.data,
-            Platform.OS === 'android' ? 'Android Device' : Platform.OS === 'ios' ? 'iOS Device' : 'Web Device',
-            Platform.OS === 'android' ? 'android' : Platform.OS === 'ios' ? 'ios' : 'web',
-          );
-        } catch {}
-      })();
-    }
-  }, [studentSession]);
+    if (studentSession) void registerForPush(true);
+  }, [studentSession, registerForPush]);
 
   React.useEffect(() => {
     if (rechargeVisible) {
@@ -426,15 +428,44 @@ export function AppShell() {
   };
   const rechargePhoneCheck = parseCameroonMobile(rechargePhone);
 
-  React.useEffect(() => {
-    const sub = Notifications.addNotificationReceivedListener((notif) => {
-      setNotifications((prev) => [
-        { id: notif.request.identifier, title: notif.request.content.title || 'Notification', body: notif.request.content.body || '', receivedAt: new Date().toISOString(), data: notif.request.content.data },
-        ...prev,
-      ]);
-    });
-    return () => sub.remove();
+  const addNotification = React.useCallback((notif: Notifications.Notification) => {
+    const entry = {
+      id: notif.request.identifier,
+      title: notif.request.content.title || 'Notification',
+      body: notif.request.content.body || '',
+      receivedAt: new Date(notif.date || Date.now()).toISOString(),
+      data: notif.request.content.data,
+    };
+    setNotifications((prev) => [entry, ...prev.filter((item) => item.id !== entry.id)]);
   }, []);
+
+  // Latest tap handler, readable from the listeners registered once at launch.
+  const notificationTapRef = React.useRef<(data: unknown) => void>(() => {});
+  const pendingNotificationData = React.useRef<unknown>(undefined);
+
+  React.useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const received = Notifications.addNotificationReceivedListener(addNotification);
+    const tapped = Notifications.addNotificationResponseReceivedListener((response) => {
+      addNotification(response.notification);
+      notificationTapRef.current(response.notification.request.content.data);
+    });
+    // Notifications still in the phone tray, and the one that opened the app.
+    Notifications.getPresentedNotificationsAsync()
+      .then((list) => list.forEach(addNotification))
+      .catch(() => undefined);
+    Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        if (!response) return;
+        addNotification(response.notification);
+        notificationTapRef.current(response.notification.request.content.data);
+      })
+      .catch(() => undefined);
+    return () => {
+      received.remove();
+      tapped.remove();
+    };
+  }, [addNotification]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -486,8 +517,10 @@ export function AppShell() {
               setOnboardingVisible(false);
             }
             setHasSeenOnboarding(true);
+            // Open the account at once; wallet and purchases refresh in the background.
+            setIsSessionRestoring(false);
           }
-          await syncStudentAccount(storedSession);
+          void syncStudentAccount(storedSession);
         }
       } catch {
         await clearStudentSession().catch(() => undefined);
@@ -644,7 +677,7 @@ export function AppShell() {
     const otp = authOtp.replace(/\D/g, '');
 
     if (authMode === 'verify-email') {
-      if (otp.length !== 6) { Alert.alert('Code de confirmation', 'Entre les 6 chiffres reçus par email.'); return; }
+      if (otp.length !== 6) { AppAlert.alert('Code de confirmation', 'Entre les 6 chiffres reçus par email.'); return; }
       setAuthLoading(true);
       try {
         const session = await verifyStudentEmailOtp(email, otp);
@@ -657,14 +690,14 @@ export function AppShell() {
         }
         await completeAuthenticatedSession(session, otpContext === 'sign-up');
       } catch (error) {
-        Alert.alert('Code invalide', error instanceof Error ? error.message : 'Demande un nouveau code.');
+        AppAlert.alert('Code invalide', error instanceof Error ? error.message : 'Demande un nouveau code.');
       } finally { setAuthLoading(false); }
       return;
     }
 
     // Step 2 of reset: the code is checked alone, before any password is asked.
     if (authMode === 'reset-code') {
-      if (otp.length !== 6) { Alert.alert('Code de vérification', 'Entre les 6 chiffres reçus par email.'); return; }
+      if (otp.length !== 6) { AppAlert.alert('Code de vérification', 'Entre les 6 chiffres reçus par email.'); return; }
       setAuthLoading(true);
       try {
         await checkStudentPasswordResetOtp(email, otp);
@@ -673,16 +706,16 @@ export function AppShell() {
         setAuthMode('new-password');
         setAuthNotice('Code validé. Choisis ton nouveau mot de passe.');
       } catch (error) {
-        Alert.alert('Code invalide', error instanceof Error ? error.message : 'Demande un nouveau code.');
+        AppAlert.alert('Code invalide', error instanceof Error ? error.message : 'Demande un nouveau code.');
       } finally { setAuthLoading(false); }
       return;
     }
 
     // Step 3 of reset: new password + confirmation, sent together with the code.
     if (authMode === 'new-password') {
-      if (otp.length !== 6) { Alert.alert('Code de vérification', 'Le code a expiré ou est absent. Redemande un code.'); return; }
-      if (password.length < 8) { Alert.alert('Nouveau mot de passe', 'Choisis au moins 8 caractères.'); return; }
-      if (password !== authPasswordConfirm.trim()) { Alert.alert('Nouveau mot de passe', 'Les deux mots de passe ne sont pas identiques.'); return; }
+      if (otp.length !== 6) { AppAlert.alert('Code de vérification', 'Le code a expiré ou est absent. Redemande un code.'); return; }
+      if (password.length < 8) { AppAlert.alert('Nouveau mot de passe', 'Choisis au moins 8 caractères.'); return; }
+      if (password !== authPasswordConfirm.trim()) { AppAlert.alert('Nouveau mot de passe', 'Les deux mots de passe ne sont pas identiques.'); return; }
       setAuthLoading(true);
       try {
         await resetStudentPassword(email, otp, password);
@@ -692,16 +725,16 @@ export function AppShell() {
         setAuthMode('sign-in');
         setAuthNotice('Mot de passe modifié. Tu peux te connecter.');
       } catch (error) {
-        Alert.alert('Code invalide', error instanceof Error ? error.message : 'Demande un nouveau code.');
+        AppAlert.alert('Code invalide', error instanceof Error ? error.message : 'Demande un nouveau code.');
       } finally { setAuthLoading(false); }
       return;
     }
 
-    if (!email) { Alert.alert('Connexion', 'Entre ton email.'); return; }
-    if ((authMode === 'sign-in' || authMode === 'sign-up') && !password) { Alert.alert('Connexion', 'Entre ton mot de passe.'); return; }
-    if (authMode === 'sign-up' && name.length < 2) { Alert.alert('Création du compte', 'Entre ton nom.'); return; }
-    if (authMode === 'sign-up' && password.length < 8) { Alert.alert('Création du compte', 'Choisis un mot de passe d’au moins 8 caractères.'); return; }
-    if (authMode === 'sign-up' && password !== authPasswordConfirm.trim()) { Alert.alert('Création du compte', 'Les deux mots de passe ne sont pas identiques.'); return; }
+    if (!email) { AppAlert.alert('Connexion', 'Entre ton email.'); return; }
+    if ((authMode === 'sign-in' || authMode === 'sign-up') && !password) { AppAlert.alert('Connexion', 'Entre ton mot de passe.'); return; }
+    if (authMode === 'sign-up' && name.length < 2) { AppAlert.alert('Création du compte', 'Entre ton nom.'); return; }
+    if (authMode === 'sign-up' && password.length < 8) { AppAlert.alert('Création du compte', 'Choisis un mot de passe d’au moins 8 caractères.'); return; }
+    if (authMode === 'sign-up' && password !== authPasswordConfirm.trim()) { AppAlert.alert('Création du compte', 'Les deux mots de passe ne sont pas identiques.'); return; }
 
     setAuthLoading(true);
     setAuthNotice('');
@@ -737,7 +770,7 @@ export function AppShell() {
         openOtpStep(error.email, 'sign-in');
         return;
       }
-      Alert.alert('Connexion impossible', error instanceof Error ? error.message : 'Réessaie dans un instant.');
+      AppAlert.alert('Connexion impossible', error instanceof Error ? error.message : 'Réessaie dans un instant.');
     } finally { setAuthLoading(false); }
   };
 
@@ -772,7 +805,7 @@ export function AppShell() {
     setAuthVisible(false);
     setActiveSection('home');
     if (isNewAccount) { setFreePdfSelectorVisible(true); }
-    else { Alert.alert('Connecté', 'Tes achats PDF et ton wallet sont synchronisés.'); }
+    else { AppAlert.alert('Connecté', 'Tes achats PDF et ton wallet sont synchronisés.'); }
   };
 
   const resendAuthOtp = async () => {
@@ -785,7 +818,7 @@ export function AppShell() {
       setOtpCooldown(OTP_RESEND_COOLDOWN_SECONDS);
       setAuthNotice(`Nouveau code transmis à ${email}.`);
     } catch (error) {
-      Alert.alert('Code non transmis', error instanceof Error ? error.message : 'Réessaie dans un instant.');
+      AppAlert.alert('Code non transmis', error instanceof Error ? error.message : 'Réessaie dans un instant.');
     } finally { setAuthLoading(false); }
   };
 
@@ -799,9 +832,9 @@ export function AppShell() {
       await syncStudentAccount(session);
       setAuthVisible(false);
       setActiveSection('home');
-      Alert.alert('Connecte', 'Connexion via Google réussie.');
+      AppAlert.alert('Connecte', 'Connexion via Google réussie.');
     } catch (error) {
-      Alert.alert('Connexion impossible', error instanceof Error ? error.message : 'Réessaie dans un instant.');
+      AppAlert.alert('Connexion impossible', error instanceof Error ? error.message : 'Réessaie dans un instant.');
     } finally { setAuthLoading(false); }
   };
 
@@ -825,16 +858,16 @@ export function AppShell() {
   };
 
   const handleUpdatePassword = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) { Alert.alert('Changement de mot de passe', 'Veuillez remplir tous les champs.'); return; }
-    if (newPassword.length < 8) { Alert.alert('Changement de mot de passe', 'Le nouveau mot de passe doit faire au moins 8 caractères.'); return; }
-    if (newPassword !== confirmPassword) { Alert.alert('Changement de mot de passe', 'Les nouveaux mots de passe ne correspondent pas.'); return; }
+    if (!currentPassword || !newPassword || !confirmPassword) { AppAlert.alert('Changement de mot de passe', 'Veuillez remplir tous les champs.'); return; }
+    if (newPassword.length < 8) { AppAlert.alert('Changement de mot de passe', 'Le nouveau mot de passe doit faire au moins 8 caractères.'); return; }
+    if (newPassword !== confirmPassword) { AppAlert.alert('Changement de mot de passe', 'Les nouveaux mots de passe ne correspondent pas.'); return; }
     setUpdatingPassword(true);
     try {
       await changeStudentPassword(currentPassword, newPassword);
-      Alert.alert('Succès', 'Votre mot de passe a été mis à jour.');
+      AppAlert.alert('Succès', 'Votre mot de passe a été mis à jour.');
       setSecuritySettingsVisible(false);
       setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
-    } catch (error) { Alert.alert('Erreur', error instanceof Error ? error.message : 'Impossible de changer le mot de passe.'); }
+    } catch (error) { AppAlert.alert('Erreur', error instanceof Error ? error.message : 'Impossible de changer le mot de passe.'); }
     finally { setUpdatingPassword(false); }
   };
 
@@ -928,7 +961,7 @@ export function AppShell() {
         (sum, id) => sum + (pdfDocuments.find((doc) => doc.id === id)?.price ?? 0),
         0,
       );
-      Alert.alert(
+      AppAlert.alert(
         'Débloquer ce pack',
         `Cette sélection regroupe ${pack.documentCount} PDF. Débloque les ${pendingIds.length} PDF restants pour ${formatCoins(total)} C ?`,
         [
@@ -958,12 +991,12 @@ export function AppShell() {
 
   const rechargeWallet = async () => {
     const amount = Number.parseInt(rechargeAmount, 10);
-    if (!Number.isFinite(amount) || amount < 500) { Alert.alert('Montant invalide', 'Le minimum de recharge est 500 FCFA.'); return; }
+    if (!Number.isFinite(amount) || amount < 500) { AppAlert.alert('Montant invalide', 'Le minimum de recharge est 500 FCFA.'); return; }
     if (!studentSession) { setAuthMode('sign-in'); setAuthNotice('Connecte-toi pour recharger ton wallet PDF.'); setAuthVisible(true); return; }
     const parsedPhone = parseCameroonMobile(rechargePhone);
-    if (!parsedPhone.ok) { Alert.alert('Numéro invalide', parsedPhone.error); return; }
+    if (!parsedPhone.ok) { AppAlert.alert('Numéro invalide', parsedPhone.error); return; }
     const mismatch = operatorMismatchMessage(parsedPhone.operator, provider === 'Orange Money' ? 'orange' : 'mtn');
-    if (mismatch) { Alert.alert('Opérateur différent', mismatch); return; }
+    if (mismatch) { AppAlert.alert('Opérateur différent', mismatch); return; }
     try {
       setRechargeLoading(true);
       setPollingMessage('Initialisation de la transaction...');
@@ -997,13 +1030,13 @@ export function AppShell() {
             } catch {}
             if (statusRes.balanceCoins !== undefined) setBalance(statusRes.balanceCoins);
             await syncStudentAccount(studentSession);
-            Alert.alert('Recharge réussie', `${formatCoins(amount)} Coins ajoutés via ${provider}.`);
+            AppAlert.alert('Recharge réussie', `${formatCoins(amount)} Coins ajoutés via ${provider}.`);
           } else if (statusRes.status === 'failed') {
             clearInterval(pollInterval);
             rechargePollRef.current = null;
             setRechargeLoading(false);
             setPollingMessage('');
-            Alert.alert(
+            AppAlert.alert(
               'Paiement non validé',
               statusRes.failureMessage ||
                 provider === 'Orange Money'
@@ -1015,7 +1048,7 @@ export function AppShell() {
             rechargePollRef.current = null;
             setRechargeLoading(false);
             setPollingMessage('');
-            Alert.alert('Délai dépassé', 'Le délai de validation a expiré.');
+            AppAlert.alert('Délai dépassé', 'Le délai de validation a expiré.');
           }
         } catch {}
       }, 3000);
@@ -1023,7 +1056,7 @@ export function AppShell() {
     } catch (error) {
       setRechargeLoading(false);
       setPollingMessage('');
-      Alert.alert('Recharge impossible', error instanceof Error ? error.message : 'Réessayez dans un instant.');
+      AppAlert.alert('Recharge impossible', error instanceof Error ? error.message : 'Réessayez dans un instant.');
     }
   };
 
@@ -1049,7 +1082,7 @@ export function AppShell() {
     try {
       await Updates.fetchUpdateAsync();
       await Updates.reloadAsync();
-    } catch { Alert.alert('Erreur', 'Impossible de télécharger la mise a jour.'); setUpdateLoading(false); }
+    } catch { AppAlert.alert('Erreur', 'Impossible de télécharger la mise a jour.'); setUpdateLoading(false); }
   };
 
   // ── Derived state ────────────────────────────────────────────────────────
@@ -1071,11 +1104,35 @@ export function AppShell() {
     setActiveSection(section);
   };
 
+  // Opens the screen a push notification is about (data.type set by mobile-api sendPushToUser).
+  const openFromNotification = (data: unknown) => {
+    const type = data && typeof data === 'object' ? (data as { type?: unknown }).type : undefined;
+    setNotificationsVisible(false);
+    // App opened from a notification: wait for the session to be restored.
+    if (!studentSession) { pendingNotificationData.current = data; return; }
+    pendingNotificationData.current = undefined;
+    if (type === 'job_match' || type === 'welcome') openSection('stages');
+    else if (type === 'wallet_topup') { openSection('account'); void syncStudentAccount(studentSession); }
+    else if (type === 'purchase' || type === 'pack_purchase') { openSection('library'); void syncStudentAccount(studentSession); }
+    else if (type === 'document_generated') {
+      const documentId = (data as { documentId?: unknown }).documentId;
+      if (typeof documentId === 'string' && documentId) setEditingDocumentId(documentId);
+      else openSection('documents');
+    } else if (type === 'application' || type === 'application_status') openSection('applications');
+  };
+  notificationTapRef.current = openFromNotification;
+  React.useEffect(() => {
+    if (studentSession && pendingNotificationData.current !== undefined) {
+      notificationTapRef.current(pendingNotificationData.current);
+    }
+  }, [studentSession]);
+  const unreadNotifications = notifications.filter((notif) => new Date(notif.receivedAt).getTime() > notificationsSeenAt).length;
+
   // ── Render ────────────────────────────────────────────────────────────────
   if (!fontsLoaded && !fontError && !fontTimeout) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: stitchColors.background }}>
-        <ActivityIndicator size="large" color={stitchColors.primary} />
+      <View style={styles.loadingScreen}>
+        <Image source={logo} style={styles.loadingLogo} />
       </View>
     );
   }
@@ -1090,6 +1147,7 @@ export function AppShell() {
             documentId={editingDocumentId}
             onClose={() => setEditingDocumentId(null)}
           />
+          <AppAlertHost />
         </SafeAreaView>
       </SafeAreaProvider>
     );
@@ -1107,11 +1165,12 @@ export function AppShell() {
         <StatusBar barStyle="dark-content" backgroundColor={stitchColors.surface} translucent={false} />
 
         <Toast toast={toast} onDismiss={() => setToast(null)} />
+        <AppAlertHost />
 
         {/* Update Banner */}
         {updateAvailable && (
           <View style={{ backgroundColor: stitchColors.surfaceContainerHigh, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ color: stitchColors.white, fontSize: 14, fontWeight: '600', flex: 1 }}>Nouvelle version disponible !</Text>
+            <Text style={{ color: stitchColors.ink, fontSize: 14, fontWeight: '600', flex: 1 }}>Nouvelle version disponible !</Text>
             <Pressable onPress={handleDownloadUpdate} disabled={updateLoading} style={{ backgroundColor: stitchColors.paper, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
               {updateLoading ? <ActivityIndicator size="small" color={stitchColors.ink} /> : <Text style={{ color: stitchColors.ink, fontSize: 13, fontWeight: '700' }}>Mettre à jour</Text>}
             </Pressable>
@@ -1121,11 +1180,7 @@ export function AppShell() {
         {/* Loading */}
         {isSessionRestoring ? (
           <View style={styles.loadingScreen}>
-            <Text style={styles.loadingEyebrow}>CAMPUS 360</Text>
-            <View style={styles.loadingRule} />
-            <Image source={logo} style={{ width: 80, height: 80, borderRadius: 20 }} />
-            <ActivityIndicator size="large" color={stitchColors.emeraldTone} />
-            <Text style={styles.loadingText}>Chargement de ton espace...</Text>
+            <Image source={logo} style={styles.loadingLogo} />
           </View>
         ) : !hasSeenOnboarding ? (
           <IntroSliderScreen
@@ -1206,9 +1261,9 @@ export function AppShell() {
             {activeSection !== 'account' && (
               <TopBar
                 appName="Campus 360"
-                onBellPress={() => setNotificationsVisible(true)}
-                hasUnread={notifications.length > 0}
-                unreadCount={notifications.length}
+                onBellPress={() => { setNotificationsVisible(true); setNotificationsSeenAt(Date.now()); }}
+                hasUnread={unreadNotifications > 0}
+                unreadCount={unreadNotifications}
                 onAvatarPress={() => openSection('account')}
                 avatarInitials={initials}
                 locationName={
@@ -1564,6 +1619,18 @@ export function AppShell() {
             <Pressable style={[styles.dropdownModalCard, { height: '65%', padding: 0 }]} onPress={() => {}}>
               <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: stitchColors.inkFaint, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ fontSize: 20, fontWeight: '800', color: stitchColors.inkSoft }}>Notifications</Text>
+                <View style={{ flex: 1 }} />
+                {notifications.length > 0 && (
+                  <Pressable
+                    onPress={() => {
+                      setNotifications([]);
+                      if (Platform.OS !== 'web') void Notifications.dismissAllNotificationsAsync().catch(() => undefined);
+                    }}
+                    style={{ paddingHorizontal: 12, paddingVertical: 6, marginRight: 8 }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: stitchColors.sienna }}>Tout effacer</Text>
+                  </Pressable>
+                )}
                 <Pressable onPress={() => setNotificationsVisible(false)}>
                   <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: `${stitchColors.ink}0D`, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 14, color: stitchColors.inkMuted }}>✕</Text>
@@ -1581,10 +1648,12 @@ export function AppShell() {
                     if (lowerTitle.includes('recharge') || lowerTitle.includes('crédité')) { emoji = '💸'; bgColor = stitchColors.emeraldBg; }
                     else if (lowerTitle.includes('pack') || lowerTitle.includes('iut')) { emoji = '✨'; bgColor = stitchColors.siennaBg; }
                     else if (lowerTitle.includes('premium')) { emoji = '👑'; bgColor = stitchColors.warningBg; }
+                    else if (lowerTitle.includes('stage')) { emoji = '💼'; bgColor = stitchColors.siennaBg; }
+                    else if (lowerTitle.includes('document')) { emoji = '📄'; bgColor = stitchColors.siennaBg; }
                     let timeStr = 'Récemment';
-                    try { const diffMs = Date.now() - new Date(notif.receivedAt).getTime(); const diffMins = Math.floor(diffMs / 60000); const diffHrs = Math.floor(diffMins / 60); if (diffMins < 60) timeStr = `Il y a ${diffMins} min`; else if (diffHrs < 24) timeStr = `Il y a ${diffHrs} h`; } catch {}
+                    try { const diffMs = Date.now() - new Date(notif.receivedAt).getTime(); const diffMins = Math.floor(diffMs / 60000); const diffHrs = Math.floor(diffMins / 60); if (diffMins < 1) timeStr = 'À l’instant'; else if (diffMins < 60) timeStr = `Il y a ${diffMins} min`; else if (diffHrs < 24) timeStr = `Il y a ${diffHrs} h`; else timeStr = `Il y a ${Math.floor(diffHrs / 24)} j`; } catch {}
                     return (
-                      <View key={notif.id} style={{ flexDirection: 'row', gap: 12 }}>
+                      <Pressable key={notif.id} onPress={() => openFromNotification(notif.data)} style={({ pressed }) => ({ flexDirection: 'row', gap: 12, opacity: pressed ? 0.7 : 1 })}>
                         <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: bgColor, alignItems: 'center', justifyContent: 'center' }}>
                           <Text style={{ fontSize: 24 }}>{emoji}</Text>
                         </View>
@@ -1593,7 +1662,7 @@ export function AppShell() {
                           <Text style={{ fontSize: 14, color: stitchColors.inkMuted, marginTop: 2 }}>{notif.body}</Text>
                           <Text style={{ fontSize: 12, color: stitchColors.inkSubtle, marginTop: 4 }}>{timeStr}</Text>
                         </View>
-                      </View>
+                      </Pressable>
                     );
                   })}
                 </View>
@@ -1625,7 +1694,14 @@ export function AppShell() {
                 <Text style={{ fontSize: 13, color: stitchColors.inkMuted, lineHeight: 19 }}>
                   Campus 360 t'envoie les alertes de tes candidatures, achats et recharges. Pour les activer ou les couper, passe par les réglages de ton téléphone.
                 </Text>
-                <PrimaryButtonLocal label="Ouvrir les réglages" onPress={() => { Linking.openSettings().catch(() => {}); }} />
+                {notifPermission !== 'granted' && Platform.OS !== 'web' && (
+                  <PrimaryButtonLocal label="Activer les notifications" onPress={() => { void registerForPush(true); }} />
+                )}
+                <PrimaryButtonLocal
+                  label="Ouvrir les réglages"
+                  variant={notifPermission !== 'granted' && Platform.OS !== 'web' ? 'secondary' : 'primary'}
+                  onPress={() => { Linking.openSettings().catch(() => {}); }}
+                />
               </View>
             </Pressable>
           </Pressable>
@@ -1704,7 +1780,7 @@ export function AppShell() {
           documents={pdfDocuments}
           onComplete={() => {
             setFreePdfSelectorVisible(false);
-            Alert.alert('Bienvenue ! 🎉', 'Tu as réclamé tes PDFs gratuits. Bonne révision !');
+            AppAlert.alert('Bienvenue ! 🎉', 'Tu as réclamé tes PDFs gratuits. Bonne révision !');
             syncStudentAccount(studentSession ?? undefined);
           }}
           onClose={() => setFreePdfSelectorVisible(false)}
@@ -1753,11 +1829,9 @@ const styles = StyleSheet.create({
   appShell: { flex: 1, backgroundColor: stitchColors.background },
   scrollContent: { width: '100%', maxWidth: 1040, alignSelf: 'center', paddingBottom: 160 },
   scrollContentCompact: { paddingBottom: 116 },
-  loadingScreen: { flex: 1, backgroundColor: stitchColors.surfaceContainerHigh, justifyContent: 'center', alignItems: 'center', gap: 16 },
-  loadingEyebrow: { fontFamily: stitchTypography.monoEyebrow.fontFamily, fontSize: 12, letterSpacing: 2, color: stitchColors.white, fontWeight: '700' },
-  loadingRule: { width: 48, height: 1, backgroundColor: stitchColors.sienna },
-
-  loadingText: { color: stitchColors.inkSubtle, fontSize: 14, fontWeight: '600' },
+  // Same white + logo as the native splash, so the opening looks like a single screen.
+  loadingScreen: { flex: 1, backgroundColor: stitchColors.paper, justifyContent: 'center', alignItems: 'center' },
+  loadingLogo: { width: 96, height: 96, borderRadius: 24 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(19, 27, 46, 0.32)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: stitchColors.surfaceContainerLowest, borderTopLeftRadius: stitchRadius.xl, borderTopRightRadius: stitchRadius.xl, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, shadowColor: stitchColors.ink, shadowOffset: { width: 0, height: -8 }, shadowOpacity: 0.12, shadowRadius: 24, elevation: 16 },
   modalTitle: { ...stitchTypography.headlineMd, color: stitchColors.onSurface, marginBottom: 16, textAlign: 'center' },

@@ -1,8 +1,9 @@
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import type { OfficialCvData } from '../../types';
 import { buildApplicationHtml, generateOfficialCvHtml, type CvTemplateId, type DocumentExportData } from './cvHtml';
+import { AppAlert } from '../../ui/AppAlert';
 
 export type { DocumentExportData } from './cvHtml';
 
@@ -40,7 +41,7 @@ export async function exportOfficialCvPdf(cv: OfficialCvData, template: CvTempla
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      Alert.alert('Impression bloquée', "Ton navigateur a bloqué l'impression : un fichier HTML a été téléchargé, ouvre-le puis choisis Imprimer > Enregistrer en PDF.");
+      AppAlert.alert('Impression bloquée', "Ton navigateur a bloqué l'impression : un fichier HTML a été téléchargé, ouvre-le puis choisis Imprimer > Enregistrer en PDF.");
       return true;
     } catch (err) {
       console.error('Download blob error', err);
@@ -59,12 +60,12 @@ export async function exportOfficialCvPdf(cv: OfficialCvData, template: CvTempla
       });
       return true;
     } else {
-      Alert.alert('CV exporté', `Fichier PDF enregistré : ${uri}`);
+      AppAlert.alert('CV exporté', `Fichier PDF enregistré : ${uri}`);
       return true;
     }
   } catch (error) {
     console.warn('Native Print.printToFileAsync failed:', error);
-    Alert.alert('Export impossible', "Le PDF n'a pas pu être créé. Réessaie.");
+    AppAlert.alert('Export impossible', "Le PDF n'a pas pu être créé. Réessaie.");
     return false;
   }
 }
@@ -105,7 +106,7 @@ export async function exportApplicationPdf(data: DocumentExportData): Promise<bo
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      Alert.alert('Impression bloquée', "Ton navigateur a bloqué l'impression : un fichier HTML a été téléchargé, ouvre-le puis choisis Imprimer > Enregistrer en PDF.");
+      AppAlert.alert('Impression bloquée', "Ton navigateur a bloqué l'impression : un fichier HTML a été téléchargé, ouvre-le puis choisis Imprimer > Enregistrer en PDF.");
       return true;
     } catch (err) {
       console.error('Download blob error', err);
@@ -124,12 +125,12 @@ export async function exportApplicationPdf(data: DocumentExportData): Promise<bo
       });
       return true;
     } else {
-      Alert.alert('PDF exporté', `Fichier disponible : ${uri}`);
+      AppAlert.alert('PDF exporté', `Fichier disponible : ${uri}`);
       return true;
     }
   } catch (error) {
     console.warn('Native Print failed in exportApplicationPdf:', error);
-    Alert.alert('Export impossible', "Le PDF n'a pas pu être créé. Réessaie.");
+    AppAlert.alert('Export impossible', "Le PDF n'a pas pu être créé. Réessaie.");
     return false;
   }
 }

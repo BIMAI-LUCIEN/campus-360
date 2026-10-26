@@ -8,7 +8,6 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import {
   Sparkles,
@@ -23,6 +22,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { stitchColors } from '../../theme/stitch';
 import { freeLabel, isFreeLaunch } from '../../config/launch';
+import { AppAlert } from '../AppAlert';
 
 interface WritingWorkshopModalProps {
   visible: boolean;
@@ -54,7 +54,7 @@ export function WritingWorkshopModal({
 
   const handleGenerate = () => {
     if (!topic.trim()) {
-      Alert.alert('Champs requis', 'Veuillez renseigner le thème ou sujet principal.');
+      AppAlert.alert('Champs requis', 'Veuillez renseigner le thème ou sujet principal.');
       return;
     }
 
@@ -78,7 +78,7 @@ export function WritingWorkshopModal({
   };
 
   const handleCopy = () => {
-    Alert.alert('Succès', 'Le document a été copié dans le presse-papier !');
+    AppAlert.alert('Succès', 'Le document a été copié dans le presse-papier !');
   };
 
   return (

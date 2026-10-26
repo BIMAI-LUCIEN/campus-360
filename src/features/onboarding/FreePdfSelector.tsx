@@ -7,7 +7,6 @@ import {
   Modal,
   ScrollView,
   Dimensions,
-  Alert,
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +14,7 @@ import type { CampusDocument } from '../../types';
 import { stitchColors, brandGradient } from '../../theme/stitch';
 import { purchasePdfDocument } from '../pdf/pdfApi';
 import { recordPdfAnalyticsEvent } from '../pdf/pdfApi';
+import { AppAlert } from '../../ui/AppAlert';
 
 const { width } = Dimensions.get('window');
 const MAX_FREE_PDFS = 3;
@@ -144,13 +144,13 @@ export function FreePdfSelector({
     setClaimingIds(new Set());
 
     if (successCount > 0) {
-      Alert.alert(
+      AppAlert.alert(
         'PDFs réclamés',
         `${successCount} PDF${successCount > 1 ? 's' : ''} ajouté${successCount > 1 ? 's' : ''} à ta bibliothèque. Bonne révision !`,
         [{ text: 'Parfait !', onPress: onComplete }]
       );
     } else if (failCount > 0) {
-      Alert.alert(
+      AppAlert.alert(
         'Certains PDFs n\'ont pas pu être réclamés.',
         'Tu pourras les retrouver plus tard dans le catalogue.',
         [{ text: 'D\'accord', onPress: onComplete }]

@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Linking,
   Pressable,
   ScrollView,
@@ -16,6 +15,7 @@ import { authFetchRawAt, mobileApiBaseUrl } from '../auth/betterAuth';
 import { stitchColors } from '../../theme/stitch';
 import { htmlToReadable, insertableHtml } from './aiHtml';
 import type { DocumentFile, SourceCitation } from './documentFilesApi';
+import { AppAlert } from '../../ui/AppAlert';
 
 // "Rédiger avec moi": a short interview, one question at a time, then a draft
 // written from the student's own answers (and ticked sources). Answers are
@@ -131,7 +131,7 @@ export function SectionInterview({
       });
       setDraft({ html: data.html, citations: data.citations });
     } catch (err) {
-      Alert.alert('Rédaction impossible', errorText(err));
+      AppAlert.alert('Rédaction impossible', errorText(err));
     } finally {
       setDrafting(false);
     }
@@ -140,7 +140,7 @@ export function SectionInterview({
   const openCitation = (c: SourceCitation) => {
     const buttons: { text: string; onPress?: () => void; style?: 'cancel' }[] = [{ text: 'Fermer', style: 'cancel' }];
     if (c.sourceUrl) buttons.push({ text: 'Ouvrir la page', onPress: () => Linking.openURL(c.sourceUrl!).catch(() => undefined) });
-    Alert.alert(`[${c.label}] ${c.title}${c.page ? ` · page ${c.page}` : ''}`, `« ${c.excerpt.trim()} »`, buttons);
+    AppAlert.alert(`[${c.label}] ${c.title}${c.page ? ` · page ${c.page}` : ''}`, `« ${c.excerpt.trim()} »`, buttons);
   };
 
   if (loading) {
@@ -195,7 +195,7 @@ export function SectionInterview({
             <Pressable
               style={styles.primaryBtn}
               onPress={() =>
-                Alert.alert('Remplacer la section', 'Le contenu actuel de la section sera remplacé par ce texte.', [
+                AppAlert.alert('Remplacer la section', 'Le contenu actuel de la section sera remplacé par ce texte.', [
                   { text: 'Annuler', style: 'cancel' },
                   { text: 'Remplacer', style: 'destructive', onPress: () => onReplaceSection(insertableHtml(draft.html)) },
                 ])

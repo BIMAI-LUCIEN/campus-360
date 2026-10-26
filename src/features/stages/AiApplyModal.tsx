@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
-  Alert,
   TextInput,
 } from 'react-native';
 import {
@@ -48,6 +47,7 @@ import { stitchColors, fontFamilies, stitchRadius } from '../../theme/stitch';
 import { isFreeLaunch } from '../../config/launch';
 import { applyPriceLabel, jobApplyPrice, jobIsPaid } from './applyPrice';
 import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from './contactTargets';
+import { AppAlert } from '../../ui/AppAlert';
 
 interface AiApplyModalProps {
   visible: boolean;
@@ -243,7 +243,7 @@ export function AiApplyModal({
     if (visible && job) {
       // Safety net: a 'LINK' offer has no recipient, the screens open its website instead.
       if (isLinkApply(job)) {
-        Alert.alert("Candidature sur le site de l'offre", APPLY_LINK_NOTICE);
+        AppAlert.alert("Candidature sur le site de l'offre", APPLY_LINK_NOTICE);
         onClose();
         return;
       }
@@ -329,7 +329,7 @@ export function AiApplyModal({
           setStep('preview');
         })
         .catch(() => {
-          Alert.alert('Erreur', 'Impossible de générer la candidature. Réessayez.');
+          AppAlert.alert('Erreur', 'Impossible de générer la candidature. Réessayez.');
           onClose();
         });
 
@@ -385,19 +385,19 @@ export function AiApplyModal({
             'Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.'
           )
       );
-      Alert.alert('Ton formel appliqué', 'Formules protocolaires professionnelles insérées.');
+      AppAlert.alert('Ton formel appliqué', 'Formules protocolaires professionnelles insérées.');
     } else if (tone === 'concise') {
       setEditableLetter((prev) =>
         prev.split('\n\n').slice(0, 3).join('\n\n') +
         '\n\nRestant à votre entière disposition pour échanger lors d’un entretien.'
       );
-      Alert.alert('Version concise', 'Format direct en 3 paragraphes opérationnels.');
+      AppAlert.alert('Version concise', 'Format direct en 3 paragraphes opérationnels.');
     } else if (tone === 'impact') {
       const skillsHighlight = currentProfile.skills.slice(0, 3).join(', ');
       setEditableLetter((prev) =>
         prev + `\n\nCompétences clés directement opérationnelles : ${skillsHighlight}.`
       );
-      Alert.alert('Compétences mises en avant', 'Compétences clés insérées dans le corps du texte.');
+      AppAlert.alert('Compétences mises en avant', 'Compétences clés insérées dans le corps du texte.');
     }
   };
 
@@ -423,7 +423,7 @@ export function AiApplyModal({
     if (result?.officialCv) {
       const missing = missingCvFields(result.officialCv);
       if (missing.length > 0) {
-        Alert.alert('Profil incomplet', `Complète ton nom et ton contact (e-mail ou téléphone) dans ton profil avant d'envoyer ton CV. Manque : ${missing.join(', ')}.`);
+        AppAlert.alert('Profil incomplet', `Complète ton nom et ton contact (e-mail ou téléphone) dans ton profil avant d'envoyer ton CV. Manque : ${missing.join(', ')}.`);
         return;
       }
     }
@@ -452,7 +452,7 @@ export function AiApplyModal({
     if (result?.officialCv) {
       const missing = missingCvFields(result.officialCv);
       if (missing.length > 0) {
-        Alert.alert('Profil incomplet', `Complète ton nom et ton contact (e-mail ou téléphone) dans ton profil avant d'envoyer ton CV. Manque : ${missing.join(', ')}.`);
+        AppAlert.alert('Profil incomplet', `Complète ton nom et ton contact (e-mail ou téléphone) dans ton profil avant d'envoyer ton CV. Manque : ${missing.join(', ')}.`);
         return;
       }
     }
@@ -474,7 +474,7 @@ export function AiApplyModal({
       });
 
       if (!pdfBase64 && Platform.OS === 'web') {
-        Alert.alert('CV non joint', "Sur le web, ton CV n'est pas joint automatiquement. Utilise l'app mobile pour l'envoyer avec ta candidature.");
+        AppAlert.alert('CV non joint', "Sur le web, ton CV n'est pas joint automatiquement. Utilise l'app mobile pour l'envoyer avec ta candidature.");
       }
 
       const pitch = buildWhatsAppPitch({
@@ -514,7 +514,7 @@ export function AiApplyModal({
       setStep('sent');
     } catch (err) {
       console.error('[AiApplyModal] 1-Click apply error:', err);
-      Alert.alert('Envoi impossible', err instanceof Error ? err.message : "La candidature n'a pas pu être enregistrée.");
+      AppAlert.alert('Envoi impossible', err instanceof Error ? err.message : "La candidature n'a pas pu être enregistrée.");
     } finally {
       setSubmitting(false);
     }
@@ -563,7 +563,7 @@ export function AiApplyModal({
       setStep('sent');
     } catch (err) {
       console.warn('[AiApplyModal] Manual WhatsApp error:', err);
-      Alert.alert('Envoi impossible', err instanceof Error ? err.message : "La candidature n'a pas pu être enregistrée.");
+      AppAlert.alert('Envoi impossible', err instanceof Error ? err.message : "La candidature n'a pas pu être enregistrée.");
     } finally {
       setSubmitting(false);
     }
@@ -590,7 +590,7 @@ export function AiApplyModal({
       });
       setStep('sent');
     } catch (err) {
-      Alert.alert('Envoi impossible', err instanceof Error ? err.message : "La candidature n'a pas pu être enregistrée.");
+      AppAlert.alert('Envoi impossible', err instanceof Error ? err.message : "La candidature n'a pas pu être enregistrée.");
     }
   };
 
@@ -609,7 +609,7 @@ export function AiApplyModal({
       });
       setStep('sent');
     } catch (err) {
-      Alert.alert('Erreur', err instanceof Error ? err.message : "La candidature n'a pas pu être enregistrée.");
+      AppAlert.alert('Erreur', err instanceof Error ? err.message : "La candidature n'a pas pu être enregistrée.");
     }
   };
 
@@ -1148,7 +1148,7 @@ export function AiApplyModal({
             const account = await getStudentAccount();
             setCurrentProfile((prev) => ({ ...prev, tokens: account.wallet.iaCredits }));
           } catch {
-            Alert.alert('Paiement reçu', 'Ton solde est en cours de mise à jour.');
+            AppAlert.alert('Paiement reçu', 'Ton solde est en cours de mise à jour.');
           }
         }}
       />

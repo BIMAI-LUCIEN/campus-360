@@ -1,25 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
 import {
-
   View,
-
   Text,
-
   StyleSheet,
-
   ScrollView,
-
   Pressable,
-
   RefreshControl,
-
   Linking,
-
-  Alert,
-
   Platform,
-
 } from 'react-native';
 
 import {
@@ -61,6 +50,7 @@ import type { StageApplication, AppStatus } from '../../types';
 import {
 
   fetchStudentApplications,
+  peekStudentApplications,
 
   updateApplicationStatus,
 
@@ -81,6 +71,7 @@ import { ApplicationDetailModal } from '../../features/stages/ApplicationDetailM
 import { stitchColors } from '../../theme/stitch';
 
 import { companyWhatsapp } from '../../features/stages/contactTargets';
+import { AppAlert } from '../AppAlert';
 
 
 
@@ -126,7 +117,7 @@ const STATUS_CONFIG: Record<
 
 export function ApplicationsTimelineScreen({ studentName, onBack }: ApplicationsTimelineProps) {
 
-  const [applications, setApplications] = useState<StageApplication[]>([]);
+  const [applications, setApplications] = useState<StageApplication[]>(() => peekStudentApplications() ?? []);
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -180,7 +171,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
   const handleWithdrawApplication = (appId: string) => {
 
-    Alert.alert(
+    AppAlert.alert(
 
       'Retirer ma candidature',
 
@@ -202,7 +193,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
             if (!res.success) {
 
-              Alert.alert('Erreur', res.error || "Impossible de retirer la candidature.");
+              AppAlert.alert('Erreur', res.error || "Impossible de retirer la candidature.");
 
               return;
 
@@ -230,7 +221,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
     if (!rawPhone) {
 
-      Alert.alert('Relance impossible', "Cette entreprise n'a pas de numéro WhatsApp. Copie le message et envoie-le par un autre moyen.");
+      AppAlert.alert('Relance impossible', "Cette entreprise n'a pas de numéro WhatsApp. Copie le message et envoie-le par un autre moyen.");
 
       return;
 
@@ -260,7 +251,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
     } else {
 
-      Alert.alert(
+      AppAlert.alert(
 
         'Message de relance J+7 préparé',
 

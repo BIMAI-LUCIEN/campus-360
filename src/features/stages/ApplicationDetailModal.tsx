@@ -1,29 +1,16 @@
 import React, { useState } from 'react';
 
 import {
-
   Modal,
-
   View,
-
   Text,
-
   ScrollView,
-
   Pressable,
-
   StyleSheet,
-
   Linking,
-
-  Alert,
-
   TextInput,
-
   ActivityIndicator,
-
   Platform,
-
 } from 'react-native';
 
 import {
@@ -89,6 +76,7 @@ import { exportOfficialCvToPdf } from './pdfExportService';
 import { missingCvFields } from './cvHtml';
 
 import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from './contactTargets';
+import { AppAlert } from '../../ui/AppAlert';
 
 
 
@@ -232,7 +220,7 @@ export function ApplicationDetailModal({
 
     if (missing.length > 0) {
 
-      Alert.alert('Profil incomplet', `Complète ton nom et ton contact avant d'exporter ce CV. Manque : ${missing.join(', ')}.`);
+      AppAlert.alert('Profil incomplet', `Complète ton nom et ton contact avant d'exporter ce CV. Manque : ${missing.join(', ')}.`);
 
       return;
 
@@ -248,7 +236,7 @@ export function ApplicationDetailModal({
 
       console.warn('PDF export error:', e);
 
-      Alert.alert('Export impossible', "Le PDF n'a pas pu être créé. Réessaie.");
+      AppAlert.alert('Export impossible', "Le PDF n'a pas pu être créé. Réessaie.");
 
     } finally {
 
@@ -274,7 +262,7 @@ export function ApplicationDetailModal({
 
       setCopied(true);
 
-      Alert.alert('Copié !', 'Le texte a été copié dans le presse-papiers.');
+      AppAlert.alert('Copié !', 'Le texte a été copié dans le presse-papiers.');
 
       setTimeout(() => setCopied(false), 2500);
 
@@ -298,7 +286,7 @@ export function ApplicationDetailModal({
 
     setSavingNotes(false);
 
-    Alert.alert('Succès', 'Vos notes personnelles ont été enregistrées.');
+    AppAlert.alert('Succès', 'Vos notes personnelles ont été enregistrées.');
 
   };
 
@@ -312,7 +300,7 @@ export function ApplicationDetailModal({
 
     if (!rawPhone) {
 
-      Alert.alert('Relance impossible', `${CONTACT_UNAVAILABLE} : pas de numéro WhatsApp. Copie le message et envoie-le par un autre moyen.`);
+      AppAlert.alert('Relance impossible', `${CONTACT_UNAVAILABLE} : pas de numéro WhatsApp. Copie le message et envoie-le par un autre moyen.`);
 
       return;
 
@@ -340,7 +328,7 @@ export function ApplicationDetailModal({
 
     if (!email) {
 
-      Alert.alert('Envoi impossible', `${CONTACT_UNAVAILABLE} : pas d'adresse e-mail.`);
+      AppAlert.alert('Envoi impossible', `${CONTACT_UNAVAILABLE} : pas d'adresse e-mail.`);
 
       return;
 
@@ -374,7 +362,7 @@ export function ApplicationDetailModal({
 
   const handleWithdraw = () => {
 
-    Alert.alert(
+    AppAlert.alert(
 
       'Retirer ma candidature',
 
@@ -400,7 +388,7 @@ export function ApplicationDetailModal({
 
             if (!res.success) {
 
-              Alert.alert('Erreur', res.error || "Impossible de retirer la candidature.");
+              AppAlert.alert('Erreur', res.error || "Impossible de retirer la candidature.");
 
               return;
 

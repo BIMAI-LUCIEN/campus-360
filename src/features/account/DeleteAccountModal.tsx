@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Trash2, X } from 'l
 
 import { deleteStudentAccount } from '../auth/betterAuth';
 import { stitchColors, stitchRadius, stitchSpacing } from '../../theme/stitch';
+import { AppAlert } from '../../ui/AppAlert';
 
 interface DeleteAccountModalProps {
   visible: boolean;
@@ -43,13 +43,13 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
       await deleteStudentAccount();
       handleClose();
       await onAccountDeleted();
-      Alert.alert(
+      AppAlert.alert(
         'Compte supprimé',
         'Ton compte et l’ensemble de tes données personnelles ont été supprimés définitivement.',
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Une erreur est survenue lors de la suppression.';
-      Alert.alert('Suppression impossible', message);
+      AppAlert.alert('Suppression impossible', message);
     } finally {
       setLoading(false);
     }
