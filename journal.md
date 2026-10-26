@@ -4,6 +4,24 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 
 ---
 
+**2026-10-26 · hors plan · test-and-verify · 22ebc6a · Upload d'images de la rédaction (serveur de fichiers `files.campus360b.site`)**
+
+- **Cause du « Connexion impossible » :** `files.campus360b.site` n'avait aucun enregistrement DNS. Corrigé côté infra : enregistrement A posé par l'utilisateur, certificat certbot (expire le 2027-01-24, renouvellement auto), `nginx-files.conf` corrigé (regex `{36}` entre guillemets, sinon `nginx -t` échoue ; correctif présent dans `9137225`), `campus360-mobile-api` remis en ligne sur le VPS (`node_modules` et `.next` absents → `next: not found`, 26 redémarrages ; `npm ci`, `npm run build`, `pm2 restart`).
+- **Commandes :** `npm test` (mobile-api) 257 tests, 238 pass, 0 échec, 19 ignorés (contrôle PDF live et base de test absente) ; `tsc --noEmit` mobile-api 0 ; `npm run typecheck` app 0 ; `lint:colors` 189/189.
+- **Production, sans écriture :** POST upload sans session → 401 `Session requise.` ; préflight depuis `https://campus360b.site` → 204 avec allow-origin ; origine non approuvée → pas d'allow-origin ; route hors liste → 404 ; livraison signée sans signature → 403 ; API locale VPS 204, PM2 `online` stable.
+- **Parcours navigateur non fait :** pas de base de test (le `mobile-api` local pointe vers la même base Supabase que la production ; ni Docker ni PostgreSQL sur le poste).
+
+| Fonctionnalité | Interface | Réseau | Donnée | Erreur | Mobile | Verdict |
+|---|---|---|---|---|---|---|
+| Serveur de fichiers (DNS, TLS, routes, auth, CORS) | n/a | 🟢 | n/a | 🟢 401 / 403 / 404 | n/a | 🟢 VERIFIED |
+| API mobile VPS remise en ligne | n/a | 🟢 204 | n/a | n/a | n/a | 🟢 VERIFIED |
+| Choisir une photo → visible dans « Images du document » | ⚪ | 🟠 401 sans session seulement | ⚪ | 🟠 tests unitaires (PDF déguisé refusé) | ⚪ | 🟠 PARTIEL |
+| Insérer l'image comme figure dans la section | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | 🟠 PARTIEL |
+
+- **Points ouverts :** le DNS du routeur local (`flybox.home`) renvoie encore « domaine inexistant » (cache négatif) : un téléphone sur ce Wi-Fi verra toujours « Connexion impossible » jusqu'à expiration (passer en 4G, ou redémarrer le routeur) ; parcours réel d'upload à faire sur le téléphone ou avec le compte de test sur la base partagée (accord requis) ; cause des redémarrages PM2 antérieurs (le déploiement a laissé `mobile-api` sans dépendances, voir `22ebc6a`) non analysée.
+
+---
+
 **2026-10-24 · Livraison 35f8228 · vps-deploy · 35f8228 · Paiement à l'acte, 5 000 coins, descriptions intégrales en production**
 
 - **VPS :** `deploy-vps.yml` réussi sur `35f8228` (migrations 0017 et 0018 appliquées par le script) ; `FREE_LAUNCH_MODE=false` et `STARTING_COINS=5000` posés dans `mobile-api/.env.local` et `recruiter-web/.env.production` (sauvegardes `.bak-<horodatage>`) ; `pm2 restart --update-env` + `pm2 save`.
