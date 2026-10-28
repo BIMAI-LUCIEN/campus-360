@@ -43,8 +43,6 @@ import {
 } from '../../theme/stitch';
 import { legalLinks } from '../../config/legalLinks';
 import { publicEnv } from '../../config/env';
-import { WhatsAppPairingModal } from '../../features/whatsapp/WhatsAppPairingModal';
-import { getStoredWhatsAppStatus } from '../../features/whatsapp/whatsappService';
 
 const formatCoins = (value: number) =>
   new Intl.NumberFormat('fr-CM', { maximumFractionDigits: 0 }).format(value);
@@ -149,21 +147,6 @@ export function ProfileScreen({
   onSignOut,
   onDeleteAccount,
 }: ProfileScreenProps) {
-  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = React.useState(false);
-  const [isWhatsAppConnected, setIsWhatsAppConnected] = React.useState(false);
-
-  React.useEffect(() => {
-    let isMounted = true;
-    getStoredWhatsAppStatus().then((status) => {
-      if (isMounted) {
-        setIsWhatsAppConnected(Boolean(status.connected));
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, [studentProfile]);
-
   const handle = studentProfile?.email
     ? `@${studentProfile.email.split('@')[0]}`
     : '@campus360';
@@ -207,39 +190,8 @@ export function ProfileScreen({
   ];
 
   const settingsRows: MenuRow[] = [
-    // TEMPORAIREMENT MASQUÉ en attendant l'API officielle WhatsApp Cloud :
-    // Évite les risques de blocage de numéro de téléphone avec l'appairage Evolution API.
-    // La logique (WhatsAppPairingModal, getStoredWhatsAppStatus) est conservée intacte.
-    /*
-    {
-      key: 'whatsapp_link',
-      testID: 'menu-whatsapp-settings',
-      label: 'Liaison WhatsApp (Candidatures 1-Clic)',
-      Icon: MessageSquare,
-      iconBg: 'rgba(16, 185, 129, 0.12)',
-      iconColor: stitchColors.emeraldDeep,
-      badge: (
-        <View
-          style={
-            isWhatsAppConnected
-              ? styles.whatsappConnectedBadge
-              : styles.whatsappDisconnectedBadge
-          }
-        >
-          <Text
-            style={
-              isWhatsAppConnected
-                ? styles.whatsappConnectedBadgeText
-                : styles.whatsappDisconnectedBadgeText
-            }
-          >
-            {isWhatsAppConnected ? '✅ WhatsApp connecté' : 'Non associé'}
-          </Text>
-        </View>
-      ),
-      onPress: () => setIsWhatsAppModalOpen(true),
-    },
-    */
+    // Liaison du compte WhatsApp (Evolution API) retirée de l'UI en attendant l'API officielle
+    // WhatsApp Cloud. Pour la réintégrer : features/whatsapp/WhatsAppPairingModal.tsx + whatsappService.ts.
     {
       key: 'security',
       label: 'Sécurité & mot de passe',
@@ -482,12 +434,6 @@ export function ProfileScreen({
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      <WhatsAppPairingModal
-        visible={isWhatsAppModalOpen}
-        onClose={() => setIsWhatsAppModalOpen(false)}
-        initialPhone={studentProfile?.whatsappPhone || studentProfile?.phone || ''}
-        onStatusChange={(connected) => setIsWhatsAppConnected(connected)}
-      />
     </>
   );
 }

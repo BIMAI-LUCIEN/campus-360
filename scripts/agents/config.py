@@ -65,7 +65,8 @@ TREG_MAX_VERIFY_CALLS_PER_RUN = _positive_int("TREG_MAX_VERIFY_CALLS_PER_RUN", 2
 TREG_MAX_PAGE_READS_PER_RUN = _positive_int("TREG_MAX_PAGE_READS_PER_RUN", 30)
 
 # Reference list of sources, shared by the orchestrator, run_scraper and the scheduler.
-DEFAULT_PLATFORMS = ["CAMEROON_JOBS", "LINKEDIN", "FACEBOOK", "TIKTOK", "ACADEMIC_WEB"]
+# TikTok is left out: its videos are neither verifiable offers nor report documents.
+DEFAULT_PLATFORMS = ["CAMEROON_JOBS", "LINKEDIN", "FACEBOOK", "ACADEMIC_WEB"]
 
 # At most this many offers added per Cameroon day, internships and jobs together.
 DAILY_OFFER_CAP = _positive_int("DAILY_OFFER_CAP", 20)

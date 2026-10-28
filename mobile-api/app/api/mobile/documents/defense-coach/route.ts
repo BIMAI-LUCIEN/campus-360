@@ -22,13 +22,14 @@ export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers });
 }
 
+// Scraped reports often lack a field, company or level: null is accepted like a missing value.
 const requestSchema = z.object({
   title: z.string().trim().min(3).max(300),
-  field: z.string().trim().default('Informatique / Général'),
-  company: z.string().trim().optional(),
-  level: z.string().trim().default('Licence'),
-  abstract: z.string().trim().optional(),
-  tableOfContents: z.array(z.string()).optional(),
+  field: z.string().trim().nullish().transform((v) => v || 'Informatique / Général'),
+  company: z.string().trim().nullish().transform((v) => v || undefined),
+  level: z.string().trim().nullish().transform((v) => v || 'Licence'),
+  abstract: z.string().trim().max(4000).nullish().transform((v) => v || undefined),
+  tableOfContents: z.array(z.string().max(300)).max(40).nullish().transform((v) => v ?? undefined),
 });
 
 export async function POST(request: NextRequest) {

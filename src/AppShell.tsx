@@ -1334,6 +1334,7 @@ export function AppShell() {
                   onOpenPdf={setReadingDocument}
                   onRefreshDocuments={() => refreshDocuments()}
                   onOpenAssistant={() => openSection('documents')}
+                  onOpenWallet={() => setRechargeVisible(true)}
                 />
               )}
 

@@ -4,14 +4,14 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { BookOpen, Sparkles, FileText, Layers, GraduationCap } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ExploreScreen } from './ExploreScreen';
 import { LibraryScreen } from './LibraryScreen';
 import { ScrapedReportsView } from './ScrapedReportsView';
-import type { CampusDocument, CampusPdfPack } from '../../types';
+import type { CampusDocument, CampusPdfPack, ScrapedStageReport } from '../../types';
 import { WritingWorkshopModal } from './WritingWorkshopModal';
 import { stitchColors } from '../../theme/stitch';
 
@@ -30,6 +30,7 @@ interface ResourcesScreenProps {
   onOpenPdf: (doc: CampusDocument) => void;
   onRefreshDocuments?: () => void;
   onOpenAssistant?: () => void;
+  onOpenWallet?: () => void;
 }
 
 export function ResourcesScreen({
@@ -47,9 +48,13 @@ export function ResourcesScreen({
   onOpenPdf,
   onRefreshDocuments = () => {},
   onOpenAssistant,
+  onOpenWallet,
 }: ResourcesScreenProps) {
   const [activeSubTab, setActiveSubTab] = useState<'catalogue' | 'library' | 'reports'>('catalogue');
   const [writingModalVisible, setWritingModalVisible] = useState(false);
+  const [templateReport, setTemplateReport] = useState<ScrapedStageReport | null>(null);
+  const { width } = useWindowDimensions();
+  const compact = width < 400;
 
   const ownedCount = ownedDocuments.length || purchasedDocumentIds.length;
 
@@ -61,12 +66,12 @@ export function ResourcesScreen({
       {/* ── Refined Obsidian Violet Header ───────────────────────── */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <View style={{ flex: 1, paddingRight: 8 }}>
+          <View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 220 }}>
             <View style={styles.titleBadgeRow}>
-              <GraduationCap size={18} color="#A78BFA" />
-              <Text style={styles.title}>Ressources Académiques</Text>
+              <GraduationCap size={18} color={stitchColors.secondary} />
+              <Text style={styles.title} numberOfLines={2}>Ressources Académiques</Text>
             </View>
-            <Text style={styles.subtitle}>
+            <Text style={styles.subtitle} numberOfLines={2}>
               Annales d'examens, fiches de révision et rapports de référence
             </Text>
           </View>
@@ -74,7 +79,10 @@ export function ResourcesScreen({
           <View style={styles.headerActions}>
             <Pressable
               style={styles.writingBtn}
-              onPress={() => setWritingModalVisible(true)}
+              onPress={() => {
+                setTemplateReport(null);
+                setWritingModalVisible(true);
+              }}
             >
               <FileText size={13} color="#C4B5FD" />
               <Text style={styles.writingBtnText}>Atelier IA</Text>
@@ -105,7 +113,7 @@ export function ResourcesScreen({
                 activeSubTab === 'catalogue' && styles.subTabTextActive,
               ]}
             >
-              Épreuves ({documents.length})
+              {compact ? 'Épreuves' : `Épreuves (${documents.length})`}
             </Text>
           </Pressable>
 
@@ -123,7 +131,7 @@ export function ResourcesScreen({
                 activeSubTab === 'library' && styles.subTabTextActive,
               ]}
             >
-              Bibliothèque ({ownedCount})
+              {compact ? `Biblio (${ownedCount})` : `Bibliothèque (${ownedCount})`}
             </Text>
           </Pressable>
 
@@ -141,7 +149,7 @@ export function ResourcesScreen({
                 activeSubTab === 'reports' && styles.subTabTextActive,
               ]}
             >
-              Rapports de Stage
+              {compact ? 'Rapports' : 'Rapports de Stage'}
             </Text>
           </Pressable>
         </View>
@@ -172,7 +180,10 @@ export function ResourcesScreen({
           />
         ) : (
           <ScrapedReportsView
-            onUseStructure={() => setWritingModalVisible(true)}
+            onUseStructure={(report) => {
+              setTemplateReport(report);
+              setWritingModalVisible(true);
+            }}
           />
         )}
       </View>
@@ -181,6 +192,8 @@ export function ResourcesScreen({
       <WritingWorkshopModal
         visible={writingModalVisible}
         onClose={() => setWritingModalVisible(false)}
+        onOpenWallet={onOpenWallet}
+        templateReport={templateReport}
       />
     </View>
   );
@@ -188,20 +201,22 @@ export function ResourcesScreen({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: stitchColors.background,
+    overflow: 'hidden',
   },
   glowTop: {
     position: 'absolute',
+    // Kept inside the screen: a negative offset widened it and shifted the content on phones.
     top: -50,
-    right: -30,
+    right: 0,
     width: 220,
     height: 220,
     borderRadius: 110,
     backgroundColor: 'rgba(124, 58, 237, 0.05)',
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 52 : 40,
+    // The TopBar above already handles the safe area.
+    paddingTop: 14,
     paddingHorizontal: 16,
     paddingBottom: 12,
     backgroundColor: stitchColors.white,
@@ -210,8 +225,11 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+    rowGap: 10,
+    columnGap: 8,
     marginBottom: 12,
   },
   titleBadgeRow: {
@@ -299,12 +317,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: stitchColors.inkMuted,
     fontWeight: '600',
+    flexShrink: 1,
   },
   subTabTextActive: {
     color: stitchColors.white,
     fontWeight: '700',
   },
-  body: {
-    flex: 1,
-  },
+  body: {},
 });

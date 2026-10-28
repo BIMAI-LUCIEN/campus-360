@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     const jobs = await listStageJobs({
       query: searchParams.get('q') || undefined,
       sector: searchParams.get('sector') || undefined,
+      kind: searchParams.get('kind') || undefined,
     });
     return withCors(NextResponse.json({ success: true, count: jobs.length, jobs }), request);
   } catch (error) {

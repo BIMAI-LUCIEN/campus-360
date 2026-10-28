@@ -107,10 +107,10 @@
       statusOverlay.style.display = 'none';
       container.innerHTML = '';
       
-      // Replace extension with .jpg to load HD rendered pages
-      const baseJpgUrl = baseUrl.replace(/\.pdf(\?.*)?$/i, '.jpg');
+      // Normalize base URL: remove any pg_X/ if already present
+      let cleanUrl = baseUrl.replace(/\/image\/upload\/(pg_\d+\/)?/, '/image/upload/');
+      cleanUrl = cleanUrl.replace(/\.pdf(\?.*)?$/i, '.jpg');
       
-      // Render first 30 pages with lazy fallback
       for (let p = 1; p <= 30; p++) {
         const pageContainer = document.createElement('div');
         pageContainer.className = 'page-container';
@@ -119,14 +119,18 @@
         img.className = 'pdf-page-img';
         img.loading = p === 1 ? 'eager' : 'lazy';
         
-        // Cloudinary multi-page URL: /image/upload/pg_N/v.../...jpg
-        const pageUrl = baseJpgUrl.replace('/image/upload/', '/image/upload/pg_' + p + '/');
+        const pageUrl = cleanUrl.replace('/image/upload/', '/image/upload/pg_' + p + '/');
         img.src = pageUrl;
         
         img.onerror = function() {
-          // If page exceeds document total, remove the container silently
           if (p > 1) {
             pageContainer.remove();
+          } else {
+            statusOverlay.style.display = 'flex';
+            if (spinner) spinner.style.display = 'none';
+            if (statusText) {
+              statusText.innerHTML = "Chargement alternatif en cours...<br><br><a class='fallback-btn' href='" + baseUrl + "' target='_blank'>Ouvrir le document</a>";
+            }
           }
         };
         

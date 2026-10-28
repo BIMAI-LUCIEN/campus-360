@@ -4,6 +4,7 @@ Coordonne les agents de collecte (LinkedIn, Facebook, Web Académique),
 l'agent d'analyse IA et l'agent d'ingestion en base de données.
 """
 
+import re
 import time
 import logging
 import sys
@@ -84,6 +85,10 @@ class ScraperOrchestrator:
             try:
                 cam_items = self.cameroon_agent.search_cameroon_jobs(query=query, city=city, max_results_per_query=limit_per_platform)
                 collected_items.extend(cam_items)
+                # Jobs (CDI, CDD): same validation chain, the classifier sets kind='emploi'.
+                emploi_items = self.cameroon_agent.search_cameroon_emplois(query=query, city=city, max_results_per_query=limit_per_platform)
+                seen_urls = {item.get("url") for item in collected_items}
+                collected_items.extend(item for item in emploi_items if item.get("url") not in seen_urls)
             except Exception as e:
                 logger.error(f"Erreur Agent Cameroun Jobs : {e}")
 
@@ -114,6 +119,7 @@ class ScraperOrchestrator:
                 fb_items = []
                 if self.apify_agent.is_configured():
                     fb_items = self.apify_agent.scrape_facebook_posts(query=f"stage {query}{city_suffix} Cameroun", limit=limit_per_platform)
+                    fb_items += self.apify_agent.scrape_facebook_posts(query=f"recrutement emploi {query}{city_suffix} Cameroun", limit=limit_per_platform)
                 if not fb_items:
                     fb_items = self.facebook_agent.search_facebook_reports(query=f"rapport de stage {query}{city_suffix}", max_results=limit_per_platform)
                 collected_items.extend(fb_items)
@@ -168,6 +174,8 @@ class ScraperOrchestrator:
                             elif self.db_ingestor.save_stage_report(analysis, item).get("status") == "success":
                                 reports_saved += 1
                         continue
+                    if self._is_social_report_post(item) or item.get("platform") == "ACADEMIC_WEB":
+                        continue
 
                     if added_today >= cap:
                         cap_reached = True
@@ -211,9 +219,22 @@ class ScraperOrchestrator:
         logger.info(f"🏁 Mission terminée en {duration}s : {reports_saved} rapports, offres {statuses}.")
         return summary
 
+    # A report example must be a real document. Social posts (TikTok, Facebook…)
+    # only carry a caption: the AI used to invent a title the video did not match.
+    _DOCUMENT_URL = re.compile(r"\.(pdf|docx?)(\?|#|$)", re.IGNORECASE)
+
     def _is_report_candidate(self, item: dict) -> bool:
+        if item.get("platform") != "ACADEMIC_WEB":
+            return False
+        url = item.get("file_url") or item.get("url") or ""
+        return bool(self._DOCUMENT_URL.search(url))
+
+    def _is_social_report_post(self, item: dict) -> bool:
+        """Social post talking about a report: neither a report nor an offer, skipped."""
+        if item.get("platform") == "ACADEMIC_WEB":
+            return False
         text = f"{item.get('title', '')} {item.get('snippet', '')}".lower()
-        return item.get("platform") == "ACADEMIC_WEB" or "rapport de stage" in text or "mémoire" in text
+        return "rapport de stage" in text or "mémoire" in text
 
     def _enrich_with_flyer(self, item: dict):
         """Reads the flyer when the post text is too short to analyze."""

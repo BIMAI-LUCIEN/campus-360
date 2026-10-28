@@ -1,11 +1,21 @@
 import { Platform } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import type { OfficialCvData } from '../../types';
 import { buildApplicationHtml, generateOfficialCvHtml, type CvTemplateId, type DocumentExportData } from './cvHtml';
 import { AppAlert } from '../../ui/AppAlert';
+import { documentDownloadName } from '../documents/documentFileName';
 
 export type { DocumentExportData } from './cvHtml';
+
+// expo-print donne au PDF un nom aléatoire : on le copie sous le vrai nom avant de le partager.
+const copyPdfUnderName = async (printedUri: string, fileName: string): Promise<string> => {
+  const target = `${FileSystem.cacheDirectory}${fileName}`;
+  await FileSystem.deleteAsync(target, { idempotent: true });
+  await FileSystem.copyAsync({ from: printedUri, to: target });
+  return target;
+};
 
 /**
  * Déclenche l'export ou l'impression PDF selon la plateforme pour le CV Officiel
@@ -13,7 +23,7 @@ export type { DocumentExportData } from './cvHtml';
 export async function exportOfficialCvPdf(cv: OfficialCvData, template: CvTemplateId = 'classic'): Promise<boolean> {
   const htmlContent = generateOfficialCvHtml(cv, template);
   const fullName = `${cv.detailsPersonnels.nom}_${cv.detailsPersonnels.prenom}`.replace(/\s+/g, '_');
-  const filename = `CV_${fullName}.pdf`;
+  const filename = documentDownloadName(`CV ${cv.detailsPersonnels.nom} ${cv.detailsPersonnels.prenom}`, 'pdf', 'CV');
 
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     try {
@@ -52,15 +62,16 @@ export async function exportOfficialCvPdf(cv: OfficialCvData, template: CvTempla
   // Native mobile iOS / Android via expo-print + expo-sharing
   try {
     const { uri } = await Print.printToFileAsync({ html: htmlContent });
+    const namedUri = await copyPdfUnderName(uri, filename);
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri, {
+      await Sharing.shareAsync(namedUri, {
         UTI: '.pdf',
         mimeType: 'application/pdf',
         dialogTitle: `Partager le CV de ${cv.detailsPersonnels.prenom} ${cv.detailsPersonnels.nom}`,
       });
       return true;
     } else {
-      AppAlert.alert('CV exporté', `Fichier PDF enregistré : ${uri}`);
+      AppAlert.alert('CV exporté', `Fichier PDF enregistré : ${namedUri}`);
       return true;
     }
   } catch (error) {
@@ -117,15 +128,16 @@ export async function exportApplicationPdf(data: DocumentExportData): Promise<bo
   // Native mobile iOS / Android via expo-print + expo-sharing
   try {
     const { uri } = await Print.printToFileAsync({ html: htmlContent });
+    const namedUri = await copyPdfUnderName(uri, documentDownloadName(`Candidature ${data.studentName} ${data.jobTitle}`, 'pdf', 'Candidature'));
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri, {
+      await Sharing.shareAsync(namedUri, {
         UTI: '.pdf',
         mimeType: 'application/pdf',
         dialogTitle: `Partager la candidature pour ${data.jobTitle}`,
       });
       return true;
     } else {
-      AppAlert.alert('PDF exporté', `Fichier disponible : ${uri}`);
+      AppAlert.alert('PDF exporté', `Fichier disponible : ${namedUri}`);
       return true;
     }
   } catch (error) {

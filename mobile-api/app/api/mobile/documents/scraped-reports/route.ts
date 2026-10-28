@@ -10,7 +10,7 @@ export const OPTIONS = (request: NextRequest) => withCors(new NextResponse(null,
 export async function GET(request: NextRequest) {
   try {
     const access = await requireMobileUser(request);
-    if (access.response) return access.response;
+    if (access.response) return withCors(access.response, request);
 
     await enforceRateLimit(request, {
       bucket: 'scraped-reports',
@@ -27,7 +27,12 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '20', 10), 1), 50);
     const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
 
-    const conditions: string[] = ["status = 'published'"];
+    // Only real documents: social posts (TikTok…) had AI titles that did not match the video.
+    const conditions: string[] = [
+      "status = 'published'",
+      "upper(coalesce(source_platform, '')) not in ('TIKTOK','FACEBOOK','LINKEDIN','INSTAGRAM','YOUTUBE')",
+      "coalesce(file_url, '') !~* '(tiktok\\.com|facebook\\.com|fb\\.watch|instagram\\.com|linkedin\\.com|youtube\\.com|youtu\\.be)'",
+    ];
     const values: any[] = [];
     let idx = 1;
 

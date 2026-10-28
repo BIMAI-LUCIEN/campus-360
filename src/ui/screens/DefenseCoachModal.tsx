@@ -30,6 +30,9 @@ interface DefenseCoachModalProps {
   reportTitle?: string;
   field?: string;
   company?: string;
+  level?: string;
+  abstract?: string;
+  tableOfContents?: string[];
 }
 
 interface SlideItem {
@@ -52,7 +55,11 @@ export function DefenseCoachModal({
   reportTitle = 'Rapport de Stage Professionnel',
   field = 'Informatique / Général',
   company = "Entreprise d'Accueil",
+  level = 'Licence',
+  abstract,
+  tableOfContents,
 }: DefenseCoachModalProps) {
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'slides' | 'jury' | 'tips'>('slides');
   const [loading, setLoading] = useState(false);
   const [slides, setSlides] = useState<SlideItem[]>([]);
@@ -63,29 +70,42 @@ export function DefenseCoachModal({
 
   const fetchCoaching = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await authFetch('/api/mobile/documents/defense-coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: reportTitle,
-          field,
-          company,
-          level: 'Licence',
+          field: field || undefined,
+          company: company || undefined,
+          level: level || undefined,
+          abstract: abstract?.slice(0, 3000) || undefined,
+          tableOfContents: tableOfContents?.slice(0, 30),
         }),
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.coaching) {
-          setSlides(data.coaching.presentation_plan || []);
-          setJuryQuestions(data.coaching.jury_simulation || []);
-          setTips(data.coaching.defense_tips || []);
-          setLoaded(true);
-        }
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.coaching) {
+        setError(
+          data?.error ||
+            (res.status === 429
+              ? 'Tu as atteint ta limite de requêtes IA pour aujourd’hui. Réessaie demain.'
+              : 'Le coach IA n’a pas pu préparer ta soutenance. Réessaie.'),
+        );
+        return;
       }
+      setSlides(data.coaching.presentation_plan || []);
+      setJuryQuestions(data.coaching.jury_simulation || []);
+      setTips(data.coaching.defense_tips || []);
+      setLoaded(true);
     } catch (err) {
+      // authFetch throws with the server's own message on an error status.
       console.warn('Erreur chargement coaching soutenance:', err);
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : 'Connexion impossible. Vérifie ta connexion internet et réessaie.',
+      );
     } finally {
       setLoading(false);
     }
@@ -112,7 +132,7 @@ export function DefenseCoachModal({
                 {reportTitle}
               </Text>
               <Text style={styles.subtitle}>
-                {field} • {company}
+                {[field, company].filter(Boolean).join(' • ')}
               </Text>
             </View>
             <Pressable style={styles.closeBtn} onPress={onClose}>
@@ -158,6 +178,13 @@ export function DefenseCoachModal({
             <View style={styles.centerBox}>
               <ActivityIndicator size="large" color={stitchColors.secondary} />
               <Text style={styles.loadingText}>L'IA prépare ta soutenance d'élite...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.centerBox}>
+              <Text style={styles.loadingText}>{error}</Text>
+              <Pressable style={[styles.tab, styles.tabActive, { marginTop: 14, flex: 0, paddingHorizontal: 18 }]} onPress={fetchCoaching}>
+                <Text style={[styles.tabText, styles.tabTextActive]}>Réessayer</Text>
+              </Pressable>
             </View>
           ) : (
             <ScrollView
@@ -331,6 +358,7 @@ const styles = StyleSheet.create({
     color: stitchColors.inkSubtle,
     fontSize: 11,
     fontWeight: '600',
+    flexShrink: 1,
   },
   tabTextActive: {
     color: stitchColors.white,
@@ -344,14 +372,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   centerBox: {
-    padding: 60,
+    paddingVertical: 60,
+    paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   loadingText: {
-    color: '#A78BFA',
+    color: stitchColors.secondary,
     marginTop: 12,
     fontSize: 13,
+    textAlign: 'center',
   },
   sectionContainer: {
     gap: 12,

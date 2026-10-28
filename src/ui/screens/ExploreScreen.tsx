@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingHorizontal: stitchSpacing.containerMargin,
     paddingTop: stitchSpacing.stackSm,
-    paddingBottom: 160,
+    paddingBottom: 24,
   },
   gridItemWrapper: {
     width: '47.8%',
@@ -300,6 +300,6 @@ const styles = StyleSheet.create({
   packListContent: {
     paddingHorizontal: stitchSpacing.containerMargin,
     paddingTop: stitchSpacing.stackSm,
-    paddingBottom: 160,
+    paddingBottom: 24,
   },
 });

@@ -7,6 +7,7 @@ const m = await loadTsWithPackages('lib/cv-fill.ts');
 const cvHtml = await loadTs('../src/features/stages/cvHtml.ts');
 
 const input = (notes = '') => m.cvFillRequestSchema.parse({
+  jobId: 'job-1',
   job: { title: 'Stage comptable', company: 'Afriland', requirements: ['Excel'] },
   student: { fullName: 'Awa Ndi', major: 'Comptabilité', educationLevel: 'Licence 3', university: 'Université de Douala', skills: ['Excel', 'Sage'] },
   notes,
@@ -99,6 +100,7 @@ test('la fusion garde identité, contact et photo du profil', () => {
 
 test('cas réel : les compétences et niveaux tirés de l’offre sont retirés, les compétences déclarées restent', () => {
   const real = m.cvFillRequestSchema.parse({
+    jobId: 'job-2',
     job: { title: 'Stagiaire en Production Audiovisuelle & Motion Design', requirements: ['Montage vidéo', 'Cadrage'] },
     student: { major: 'Réseaux & Télécommunications', educationLevel: 'Licence 3', skills: ['Linux'] },
     notes: "Stage de 2 mois chez Camtel Douala en 2025 : installation de routeurs et support aux clients. Je parle francais et anglais. J'aime le football et la lecture.",

@@ -23,12 +23,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { stitchColors } from '../../theme/stitch';
 import { freeLabel, isFreeLaunch } from '../../config/launch';
 import { AppAlert } from '../AppAlert';
+import { authFetch } from '../../features/auth/betterAuth';
+import { copyToClipboard } from '../../features/whatsapp/whatsappService';
+import type { ScrapedStageReport } from '../../types';
 
 interface WritingWorkshopModalProps {
   visible: boolean;
   onClose: () => void;
-  tokens?: number;
   onOpenWallet?: () => void;
+  /** Reference report whose plan the AI follows ("Utiliser ce plan"). */
+  templateReport?: ScrapedStageReport | null;
 }
 
 type WorkshopType = 'REPORT' | 'THESIS' | 'CV';
@@ -36,8 +40,8 @@ type WorkshopType = 'REPORT' | 'THESIS' | 'CV';
 export function WritingWorkshopModal({
   visible,
   onClose,
-  tokens = 1,
   onOpenWallet,
+  templateReport,
 }: WritingWorkshopModalProps) {
   const [docType, setDocType] = useState<WorkshopType>('REPORT');
   const [topic, setTopic] = useState('');
@@ -45,6 +49,15 @@ export function WritingWorkshopModal({
   const [outlineNotes, setOutlineNotes] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedDoc, setGeneratedDoc] = useState<string | null>(null);
+  const outline = Array.isArray(templateReport?.table_of_contents) ? templateReport!.table_of_contents : [];
+
+  // "Utiliser ce plan": start from the reference report's field and plan.
+  React.useEffect(() => {
+    if (!visible || !templateReport) return;
+    setDocType('REPORT');
+    setGeneratedDoc(null);
+    setField(templateReport.field || '');
+  }, [visible, templateReport]);
 
   const pricing = {
     REPORT: { get price() { return isFreeLaunch() ? freeLabel() : '2 000 FCFA'; }, title: 'Rapport de Stage', icon: FileText, desc: 'Structure académique complète (Intro, Missions, Bilan, Recommandations)' },
@@ -59,26 +72,42 @@ export function WritingWorkshopModal({
     }
 
     setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
-      if (docType === 'REPORT') {
-        setGeneratedDoc(
-          `# RAPPORT DE STAGE ACADÉMIQUE\n## Thème : ${topic}\nFilière : ${field || 'Sciences de Gestion / Informatique'}\n\n### 1. Introduction & Présentation de l'Entreprise\nLe présent rapport retrace la période d'immersion professionnelle effectuée au sein de la structure d'accueil. Ce stage a constitué une opportunité d'appliquer les connaissances théoriques acquises durant le cycle de formation.\n\n### 2. Missions Confiées & Réalisations\n- Analyse des besoins et diagnostic opérationnel\n- Déploiement des solutions et suivi des indicateurs de performance\n- Coordination des livrables avec l'équipe projet\n\n### 3. Compétences Développées & Bilan Professionnel\nAu cours de cette expérience, nous avons renforcé notre maîtrise des outils de gestion de projet ainsi que nos aptitudes en travail d'équipe et en résolution de problèmes complexes.\n\n### 4. Recommandations Stratégiques & Conclusion\nNous suggérons une automatisation progressive des flux de traitement afin d'accroître l'efficience opérationnelle globale.`
-        );
-      } else if (docType === 'THESIS') {
-        setGeneratedDoc(
-          `# PROJET DE MÉMOIRE DE FIN D'ÉTUDES\n## Thématique : ${topic}\n\n### I. Problématique & Justification du Choix\nComment optimiser les processus décisionnels dans un contexte d'intégration technologique accélérée ?\n\n### II. Cadre Théorique & Revue de Littérature\nSynthèse des modèles conceptuels existants et identification des lacunes opérationnelles.\n\n### III. Méthodologie de Recherche\nApproche mixte combinant analyse qualitative des entretiens et modélisation quantitative des données terrain.\n\n### IV. Résultats Attendus & Perspectives\nFormulation de préconisations scientifiques et managériales pour le secteur d'activité.`
-        );
-      } else {
-        setGeneratedDoc(
-          `# CV PROFESSIONNEL OPTIMISÉ\n**Profil : ${topic}**\n\n**Accroche Professionnelle :**\nDiplômé dynamique et orienté résultats, démontrant une solide expertise pratique et une forte capacité d'adaptation en environnement agile.\n\n**Compétences Clés :**\n- Analyse Stratégique & Gestion de Projet\n- Maîtrise des Outils Digitaux & Reporting\n- Communication Interpersonnelle & Négociation`
-        );
+    void (async () => {
+      try {
+        const res = await authFetch('/api/mobile/documents/workshop', {
+          method: 'POST',
+          body: JSON.stringify({
+            type: docType,
+            topic: topic.trim(),
+            field: field.trim() || undefined,
+            notes: outlineNotes.trim() || undefined,
+            outline: docType === 'REPORT' && outline.length ? outline.slice(0, 30) : undefined,
+            generationId: `${docType}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+          }),
+        });
+        const data = (await res.json()) as { content?: string };
+        if (!data.content) throw new Error("L'IA n'a pas pu rédiger le document. Réessaie.");
+        setGeneratedDoc(data.content);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Rédaction impossible pour le moment.';
+        if (/solde insuffisant/i.test(message) && onOpenWallet) {
+          AppAlert.alert('Solde insuffisant', message, [
+            { text: 'Annuler', style: 'cancel' },
+            { text: 'Recharger', onPress: onOpenWallet },
+          ]);
+        } else {
+          AppAlert.alert('Rédaction impossible', message);
+        }
+      } finally {
+        setIsGenerating(false);
       }
-    }, 1800);
+    })();
   };
 
-  const handleCopy = () => {
-    AppAlert.alert('Succès', 'Le document a été copié dans le presse-papier !');
+  const handleCopy = async () => {
+    if (!generatedDoc) return;
+    const ok = await copyToClipboard(generatedDoc);
+    AppAlert.alert(ok ? 'Copié' : 'Copie impossible', ok ? 'Le document est dans le presse-papier.' : 'Sélectionne le texte pour le copier.');
   };
 
   return (
@@ -125,6 +154,11 @@ export function WritingWorkshopModal({
               </View>
 
               <Text style={styles.docDesc}>{pricing[docType].desc}</Text>
+              {docType === 'REPORT' && outline.length > 0 && (
+                <Text style={styles.docDesc}>
+                  Plan repris de « {templateReport?.title} » ({outline.length} parties).
+                </Text>
+              )}
 
               {/* Input Form */}
               <View style={styles.formGroup}>

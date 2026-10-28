@@ -43,11 +43,11 @@ import { exportApplicationPdf, buildWhatsAppPitch, generateCvPdfBase64 } from '.
 import { mergeAiCv, missingCvFields, type CvTemplateId } from './cvHtml';
 import { CvTemplateGallery } from './CvTemplateGallery';
 import { CvTemplatePreview } from './CvTemplatePreview';
+import { composeApplicationMail, type ApplicationMailResult } from './applicationMail';
 import { StudentProfileExpressModal } from './StudentProfileExpressModal';
 import { getStudentAccount, updateStudentProfile } from '../auth/betterAuth';
 import { PaymentModal } from '../wallet/PaymentModal';
-import { WhatsAppPairingModal } from '../whatsapp/WhatsAppPairingModal';
-import { getStoredWhatsAppStatus, cleanPhoneNumber } from '../whatsapp/whatsappService';
+import { cleanPhoneNumber } from '../whatsapp/whatsappService';
 import { stitchColors, fontFamilies, stitchRadius } from '../../theme/stitch';
 import { isFreeLaunch } from '../../config/launch';
 import { applyPriceLabel, jobApplyPrice, jobIsPaid } from './applyPrice';
@@ -112,12 +112,26 @@ export function AiApplyModal({
   const [currentProfile, setCurrentProfile] = useState(studentProfile);
   const [showExpressModal, setShowExpressModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  // Wallet balance in coins (1 coin = 1 FCFA): the application is paid before the AI writes it.
+  const [balanceCoins, setBalanceCoins] = useState<number | null>(null);
 
-  // 1-Click Apply & WhatsApp Session State
+  const refreshBalance = async () => {
+    try {
+      const account = await getStudentAccount();
+      setBalanceCoins(account.wallet.balanceCoins);
+    } catch {
+      setBalanceCoins(null);
+    }
+  };
+
+  useEffect(() => {
+    if (visible) void refreshBalance();
+  }, [visible]);
+
+  // E-mail : messagerie de l'étudiant en premier sur mobile (pièces jointes possibles), Campus 360 sur le web
+  const studentMailFirst = Platform.OS !== 'web';
+  // Canal d'envoi (la liaison du compte WhatsApp est retirée de l'UI en attendant l'API officielle)
   const [selectedChannel, setSelectedChannel] = useState<'whatsapp' | 'email'>('whatsapp');
-  const [isWhatsAppLinked, setIsWhatsAppLinked] = useState<boolean>(false);
-  const [linkedPhone, setLinkedPhone] = useState<string>('');
-  const [showPairingModal, setShowPairingModal] = useState<boolean>(false);
   const [dispatchReceipt, setDispatchReceipt] = useState<{
     applicationId: string;
     channel: 'whatsapp' | 'email' | 'whatsapp_manual' | 'email_manual' | 'inapp';
@@ -132,9 +146,8 @@ export function AiApplyModal({
     setCurrentProfile(studentProfile);
   }, [studentProfile]);
 
-  // Synchronise le statut de jumelage WhatsApp et sélectionne le canal par défaut
+  // Sélectionne le canal par défaut
   useEffect(() => {
-    let isMounted = true;
     if (visible && job) {
       // Safety net: a 'LINK' offer has no recipient, the screens open its website instead.
       if (isLinkApply(job)) {
@@ -147,17 +160,8 @@ export function AiApplyModal({
       } else {
         setSelectedChannel('whatsapp');
       }
-
-      getStoredWhatsAppStatus().then((status) => {
-        if (!isMounted) return;
-        setIsWhatsAppLinked(Boolean(status.connected));
-        setLinkedPhone(status.phone || currentProfile.phoneWhatsapp || '');
-      });
     }
-    return () => {
-      isMounted = false;
-    };
-  }, [visible, job, currentProfile.phoneWhatsapp, onClose]);
+  }, [visible, job, onClose]);
 
   // Compute Match Analysis
   const matchAnalysis: MatchAnalysis | null = useMemo(() => {
@@ -196,13 +200,7 @@ export function AiApplyModal({
         return;
       }
 
-      // If student has 0 tokens, prompt Mobile Money payment modal
-      // Free during the V1 launch: no credit gate.
-      if (!isFreeLaunch() && currentProfile.tokens !== undefined && currentProfile.tokens <= 0) {
-        setShowPaymentModal(true);
-        return;
-      }
-
+      // The student can fill everything in first: payment is asked just before generation.
       setStep('template');
       setResult(null);
       setIsEditing(false);
@@ -212,10 +210,19 @@ export function AiApplyModal({
 
   useEffect(() => () => progressTimers.current.forEach(clearTimeout), []);
 
+  const applyPrice = job ? jobApplyPrice(job) : 0;
+  const mustPay = !isFreeLaunch() && applyPrice > 0;
+  const canAfford = !mustPay || (balanceCoins !== null && balanceCoins >= applyPrice);
+
   // Letter and match are written on the device; the CV is filled by the AI
-  // (/api/mobile/stages/cv) and falls back to the profile alone when it fails.
+  // (/api/mobile/stages/cv), which charges the application first. When the AI
+  // fails the coins come back and the CV falls back to the profile alone.
   const startGeneration = async () => {
     if (!job) return;
+    if (!canAfford) {
+      setShowPaymentModal(true);
+      return;
+    }
     setStep('generating');
     setCvAiNotice(null);
     setProgressMsg("Lecture de ton profil et de l'offre...");
@@ -225,13 +232,22 @@ export function AiApplyModal({
       setTimeout(() => setProgressMsg('Mise en page dans le modèle choisi...'), 4000),
     ];
     try {
-      const [res, aiCv] = await Promise.all([
-        generateIaApplication(job, currentProfile),
-        fillCvWithAi(job, currentProfile, cvNotes).catch((err) => {
-          console.warn('[AiApplyModal] AI CV fill failed:', err);
-          return null;
-        }),
-      ]);
+      // Paid first: a balance too low stops here, before anything is written.
+      let aiCv: Awaited<ReturnType<typeof fillCvWithAi>> | null = null;
+      try {
+        aiCv = await fillCvWithAi(job, currentProfile, cvNotes);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '';
+        if (/solde insuffisant/i.test(message)) {
+          await refreshBalance();
+          setStep('template');
+          setShowPaymentModal(true);
+          return;
+        }
+        console.warn('[AiApplyModal] AI CV fill failed:', err);
+      }
+      void refreshBalance();
+      const res = await generateIaApplication(job, currentProfile);
       const officialCv = res.officialCv ? mergeAiCv(res.officialCv, aiCv) : undefined;
       const cvText = officialCv ? buildCvText(officialCv) : res.cvText;
       setResult({ ...res, officialCv, cvText });
@@ -370,7 +386,7 @@ export function AiApplyModal({
     setSubmitting(true);
     setDispatchReceipt(null);
     try {
-      const studentPhone = linkedPhone || currentProfile.phoneWhatsapp || '';
+      const studentPhone = currentProfile.phoneWhatsapp || '';
       const pdfBase64 = await generateCvPdfBase64({
         studentName: currentProfile.fullName,
         studentEmail: currentProfile.email,
@@ -486,17 +502,63 @@ export function AiApplyModal({
     if (!result || !job) return;
     try {
       if (!result.recipientEmail) throw new Error(`${CONTACT_UNAVAILABLE} : pas d'adresse e-mail.`);
+      if (result.officialCv) {
+        const missing = missingCvFields(result.officialCv);
+        if (missing.length > 0) {
+          AppAlert.alert('Profil incomplet', `Complète ton nom et ton contact (e-mail ou téléphone) dans ton profil avant d'envoyer ton CV. Manque : ${missing.join(', ')}.`);
+          return;
+        }
+      }
+      const companyName = job.company?.name || "L'Entreprise";
+      // Enregistrée (et débitée côté serveur) avant l'envoi, comme pour les autres canaux.
       const applicationId = await persistApplication();
-      const mailto = `mailto:${result.recipientEmail}?subject=${result.emailSubject}&body=${encodeURIComponent(
-        editableLetter
-      )}`;
-      await Linking.openURL(mailto);
+
+      // Mobile : messagerie de l'étudiant avec CV + lettre en PDF joints. Web : mailto (sans pièce jointe).
+      setSubmitting(true);
+      let mailResult: ApplicationMailResult;
+      try {
+        mailResult = await composeApplicationMail({
+          to: result.recipientEmail,
+          subject: decodeURIComponent(result.emailSubject),
+          body:
+            `Bonjour,\n\nVeuillez trouver ci-joints mon CV et ma lettre de motivation pour l'offre « ${job.title} » chez ${companyName}.\n\n` +
+            `Je reste à votre disposition pour un entretien.\n\nCordialement,\n${currentProfile.fullName}` +
+            (currentProfile.phoneWhatsapp ? `\n${currentProfile.phoneWhatsapp}` : ''),
+          data: {
+            studentName: currentProfile.fullName,
+            studentEmail: currentProfile.email,
+            studentPhone: currentProfile.phoneWhatsapp,
+            major: currentProfile.major,
+            educationLevel: currentProfile.educationLevel,
+            jobTitle: job.title,
+            companyName,
+            letterText: editableLetter,
+            cvText: editableCv,
+            officialCv: result.officialCv,
+          },
+        });
+      } finally {
+        setSubmitting(false);
+      }
+      if (mailResult === 'cancelled') {
+        AppAlert.alert('Envoi annulé', 'Ta candidature est enregistrée dans ton suivi. Tu peux la renvoyer quand tu veux.');
+        return;
+      }
+      if (mailResult === 'unavailable') {
+        const mailto = `mailto:${result.recipientEmail}?subject=${result.emailSubject}&body=${encodeURIComponent(
+          editableLetter
+        )}`;
+        await Linking.openURL(mailto);
+      }
       setDispatchReceipt({
         applicationId,
         channel: 'email_manual',
         status: 'SENT_PENDING',
         appliedAt: new Date().toISOString(),
-        message: 'Candidature ouverte dans votre messagerie.',
+        message:
+          mailResult === 'sent'
+            ? 'Candidature envoyée depuis votre messagerie, CV et lettre joints.'
+            : 'Candidature ouverte dans votre messagerie (joignez votre CV).',
         companyName: job.company?.name || 'Entreprise Partenaire',
         jobTitle: job.title,
       });
@@ -608,13 +670,32 @@ export function AiApplyModal({
                   </Text>
                 </ScrollView>
                 <View style={styles.templateFooter}>
+                  {mustPay && (
+                    <View style={styles.payGate} testID="apply-pay-gate">
+                      <Text style={styles.payGateText}>
+                        Candidature : {applyPriceLabel(job)} • Ton solde :{' '}
+                        {balanceCoins === null ? '…' : `${balanceCoins} FCFA`}
+                      </Text>
+                      <Text style={styles.payGateHint}>
+                        {canAfford
+                          ? "Débité une seule fois au moment de la génération. Rendu si l'IA échoue."
+                          : 'Recharge ton portefeuille pour que l’IA rédige ton CV et ta lettre.'}
+                      </Text>
+                    </View>
+                  )}
                   <Pressable
                     testID="btn-generate-cv"
                     style={({ pressed }) => [styles.primaryOneClickBtn, styles.generateCvBtn, pressed && { opacity: 0.9 }]}
-                    onPress={startGeneration}
+                    onPress={canAfford ? startGeneration : () => setShowPaymentModal(true)}
                   >
                     <Sparkles size={16} color={stitchColors.white} />
-                    <Text style={styles.primaryOneClickBtnText}>Générer mon CV et ma lettre</Text>
+                    <Text style={styles.primaryOneClickBtnText}>
+                      {canAfford
+                        ? mustPay
+                          ? `Payer ${applyPriceLabel(job)} et générer`
+                          : 'Générer mon CV et ma lettre'
+                        : 'Recharger mon portefeuille'}
+                    </Text>
                   </Pressable>
                 </View>
               </View>
@@ -842,7 +923,7 @@ export function AiApplyModal({
                   <Text style={styles.applyPriceBanner} testID="apply-modal-price">
                     {jobApplyPrice(job) === 0
                       ? 'Cette candidature est gratuite.'
-                      : `Cette candidature coûte ${applyPriceLabel(job)} (${jobIsPaid(job) ? 'offre rémunérée' : 'offre non rémunérée'}), débités une seule fois à l'envoi. Rendus si l'envoi échoue.`}
+                      : `Cette candidature coûte ${applyPriceLabel(job)} (${jobIsPaid(job) ? 'offre rémunérée' : 'offre non rémunérée'}), déjà réglée à la génération : l'envoi ne coûte rien de plus.`}
                   </Text>
 
                   {/* Segmented Channel Selector */}
@@ -938,10 +1019,13 @@ export function AiApplyModal({
                     </View>
                   ) : (
                     <View style={styles.emailBox}>
+                      {/* Mobile : l'étudiant envoie depuis sa propre messagerie (CV + lettre joints),
+                          l'envoi par Campus 360 (n8n) reste en option. Web : pas de pièce jointe
+                          possible en mailto, l'envoi par Campus 360 reste le bouton principal. */}
                       <Pressable
-                        testID="btn-apply-email-dispatch"
+                        testID={studentMailFirst ? 'btn-fallback-manual-email' : 'btn-apply-email-dispatch'}
                         style={({ pressed }) => [styles.primaryEmailBtn, pressed && { opacity: 0.9 }]}
-                        onPress={() => handleOneClickApply('email')}
+                        onPress={studentMailFirst ? handleManualEmailApply : () => handleOneClickApply('email')}
                         disabled={submitting || !companyEmail(job?.company)}
                       >
                         {submitting ? (
@@ -950,19 +1034,21 @@ export function AiApplyModal({
                           <>
                             <Mail size={16} color={stitchColors.white} />
                             <Text style={styles.primaryEmailBtnText}>
-                              ✉️ Expédier ma Candidature par Email
+                              {studentMailFirst ? '✉️ Envoyer depuis ma messagerie' : '✉️ Expédier ma Candidature par Email'}
                             </Text>
                           </>
                         )}
                       </Pressable>
                       <View style={styles.secondaryActionsRow}>
                         <Pressable
-                          testID="btn-fallback-manual-email"
+                          testID={studentMailFirst ? 'btn-apply-email-dispatch' : 'btn-fallback-manual-email'}
                           style={styles.textFallbackBtn}
-                          onPress={handleManualEmailApply}
+                          onPress={studentMailFirst ? () => handleOneClickApply('email') : handleManualEmailApply}
                           disabled={submitting || !companyEmail(job?.company)}
                         >
-                          <Text style={styles.textFallbackBtnText}>📧 Ouvrir ma messagerie manuellement (mailto)</Text>
+                          <Text style={styles.textFallbackBtnText}>
+                            {studentMailFirst ? "🤖 Laisser Campus 360 l'envoyer pour moi" : '📧 Ouvrir ma messagerie (mailto)'}
+                          </Text>
                         </Pressable>
                         <Pressable
                           testID="btn-apply-inapp"
@@ -974,7 +1060,9 @@ export function AiApplyModal({
                         </Pressable>
                       </View>
                       <Text style={styles.subHintText}>
-                        Expédition sécurisée avec CV officiel PDF joint via SMTP N8N.
+                        {studentMailFirst
+                          ? "Ta messagerie s'ouvre avec ton CV et ta lettre en PDF : il ne te reste qu'à appuyer sur Envoyer. Le recruteur te répondra directement."
+                          : 'Expédition sécurisée avec CV officiel PDF joint via SMTP N8N.'}
                       </Text>
                     </View>
                   )}
@@ -1099,39 +1187,10 @@ export function AiApplyModal({
         visible={showPaymentModal}
         defaultPhone={currentProfile.phoneWhatsapp || ''}
         reasonMessage={`Candidature (${job ? applyPriceLabel(job) : ''}). Recharge ton portefeuille Mobile Money pour continuer.`}
-        onClose={() => {
-          setShowPaymentModal(false);
-          if (currentProfile.tokens !== undefined && currentProfile.tokens <= 0) {
-            onClose();
-          }
-        }}
+        onClose={() => setShowPaymentModal(false)}
         onPaymentSuccess={async () => {
           setShowPaymentModal(false);
-          try {
-            const account = await getStudentAccount();
-            setCurrentProfile((prev) => ({ ...prev, tokens: account.wallet.iaCredits }));
-          } catch {
-            AppAlert.alert('Paiement reçu', 'Ton solde est en cours de mise à jour.');
-          }
-        }}
-      />
-      {/* Modal d'appairage WhatsApp en 30s si non lié */}
-      <WhatsAppPairingModal
-        visible={showPairingModal}
-        onClose={() => setShowPairingModal(false)}
-        initialPhone={currentProfile.phoneWhatsapp || linkedPhone || ''}
-        onPairingSuccess={(pairedPhone) => {
-          setIsWhatsAppLinked(true);
-          setLinkedPhone(pairedPhone);
-          setShowPairingModal(false);
-          setCurrentProfile((prev) => ({
-            ...prev,
-            phoneWhatsapp: pairedPhone || prev.phoneWhatsapp,
-          }));
-        }}
-        onStatusChange={(connected) => {
-          setIsWhatsAppLinked(connected);
-          if (connected) setShowPairingModal(false);
+          await refreshBalance();
         }}
       />
     </>
@@ -1471,6 +1530,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: stitchColors.outlineVariant,
+  },
+  payGate: {
+    marginBottom: 10,
+    gap: 2,
+  },
+  payGateText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: stitchColors.ink,
+  },
+  payGateHint: {
+    fontSize: 12,
+    color: stitchColors.inkMuted,
   },
   cvPreviewArea: {
     flex: 1,

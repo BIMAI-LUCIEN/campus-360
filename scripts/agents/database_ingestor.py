@@ -13,6 +13,14 @@ from config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, DATABASE_URL
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("DatabaseIngestor")
 
+
+def _clamp_score(value, default=50):
+    """Model score as an int in 0..100; anything unreadable gets a neutral default."""
+    try:
+        return max(0, min(100, int(float(value))))
+    except (TypeError, ValueError):
+        return default
+
 # Patterns d'exclusion stricts pour les offres
 JUNK_JOB_PATTERNS = [
     r"profil\s*cv",
@@ -145,7 +153,7 @@ class DatabaseIngestor:
             "source_platform": source_item.get("platform", "WEB"),
             "source_url": source_item.get("url"),
             "tags": report_data.get("tags") or ["stage", "rapport"],
-            "quality_score": report_data.get("quality_score", 80)
+            "quality_score": _clamp_score(report_data.get("quality_score"))
         }
 
         url = f"{self.supabase_url}/rest/v1/scraped_stage_reports"

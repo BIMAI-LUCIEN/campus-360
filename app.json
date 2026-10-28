@@ -40,7 +40,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Campus 360 acc\u00e8de \u00e0 vos photos pour les ins\u00e9rer dans vos documents.",
+          "photosPermission": "Campus 360 accède à vos photos pour les insérer dans vos documents.",
           "cameraPermission": false,
           "microphonePermission": false
         }
@@ -51,7 +51,8 @@
           "icon": "./assets/android-icon-monochrome.png",
           "color": "#7C4DFF"
         }
-      ]
+      ],
+      "expo-mail-composer"
     ],
     "extra": {
       "eas": {

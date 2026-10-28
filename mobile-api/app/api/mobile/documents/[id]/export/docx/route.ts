@@ -6,15 +6,13 @@ import { loadDocumentImages, readImageSize } from '@/lib/document-images';
 import { resolveStyle } from '@/lib/document-style';
 import { getDocumentById, getDocumentSections } from '@/lib/documents-db';
 import { isEmptyEditorHtml, stripEditorPlaceholder } from '@/lib/editor-html';
+import { attachmentDisposition, documentDownloadName } from '@/lib/document-filename';
 import type { DocxImage } from '@/lib/html-to-docx';
 import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 
 export const runtime = 'nodejs';
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-const safeFilename = (value: string) =>
-  value.replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 80) || 'Rapport_de_stage';
 
 export async function OPTIONS(request: NextRequest) {
   return withCors(new NextResponse(null, { status: 204 }), request);
@@ -77,7 +75,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         status: 200,
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'Content-Disposition': `attachment; filename="${safeFilename(document.title)}.docx"`,
+          'Content-Disposition': attachmentDisposition(documentDownloadName(document.title, 'docx', 'Document')),
           'Cache-Control': 'no-store',
         },
       }),

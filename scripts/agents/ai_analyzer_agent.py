@@ -119,7 +119,7 @@ Réponds STRICTEMENT avec un objet JSON respectant exactement cette structure :
 {{
   "is_relevant": true ou false,
   "document_type": "OFFRE_DE_STAGE" ou "RAPPORT_DE_STAGE" ou "MEMOIRE" ou "AUTRE",
-  "title": "Titre explicite de l'offre ou du document",
+  "title": "Titre tel qu'il figure dans le contenu (n'invente jamais un titre absent du texte)",
   "theme": "Thématique ou secteur (ex: Informatique, Banque, etc.)",
   "author": "Auteur ou recruteur si disponible",
   "school": "École ou université si mentionnée",
@@ -130,7 +130,7 @@ Réponds STRICTEMENT avec un objet JSON respectant exactement cette structure :
   "abstract": "Description résumée des missions ou du travail (2 à 4 phrases)",
   "table_of_contents": [],
   "tags": ["stage", "cameroun", "emploi"],
-  "quality_score": 85,
+  "quality_score": "entier de 0 à 100 : complétude réelle (titre, école, entreprise, plan, contenu exploitable). Ne recopie pas d'exemple.",
   "is_offer": true si c'est une offre de stage ou d'emploi émise par une entreprise sinon false,
   "offer_details": {{
     "requirements": ["Compétence requise 1", "Compétence requise 2"],

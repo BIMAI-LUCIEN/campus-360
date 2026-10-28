@@ -27,6 +27,7 @@ const ingestSchema = z
     description: z.string().trim().max(20000).optional(),
     source: z.enum(['INTERNAL', 'SCRAPED']).optional().default('SCRAPED'),
     expiresInDays: z.number().int().min(1).max(90).optional().default(30),
+    kind: z.enum(['stage', 'emploi']).optional().default('stage'),
   })
   .refine(
     (data) => Boolean(data.contactWhatsapp?.trim() || data.contactEmail?.trim()),
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
       description: validated.description,
       source: validated.source,
       expiresInDays: validated.expiresInDays,
+      kind: validated.kind,
     });
 
     // Automation 2: push "new internship for you" to students whose skills match >= 70 %.
@@ -104,7 +106,7 @@ export async function POST(request: NextRequest) {
           isNew: result.isNew,
           alertedStudents,
           message: result.isNew
-            ? 'Nouvelle offre de stage ingérée avec succès.'
+            ? `Nouvelle offre ${validated.kind === 'emploi' ? "d'emploi" : 'de stage'} ingérée avec succès.`
             : 'Offre existante identifiée et actualisée sans duplication.',
         },
         { status: 201 },

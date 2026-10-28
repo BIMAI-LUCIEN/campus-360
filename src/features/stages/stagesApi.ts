@@ -99,6 +99,7 @@ const stageJobsSuffix = (params?: StageJobsParams) => {
   const search = new URLSearchParams();
   if (params?.query?.trim()) search.set('q', params.query.trim());
   if (params?.sector && params.sector !== 'Tous') search.set('sector', params.sector);
+  if (params?.kind === 'stage' || params?.kind === 'emploi') search.set('kind', params.kind);
   return search.toString() ? `?${search.toString()}` : '';
 };
 
@@ -275,6 +276,7 @@ export async function fillCvWithAi(
   const response = await authFetch('/api/mobile/stages/cv', {
     method: 'POST',
     body: JSON.stringify({
+      jobId: job.id,
       job: {
         title: job.title,
         company: job.company?.name,

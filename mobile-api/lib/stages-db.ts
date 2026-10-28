@@ -143,9 +143,14 @@ const JOB_SELECT = `
     join public.stage_companies c on c.id = j.company_id
 `;
 
-export const listStageJobs = async (params: { query?: string; sector?: string }) => {
+export const listStageJobs = async (params: { query?: string; sector?: string; kind?: string }) => {
   const conditions = [`j.expires_at > now()`, `c.status != 'SUSPENDED'`, `j.status = 'published'`];
   const values: string[] = [];
+  // Filtered here, not on the phone: internships would otherwise push jobs out of the 100-row limit.
+  if (params.kind === 'stage' || params.kind === 'emploi') {
+    values.push(params.kind);
+    conditions.push(`j.kind = $${values.length}`);
+  }
   if (params.sector && params.sector !== 'Tous') {
     values.push(`%${params.sector}%`);
     conditions.push(`(c.industry ilike $${values.length} or j.title ilike $${values.length})`);
@@ -269,6 +274,7 @@ export interface IngestJobInput {
   contactEmail?: string;
   source?: 'INTERNAL' | 'SCRAPED';
   expiresInDays?: number;
+  kind?: 'stage' | 'emploi';
 }
 
 export const ingestStageJob = async (input: IngestJobInput): Promise<{
@@ -355,10 +361,10 @@ export const ingestStageJob = async (input: IngestJobInput): Promise<{
       const insertJob = await client.query<{ id: string }>(
         `insert into public.stage_jobs (
            company_id, title, description, requirements, apply_method,
-           source, location, duration, stipend, flyer_url, video_url, expires_at
+           source, location, duration, stipend, flyer_url, video_url, expires_at, kind
          ) values (
            $1, $2, $3, $4, $5,
-           $6, $7, $8, $9, $10, $11, now() + ($12 || ' days')::interval
+           $6, $7, $8, $9, $10, $11, now() + ($12 || ' days')::interval, $13
          ) returning id`,
         [
           companyId,
@@ -373,6 +379,7 @@ export const ingestStageJob = async (input: IngestJobInput): Promise<{
           input.flyerUrl || null,
           input.videoUrl || null,
           days,
+          input.kind === 'emploi' ? 'emploi' : 'stage',
         ],
       );
       jobId = insertJob.rows[0].id;

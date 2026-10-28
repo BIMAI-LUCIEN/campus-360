@@ -11,6 +11,8 @@ import type { LlmMessage } from './llm';
 const text = (max: number) => z.string().trim().max(max);
 
 export const cvFillRequestSchema = z.object({
+  // The offer being applied to: the generation is charged on it (stage-charge).
+  jobId: z.string().min(1).max(200),
   job: z.object({
     title: text(200).min(2),
     company: text(200).optional(),

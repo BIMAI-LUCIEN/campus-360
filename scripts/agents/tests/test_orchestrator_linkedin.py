@@ -117,7 +117,7 @@ class OrchestratorLinkedInTests(unittest.TestCase):
         self.run_pipeline(make(treg, rss, cameroon), dry_run=True, live=False)
         self.assertEqual(treg.calls, [])
         self.assertEqual(rss.calls, 1)
-        self.assertEqual(cameroon.calls, 1)
+        self.assertEqual(cameroon.calls, 2)  # internships, then jobs
 
     def test_live_run_calls_treg_for_internships_then_jobs(self):
         treg, rss = FakeTreg(items=[OFFER]), FakeSource()

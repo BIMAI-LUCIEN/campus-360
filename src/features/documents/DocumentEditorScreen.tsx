@@ -28,6 +28,7 @@ import { listDocumentImages, resolveFileUrls, type DocumentFile } from './docume
 import { buildPreviewHtml, buildWysiwygHtml } from './editorTemplate';
 import { applyStylePatch, resolveStyle, type DocumentStylePatch } from './documentStyle';
 import { classifySection } from './documentRender';
+import { documentDownloadName } from './documentFileName';
 import { DocumentStylePanel } from './DocumentStylePanel';
 import { EditorSurface, type EditorSurfaceHandle } from './EditorSurface';
 import {
@@ -403,7 +404,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
         throw new Error(payload.error || 'Erreur lors de la génération du PDF.');
       }
       const blob = await response.blob();
-      const safeName = `${String(report.title || 'document').replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 60)}.pdf`;
+      const safeName = documentDownloadName(report.title, 'pdf');
       if (Platform.OS === 'web') {
         downloadBlobOnWeb(blob, safeName);
         return;
@@ -442,7 +443,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
         throw new Error(payload.error || "Erreur lors de l'export Word.");
       }
       const blob = await response.blob();
-      const safeName = `${String(report.title || 'document').replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 60)}.docx`;
+      const safeName = documentDownloadName(report.title, 'docx');
       if (Platform.OS === 'web') {
         downloadBlobOnWeb(blob, safeName);
         return;

@@ -7,6 +7,7 @@ import { escapeHtml, FONT_STACKS } from '@/lib/document-render';
 import { resolveStyle } from '@/lib/document-style';
 import { getDocumentById, getDocumentSections } from '@/lib/documents-db';
 import { isEmptyEditorHtml, stripEditorPlaceholder } from '@/lib/editor-html';
+import { attachmentDisposition, documentDownloadName } from '@/lib/document-filename';
 import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { renderHtmlToPdf } from '@/lib/pdf-render';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
@@ -34,9 +35,6 @@ const careerHtml = (title: string, sectionsHtml: string, fontStack: string, line
   td, th { border: 0.75pt solid #BFC5CC; padding: 4pt 6pt; text-align: left; }
   img { max-width: 100%; }
 </style></head><body>${sectionsHtml}</body></html>`;
-
-const safeFilename = (prefix: string, title: string) =>
-  `${prefix}_${String(title || 'Document').replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 80)}.pdf`;
 
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
@@ -111,19 +109,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
       });
     }
 
-    const prefix = document.template_type === 'cv'
-      ? 'CV'
-      : document.template_type === 'lettre_motivation'
-        ? 'Lettre_de_Motivation'
-        : document.template_type === 'memoire'
-          ? 'Memoire'
-          : 'Rapport_de_Stage';
     return withCors(
       new NextResponse(new Uint8Array(pdf), {
         status: 200,
         headers: {
           'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="${safeFilename(prefix, document.title)}"`,
+          'Content-Disposition': attachmentDisposition(documentDownloadName(document.title, 'pdf', 'Document')),
           'Cache-Control': 'no-store',
         },
       }),

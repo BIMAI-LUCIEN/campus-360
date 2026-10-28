@@ -85,6 +85,29 @@ class CameroonJobsAgent:
                 f'"{query}" ("stage académique" OR "stage professionnel" OR "stage PFE") "Cameroun" ("WhatsApp" OR "recrutement")'
             ]
 
+        return self._run_queries(search_queries, max_results_per_query)
+
+    def search_cameroon_emplois(self, query: str = "emploi", city: str = None, max_results_per_query: int = 8) -> list:
+        """
+        Offres d'emploi (CDI, CDD, recrutement) au Cameroun. Le type n'est pas imposé :
+        le classifieur IA tranche stage / emploi et le vérificateur valide comme pour les stages.
+        """
+        jobs = '("offre d\'emploi" OR "recrutement" OR "avis de recrutement" OR "CDI" OR "CDD")'
+        where = f'"{city}"' if city and city.lower() not in ["all", "toutes", "cameroun"] else "Cameroun"
+        search_queries = [
+            f'site:emploi.cm {jobs} "{query}" {where}',
+            f'site:minajobs.net {jobs} "{query}" {where}',
+            f'site:cameroun.minajobs.net {jobs} {where}',
+            f'site:jobinfocamer.com {jobs} "{query}"',
+            f'site:louma-jobs.com {jobs} "{query}" {where}',
+            f'site:linkedin.com/posts ("nous recrutons" OR "we are hiring" OR "recrutement") "{query}" ("Douala" OR "Yaoundé")',
+            f'site:facebook.com ("nous recrutons" OR "avis de recrutement") "{query}" {where}',
+            f'"{query}" {where} {jobs} ("envoyer CV" OR "WhatsApp" OR "dossier de candidature") -stage -stagiaire',
+        ]
+        return self._run_queries(search_queries, max_results_per_query)
+
+    def _run_queries(self, search_queries: list, max_results_per_query: int) -> list:
+        results = []
         for sq in search_queries:
             found = self._query_syndication(sq, limit=max_results_per_query)
             results.extend(found)

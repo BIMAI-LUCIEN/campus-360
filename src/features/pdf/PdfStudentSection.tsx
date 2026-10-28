@@ -5,6 +5,7 @@ import { createElement, useEffect, useMemo, useState } from 'react';
 import { authWebBaseUrl, mobileApiBaseUrl } from '../auth/betterAuth';
 import {
   ActivityIndicator,
+  Image as RNImage,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -115,14 +116,71 @@ const getDocumentPriority = (document: CampusDocument) => {
 
 const getDocumentBadges = (document: CampusDocument) => {
   const badges: string[] = [];
-  if (document.aiDifficulty === 'easy') badges.push('Lecture simple');
+  const text = [document.title, document.description, document.kind, ...(document.aiTags || [])].join(' ').toLowerCase();
+
+  if (text.includes('session normale') || text.includes(' sn ') || text.includes('(sn)')) {
+    badges.push('Session Normale (SN)');
+  } else if (text.includes('concours') || document.level.toLowerCase().includes('concours')) {
+    badges.push('Concours');
+  } else if (text.includes('rattrapage') || text.includes(' sr ')) {
+    badges.push('Rattrapage (SR)');
+  } else if (document.kind === 'corrige' || text.includes('corrigé') || text.includes('corrige')) {
+    badges.push('Corrigé');
+  } else if (document.kind === 'cours') {
+    badges.push('Cours');
+  }
+
+  if (document.alwaysFree || document.price === 0) badges.push('Gratuit');
+  if (document.aiDifficulty === 'easy') badges.push('Accessible');
   if (document.aiDifficulty === 'medium') badges.push('Bon niveau');
   if (document.aiDifficulty === 'hard') badges.push('Niveau avance');
-  if (document.rating >= 4) badges.push('Bien note');
-  if (document.pageCount >= 30) badges.push('Complet');
   if (document.quiz?.length) badges.push('Quiz IA');
-  if (!badges.length) badges.push('Selection PDF');
+  if (!badges.length) badges.push('Sélection');
+
   return badges.slice(0, 3);
+};
+
+const matchesDocSessionType = (document: CampusDocument, sessionType: string): boolean => {
+  if (sessionType === allValue) return true;
+  const text = [
+    document.title,
+    document.description,
+    document.kind ?? '',
+    ...(document.aiTags || []),
+  ].join(' ').toLowerCase();
+
+  if (sessionType === 'Session Normale (SN)') {
+    return (
+      text.includes('session normale') ||
+      text.includes(' sn ') ||
+      text.includes('(sn)') ||
+      text.endsWith(' sn') ||
+      (document.kind === 'ancien_sujet' && !text.includes('concours') && !text.includes('rattrapage') && !text.includes(' sr '))
+    );
+  }
+  if (sessionType === 'Concours d\'entrée') {
+    return (
+      text.includes('concours') ||
+      document.level.toLowerCase().includes('concours') ||
+      document.university.toLowerCase().includes('polytechnique') ||
+      document.university.toLowerCase().includes('ens') ||
+      document.university.toLowerCase().includes('fmsb') ||
+      document.university.toLowerCase().includes('enam')
+    );
+  }
+  if (sessionType === 'Session de Rattrapage (SR)') {
+    return text.includes('rattrapage') || text.includes(' sr ') || text.includes('(sr)');
+  }
+  if (sessionType === 'Contrôle Continu (CC)') {
+    return text.includes('contrôle continu') || text.includes('controle continu') || text.includes(' cc ') || text.includes('(cc)');
+  }
+  if (sessionType === 'Corrigé type') {
+    return document.kind === 'corrige' || text.includes('corrigé') || text.includes('corrige') || text.includes('solution');
+  }
+  if (sessionType === 'Cours & Fiches') {
+    return document.kind === 'cours' || text.includes('cours') || text.includes('manuel');
+  }
+  return true;
 };
 
 // Folio index helper — gives a consistent two-digit number per item
@@ -154,6 +212,7 @@ export function PdfStudentSection({
   const [faculty, setFaculty] = useState(allValue);
   const [subject, setSubject] = useState(allValue);
   const [level, setLevel] = useState(allValue);
+  const [sessionType, setSessionType] = useState(allValue);
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<CampusDocument | null>(null);
   const [selectedPack, setSelectedPack] = useState<CampusPdfPack | null>(null);
@@ -200,12 +259,25 @@ export function PdfStudentSection({
     [packUnlockedDocumentIds, purchasedDocumentIds],
   );
 
+  const sessionTypes = useMemo(() => [
+    allValue,
+    'Session Normale (SN)',
+    'Concours d\'entrée',
+    'Session de Rattrapage (SR)',
+    'Contrôle Continu (CC)',
+    'Corrigé type',
+    'Cours & Fiches',
+  ], []);
+
   const subjects = useMemo(() => {
     const fromDocs = uniqueOptions(publishedDocuments.map((d) => d.subject)).filter(s => s !== 'Tous');
     const defaults = [
-      'Algèbre', 'Analyse Mathématique', 'Programmation C/C++', 'Droit Administratif',
-      'Microéconomie', 'Macroéconomie', 'Biologie Cellulaire', 'Réseaux Informatiques',
-      'Comptabilité Générale', 'Physique Quantique'
+      'Algorithmique et Programmation C', 'Algèbre Linéaire', 'Analyse Mathématique',
+      'Bases de Données (SQL)', 'Réseaux & Télécommunications', 'Mécanique du Point',
+      'Électrostatique & Circuits', 'Chimie Générale & Organique', 'Biologie Cellulaire',
+      'Anatomie & Embryologie', 'Biochimie Médicale', 'Microéconomie', 'Macroéconomie',
+      'Comptabilité Générale (SYSCOHADA)', 'Statistiques Descriptives', 'Droit Constitutionnel',
+      'Introduction au Droit', 'Droit Civil (Personnes & Famille)', 'Culture Générale Concours'
     ];
     return ['Tous', ...Array.from(new Set([...fromDocs, ...defaults]))];
   }, [publishedDocuments]);
@@ -213,10 +285,11 @@ export function PdfStudentSection({
   const universities = useMemo(() => {
     const fromDocs = uniqueOptions(publishedDocuments.map((d) => d.university)).filter(u => u !== 'Tous');
     const defaults = [
-      'Université de Douala', 'Université de Yaoundé I', 'Université de Yaoundé II',
-      'Université de Dschang', 'Université de Buea', 'Université de Bamenda',
-      'Université de Ngaoundéré', 'Université de Maroua', 'ENSP (Polytechnique)',
-      'ENAM', 'IUC', 'IUT', 'IUG', 'UCAC'
+      'Université de Yaoundé I', 'Université de Douala', 'Université de Yaoundé II (Soa)',
+      'Université de Dschang', 'ENSPY (Polytechnique Yaoundé)', 'ENSPD (Polytechnique Douala)',
+      'FMSB (Médecine Yaoundé)', 'FMSP (Médecine Douala)', 'ENS Yaoundé', 'ENS Maroua',
+      'IUT de Douala', 'IUT Bandjoun', 'ENAM', 'ESSEC Douala', 'Université de Buea',
+      'Université de Bamenda', 'Université de Ngaoundéré', 'Université de Maroua'
     ];
     return ['Tous', ...Array.from(new Set([...fromDocs, ...defaults]))];
   }, [publishedDocuments]);
@@ -224,12 +297,11 @@ export function PdfStudentSection({
   const faculties = useMemo(() => {
     const fromDocs = uniqueOptions(publishedDocuments.map((d) => d.faculty)).filter(f => f !== 'Tous');
     const defaults = [
-      'Informatique et Génie Logiciel', 'Génie Informatique', 'Génie Réseaux et Télécommunications',
-      'Génie Électrique', 'Génie Civil', 'Génie Mécanique', 'Techniques de Commercialisation',
-      'Logistique Industrielle', 'Gestion Comptable et Financière', 'Médecine et Pharmacie',
-      'Droit et Sciences Politiques', 'Sciences Économiques et Gestion', 'Ingénierie et Technologies',
-      'Lettres et Sciences Humaines', 'Mathématiques et Physique', 'Comptabilité et Finance',
-      'Communication', 'Agronomie'
+      'Faculté des Sciences (FS)', 'Génie Informatique & Logiciel', 'Génie Électrique & Télécoms',
+      'Génie Civil & Mécanique', 'Médecine & Sciences Biomédicales', 'Sciences Économiques et Gestion (FSEG)',
+      'Sciences Juridiques et Politiques (FSJP)', 'IUT Filières Industrielles & Tertiaires',
+      'Sciences de l\'Éducation (ENS)', 'Administration & Magistrature (ENAM)',
+      'Management & Commerce (ESSEC)', 'Agronomie (FASA)'
     ];
     return ['Tous', ...Array.from(new Set([...fromDocs, ...defaults]))];
   }, [publishedDocuments]);
@@ -237,8 +309,9 @@ export function PdfStudentSection({
   const levels = useMemo(() => {
     const fromDocs = uniqueOptions(publishedDocuments.map((d) => d.level)).filter(l => l !== 'Tous');
     const defaults = [
-      'Licence 1', 'Licence 2', 'Licence 3', 'Master 1', 'Master 2',
-      'BTS 1ère année', 'BTS 2ème année', 'Cycle Ingénieur'
+      'Licence 1 (Niveau 1)', 'Licence 2 (Niveau 2)', 'Licence 3 (Niveau 3)',
+      'Concours', 'Master 1', 'Master 2', 'Niveau 1 Ingénieur', 'Niveau 1 Médecine',
+      'DUT 1ère année', 'DUT 2ème année', 'Cycle Ingénieur'
     ];
     return ['Tous', ...Array.from(new Set([...fromDocs, ...defaults]))];
   }, [publishedDocuments]);
@@ -248,6 +321,7 @@ export function PdfStudentSection({
     const filtered = publishedDocuments.filter((document) => {
       const owned = ownedDocumentIds.includes(document.id);
       const matchesTab = viewMode === 'library' ? (activeTab === 'catalog' && owned) : (activeTab === 'catalog');
+      const matchesSession = matchesDocSessionType(document, sessionType);
       const matchesUniversity = university === allValue || document.university === university;
       const matchesFaculty = faculty === allValue || document.faculty === faculty;
       const matchesSubject = subject === allValue || document.subject === subject;
@@ -267,7 +341,7 @@ export function PdfStudentSection({
           .toLowerCase()
           .includes(normalizedQuery);
 
-      return matchesTab && matchesUniversity && matchesFaculty && matchesSubject && matchesLevel && matchesQuery;
+      return matchesTab && matchesSession && matchesUniversity && matchesFaculty && matchesSubject && matchesLevel && matchesQuery;
     });
 
     return filtered.sort((left, right) => {
@@ -281,7 +355,7 @@ export function PdfStudentSection({
 
       return right.pageCount - left.pageCount;
     });
-  }, [activeTab, faculty, level, ownedDocumentIds, publishedDocuments, query, subject, university, viewMode]);
+  }, [activeTab, faculty, level, ownedDocumentIds, publishedDocuments, query, sessionType, subject, university, viewMode]);
 
   const visiblePacks = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -325,15 +399,17 @@ export function PdfStudentSection({
     .reduce((sum, document) => sum + document.pageCount, 0);
   const hasActiveFilters =
     Boolean(query.trim()) ||
+    sessionType !== allValue ||
     university !== allValue ||
     faculty !== allValue ||
     subject !== allValue ||
     level !== allValue;
-  const activeFilterCount = [university, faculty, subject, level].filter((item) => item !== allValue).length;
+  const activeFilterCount = [sessionType, university, faculty, subject, level].filter((item) => item !== allValue).length;
   const filterSections = [
+    { key: 'session', label: 'Session / Type', options: sessionTypes, value: sessionType, onChange: setSessionType },
     { key: 'university', label: 'Université', options: universities, value: university, onChange: setUniversity },
     { key: 'faculty', label: 'Filière', options: faculties, value: faculty, onChange: setFaculty },
-    { key: 'subject', label: 'Matière', options: subjects, value: subject, onChange: setSubject },
+    { key: 'subject', label: 'Matière / UE', options: subjects, value: subject, onChange: setSubject },
     { key: 'level', label: 'Niveau', options: levels, value: level, onChange: setLevel },
   ] as const;
   const filterSummary = filterSections.filter((section) => section.value !== allValue);
@@ -373,6 +449,7 @@ export function PdfStudentSection({
 
   const resetFilters = () => {
     setQuery('');
+    setSessionType(allValue);
     setUniversity(allValue);
     setFaculty(allValue);
     setSubject(allValue);
@@ -417,8 +494,8 @@ export function PdfStudentSection({
       },
     });
 
-    const targetBucket = document.previewPath ? 'document-previews' : 'documents';
-    const targetPath = document.previewPath || document.filePath;
+    const targetBucket = 'documents';
+    const targetPath = document.filePath || document.previewPath || '';
 
     try {
       const url = await createSignedPdfUrl(targetBucket, targetPath, accessToken, 1800);
@@ -937,9 +1014,17 @@ export function PdfStudentSection({
               >
                 {/* Square Cover */}
                 <View style={{ aspectRatio: 1, backgroundColor: inLibrary ? stitchColors.emeraldBg : `${stitchColors.ink}0D`, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                  <Text style={{ fontSize: 40, fontWeight: '900', color: inLibrary ? stitchColors.emerald : stitchColors.inkSubtle, opacity: 0.4 }}>
-                    {initials}
-                  </Text>
+                  {document.previewPath?.startsWith('http') ? (
+                    <RNImage
+                      source={{ uri: document.previewPath }}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text style={{ fontSize: 40, fontWeight: '900', color: inLibrary ? stitchColors.emerald : stitchColors.inkSubtle, opacity: 0.4 }}>
+                      {initials}
+                    </Text>
+                  )}
                   
                   {/* Badges */}
                   <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: owned ? stitchColors.emerald : stitchColors.sienna, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>

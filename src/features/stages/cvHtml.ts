@@ -153,7 +153,7 @@ export function buildApplicationHtml(data: DocumentExportData): string {
     <div>
       <h1 class="student-name">${todo(d.studentName)}</h1>
       <div class="student-meta">${d.educationLevel} en ${d.major}</div>
-      <div class="student-meta">Email : ${d.studentEmail} ${d.studentPhone ? '| WhatsApp : ' + data.studentPhone : ''}</div>
+      <div class="student-meta">Email : ${d.studentEmail} ${d.studentPhone ? '| WhatsApp : ' + d.studentPhone : ''}</div>
     </div>
   </div>
 
@@ -170,6 +170,44 @@ ${d.cvText}
   <div class="footer">
     Document préparé avec Campus 360
   </div>
+</body>
+</html>`;
+}
+
+/**
+ * Lettre de motivation seule (pièce jointe séparée du CV dans l'e-mail de candidature)
+ */
+export function buildCoverLetterHtml(data: DocumentExportData): string {
+  const d = escapeDeep(data);
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Lettre de motivation - ${d.studentName} - ${d.jobTitle}</title>
+  <style>
+    @page { margin: 20mm; size: A4 portrait; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #1E293B;
+      line-height: 1.6;
+      font-size: 11pt;
+      margin: 0;
+      padding: 24px;
+    }
+    .header { border-bottom: 2px solid #7C3AED; padding-bottom: 12px; margin-bottom: 24px; }
+    .student-name { font-size: 18pt; font-weight: 800; color: #0F172A; margin: 0; }
+    .student-meta { font-size: 10pt; color: #64748B; margin-top: 4px; }
+    .subject { font-weight: 700; margin-bottom: 18px; }
+    .letter { white-space: pre-line; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 class="student-name">${todo(d.studentName)}</h1>
+    <div class="student-meta">Email : ${d.studentEmail} ${d.studentPhone ? '| Tél : ' + d.studentPhone : ''}</div>
+  </div>
+  <div class="subject">Objet : candidature au poste de ${d.jobTitle} — ${d.companyName}</div>
+  <div class="letter">${todo(d.letterText)}</div>
 </body>
 </html>`;
 }

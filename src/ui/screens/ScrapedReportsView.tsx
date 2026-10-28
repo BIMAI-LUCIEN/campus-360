@@ -30,6 +30,7 @@ import type { ScrapedStageReport } from '../../types';
 import { authFetch } from '../../features/auth/betterAuth';
 import { DefenseCoachModal } from './DefenseCoachModal';
 import { stitchColors } from '../../theme/stitch';
+import { AppAlert } from '../AppAlert';
 
 const FIELDS = [
   'Tous',
@@ -40,6 +41,18 @@ const FIELDS = [
   'Génie Civil',
 ];
 
+// A report example must be a document. Social posts (TikTok, Facebook…) were
+// scraped with AI-written titles that do not match the video: never shown.
+const SOCIAL_HOST = /(tiktok\.com|facebook\.com|fb\.watch|instagram\.com|linkedin\.com|youtube\.com|youtu\.be)/i;
+const SOCIAL_PLATFORMS = new Set(['TIKTOK', 'FACEBOOK', 'LINKEDIN', 'INSTAGRAM', 'YOUTUBE']);
+
+export const isUsefulReport = (report: ScrapedStageReport) =>
+  !SOCIAL_PLATFORMS.has(String(report.source_platform || '').toUpperCase()) &&
+  !SOCIAL_HOST.test(report.file_url || '');
+
+// Some scraped rows store the literal text "null" for a missing school or company.
+const present = (value?: string | null) => (value && value.trim().toLowerCase() !== 'null' ? value : '');
+
 interface ScrapedReportsViewProps {
   onUseStructure?: (report: ScrapedStageReport) => void;
 }
@@ -47,6 +60,7 @@ interface ScrapedReportsViewProps {
 export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) {
   const [reports, setReports] = useState<ScrapedStageReport[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeField, setActiveField] = useState('Tous');
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
@@ -54,6 +68,7 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
 
   const loadReports = async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const params = new URLSearchParams();
       if (activeField !== 'Tous') {
@@ -64,14 +79,15 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
       }
       const suffix = params.toString() ? `?${params.toString()}` : '';
       const res = await authFetch(`/api/mobile/documents/scraped-reports${suffix}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.reports)) {
-          setReports(data.reports);
-        }
+      const data = res.ok ? await res.json().catch(() => null) : null;
+      if (data?.success && Array.isArray(data.reports)) {
+        setReports((data.reports as ScrapedStageReport[]).filter(isUsefulReport));
+      } else {
+        setLoadError(true);
       }
     } catch (err) {
       console.warn('Failed to load scraped reports:', err);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -83,7 +99,9 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
 
   const handleOpenSource = (url: string) => {
     if (url) {
-      Linking.openURL(url).catch(() => {});
+      Linking.openURL(url).catch(() =>
+        AppAlert.alert('Lien indisponible', "Impossible d'ouvrir ce document pour le moment."),
+      );
     }
   };
 
@@ -141,23 +159,29 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
         </ScrollView>
       </View>
 
-      {/* Reports List */}
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      {/* Reports List: the screen scrolls in AppShell, no nested scroll here. */}
+      <View style={styles.scrollContent}>
         {loading ? (
           <View style={styles.centerBox}>
             <ActivityIndicator size="large" color={stitchColors.secondary} />
             <Text style={styles.loadingText}>Récupération des rapports de référence...</Text>
           </View>
+        ) : loadError ? (
+          <View style={styles.centerBox}>
+            <BookOpen size={36} color={stitchColors.inkMuted} />
+            <Text style={styles.emptyTitle}>Rapports indisponibles</Text>
+            <Text style={styles.emptySubtitle}>Impossible de charger les rapports pour le moment.</Text>
+            <Pressable style={[styles.openDocBtn, { marginTop: 14 }]} onPress={loadReports}>
+              <RefreshCw size={13} color={stitchColors.white} />
+              <Text style={styles.openDocBtnText}>Réessayer</Text>
+            </Pressable>
+          </View>
         ) : filteredReports.length === 0 ? (
           <View style={styles.centerBox}>
             <BookOpen size={36} color={stitchColors.inkMuted} />
-            <Text style={styles.emptyTitle}>Aucun rapport trouvé</Text>
+            <Text style={styles.emptyTitle}>Pas encore d'exemplaire vérifié</Text>
             <Text style={styles.emptySubtitle}>
-              Les agents IA moissonnent le web et les réseaux en continu. Réessaie avec d'autres mots-clés.
+              Seuls les vrais rapports (PDF, Word) vérifiés sont affichés ici. Essaie un autre domaine ou d'autres mots-clés.
             </Text>
           </View>
         ) : (
@@ -178,32 +202,32 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
                     </View>
                   </View>
                   <View style={styles.qualityBadge}>
-                    <Award size={12} color="#FDE047" />
+                    <Award size={12} color={stitchColors.warningDeep} />
                     <Text style={styles.qualityText}>{item.quality_score}% Qualité</Text>
                   </View>
                 </View>
 
                 {/* Title */}
-                <Text style={styles.reportTitle}>{item.title}</Text>
+                <Text style={styles.reportTitle} numberOfLines={3}>{item.title}</Text>
 
                 {/* Meta Entities */}
                 <View style={styles.metaRow}>
-                  {item.school && (
+                  {present(item.school) ? (
                     <View style={styles.metaItem}>
-                      <GraduationCap size={13} color="#A78BFA" />
+                      <GraduationCap size={13} color={stitchColors.secondary} />
                       <Text style={styles.metaText} numberOfLines={1}>
                         {item.school}
                       </Text>
                     </View>
-                  )}
-                  {item.company && (
+                  ) : null}
+                  {present(item.company) ? (
                     <View style={styles.metaItem}>
                       <Building2 size={13} color={stitchColors.emeraldDeep} />
                       <Text style={styles.metaText} numberOfLines={1}>
                         {item.company}
                       </Text>
                     </View>
-                  )}
+                  ) : null}
                 </View>
 
                 {/* Abstract */}
@@ -262,7 +286,7 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
                     style={styles.coachBtn}
                     onPress={() => setDefenseTargetReport(item)}
                   >
-                    <Presentation size={13} color="#FDE047" />
+                    <Presentation size={13} color={stitchColors.soleilInk} />
                     <Text style={styles.coachBtnText}>Coach Soutenance</Text>
                   </Pressable>
 
@@ -271,7 +295,7 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
                       style={styles.useStructureBtn}
                       onPress={() => onUseStructure(item)}
                     >
-                      <Sparkles size={13} color="#A78BFA" />
+                      <Sparkles size={13} color={stitchColors.primary} />
                       <Text style={styles.useStructureBtnText}>Utiliser ce plan</Text>
                     </Pressable>
                   )}
@@ -280,7 +304,7 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
             );
           })
         )}
-      </ScrollView>
+      </View>
 
       {/* Defense Coach Modal */}
       {defenseTargetReport && (
@@ -289,7 +313,12 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
           onClose={() => setDefenseTargetReport(null)}
           reportTitle={defenseTargetReport.title}
           field={defenseTargetReport.field}
-          company={defenseTargetReport.company}
+          company={present(defenseTargetReport.company) || undefined}
+          level={defenseTargetReport.level}
+          abstract={defenseTargetReport.abstract}
+          tableOfContents={
+            Array.isArray(defenseTargetReport.table_of_contents) ? defenseTargetReport.table_of_contents : undefined
+          }
         />
       )}
     </View>
@@ -298,7 +327,6 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: stitchColors.background,
   },
   searchSection: {
@@ -350,12 +378,8 @@ const styles = StyleSheet.create({
     color: stitchColors.white,
     fontWeight: '600',
   },
-  scroll: {
-    flex: 1,
-  },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
     gap: 14,
   },
   centerBox: {
@@ -390,12 +414,15 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 6,
     marginBottom: 8,
   },
   badgeRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
   },
   platformBadge: {
@@ -424,13 +451,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    backgroundColor: stitchColors.warningBg,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   qualityText: {
-    color: '#FDE047',
+    color: stitchColors.warningDeep,
     fontSize: 10,
     fontWeight: '700',
   },
@@ -451,10 +478,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    flexShrink: 1,
   },
   metaText: {
     color: stitchColors.inkSubtle,
     fontSize: 12,
+    flexShrink: 1,
   },
   abstractText: {
     color: stitchColors.inkMuted,
@@ -463,7 +492,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   tocSection: {
-    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    backgroundColor: stitchColors.paperSoft,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: stitchColors.glassBorder,
@@ -477,7 +506,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   tocToggleText: {
-    color: '#C4B5FD',
+    color: stitchColors.primary,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -500,15 +529,20 @@ const styles = StyleSheet.create({
   tocItemText: {
     color: stitchColors.inkSoft,
     fontSize: 12,
+    flex: 1,
   },
   cardActions: {
     flexDirection: 'row',
-    gap: 10,
+    flexWrap: 'wrap',
+    gap: 8,
     marginTop: 4,
   },
   openDocBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    flexGrow: 1,
+    flexBasis: 140,
     gap: 6,
     backgroundColor: stitchColors.primary,
     paddingHorizontal: 12,
@@ -523,22 +557,28 @@ const styles = StyleSheet.create({
   coachBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    flexGrow: 1,
+    flexBasis: 140,
     gap: 6,
-    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    backgroundColor: stitchColors.soleilBg,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(234, 179, 8, 0.35)',
+    borderColor: stitchColors.soleil,
   },
   coachBtnText: {
-    color: '#FDE047',
+    color: stitchColors.soleilInk,
     fontSize: 12,
     fontWeight: '600',
   },
   useStructureBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    flexGrow: 1,
+    flexBasis: 140,
     gap: 6,
     backgroundColor: 'rgba(139, 92, 246, 0.15)',
     paddingHorizontal: 12,
@@ -548,7 +588,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(139, 92, 246, 0.3)',
   },
   useStructureBtnText: {
-    color: '#C4B5FD',
+    color: stitchColors.primary,
     fontSize: 12,
     fontWeight: '600',
   },
