@@ -1,6 +1,5 @@
 import { Platform } from 'react-native';
 import * as Print from 'expo-print';
-import * as MailComposer from 'expo-mail-composer';
 import * as FileSystem from 'expo-file-system/legacy';
 import { buildApplicationHtml, buildCoverLetterHtml, generateOfficialCvHtml, type DocumentExportData } from './cvHtml';
 
@@ -26,10 +25,27 @@ const printPdf = async (html: string, fileName: string): Promise<string> => {
   return target;
 };
 
+// Loaded on demand: APKs built before expo-mail-composer was added have no native
+// module, and a top-level import would crash them when they receive an OTA update.
+type MailComposerModule = typeof import('expo-mail-composer');
+let mailComposer: MailComposerModule | null | undefined;
+const loadMailComposer = (): MailComposerModule | null => {
+  if (mailComposer === undefined) {
+    try {
+      mailComposer = require('expo-mail-composer') as MailComposerModule;
+    } catch {
+      mailComposer = null;
+    }
+  }
+  return mailComposer;
+};
+
 /** Composer natif disponible (app mobile avec un compte mail configuré). Faux sur le web. */
 export async function canComposeApplicationMail(): Promise<boolean> {
   if (Platform.OS === 'web') return false;
-  return MailComposer.isAvailableAsync().catch(() => false);
+  const composer = loadMailComposer();
+  if (!composer) return false;
+  return composer.isAvailableAsync().catch(() => false);
 }
 
 /**
@@ -53,12 +69,12 @@ export async function composeApplicationMail(params: {
     attachments.push(await printPdf(buildCoverLetterHtml(params.data), `Lettre_motivation_${name}`));
   }
 
-  const { status } = await MailComposer.composeAsync({
+  const { status } = await loadMailComposer()!.composeAsync({
     recipients: [params.to],
     subject: params.subject,
     body: params.body,
     attachments,
   });
   // Android ne dit pas si le mail est parti ('undetermined') : on le compte comme envoyé.
-  return status === MailComposer.MailComposerStatus.CANCELLED ? 'cancelled' : 'sent';
+  return status === loadMailComposer()!.MailComposerStatus.CANCELLED ? 'cancelled' : 'sent';
 }
