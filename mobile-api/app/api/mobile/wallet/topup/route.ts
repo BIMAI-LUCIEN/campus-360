@@ -13,6 +13,7 @@ import {
   splitCustomerName,
 } from '@/lib/payments';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
+import { isFeatureEnabled } from '@/lib/app-config';
 
 export const runtime = 'nodejs';
 
@@ -57,6 +58,10 @@ export async function POST(request: NextRequest) {
     const access = await requireMobileUser(request);
     if (access.response || !access.user) return withCors(access.response!, request);
     const user = access.user;
+
+    if (!(await isFeatureEnabled('payments'))) {
+      return withCors(NextResponse.json({ error: 'Les recharges sont temporairement indisponibles.' }, { status: 503 }), request);
+    }
 
     try {
       await enforceRateLimit(request, {

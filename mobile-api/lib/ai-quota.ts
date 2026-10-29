@@ -7,6 +7,7 @@ import {
   readDailyLimit,
   reserveDailyAiCall,
 } from './ai-quota-rules';
+import { isFeatureEnabled } from './app-config';
 import { databasePool } from './database';
 import { RateLimitError } from './rate-limit';
 import { enforceRateLimit } from './route-rate-limit';
@@ -19,6 +20,11 @@ export const enforceAiQuota = async (
   request: NextRequest,
   options: { userId: string; route: AiRoute },
 ): Promise<void> => {
+  // Switch controlled from the admin dashboard (app_config.features.ai)
+  if (!(await isFeatureEnabled('ai'))) {
+    throw new RateLimitError("L'assistant IA est temporairement indisponible. Réessaie plus tard.", 600);
+  }
+
   // (a) Route-level burst rate limit (fail-closed under 'ai-' prefix)
   const routeLimit = AI_ROUTE_LIMITS[options.route];
   await enforceRateLimit(request, {

@@ -5,6 +5,7 @@ import { createStageApplication, ensureStageStudent, getStageJob } from '@/lib/s
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { chargeStageApplication, refundStageApplication } from '@/lib/stage-charge';
 import { stageErrorStatus } from '@/lib/stages-errors';
+import { isFeatureEnabled } from '@/lib/app-config';
 
 const applySchema = z.object({
   jobId: z.string().min(1),
@@ -20,6 +21,9 @@ export async function POST(request: NextRequest) {
   try {
     const access = await requireMobileUser(request, { readBudgetPerMinute: 15 });
     if (access.response) return withCors(access.response, request);
+    if (!(await isFeatureEnabled('stages'))) {
+      return withCors(NextResponse.json({ error: 'Les candidatures sont temporairement indisponibles.' }, { status: 503 }), request);
+    }
     const input = applySchema.parse(await request.json());
     const job = await getStageJob(input.jobId, access.user!.id);
     if (!job) {
