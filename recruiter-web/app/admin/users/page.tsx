@@ -1,9 +1,6 @@
-import { requireAdminPage } from '@/lib/access';
-import { UsersDashboardClient } from './UsersDashboardClient';
+import { redirect } from 'next/navigation';
 
-export const dynamic = 'force-dynamic';
-
-export default async function UsersPage() {
-  await requireAdminPage();
-  return <UsersDashboardClient />;
+// Accounts and roles are managed from the student sheet.
+export default function UsersPage() {
+  redirect('/admin/students');
 }
