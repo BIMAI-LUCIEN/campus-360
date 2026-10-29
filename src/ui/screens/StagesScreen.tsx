@@ -34,15 +34,19 @@ import {
   ChevronUp,
   ShieldCheck,
   ExternalLink,
+  ChevronRight,
+  ImagePlus,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { StageJob } from '../../types';
 import { fetchStageJobs, isStageJobsCacheFresh, peekStageJobs } from '../../features/stages/stagesApi';
 import { AiApplyModal, type ApplicationProfilePatch } from '../../features/stages/AiApplyModal';
+import { ExternalOfferModal } from '../../features/stages/ExternalOfferModal';
 import { analyzeJobMatch } from '../../features/stages/aiMatchEngine';
 import { cleanPhoneNumber } from '../../features/whatsapp/whatsappService';
 import { SearchFilterBar } from '../GlassComponents';
 import {
+  fontFamilies,
   stitchColors,
   stitchRadius,
   stitchShadows,
@@ -228,6 +232,7 @@ export function StagesScreen({
   const [activeSector, setActiveSector] = useState('Tous');
   const [activeKind, setActiveKind] = useState<'Tous' | 'stage' | 'emploi'>('Tous');
   const [applyingJob, setApplyingJob] = useState<StageJob | null>(null);
+  const [showExternalOffer, setShowExternalOffer] = useState(false);
   const [selectedDetailJob, setSelectedDetailJob] = useState<StageJob | null>(null);
   const [showTopThreeOnly, setShowTopThreeOnly] = useState(false);
   const [activeDetailTab, setActiveDetailTab] = useState<'about' | 'company' | 'aiAdvice'>('about');
@@ -530,6 +535,25 @@ export function StagesScreen({
           />
         }
       >
+        {/* An offer seen outside the app: its flyer, screenshot or text becomes a tailored CV */}
+        <Pressable
+          style={styles.externalOfferCard}
+          onPress={() => setShowExternalOffer(true)}
+          testID="btn-external-offer"
+          accessibilityRole="button"
+        >
+          <View style={styles.externalOfferIcon}>
+            <ImagePlus size={20} color={stitchColors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.externalOfferTitle}>Une offre vue ailleurs ?</Text>
+            <Text style={styles.externalOfferText}>
+              Ajoute l’affiche, la capture ou le texte : ton CV est adapté à l’offre.
+            </Text>
+          </View>
+          <ChevronRight size={18} color={stitchColors.inkMuted} />
+        </Pressable>
+
         {/* Results count bar */}
         <View style={styles.resultsBar}>
           <Text style={styles.resultsCountText}>
@@ -1261,6 +1285,15 @@ export function StagesScreen({
         onClose={() => setApplyingJob(null)}
         onProfileSaved={onProfileSaved}
       />
+
+      <ExternalOfferModal
+        visible={showExternalOffer}
+        onClose={() => setShowExternalOffer(false)}
+        onOfferReady={(job) => {
+          setShowExternalOffer(false);
+          setApplyingJob(job);
+        }}
+      />
     </View>
   );
 }
@@ -1271,6 +1304,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: stitchColors.paperDeep, // #F8FAFC
   },
+
+  // Entry for an offer found outside the app
+  externalOfferCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: stitchColors.primaryFixedDim,
+    backgroundColor: stitchColors.surface,
+  },
+  externalOfferIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: stitchColors.primaryContainer,
+  },
+  externalOfferTitle: { fontFamily: fontFamilies.outfit, fontSize: 15, fontWeight: '700', color: stitchColors.ink },
+  externalOfferText: { fontFamily: fontFamilies.inter, fontSize: 12, lineHeight: 17, color: stitchColors.inkMuted },
 
   // Feed Header & Search Bar
   header: {

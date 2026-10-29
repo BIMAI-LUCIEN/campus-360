@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     if (!isLlmConfigured()) throw new MobileApiError("L'IA n'est pas disponible pour le moment.", 503);
 
     // The price comes from the stored offer, never from the client.
-    const job = await getStageJob(parsed.data.jobId);
+    const job = await getStageJob(parsed.data.jobId, access.user.id);
     if (!job) throw new MobileApiError('Offre de stage indisponible.', 404);
 
     await enforceAiQuota(request, { userId: access.user.id, route: 'cv-fill' });

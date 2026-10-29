@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     const instanceName = getInstanceName(studentPhone);
 
     // Resolve job and recruiter details
-    const job = await getStageJob(input.jobId);
+    const job = await getStageJob(input.jobId, user.id);
     if (!job) {
       return withCors(NextResponse.json({ error: 'Offre de stage indisponible.' }, { status: 404 }), request);
     }

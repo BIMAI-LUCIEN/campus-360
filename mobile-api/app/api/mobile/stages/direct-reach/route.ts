@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const { jobId, customNotes } = parsed.data;
 
     // 1. Get job and company details (must be published, unexpired, non-suspended)
-    const job = await getStageJob(jobId);
+    const job = await getStageJob(jobId, user.id);
     if (!job) {
       throw new MobileApiError('Offre de stage indisponible.', 404);
     }

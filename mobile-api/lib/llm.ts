@@ -8,13 +8,22 @@ export const DRAFTING_MODELS = [
   'google/gemini-2.0-flash-exp:free',
 ];
 
-export type LlmMessage = { role: 'system' | 'user' | 'assistant'; content: string };
+// Models that read images (flyers, screenshots); the drafting list does not all do.
+export const VISION_MODELS = ['openai/gpt-4o-mini', 'google/gemini-2.0-flash-001'];
+
+export type LlmContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } };
+
+export type LlmMessage = { role: 'system' | 'user' | 'assistant'; content: string | LlmContentPart[] };
 
 export type LlmOptions = {
   temperature?: number;
   maxTokens?: number;
   title?: string;
   timeoutMs?: number;
+  /** Replaces the drafting models, e.g. VISION_MODELS for a message with images. */
+  models?: string[];
 };
 
 export const isLlmConfigured = (): boolean => Boolean(process.env.OPENROUTER_API_KEY);
@@ -22,7 +31,7 @@ export const isLlmConfigured = (): boolean => Boolean(process.env.OPENROUTER_API
 export const callLlm = async (messages: LlmMessage[], options: LlmOptions = {}): Promise<string | null> => {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return null;
-  const models = Array.from(new Set([process.env.OPENROUTER_MODEL || DRAFTING_MODELS[0], ...DRAFTING_MODELS]));
+  const models = options.models ?? Array.from(new Set([process.env.OPENROUTER_MODEL || DRAFTING_MODELS[0], ...DRAFTING_MODELS]));
   for (const model of models) {
     try {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {

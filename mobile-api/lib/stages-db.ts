@@ -168,13 +168,78 @@ export const listStageJobs = async (params: { query?: string; sector?: string; k
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export const getStageJob = async (jobId: string) => {
+// A published offer, or a private one (found outside the app) when `viewerId` added it.
+export const getStageJob = async (jobId: string, viewerId?: string) => {
   if (!UUID_PATTERN.test(jobId)) return null;
   const result = await databasePool.query<StageJobRow>(
-    `${JOB_SELECT} where j.id = $1 and j.status = 'published' and j.expires_at > now() and c.status != 'SUSPENDED' limit 1`,
-    [jobId],
+    `${JOB_SELECT} where j.id = $1
+        and (j.status = 'published' or (j.status = 'private' and j.owner_user_id = $2))
+        and j.expires_at > now() and c.status != 'SUSPENDED' limit 1`,
+    [jobId, viewerId ?? null],
   );
   return result.rows[0] ? mapJob(result.rows[0]) : null;
+};
+
+export type PrivateStageJobInput = {
+  ownerUserId: string;
+  kind: 'stage' | 'emploi';
+  title: string;
+  companyName: string;
+  location: string;
+  duration: string;
+  stipend: string;
+  description: string;
+  requirements: string[];
+  contactEmail: string;
+  contactWhatsapp: string;
+};
+
+const PRIVATE_OFFER_DAYS = 60;
+
+/**
+ * Saves an offer the student found outside the app, visible only to them.
+ * It gets its own company row: the contacts read on a flyer never overwrite
+ * those of a real company with the same name.
+ */
+export const createPrivateStageJob = async (input: PrivateStageJobInput) => {
+  const client = await databasePool.connect();
+  let jobId: string;
+  try {
+    await client.query('begin');
+    const company = await client.query<{ id: string }>(
+      `insert into public.stage_companies (name, industry, address, contact_email, contact_whatsapp, kyb_score, status)
+       values ($1, '', $2, $3, $4, 0, 'UNVERIFIED') returning id`,
+      [input.companyName, input.location, input.contactEmail, input.contactWhatsapp || null],
+    );
+    const job = await client.query<{ id: string }>(
+      `insert into public.stage_jobs (
+         company_id, title, description, requirements, apply_method, source, location,
+         duration, stipend, expires_at, kind, status, owner_user_id
+       ) values ($1, $2, $3, $4, $5, 'INTERNAL', $6, $7, $8, now() + ($9 || ' days')::interval, $10, 'private', $11)
+       returning id`,
+      [
+        company.rows[0].id,
+        input.title,
+        input.description,
+        input.requirements,
+        input.contactWhatsapp ? 'WHATSAPP' : 'EMAIL',
+        input.location || null,
+        input.duration || null,
+        input.stipend || null,
+        PRIVATE_OFFER_DAYS,
+        input.kind,
+        input.ownerUserId,
+      ],
+    );
+    await client.query('commit');
+    jobId = job.rows[0].id;
+  } catch (error) {
+    await client.query('rollback');
+    throw error;
+  } finally {
+    client.release();
+  }
+  return getStageJob(jobId, input.ownerUserId);
 };
 
 export const listStudentApplications = async (studentId: string) => {

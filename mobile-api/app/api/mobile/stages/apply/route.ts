@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const access = await requireMobileUser(request, { readBudgetPerMinute: 15 });
     if (access.response) return withCors(access.response, request);
     const input = applySchema.parse(await request.json());
-    const job = await getStageJob(input.jobId);
+    const job = await getStageJob(input.jobId, access.user!.id);
     if (!job) {
       return withCors(NextResponse.json({ error: 'Offre de stage indisponible.' }, { status: 404 }), request);
     }
