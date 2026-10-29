@@ -1,2 +1,12 @@
-// App.tsx — Entry point, delegates to AppShell
-export { AppShell as default } from './src/AppShell';
+// App.tsx — Entry point: remote config gate (maintenance, forced update, banner) around AppShell
+import React from 'react';
+import { AppShell } from './src/AppShell';
+import { RemoteConfigGate } from './src/features/config/RemoteConfigGate';
+
+export default function App() {
+  return (
+    <RemoteConfigGate>
+      <AppShell />
+    </RemoteConfigGate>
+  );
+}
