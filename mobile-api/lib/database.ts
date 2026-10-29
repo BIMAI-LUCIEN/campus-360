@@ -16,7 +16,7 @@ const createPool = (): Pool => {
   const config: PoolConfig = {
     connectionString: process.env.DATABASE_URL,
     max: 5,
-    connectionTimeoutMillis: 3_000,
+    connectionTimeoutMillis: 10_000,
     idleTimeoutMillis: 30_000,
     keepAlive: true,
   };
