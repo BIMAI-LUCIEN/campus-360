@@ -51,6 +51,10 @@ import { cleanPhoneNumber } from '../whatsapp/whatsappService';
 import { stitchColors, fontFamilies, stitchRadius } from '../../theme/stitch';
 import { isFreeLaunch } from '../../config/launch';
 import { applyPriceLabel, jobApplyPrice, jobIsPaid } from './applyPrice';
+import { saveCvToLibrary } from './cvLibrary';
+import { CvEditor } from './CvEditor';
+import { CvBackgroundScreen } from '../profile/CvBackgroundScreen';
+import { cvBackgroundFilledCount, fetchCvBackground } from '../profile/cvBackgroundApi';
 import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from './contactTargets';
 import { AppAlert } from '../../ui/AppAlert';
 
@@ -92,7 +96,7 @@ export function AiApplyModal({
   onProfileSaved,
 }: AiApplyModalProps) {
   // template: the student picks the CV layout and tells the AI what is not in the profile.
-  const [step, setStep] = useState<'template' | 'generating' | 'preview' | 'sent'>('template');
+  const [step, setStep] = useState<'template' | 'generating' | 'preview' | 'send' | 'sent'>('template');
   const [cvTemplate, setCvTemplate] = useState<CvTemplateId>('classic');
   // Kept while the screen lives, so the next application starts from the same notes.
   const [cvNotes, setCvNotes] = useState('');
@@ -112,6 +116,16 @@ export function AiApplyModal({
   const [currentProfile, setCurrentProfile] = useState(studentProfile);
   const [showExpressModal, setShowExpressModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  // "Mon parcours" saved on the account: the AI reads it for every application.
+  const [backgroundCount, setBackgroundCount] = useState<number | null>(null);
+  const [showBackground, setShowBackground] = useState(false);
+  const refreshBackground = () =>
+    fetchCvBackground()
+      .then((res) => setBackgroundCount(res.saved ? cvBackgroundFilledCount(res.background) : 0))
+      .catch(() => setBackgroundCount(null));
+  useEffect(() => {
+    if (visible) void refreshBackground();
+  }, [visible]);
   // Wallet balance in coins (1 coin = 1 FCFA): the application is paid before the AI writes it.
   const [balanceCoins, setBalanceCoins] = useState<number | null>(null);
 
@@ -251,6 +265,16 @@ export function AiApplyModal({
       const officialCv = res.officialCv ? mergeAiCv(res.officialCv, aiCv) : undefined;
       const cvText = officialCv ? buildCvText(officialCv) : res.cvText;
       setResult({ ...res, officialCv, cvText });
+      if (officialCv) {
+        // Keep this CV in the library, whatever happens to the application afterwards.
+        void saveCvToLibrary({
+          templateId: cvTemplate,
+          jobId: job.id,
+          jobTitle: job.title,
+          company: job.company?.name ?? '',
+          officialCv,
+        }).catch(() => {});
+      }
       setEditableLetter(res.letterText);
       setEditableCv(cvText);
       if (!aiCv) {
@@ -639,6 +663,24 @@ export function AiApplyModal({
               </Text>
             </View>
 
+            {step !== 'sent' && (
+              <View style={styles.stepper}>
+                {(['Préparer', 'Vérifier', 'Envoyer'] as const).map((label, i) => {
+                  const current = step === 'template' || step === 'generating' ? 0 : step === 'preview' ? 1 : 2;
+                  return (
+                    <View key={label} style={styles.stepperItem}>
+                      <View style={[styles.stepperDot, i <= current && styles.stepperDotActive]}>
+                        <Text style={[styles.stepperDotText, i <= current && styles.stepperDotTextActive]}>{i + 1}</Text>
+                      </View>
+                      <Text style={[styles.stepperLabel, i === current && styles.stepperLabelActive]} numberOfLines={1}>
+                        {label}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
             {/* Étape 0 : Choix du modèle de CV et notes pour l'IA */}
             {step === 'template' && (
               <View style={styles.previewContainer}>
@@ -647,13 +689,27 @@ export function AiApplyModal({
                   contentContainerStyle={styles.templateStepContent}
                   keyboardShouldPersistTaps="handled"
                 >
+                  <Pressable style={styles.backgroundCard} onPress={() => setShowBackground(true)} testID="btn-open-background">
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.backgroundCardTitle}>
+                        {backgroundCount ? 'Ton parcours est enregistré' : 'Ajoute ton parcours'}
+                      </Text>
+                      <Text style={styles.backgroundCardText}>
+                        {backgroundCount
+                          ? "L'IA reprend tes expériences, formations et langues. Touche pour les compléter."
+                          : "Importe ton CV ou remplis tes expériences une fois : l'IA s'en servira à chaque candidature."}
+                      </Text>
+                    </View>
+                    <Text style={styles.backgroundCardAction}>{backgroundCount ? 'Modifier' : 'Ajouter'}</Text>
+                  </Pressable>
+
                   <Text style={styles.templateStepTitle}>Choisis le modèle de ton CV</Text>
                   <Text style={styles.templateStepSubtitle}>
                     L'IA le remplit avec ton profil et l'adapte à cette offre. Tu pourras encore changer de modèle avant l'envoi.
                   </Text>
                   <CvTemplateGallery value={cvTemplate} onChange={setCvTemplate} />
 
-                  <Text style={styles.notesLabel}>Ce que l'IA doit savoir (facultatif)</Text>
+                  <Text style={styles.notesLabel}>Pour cette offre, à ajouter (facultatif)</Text>
                   <TextInput
                     testID="cv-notes-input"
                     style={styles.notesInput}
@@ -661,12 +717,12 @@ export function AiApplyModal({
                     maxLength={4000}
                     value={cvNotes}
                     onChangeText={setCvNotes}
-                    placeholder="Stages, jobs, projets, associations, langues parlées, loisirs… Ex : stage de 2 mois au service client d'Orange à Douala en 2025. Je parle anglais."
+                    placeholder="Ce qui compte pour ce poste et n'est pas dans ton parcours. Ex : j'ai déjà utilisé Sage lors d'un projet de classe."
                     placeholderTextColor={stitchColors.inkSubtle}
                     textAlignVertical="top"
                   />
                   <Text style={styles.notesHint}>
-                    L'IA n'utilise que ton profil et ce que tu écris ici : elle n'invente ni entreprise, ni diplôme, ni langue.
+                    L'IA n'utilise que ton profil, ton parcours et ce que tu écris ici : elle n'invente ni entreprise, ni diplôme, ni langue.
                   </Text>
                 </ScrollView>
                 <View style={styles.templateFooter}>
@@ -802,7 +858,7 @@ export function AiApplyModal({
                     >
                       <Edit3 size={13} color={isEditing ? stitchColors.white : '#A78BFA'} />
                       <Text style={[styles.editToggleText, isEditing && styles.editToggleTextActive]}>
-                        {isEditing ? 'Terminer' : 'Modifier'}
+                        {isEditing ? 'Voir le rendu' : activePreviewTab === 'cv' ? 'Modifier le CV' : 'Modifier la lettre'}
                       </Text>
                     </Pressable>
                   )}
@@ -865,6 +921,14 @@ export function AiApplyModal({
                         <Text style={styles.strategicText}>{matchAnalysis.strategicAdvice}</Text>
                       </View>
                     </View>
+                  ) : isEditing && activePreviewTab === 'cv' && result.officialCv ? (
+                    <CvEditor
+                      cv={result.officialCv}
+                      onChange={(officialCv) => {
+                        setResult((current) => (current ? { ...current, officialCv } : current));
+                        setEditableCv(buildCvText(officialCv));
+                      }}
+                    />
                   ) : isEditing ? (
                     <TextInput
                       style={styles.editorTextInput}
@@ -883,6 +947,40 @@ export function AiApplyModal({
                 </ScrollView>
                 )}
 
+                {/* Vérifier -> Envoyer : l'envoi a son propre écran, plus rien ne s'empile ici. */}
+                {!isEditing && (
+                  <View style={styles.stepFooter}>
+                    <Pressable
+                      style={({ pressed }) => [styles.footerSecondaryBtn, pressed && { opacity: 0.85 }]}
+                      onPress={handleDownloadPdf}
+                      disabled={downloadingPdf}
+                    >
+                      {downloadingPdf ? (
+                        <ActivityIndicator size="small" color={stitchColors.primary} />
+                      ) : (
+                        <Download size={16} color={stitchColors.primary} />
+                      )}
+                      <Text style={styles.footerSecondaryBtnText}>PDF</Text>
+                    </Pressable>
+                    <Pressable
+                      testID="btn-go-send"
+                      style={({ pressed }) => [styles.primaryOneClickBtn, styles.footerPrimaryBtn, pressed && { opacity: 0.9 }]}
+                      onPress={() => setStep('send')}
+                    >
+                      <Text style={styles.primaryOneClickBtnText}>Continuer vers l'envoi</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Étape 3 : Envoi (canal, copie du texte, suivi) */}
+            {step === 'send' && result && (
+              <View style={styles.previewContainer}>
+                <ScrollView style={styles.previewScroll} contentContainerStyle={styles.sendStepContent}>
+                  <Pressable style={styles.backLink} onPress={() => setStep('preview')} hitSlop={8}>
+                    <Text style={styles.backLinkText}>‹ Revenir à mon CV et ma lettre</Text>
+                  </Pressable>
                 {/* Quick Utility Actions Row: Copier WhatsApp & Télécharger PDF */}
                 <View style={styles.utilRow}>
                   <Pressable
@@ -1067,10 +1165,11 @@ export function AiApplyModal({
                     </View>
                   )}
                 </View>
+                </ScrollView>
               </View>
             )}
 
-            {/* Étape 3 : Confirmation & Accusé de réception officiel */}
+            {/* Étape 4 : Confirmation & Accusé de réception officiel */}
             {step === 'sent' && (
               <View style={styles.receiptContainer}>
                 <View style={styles.receiptIconCircle}>
@@ -1182,6 +1281,12 @@ export function AiApplyModal({
         onSaveAndContinue={handleExpressProfileSaved}
       />
 
+      <CvBackgroundScreen
+        visible={showBackground}
+        onClose={() => setShowBackground(false)}
+        onSaved={(b) => setBackgroundCount(cvBackgroundFilledCount(b))}
+      />
+
       {/* Modal Paiement Mobile Money si solde épuisé */}
       <PaymentModal
         visible={showPaymentModal}
@@ -1209,9 +1314,13 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     borderWidth: 1,
     borderColor: stitchColors.glassBorder,
-    maxHeight: '92%',
-    minHeight: 520,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    // Fixed height so each step's scroll area and footer get the room they need on phones;
+    // capped width keeps it readable on tablets and the web.
+    height: '94%',
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12,
     shadowColor: stitchColors.ink,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.12,
@@ -1525,6 +1634,67 @@ const styles = StyleSheet.create({
     color: stitchColors.inkMuted,
     marginTop: 6,
   },
+  stepper: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchColors.paperSoft,
+  },
+  stepperItem: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  stepperDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: stitchColors.paperSoft,
+  },
+  stepperDotActive: { backgroundColor: stitchColors.primary },
+  stepperDotText: { fontSize: 11, fontWeight: '700', color: stitchColors.inkMuted },
+  stepperDotTextActive: { color: stitchColors.white },
+  stepperLabel: { flexShrink: 1, fontSize: 12, color: stitchColors.inkMuted, fontWeight: '600' },
+  stepperLabelActive: { color: stitchColors.ink },
+  backgroundCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    marginBottom: 18,
+    borderRadius: stitchRadius.lg,
+    borderWidth: 1,
+    borderColor: stitchColors.primary,
+    backgroundColor: stitchColors.siennaBg,
+  },
+  backgroundCardTitle: { fontSize: 15, fontWeight: '700', color: stitchColors.ink },
+  backgroundCardText: { marginTop: 3, fontSize: 13, lineHeight: 18, color: stitchColors.inkMuted },
+  backgroundCardAction: { fontSize: 14, fontWeight: '700', color: stitchColors.primary },
+  stepFooter: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: stitchColors.outlineVariant,
+  },
+  footerSecondaryBtn: {
+    minHeight: 50,
+    paddingHorizontal: 16,
+    borderRadius: stitchRadius.button,
+    borderWidth: 1,
+    borderColor: stitchColors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  footerSecondaryBtnText: { color: stitchColors.primary, fontSize: 14, fontWeight: '700' },
+  footerPrimaryBtn: { flex: 1, minHeight: 50, marginTop: 0 },
+  sendStepContent: { padding: 16, paddingBottom: 24 },
+  backLink: { alignSelf: 'flex-start', paddingVertical: 6, marginBottom: 8 },
+  backLinkText: { color: stitchColors.primary, fontSize: 14, fontWeight: '600' },
   templateFooter: {
     paddingHorizontal: 16,
     paddingVertical: 12,

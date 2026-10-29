@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { analyzeJobMatch } from './aiMatchEngine';
 import { fitSecureStoreBudget, getUtf8ByteLength, pruneBulkyApplicationFields, purgeFakeApplications } from './applicationsCache';
+import { readJsonFile, writeJsonFile } from '../documents/localJsonStore';
 import { companyEmail, companyWhatsapp } from './contactTargets';
 import { fetchCvPhoto } from './cvPhoto';
 
@@ -535,23 +536,18 @@ const APPLICATIONS_STORAGE_KEY = 'campus360_student_applications';
 
 export async function getStoredApplicationsAsync(): Promise<StageApplication[]> {
   try {
-    let raw: string | null = null;
-    if (Platform.OS === 'web') {
-      if (typeof localStorage !== 'undefined') {
-        raw = localStorage.getItem(APPLICATIONS_STORAGE_KEY);
-      }
-    } else {
-      raw = await SecureStore.getItemAsync(APPLICATIONS_STORAGE_KEY).catch(() => null);
+    let parsed = await readJsonFile<unknown>(APPLICATIONS_STORAGE_KEY);
+    if (!parsed && Platform.OS !== 'web') {
+      // Builds before the file store kept a truncated copy in SecureStore: read it once.
+      const legacy = await SecureStore.getItemAsync(APPLICATIONS_STORAGE_KEY).catch(() => null);
+      parsed = legacy ? JSON.parse(legacy) : null;
     }
-    if (raw) {
-      const parsed: unknown = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        const stored = parsed as StageApplication[];
-        const clean = purgeFakeApplications(stored);
-        // Old builds stored sample seeds and offline placeholders: rewrite without them.
-        if (clean.length !== stored.length) persistApplicationsLocally(clean);
-        return clean;
-      }
+    if (Array.isArray(parsed)) {
+      const stored = parsed as StageApplication[];
+      const clean = purgeFakeApplications(stored);
+      // Old builds stored sample seeds and offline placeholders: rewrite without them.
+      if (clean.length !== stored.length) persistApplicationsLocally(clean);
+      return clean;
     }
   } catch (err) {
     console.warn('[stagesApi] Error reading stored applications:', err);
@@ -560,20 +556,8 @@ export async function getStoredApplicationsAsync(): Promise<StageApplication[]> 
 }
 
 export function persistApplicationsLocally(apps: StageApplication[]): void {
-  try {
-    const leanApps = apps.map(pruneBulkyApplicationFields);
-    const raw = JSON.stringify(leanApps);
-    if (Platform.OS === 'web') {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(APPLICATIONS_STORAGE_KEY, raw);
-      }
-    } else {
-      const safePayload = fitSecureStoreBudget(apps, 1800);
-      SecureStore.setItemAsync(APPLICATIONS_STORAGE_KEY, safePayload).catch(() => {});
-    }
-  } catch (err) {
-    console.warn('[stagesApi] Error persisting applications locally:', err);
-  }
+  // Full list, without the bulky CV/letter texts (they stay on the server).
+  void writeJsonFile(APPLICATIONS_STORAGE_KEY, apps.map(pruneBulkyApplicationFields));
 }
 
 export async function fetchStudentApplications(): Promise<StageApplication[]> {

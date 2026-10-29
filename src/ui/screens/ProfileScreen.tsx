@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   Bell,
   BookOpen,
+  Briefcase,
   ChevronRight,
   Crown,
   FileText,
@@ -29,6 +30,7 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import { TransactionRow } from '../GlassComponents';
+import { CvBackgroundScreen } from '../../features/profile/CvBackgroundScreen';
 import { fetchStudentApplications } from '../../features/stages/stagesApi';
 import type { StudentProfile } from '../../features/auth/betterAuth';
 import type { Transaction } from '../../types';
@@ -162,7 +164,17 @@ export function ProfileScreen({
     return () => { active = false; };
   }, [studentProfile?.id]);
 
+  const [backgroundOpen, setBackgroundOpen] = React.useState(false);
+
   const activityRows: MenuRow[] = [
+    {
+      key: 'background',
+      label: 'Mon parcours (pour mes CV)',
+      Icon: Briefcase,
+      iconBg: stitchColors.siennaBg,
+      iconColor: stitchColors.primary,
+      onPress: () => setBackgroundOpen(true),
+    },
     {
       key: 'applications',
       label: 'Mes candidatures & relances',
@@ -434,6 +446,7 @@ export function ProfileScreen({
         <View style={{ height: 100 }} />
       </ScrollView>
 
+      <CvBackgroundScreen visible={backgroundOpen} onClose={() => setBackgroundOpen(false)} />
     </>
   );
 }

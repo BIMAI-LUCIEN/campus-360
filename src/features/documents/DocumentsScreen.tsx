@@ -24,6 +24,7 @@ import type { TemplateCard } from './templatesApi';
 import { CvTemplatePreview } from '../stages/CvTemplatePreview';
 import { CvTemplateGallery } from '../stages/CvTemplateGallery';
 import { exportOfficialCvPdf } from '../stages/pdfExportService';
+import { loadCvLibrary, removeCvFromLibrary, saveCvToLibrary, savedCvTitle, type SavedCv } from '../stages/cvLibrary';
 import { CV_TEMPLATES, missingCvFields, type CvTemplateId } from '../stages/cvHtml';
 import { deleteCvPhoto, fetchCvPhoto, pickCvPhoto, saveCvPhoto } from '../stages/cvPhoto';
 import type { OfficialCvData } from '../../types';
@@ -180,6 +181,9 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   const [cvTemplate, setCvTemplate] = useState<CvTemplateId>('classic');
   const [cvPhoto, setCvPhoto] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  // CV library: every CV generated for a job, plus the one being previewed.
+  const [savedCvs, setSavedCvs] = useState<SavedCv[]>([]);
+  const [selectedSavedCv, setSelectedSavedCv] = useState<SavedCv | null>(null);
 
   // Only what the profile really knows: missing fields print "[à compléter]".
   const officialCvData: OfficialCvData = useMemo(() => {
@@ -293,6 +297,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
     fetchDocuments();
     fetchIaCredits();
     fetchCvPhoto().then(setCvPhoto).catch(() => {});
+    loadCvLibrary().then(setSavedCvs).catch(() => {});
   }, []);
 
   // ─── Reset form ───────────────────────────────────────────────────────────────
@@ -449,6 +454,10 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
     return 'Stage';
   };
 
+  // Rapports de stage get their own section; the rest stays under "Mes documents récents".
+  const reportDocs = documents.filter((doc) => doc.template_type === 'stage');
+  const otherDocs = documents.filter((doc) => doc.template_type !== 'stage');
+
   // ─── Render ─────────────────────────────────────────────────────────────────
   if (loading && documents.length === 0) {
     return (
@@ -521,6 +530,119 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         </View>
       </View>
 
+      <Text style={styles.sectionLabel}>Mes CV</Text>
+      {savedCvs.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyTitle}>Aucun CV enregistré</Text>
+          <Text style={styles.emptyText}>
+            Chaque CV créé pour une candidature ou exporté en PDF apparaît ici.
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.listContainer}>
+          {savedCvs.map((cv) => (
+            <View key={cv.id} style={styles.documentCard}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.templateBadge, { backgroundColor: 'rgba(99, 102, 241, 0.15)', borderColor: 'rgba(255, 255, 255, 0.1)' }]}>
+                  <Text style={[styles.templateBadgeText, { color: stitchColors.secondary }]}>
+                    {cv.jobId ? 'Candidature' : 'CV général'}
+                  </Text>
+                </View>
+                <Text style={styles.cardDate}>
+                  {new Date(cv.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                </Text>
+              </View>
+              <Text style={styles.cardTitle}>{savedCvTitle(cv)}</Text>
+              <View style={styles.cardActions}>
+                <Pressable style={[styles.actionButton, styles.editButton]} onPress={() => setSelectedSavedCv(cv)}>
+                  <Eye size={13} color={stitchColors.white} strokeWidth={2.2} style={{ marginRight: 6 }} />
+                  <Text style={styles.editButtonText}>Voir</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.actionButton, styles.pdfButton]}
+                  onPress={async () => {
+                    try {
+                      await exportOfficialCvPdf(cv.officialCv, cv.templateId);
+                    } catch {
+                      AppAlert.alert('Erreur', 'Impossible d’exporter ce CV.');
+                    }
+                  }}
+                >
+                  <Download size={13} color="#38BDF8" strokeWidth={2.2} style={{ marginRight: 6 }} />
+                  <Text style={styles.pdfButtonText}>PDF</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.actionButton, styles.deleteButton]}
+                  onPress={() => {
+                    AppAlert.alert('Confirmer', `Supprimer le CV « ${savedCvTitle(cv)} » ?`, [
+                      { text: 'Annuler', style: 'cancel' },
+                      {
+                        text: 'Supprimer', style: 'destructive',
+                        onPress: async () => {
+                          const next = await removeCvFromLibrary(cv.id);
+                          setSavedCvs(next);
+                        },
+                      },
+                    ]);
+                  }}
+                >
+                  <Trash2 size={14} color="#F87171" strokeWidth={1.8} />
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      <Text style={styles.sectionLabel}>Mes rapports de stage</Text>
+      {reportDocs.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyTitle}>Aucun rapport de stage</Text>
+          <Text style={styles.emptyText}>Tes rapports de stage créés apparaissent ici.</Text>
+        </View>
+      ) : (
+        <View style={styles.listContainer}>
+          {reportDocs.map((doc) => (
+            <View key={doc.id} style={styles.documentCard}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.templateBadge, { backgroundColor: 'rgba(251, 191, 36, 0.15)', borderColor: 'rgba(255, 255, 255, 0.1)' }]}>
+                  <Text style={[styles.templateBadgeText, { color: '#FBBF24' }]}>Rapport de stage</Text>
+                </View>
+                <Text style={styles.cardDate}>
+                  {new Date(doc.updated_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                </Text>
+              </View>
+              <Text style={styles.cardTitle}>{doc.title}</Text>
+              <View style={styles.cardActions}>
+                <Pressable style={[styles.actionButton, styles.editButton]} onPress={() => onEditDocument(doc.id)}>
+                  <Edit3 size={13} color={stitchColors.white} strokeWidth={2.2} style={{ marginRight: 6 }} />
+                  <Text style={styles.editButtonText}>Éditer</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.actionButton, styles.deleteButton]}
+                  onPress={() => {
+                    AppAlert.alert('Confirmer', `Supprimer "${doc.title}" ?`, [
+                      { text: 'Annuler', style: 'cancel' },
+                      {
+                        text: 'Supprimer', style: 'destructive',
+                        onPress: async () => {
+                          try {
+                            await authFetch(`/api/mobile/documents/${doc.id}`, { method: 'DELETE' });
+                            setDocuments((p) => p.filter((d) => d.id !== doc.id));
+                          } catch { AppAlert.alert('Erreur', 'Suppression impossible.'); }
+                        },
+                      },
+                    ]);
+                  }}
+                >
+                  <Trash2 size={14} color="#F87171" strokeWidth={1.8} />
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
       <Text style={styles.sectionLabel}>Mes documents récents</Text>
 
       {error ? (
@@ -539,7 +661,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
         </View>
       ) : (
         <View style={styles.listContainer}>
-          {documents.map((doc) => {
+          {otherDocs.map((doc) => {
             const dateStr = new Date(doc.updated_at).toLocaleDateString('fr-FR', {
               day: 'numeric', month: 'short',
             });
@@ -591,6 +713,54 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
           })}
         </View>
       )}
+
+      {/* ─── SAVED CV PREVIEW ──────────────────────────────────────────── */}
+      <Modal
+        visible={selectedSavedCv !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSelectedSavedCv(null)}
+      >
+        <View style={styles.officialCvModalOverlay}>
+          <View style={styles.officialCvModalSheet}>
+            <View style={styles.officialCvModalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.officialCvModalTitle} numberOfLines={2}>
+                  {selectedSavedCv ? savedCvTitle(selectedSavedCv) : ''}
+                </Text>
+                <Text style={styles.officialCvModalSub}>
+                  {selectedSavedCv ? `Modèle ${CV_TEMPLATES.find((t) => t.id === selectedSavedCv.templateId)?.label ?? ''}` : ''}
+                </Text>
+              </View>
+              <Pressable style={styles.officialCvCloseBtn} onPress={() => setSelectedSavedCv(null)}>
+                <X size={18} color={stitchColors.ink} />
+              </Pressable>
+            </View>
+            {selectedSavedCv ? (
+              <>
+                <View style={styles.officialCvPreviewBox}>
+                  <CvTemplatePreview cv={selectedSavedCv.officialCv} template={selectedSavedCv.templateId} />
+                </View>
+                <View style={styles.officialCvFooter}>
+                  <Pressable
+                    style={({ pressed }) => [styles.officialCvDownloadBtn, pressed && { opacity: 0.88 }]}
+                    onPress={async () => {
+                      try {
+                        await exportOfficialCvPdf(selectedSavedCv.officialCv, selectedSavedCv.templateId);
+                      } catch {
+                        AppAlert.alert('Erreur', 'Impossible d’exporter ce CV.');
+                      }
+                    }}
+                  >
+                    <Download size={15} color={stitchColors.white} strokeWidth={2.2} />
+                    <Text style={styles.officialCvDownloadBtnText}>Télécharger le PDF</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
 
       {/* ─── TYPE SELECTOR MODAL — Editorial poster series ─────────────── */}
       <Modal
@@ -912,7 +1082,16 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                   }
                   try {
                     const done = await exportOfficialCvPdf(officialCvData, cvTemplate);
-                    if (done) AppAlert.alert('CV exporté', 'Ton CV a été exporté en PDF.');
+                    if (done) {
+                      const saved = await saveCvToLibrary({
+                        templateId: cvTemplate,
+                        jobTitle: '',
+                        company: '',
+                        officialCv: officialCvData,
+                      }).catch(() => null);
+                      if (saved) setSavedCvs((prev) => [saved, ...prev]);
+                      AppAlert.alert('CV exporté', 'Ton CV a été exporté en PDF et ajouté à tes CV.');
+                    }
                   } catch {
                     AppAlert.alert('Erreur', 'Impossible d’exporter le CV.');
                   }
@@ -1164,9 +1343,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 16,
   },
-  cardActions: { flexDirection: 'row', gap: 10 },
+  // Wraps on narrow phones so "Voir / PDF / supprimer" never overflow the card.
+  cardActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   actionButton: { height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
-  editButton: { flex: 1, backgroundColor: stitchColors.primary },
+  editButton: { flexGrow: 1, flexBasis: 120, backgroundColor: stitchColors.primary },
   editButtonText: {
     color: stitchColors.white,
     fontSize: 13,

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { enforceAiQuota } from '@/lib/ai-quota';
+import { cvBackgroundToText } from '@/lib/cv-background';
+import { getCvBackground } from '@/lib/cv-background-db';
 import { buildCvFillMessages, cvFillRequestSchema, parseCvFill } from '@/lib/cv-fill';
 import { callLlm, isLlmConfigured } from '@/lib/llm';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
@@ -35,15 +37,22 @@ export async function POST(request: NextRequest) {
     const refund = () =>
       payment.charged > 0 ? refundStageApplication(userId, job.id).catch(() => undefined) : undefined;
 
+    // The background saved on the account ("Mon parcours") counts as the student's
+    // own words, like the notes: the model may use it, the grounding check accepts it.
+    const background = cvBackgroundToText(await getCvBackground(userId).catch(() => null));
+    const input = background
+      ? { ...parsed.data, notes: [background, parsed.data.notes].filter(Boolean).join('\n\nPour cette offre : ') }
+      : parsed.data;
+
     let cv;
     try {
-      const raw = await callLlm(buildCvFillMessages(parsed.data), {
+      const raw = await callLlm(buildCvFillMessages(input), {
         temperature: 0.3,
         maxTokens: 1800,
         title: 'Campus 360 CV',
         timeoutMs: 45_000,
       });
-      cv = parseCvFill(raw, parsed.data);
+      cv = parseCvFill(raw, input);
     } catch (error) {
       await refund();
       throw error;
