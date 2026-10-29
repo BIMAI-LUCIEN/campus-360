@@ -1,5 +1,6 @@
 import { requireAdminPage } from '@/lib/access';
 import { getSupabasePdfAnalytics } from '@/lib/supabase-pdf';
+import { ControlPulse } from './_components/ControlPulse';
 import { DashboardOverview } from './_components/DashboardOverview';
 
 // Page is auth-gated and reads the DB at request time — skip prerender so
@@ -11,5 +12,10 @@ export default async function AdminDashboardPage() {
   await requireAdminPage();
   const analytics = await getSupabasePdfAnalytics();
 
-  return <DashboardOverview initialData={analytics} />;
+  return (
+    <>
+      <ControlPulse />
+      <DashboardOverview initialData={analytics} />
+    </>
+  );
 }

@@ -3,6 +3,7 @@ import { databasePool } from './database';
 export interface AdminStageJob {
   id: string;
   title: string;
+  description?: string;
   companyId: string;
   companyName: string;
   companyIndustry: string;
@@ -118,275 +119,6 @@ export interface AdminUnifiedMetrics {
   };
 }
 
-// Fallback in-memory data for demo / tests / disconnected environment
-const MOCK_COMPANIES: AdminCompany[] = [
-  {
-    id: 'comp_orange_cm',
-    name: 'Orange Cameroun',
-    industry: 'Télécoms & Réseaux',
-    address: 'Boulevard de la Liberté, Akwa, Douala',
-    contactEmail: 'recrutement@orange.cm',
-    contactWhatsapp: '+237699001122',
-    kybScore: 92,
-    status: 'VERIFIED',
-    isPremium: true,
-    logoUrl: null,
-    jobsCount: 3,
-  },
-  {
-    id: 'comp_technovation',
-    name: 'TechNovation Labs',
-    industry: 'Génie Logiciel & Cloud',
-    address: 'Bastos, Yaoundé',
-    contactEmail: 'contact@technovation.cm',
-    contactWhatsapp: '+237672364124',
-    kybScore: 88,
-    status: 'VERIFIED',
-    isPremium: false,
-    logoUrl: null,
-    jobsCount: 2,
-  },
-  {
-    id: 'comp_bicec',
-    name: 'BICEC Banque',
-    industry: 'Banque & Finance',
-    address: 'Bonanjo, Douala',
-    contactEmail: 'carrieres@bicec.com',
-    contactWhatsapp: '+237690123456',
-    kybScore: 95,
-    status: 'VERIFIED',
-    isPremium: true,
-    logoUrl: null,
-    jobsCount: 1,
-  },
-  {
-    id: 'comp_crypto_dubious',
-    name: 'Global Fast Crypto Trading',
-    industry: 'Trading non régulé',
-    address: 'Inconnue / Sans siège vérifié',
-    contactEmail: 'investfast@gmail.com',
-    contactWhatsapp: '+237655000111',
-    kybScore: 24,
-    status: 'SUSPENDED',
-    isPremium: false,
-    logoUrl: null,
-    jobsCount: 1,
-  },
-];
-
-const MOCK_JOBS: AdminStageJob[] = [
-  {
-    id: 'job_dev_rn_1',
-    title: 'Stagiaire Développeur Mobile React Native / TypeScript',
-    companyId: 'comp_technovation',
-    companyName: 'TechNovation Labs',
-    companyIndustry: 'Génie Logiciel & Cloud',
-    location: 'Yaoundé (Bastos)',
-    duration: '3 à 6 mois',
-    stipend: '85 000 FCFA/mois',
-    requirements: ['React Native', 'TypeScript', 'Git', 'API REST'],
-    applyMethod: 'WHATSAPP',
-    isSponsored: true,
-    source: 'INTERNAL',
-    contactWhatsapp: '+237672364124',
-    contactEmail: 'contact@technovation.cm',
-    flyerUrl: null,
-    videoUrl: null,
-    createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-    expiresAt: new Date(Date.now() + 27 * 86400000).toISOString(),
-    isExpired: false,
-    applicationsCount: 14,
-  },
-  {
-    id: 'job_cybersec_2',
-    title: 'Stagiaire Analyste SOC & Cybersécurité',
-    companyId: 'comp_orange_cm',
-    companyName: 'Orange Cameroun',
-    companyIndustry: 'Télécoms & Réseaux',
-    location: 'Douala (Akwa)',
-    duration: '6 mois (Stage PFE)',
-    stipend: '100 000 FCFA/mois',
-    requirements: ['Réseaux TCP/IP', 'Linux', 'Wireshark', 'Python'],
-    applyMethod: 'EMAIL',
-    isSponsored: true,
-    source: 'SCRAPED',
-    contactWhatsapp: '+237699001122',
-    contactEmail: 'recrutement@orange.cm',
-    flyerUrl: null,
-    videoUrl: null,
-    createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-    expiresAt: new Date(Date.now() + 25 * 86400000).toISOString(),
-    isExpired: false,
-    applicationsCount: 22,
-  },
-  {
-    id: 'job_audit_fin_3',
-    title: 'Stagiaire Assistant Contrôle de Gestion & Audit',
-    companyId: 'comp_bicec',
-    companyName: 'BICEC Banque',
-    companyIndustry: 'Banque & Finance',
-    location: 'Douala (Bonanjo)',
-    duration: '3 mois',
-    stipend: '75 000 FCFA/mois',
-    requirements: ['Comptabilité', 'Excel Avancé', 'Analyse Financière'],
-    applyMethod: 'EMAIL',
-    isSponsored: false,
-    source: 'INTERNAL',
-    contactWhatsapp: '+237690123456',
-    contactEmail: 'carrieres@bicec.com',
-    flyerUrl: null,
-    videoUrl: null,
-    createdAt: new Date(Date.now() - 8 * 86400000).toISOString(),
-    expiresAt: new Date(Date.now() + 22 * 86400000).toISOString(),
-    isExpired: false,
-    applicationsCount: 9,
-  },
-  {
-    id: 'job_suspect_4',
-    title: 'Trader Crypto Indépendant - Gain 500 000 FCFA/semaine',
-    companyId: 'comp_crypto_dubious',
-    companyName: 'Global Fast Crypto Trading',
-    companyIndustry: 'Trading non régulé',
-    location: 'En ligne',
-    duration: 'Indéterminée',
-    stipend: '500 000 FCFA',
-    requirements: ['Téléphone', 'Dépôt initial 50 000 FCFA'],
-    applyMethod: 'WHATSAPP',
-    isSponsored: false,
-    source: 'SCRAPED',
-    contactWhatsapp: '+237655000111',
-    contactEmail: 'investfast@gmail.com',
-    flyerUrl: null,
-    videoUrl: null,
-    createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
-    expiresAt: new Date(Date.now() + 20 * 86400000).toISOString(),
-    isExpired: false,
-    applicationsCount: 1,
-  },
-];
-
-const MOCK_PAYMENTS: AdminPayment[] = [
-  {
-    id: 'pay_1',
-    userId: 'usr_kameni',
-    userName: 'Dave Lionel KAMENI',
-    userEmail: 'kamenidave@gmail.com',
-    userPhone: '+237672364124',
-    type: 'momo_monthly_2000',
-    packType: 'monthly_2000',
-    operator: 'mtn',
-    amountFcfa: 2000,
-    referenceId: 'c360_monthly_2000_17832890_8fa1',
-    status: 'success',
-    createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
-  },
-  {
-    id: 'pay_2',
-    userId: 'usr_ngono',
-    userName: 'Marie Claire NGONO',
-    userEmail: 'marie.ngono@univ-douala.cm',
-    userPhone: '+237699112233',
-    type: 'momo_discovery_500',
-    packType: 'discovery_500',
-    operator: 'orange',
-    amountFcfa: 500,
-    referenceId: 'c360_discovery_500_17832900_3bc2',
-    status: 'success',
-    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-  },
-  {
-    id: 'pay_3',
-    userId: 'usr_koffi',
-    userName: 'Kouassi Jean KOFFI',
-    userEmail: 'koffi.jean@inphb.ci',
-    userPhone: '+2250708091011',
-    type: 'momo_discovery_500',
-    packType: 'discovery_500',
-    operator: 'wave',
-    amountFcfa: 500,
-    referenceId: 'c360_discovery_500_17832920_7fe4',
-    status: 'success',
-    createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-  },
-  {
-    id: 'pay_4',
-    userId: 'usr_talla',
-    userName: 'Christian TALLA',
-    userEmail: 'talla.c@polytech.cm',
-    userPhone: '+237670009988',
-    type: 'momo_monthly_2000',
-    packType: 'monthly_2000',
-    operator: 'mtn',
-    amountFcfa: 2000,
-    referenceId: 'c360_monthly_2000_17832940_9ab3',
-    status: 'pending',
-    createdAt: new Date(Date.now() - 4 * 3600000).toISOString(),
-  },
-];
-
-const MOCK_APPLICATIONS: AdminApplication[] = [
-  {
-    id: 'app_1',
-    studentId: 'usr_kameni',
-    studentName: 'Dave Lionel KAMENI',
-    studentEmail: 'kamenidave@gmail.com',
-    studentWhatsapp: '+237672364124',
-    studentMajor: 'Génie Informatique',
-    studentLevel: 'Ingénieur 4',
-    jobId: 'job_dev_rn_1',
-    jobTitle: 'Stagiaire Développeur Mobile React Native / TypeScript',
-    companyName: 'TechNovation Labs',
-    companyContactWhatsapp: '+237672364124',
-    status: 'PENDING',
-    appliedAt: new Date(Date.now() - 8 * 86400000).toISOString(),
-    lastRemindedAt: null,
-    isEligibleForFollowup: true,
-    daysSinceApplication: 8,
-    cvFileUrl: null,
-    letterFileUrl: null,
-  },
-  {
-    id: 'app_2',
-    studentId: 'usr_ngono',
-    studentName: 'Marie Claire NGONO',
-    studentEmail: 'marie.ngono@univ-douala.cm',
-    studentWhatsapp: '+237699112233',
-    studentMajor: 'Cybersécurité & Réseaux',
-    studentLevel: 'Licence 3',
-    jobId: 'job_cybersec_2',
-    jobTitle: 'Stagiaire Analyste SOC & Cybersécurité',
-    companyName: 'Orange Cameroun',
-    companyContactWhatsapp: '+237699001122',
-    status: 'REVIEWING',
-    appliedAt: new Date(Date.now() - 4 * 86400000).toISOString(),
-    lastRemindedAt: null,
-    isEligibleForFollowup: false,
-    daysSinceApplication: 4,
-    cvFileUrl: null,
-    letterFileUrl: null,
-  },
-  {
-    id: 'app_3',
-    studentId: 'usr_koffi',
-    studentName: 'Kouassi Jean KOFFI',
-    studentEmail: 'koffi.jean@inphb.ci',
-    studentWhatsapp: '+2250708091011',
-    studentMajor: 'Comptabilité & Gestion',
-    studentLevel: 'Master 1',
-    jobId: 'job_audit_fin_3',
-    jobTitle: 'Stagiaire Assistant Contrôle de Gestion & Audit',
-    companyName: 'BICEC Banque',
-    companyContactWhatsapp: '+237690123456',
-    status: 'INTERVIEW',
-    appliedAt: new Date(Date.now() - 12 * 86400000).toISOString(),
-    lastRemindedAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-    isEligibleForFollowup: false,
-    daysSinceApplication: 12,
-    cvFileUrl: null,
-    letterFileUrl: null,
-  },
-];
-
 /* ─────────────────────────────────────────────────────────────────────────
  * Public Functions for Admin Dashboard
  * ──────────────────────────────────────────────────────────────────────── */
@@ -397,6 +129,7 @@ export async function getAdminStages(params?: {
   source?: string;
   sponsored?: string;
   pipeline?: string;
+  kind?: string;
 }): Promise<AdminStageJob[]> {
   try {
     const conditions: string[] = [];
@@ -416,6 +149,11 @@ export async function getAdminStages(params?: {
     if (params?.pipeline && ['published', 'pending_review', 'rejected'].includes(params.pipeline)) {
       conditions.push(`j.status = $${idx}`);
       values.push(params.pipeline);
+      idx++;
+    }
+    if (params?.kind === 'stage' || params?.kind === 'emploi') {
+      conditions.push(`j.kind = $${idx}`);
+      values.push(params.kind);
       idx++;
     }
     if (params?.sponsored === 'true') {
@@ -438,13 +176,11 @@ export async function getAdminStages(params?: {
     `;
 
     const result = await databasePool.query<any>(sql, values);
-    if (result.rows.length === 0 && !params?.query && !params?.pipeline) {
-      return MOCK_JOBS;
-    }
 
     return result.rows.map((row) => ({
       id: row.id,
       title: row.title,
+      description: row.description,
       companyId: row.company_id,
       companyName: row.company_name,
       companyIndustry: row.company_industry,
@@ -472,19 +208,8 @@ export async function getAdminStages(params?: {
       evidence: row.evidence ?? {},
     }));
   } catch (err) {
-    console.warn('[AdminStages] DB Query fallback to mock:', (err as Error).message);
-    let list = [...MOCK_JOBS];
-    if (params?.query) {
-      const q = params.query.toLowerCase();
-      list = list.filter((j) => j.title.toLowerCase().includes(q) || j.companyName.toLowerCase().includes(q));
-    }
-    if (params?.source && params.source !== 'ALL') {
-      list = list.filter((j) => j.source === params.source);
-    }
-    if (params?.sponsored === 'true') {
-      list = list.filter((j) => j.isSponsored);
-    }
-    return list;
+    console.error('[AdminStages] DB query failed:', (err as Error).message);
+    throw err;
   }
 }
 
@@ -496,10 +221,8 @@ export async function toggleAdminJobSponsored(jobId: string, isSponsored: boolea
     );
     return true;
   } catch (err) {
-    console.warn('[AdminStages] Toggle sponsored fallback:', (err as Error).message);
-    const job = MOCK_JOBS.find((j) => j.id === jobId);
-    if (job) job.isSponsored = isSponsored;
-    return true;
+    console.error('[AdminStages] DB query failed:', (err as Error).message);
+    throw err;
   }
 }
 
@@ -533,10 +256,8 @@ export async function deleteAdminJob(jobId: string): Promise<boolean> {
     await databasePool.query(`DELETE FROM public.stage_jobs WHERE id = $1`, [jobId]);
     return true;
   } catch (err) {
-    console.warn('[AdminStages] Delete job fallback:', (err as Error).message);
-    const idx = MOCK_JOBS.findIndex((j) => j.id === jobId);
-    if (idx !== -1) MOCK_JOBS.splice(idx, 1);
-    return true;
+    console.error('[AdminStages] DB query failed:', (err as Error).message);
+    throw err;
   }
 }
 
@@ -571,9 +292,6 @@ export async function getAdminCompanies(params?: {
     `;
 
     const result = await databasePool.query<any>(sql, values);
-    if (result.rows.length === 0 && !params?.query) {
-      return MOCK_COMPANIES;
-    }
 
     return result.rows.map((row) => ({
       id: row.id,
@@ -590,16 +308,8 @@ export async function getAdminCompanies(params?: {
       createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined,
     }));
   } catch (err) {
-    console.warn('[AdminCompanies] DB Query fallback to mock:', (err as Error).message);
-    let list = [...MOCK_COMPANIES];
-    if (params?.query) {
-      const q = params.query.toLowerCase();
-      list = list.filter((c) => c.name.toLowerCase().includes(q) || c.industry.toLowerCase().includes(q));
-    }
-    if (params?.status && params.status !== 'ALL') {
-      list = list.filter((c) => c.status === params.status);
-    }
-    return list;
+    console.error('[AdminCompanies] DB query failed:', (err as Error).message);
+    throw err;
   }
 }
 
@@ -633,13 +343,8 @@ export async function updateAdminCompany(input: {
     }
     return true;
   } catch (err) {
-    console.warn('[AdminCompanies] Update fallback:', (err as Error).message);
-    const comp = MOCK_COMPANIES.find((c) => c.id === input.companyId);
-    if (comp) {
-      if (input.status) comp.status = input.status;
-      if (typeof input.kybScore === 'number') comp.kybScore = input.kybScore;
-    }
-    return true;
+    console.error('[AdminCompanies] DB query failed:', (err as Error).message);
+    throw err;
   }
 }
 
@@ -670,9 +375,6 @@ export async function getAdminPayments(params?: {
     `;
 
     const result = await databasePool.query<any>(sql, values);
-    if (result.rows.length === 0) {
-      return MOCK_PAYMENTS;
-    }
 
     return result.rows.map((row) => {
       const typeStr = String(row.type || '');
@@ -704,15 +406,8 @@ export async function getAdminPayments(params?: {
       };
     });
   } catch (err) {
-    console.warn('[AdminPayments] DB Query fallback to mock:', (err as Error).message);
-    let list = [...MOCK_PAYMENTS];
-    if (params?.operator && params.operator !== 'ALL') {
-      list = list.filter((p) => p.operator === params.operator);
-    }
-    if (params?.status && params.status !== 'ALL') {
-      list = list.filter((p) => p.status === params.status);
-    }
-    return list;
+    console.error('[AdminPayments] DB query failed:', (err as Error).message);
+    throw err;
   }
 }
 
@@ -738,9 +433,6 @@ export async function getAdminApplications(params?: {
     `;
 
     const result = await databasePool.query<any>(sql);
-    if (result.rows.length === 0) {
-      return MOCK_APPLICATIONS;
-    }
 
     return result.rows.map((row: any) => {
       const applied = new Date(row.applied_at).getTime();
@@ -769,8 +461,8 @@ export async function getAdminApplications(params?: {
       };
     });
   } catch (err) {
-    console.warn('[AdminApplications] DB Query fallback to mock:', (err as Error).message);
-    return MOCK_APPLICATIONS;
+    console.error('[AdminApplications] DB query failed:', (err as Error).message);
+    throw err;
   }
 }
 
@@ -841,4 +533,97 @@ export async function getAdminUnifiedMetrics(): Promise<AdminUnifiedMetrics> {
       premiumCount: monthlyCount,
     },
   };
+}
+
+/* ── Offres créées ou modifiées depuis le dashboard ─────────────────────── */
+
+export interface AdminJobInput {
+  title: string;
+  kind: 'stage' | 'emploi';
+  companyName: string;
+  companyIndustry?: string;
+  companyAddress?: string;
+  description: string;
+  requirements: string[];
+  location?: string;
+  duration?: string;
+  stipend?: string;
+  applyMethod: 'WHATSAPP' | 'EMAIL' | 'LINK' | 'PHYSICAL';
+  contactEmail?: string;
+  contactWhatsapp?: string;
+  applyUrl?: string;
+  flyerUrl?: string;
+  isSponsored: boolean;
+  expiresAt: string;
+}
+
+async function upsertCompanyForJob(input: AdminJobInput): Promise<string> {
+  const existing = await databasePool.query<{ id: string }>(
+    `select id from public.stage_companies where lower(name) = lower($1) order by created_at limit 1`,
+    [input.companyName.trim()],
+  );
+  if (existing.rows[0]) {
+    await databasePool.query(
+      `update public.stage_companies
+          set contact_email = coalesce(nullif($2, ''), contact_email),
+              contact_whatsapp = coalesce(nullif($3, ''), contact_whatsapp)
+        where id = $1`,
+      [existing.rows[0].id, input.contactEmail ?? '', input.contactWhatsapp ?? ''],
+    );
+    return existing.rows[0].id;
+  }
+  const created = await databasePool.query<{ id: string }>(
+    `insert into public.stage_companies (name, industry, address, contact_email, contact_whatsapp, kyb_score, status)
+     values ($1, $2, $3, $4, nullif($5, ''), 60, 'VERIFIED') returning id`,
+    [
+      input.companyName.trim(),
+      input.companyIndustry?.trim() || 'Non précisé',
+      input.companyAddress?.trim() || input.location?.trim() || 'Cameroun',
+      input.contactEmail?.trim() || 'contact@campus360b.site',
+      input.contactWhatsapp ?? '',
+    ],
+  );
+  return created.rows[0].id;
+}
+
+export async function createAdminJob(input: AdminJobInput, adminEmail: string): Promise<string> {
+  const companyId = await upsertCompanyForJob(input);
+  const { rows } = await databasePool.query<{ id: string }>(
+    `insert into public.stage_jobs (
+       company_id, title, description, requirements, apply_method, is_sponsored, source,
+       location, duration, stipend, flyer_url, expires_at, kind, status, source_url, reviewed_at, reviewed_by
+     ) values ($1, $2, $3, $4, $5, $6, 'INTERNAL', $7, $8, $9, nullif($10, ''), $11, $12, 'published', nullif($13, ''), now(), $14)
+     returning id`,
+    [
+      companyId, input.title.trim(), input.description.trim(), input.requirements, input.applyMethod, input.isSponsored,
+      input.location || null, input.duration || null, input.stipend || null, input.flyerUrl ?? '',
+      input.expiresAt, input.kind, input.applyUrl ?? '', `admin:${adminEmail}`.slice(0, 80),
+    ],
+  );
+  return rows[0].id;
+}
+
+export async function updateAdminJob(jobId: string, input: AdminJobInput): Promise<boolean> {
+  const companyId = await upsertCompanyForJob(input);
+  const { rowCount } = await databasePool.query(
+    `update public.stage_jobs set
+       company_id = $2, title = $3, description = $4, requirements = $5, apply_method = $6, is_sponsored = $7,
+       location = $8, duration = $9, stipend = $10, flyer_url = nullif($11, ''), expires_at = $12, kind = $13,
+       source_url = coalesce(nullif($14, ''), source_url)
+     where id = $1`,
+    [
+      jobId, companyId, input.title.trim(), input.description.trim(), input.requirements, input.applyMethod, input.isSponsored,
+      input.location || null, input.duration || null, input.stipend || null, input.flyerUrl ?? '',
+      input.expiresAt, input.kind, input.applyUrl ?? '',
+    ],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function getAdminJobDescription(jobId: string): Promise<string | null> {
+  const { rows } = await databasePool.query<{ description: string }>(
+    'select description from public.stage_jobs where id = $1',
+    [jobId],
+  );
+  return rows[0]?.description ?? null;
 }

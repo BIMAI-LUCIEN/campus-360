@@ -21,7 +21,10 @@ import {
   Check,
   X,
   CheckCheck,
+  Plus,
+  Pencil,
 } from 'lucide-react';
+import { JobFormDrawer } from './JobFormDrawer';
 import type { AdminStageJob } from '@/lib/admin-platform-service';
 import {
   Card,
@@ -40,6 +43,9 @@ export function StagesDashboardClient() {
   const [sourceFilter, setSourceFilter] = useState('ALL');
   const [sponsoredFilter, setSponsoredFilter] = useState('ALL');
   const [pipelineFilter, setPipelineFilter] = useState('ALL');
+  const [kindFilter, setKindFilter] = useState('ALL');
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState<AdminStageJob | null>(null);
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
   const [bulkLoading, setBulkLoading] = useState(false);
 
@@ -121,6 +127,7 @@ export function StagesDashboardClient() {
       if (sponsoredFilter === 'true') params.append('sponsored', 'true');
       if (sponsoredFilter === 'false') params.append('sponsored', 'false');
       if (pipelineFilter !== 'ALL') params.append('pipeline', pipelineFilter);
+      if (kindFilter !== 'ALL') params.append('kind', kindFilter);
 
       const res = await fetch(`/api/admin/stages?${params.toString()}`);
       if (!res.ok) throw new Error('Impossible de charger les stages');
@@ -139,7 +146,7 @@ export function StagesDashboardClient() {
   useEffect(() => {
     fetchStages();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceFilter, sponsoredFilter, pipelineFilter]);
+  }, [sourceFilter, sponsoredFilter, pipelineFilter, kindFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,13 +246,22 @@ export function StagesDashboardClient() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-fg">
-            Modération & Offres de Stages
+            Offres de stage et d'emploi
           </h1>
           <p className="mt-1 text-sm text-fg-subtle">
-            Supervisez les annonces collectées par l'agent n8n et publiées par les entreprises partenaires.
+            Publiez vos propres offres, validez celles collectées automatiquement et mettez les meilleures en avant.
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            onClick={() => {
+              setEditingJob(null);
+              setFormOpen(true);
+            }}
+            icon={Plus}
+          >
+            Nouvelle offre
+          </Button>
           <Button
             variant="secondary"
             onClick={fetchStages}
@@ -339,6 +355,20 @@ export function StagesDashboardClient() {
                 <option value="ALL">Toutes les sources</option>
                 <option value="SCRAPED">Ingestion n8n (OCR)</option>
                 <option value="INTERNAL">Entreprise Partenaire</option>
+              </select>
+            </div>
+
+            {/* Filter kind */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase text-fg-subtle">Type :</span>
+              <select
+                value={kindFilter}
+                onChange={(e) => setKindFilter(e.target.value)}
+                className="h-9 rounded-md border border-border bg-surface px-3 text-xs font-medium text-fg focus:outline-none"
+              >
+                <option value="ALL">Stages et emplois</option>
+                <option value="stage">Stages</option>
+                <option value="emploi">Emplois</option>
               </select>
             </div>
 
@@ -570,6 +600,14 @@ export function StagesDashboardClient() {
                           </>
                         )}
                         <IconButton
+                          icon={Pencil}
+                          label="Modifier l'offre"
+                          onClick={() => {
+                            setEditingJob(job);
+                            setFormOpen(true);
+                          }}
+                        />
+                        <IconButton
                           icon={Trash2}
                           label="Supprimer le stage"
                           variant="danger"
@@ -585,6 +623,17 @@ export function StagesDashboardClient() {
           </div>
         )}
       </Card>
+
+      <JobFormDrawer
+        open={formOpen}
+        job={editingJob}
+        onClose={() => setFormOpen(false)}
+        onSaved={(text) => {
+          setFormOpen(false);
+          setMessage({ text, type: 'success' });
+          fetchStages();
+        }}
+      />
     </div>
   );
 }

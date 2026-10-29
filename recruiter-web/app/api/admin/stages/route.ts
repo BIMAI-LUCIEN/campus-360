@@ -7,6 +7,8 @@ import {
   deleteAdminJob,
   reviewAdminJob,
   bulkReviewAdminJobs,
+  createAdminJob,
+  updateAdminJob,
 } from '@/lib/admin-platform-service';
 
 export const runtime = 'nodejs';
@@ -21,9 +23,10 @@ export async function GET(request: NextRequest) {
   const source = searchParams.get('source') ?? undefined;
   const sponsored = searchParams.get('sponsored') ?? undefined;
   const pipeline = searchParams.get('pipeline') ?? undefined;
+  const kind = searchParams.get('kind') ?? undefined;
 
   try {
-    const stages = await getAdminStages({ query, status, source, sponsored, pipeline });
+    const stages = await getAdminStages({ query, status, source, sponsored, pipeline, kind });
     return NextResponse.json(stages);
   } catch (err) {
     console.error('[api/admin/stages] GET failed:', err);
@@ -34,7 +37,33 @@ export async function GET(request: NextRequest) {
   }
 }
 
+const jobSchema = z.object({
+  title: z.string().trim().min(3).max(200),
+  kind: z.enum(['stage', 'emploi']),
+  companyName: z.string().trim().min(2).max(200),
+  companyIndustry: z.string().trim().max(120).optional(),
+  companyAddress: z.string().trim().max(200).optional(),
+  description: z.string().trim().min(20).max(20000),
+  requirements: z.array(z.string().trim().min(1).max(80)).max(20).default([]),
+  location: z.string().trim().max(120).optional(),
+  duration: z.string().trim().max(80).optional(),
+  stipend: z.string().trim().max(80).optional(),
+  applyMethod: z.enum(['WHATSAPP', 'EMAIL', 'LINK', 'PHYSICAL']),
+  contactEmail: z.string().trim().email().max(200).optional().or(z.literal('')),
+  contactWhatsapp: z.string().trim().max(30).optional(),
+  applyUrl: z.string().trim().url().max(1000).optional().or(z.literal('')),
+  flyerUrl: z.string().trim().url().max(1000).optional().or(z.literal('')),
+  isSponsored: z.boolean().default(false),
+  expiresAt: z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'Date invalide'),
+}).superRefine((job, ctx) => {
+  if (job.applyMethod === 'LINK' && !job.applyUrl) ctx.addIssue({ code: 'custom', path: ['applyUrl'], message: 'Lien de candidature requis' });
+  if (job.applyMethod === 'EMAIL' && !job.contactEmail) ctx.addIssue({ code: 'custom', path: ['contactEmail'], message: 'E-mail requis' });
+  if (job.applyMethod === 'WHATSAPP' && !job.contactWhatsapp) ctx.addIssue({ code: 'custom', path: ['contactWhatsapp'], message: 'Numéro WhatsApp requis' });
+});
+
 const actionSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('create'), job: jobSchema }),
+  z.object({ action: z.literal('update'), jobId: z.string().uuid(), job: jobSchema }),
   z.object({
     action: z.literal('toggle-sponsored'),
     jobId: z.string().min(1),
@@ -70,7 +99,7 @@ export async function POST(request: NextRequest) {
   const parsed = actionSchema.safeParse(payload);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: 'Action invalide', details: parsed.error.flatten() },
+      { error: parsed.error.issues[0]?.message ?? 'Action invalide', details: parsed.error.flatten() },
       { status: 400 },
     );
   }
@@ -78,6 +107,17 @@ export async function POST(request: NextRequest) {
   const body = parsed.data;
 
   try {
+    if (body.action === 'create') {
+      const id = await createAdminJob(body.job, user?.email ?? 'inconnu');
+      return NextResponse.json({ ok: true, id, message: body.job.kind === 'emploi' ? "Offre d'emploi publiée dans l'app" : "Offre de stage publiée dans l'app" });
+    }
+
+    if (body.action === 'update') {
+      const updated = await updateAdminJob(body.jobId, body.job);
+      if (!updated) return NextResponse.json({ error: 'Offre introuvable' }, { status: 404 });
+      return NextResponse.json({ ok: true, message: 'Offre mise à jour' });
+    }
+
     if (body.action === 'toggle-sponsored') {
       await toggleAdminJobSponsored(body.jobId, body.isSponsored);
       return NextResponse.json({

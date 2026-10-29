@@ -422,11 +422,11 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
       {/* ── Header (greeting + actions) ─────────────────────────────── */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-[32px] font-bold leading-tight tracking-tight text-fg">
-            Bonjour {firstName} <span aria-hidden>👋</span>
-          </h1>
-          <p className="mt-1 text-[15px] text-fg-subtle">
-            Voici ce qui se passe sur Campus 360 aujourd&apos;hui.
+          <h2 className="font-display text-xl font-bold leading-tight text-fg">
+            Catalogue PDF
+          </h2>
+          <p className="mt-1 text-sm text-fg-subtle">
+            Ventes, revenus et documents les plus achetés.
           </p>
           {fetchError ? (
             <p className="mt-1.5 text-xs text-danger">{fetchError}</p>
@@ -534,121 +534,7 @@ export function DashboardOverview({ initialData }: DashboardOverviewProps) {
         </div>
       )}
 
-      {/* ── Cœur de Métier Campus 360 (Stages, KYB & Mobile Money) ──── */}
-      {platformMetrics && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-display text-lg font-bold text-fg">
-                Cockpit Opérationnel : Stages, KYB & Monétisation
-              </h2>
-              <p className="text-xs text-fg-subtle">
-                Indicateurs clés du matching IA, vérification entreprises et revenus Mobile Money.
-              </p>
-            </div>
-            <span className="rounded-full bg-primary-soft text-primary font-bold text-[11px] px-3 py-1 uppercase tracking-wider">
-              Campus 360 Core
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Stages Actifs */}
-            <Link href="/admin/stages" className="group block">
-              <Card className="hover:border-primary/50 transition-colors h-full">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-fg-subtle">
-                    Stages Actifs
-                  </span>
-                  <span className="p-2 rounded-lg bg-chart-blue-soft text-chart-blue group-hover:scale-105 transition-transform">
-                    <Briefcase size={16} />
-                  </span>
-                </div>
-                <div className="mt-3 text-3xl font-display font-bold text-fg">
-                  {platformMetrics.stages.active}
-                </div>
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-fg-subtle">
-                  <span className="inline-block w-2 h-2 rounded-full bg-success" />
-                  <span>{platformMetrics.stages.scraped} via n8n OCR Vision</span>
-                </div>
-              </Card>
-            </Link>
-
-            {/* Entreprises & KYB */}
-            <Link href="/admin/companies" className="group block">
-              <Card className="hover:border-primary/50 transition-colors h-full">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-fg-subtle">
-                    Entreprises & KYB
-                  </span>
-                  <span className="p-2 rounded-lg bg-chart-green-soft text-chart-green group-hover:scale-105 transition-transform">
-                    <Building2 size={16} />
-                  </span>
-                </div>
-                <div className="mt-3 text-3xl font-display font-bold text-fg">
-                  {platformMetrics.companies.verified}{' '}
-                  <span className="text-sm font-normal text-fg-subtle">/ {platformMetrics.companies.total}</span>
-                </div>
-                <div className="mt-2 text-xs text-fg-subtle">
-                  Score KYB Moyen : <strong className="text-success">{platformMetrics.companies.avgKybScore}%</strong>
-                </div>
-              </Card>
-            </Link>
-
-            {/* Candidatures IA */}
-            <Link href="/admin/applications" className="group block">
-              <Card className="hover:border-primary/50 transition-colors h-full">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-fg-subtle">
-                    Candidatures IA
-                  </span>
-                  <span className="p-2 rounded-lg bg-chart-purple-soft text-chart-purple group-hover:scale-105 transition-transform">
-                    <Send size={16} />
-                  </span>
-                </div>
-                <div className="mt-3 text-3xl font-display font-bold text-fg">
-                  {platformMetrics.applications.total}
-                </div>
-                <div className="mt-2 flex items-center justify-between text-xs text-fg-subtle">
-                  <span>{platformMetrics.applications.pending} en attente</span>
-                  {platformMetrics.applications.eligibleForFollowup > 0 && (
-                    <span className="text-danger font-semibold">
-                      {platformMetrics.applications.eligibleForFollowup} relances J+7
-                    </span>
-                  )}
-                </div>
-              </Card>
-            </Link>
-
-            {/* Mobile Money */}
-            <Link href="/admin/payments" className="group block">
-              <Card className="hover:border-primary/50 transition-colors h-full">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-fg-subtle">
-                    Mobile Money Direct
-                  </span>
-                  <span className="p-2 rounded-lg bg-chart-cyan-soft text-chart-cyan group-hover:scale-105 transition-transform">
-                    <CreditCard size={16} />
-                  </span>
-                </div>
-                <div className="mt-3 text-2xl font-display font-bold text-fg">
-                  {new Intl.NumberFormat('fr-CM').format(platformMetrics.payments.totalRevenueFcfa)} FCFA
-                </div>
-                <div className="mt-2 text-xs text-fg-subtle">
-                  {platformMetrics.payments.discoveryPacks} packs • {platformMetrics.payments.monthlyPasses} pass illimités
-                </div>
-              </Card>
-            </Link>
-          </div>
-        </div>
-      )}
-
       {/* ── KPI Row ─────────────────────────────────────────────────── */}
-      <div className="space-y-4">
-        <h2 className="font-display text-lg font-bold text-fg">
-          Ressources Académiques & Analytics PDF
-        </h2>
-      </div>
-
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="REVENUS"

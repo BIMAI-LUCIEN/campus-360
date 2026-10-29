@@ -65,34 +65,34 @@
 
 @theme {
   /* ── Brand / Primary (Stitch design) ──────────────────────────────── */
-  --color-primary: #004ac6;
-  --color-primary-hover: #003ea8;
-  --color-primary-active: #002e80;
-  --color-primary-soft: #dbe1ff;
-  --color-primary-softer: #eeefff;
-  --color-primary-tint: #eff4ff;
+  --color-primary: #7c3aed;
+  --color-primary-hover: #6d28d9;
+  --color-primary-active: #5b21b6;
+  --color-primary-soft: #ede9fe;
+  --color-primary-softer: #f5f3ff;
+  --color-primary-tint: #f5f3ff;
   --color-on-primary: #ffffff;
 
   /* ── Surfaces (Stitch design) ─────────────────────────────────────── */
-  --color-bg: #f8f9ff;
+  --color-bg: #f6f5fb;
   --color-surface: #ffffff;
-  --color-surface-2: #eff4ff;
-  --color-surface-3: #e5eeff;
-  --color-surface-soft: #f8f9ff;
+  --color-surface-2: #f3f1fa;
+  --color-surface-3: #ebe7f7;
+  --color-surface-soft: #f6f5fb;
 
   /* ── Borders ──────────────────────────────────────────────────────── */
-  --color-border: #cbd5e1;
-  --color-border-light: #e2e8f0;
+  --color-border: #e4e1ee;
+  --color-border-light: #eeecf5;
   --color-border-strong: #737686;
 
   /* ── Foreground (text) ────────────────────────────────────────────── */
-  --color-fg: #0b1c30;
-  --color-fg-muted: #434655;
-  --color-fg-subtle: #737686;
+  --color-fg: #15122b;
+  --color-fg-muted: #4a4560;
+  --color-fg-subtle: #77728c;
   --color-fg-faint: #c3c6d7;
 
   /* ── Status ───────────────────────────────────────────────────────── */
-  --color-success: #10b981;
+  --color-success: #047857;
   --color-success-soft: #ecfdf5;
   --color-success-bg: #f0fdf4;
   --color-warning: #f59e0b;
@@ -109,10 +109,19 @@
   --color-sidebar-strip: #ffffff;
   --color-sidebar-fg: #0b1c30;
   --color-sidebar-fg-muted: #434655;
-  --color-sidebar-active-bg: #d5e3fc;
-  --color-sidebar-active-fg: #004ac6;
+  --color-sidebar-active-bg: #ede9fe;
+  --color-sidebar-active-fg: #7c3aed;
   --color-sidebar-border: #c3c6d7;
   --color-sidebar-divider: #eff4ff;
+
+  /* ── Control tower (dark sidebar) ── */
+  --color-tower: #15122b;
+  --color-tower-2: #221d3d;
+  --color-tower-line: #2f2950;
+  --color-tower-fg: #f5f3ff;
+  --color-tower-muted: #a49fbf;
+  --color-money: #047857;
+  --color-money-soft: #ecfdf5;
 
   /* ── Chart palette (Stitch multi-color style) ─────────────────────── */
   --color-chart-blue: #3b82f6;
@@ -135,23 +144,23 @@
   --color-chart-indigo-soft: #e0e7ff;
 
   /* ── Stitch design system tokens (prefixed for backward compatibility) ─ */
-  --color-stitch-bg: #f8f9ff;
-  --color-stitch-surface: #f8f9ff;
+  --color-stitch-bg: #f6f5fb;
+  --color-stitch-surface: #ffffff;
   --color-stitch-surface-lowest: #ffffff;
   --color-stitch-surface-container-lowest: #ffffff;
-  --color-stitch-surface-container-low: #eff4ff;
-  --color-stitch-surface-container: #e5eeff;
-  --color-stitch-surface-container-high: #dce9ff;
-  --color-stitch-surface-container-highest: #d3e4fe;
-  --color-stitch-primary: #004ac6;
-  --color-stitch-primary-container: #2563eb;
+  --color-stitch-surface-container-low: #f6f5fb;
+  --color-stitch-surface-container: #f3f1fa;
+  --color-stitch-surface-container-high: #ebe7f7;
+  --color-stitch-surface-container-highest: #e2ddf2;
+  --color-stitch-primary: #7c3aed;
+  --color-stitch-primary-container: #8b5cf6;
   --color-stitch-on-primary: #ffffff;
-  --color-stitch-on-primary-container: #eeefff;
-  --color-stitch-primary-fixed: #dbe1ff;
-  --color-stitch-on-surface: #0b1c30;
-  --color-stitch-on-surface-variant: #434655;
-  --color-stitch-outline: #737686;
-  --color-stitch-outline-variant: #c3c6d7;
+  --color-stitch-on-primary-container: #ffffff;
+  --color-stitch-primary-fixed: #ede9fe;
+  --color-stitch-on-surface: #15122b;
+  --color-stitch-on-surface-variant: #4a4560;
+  --color-stitch-outline: #77728c;
+  --color-stitch-outline-variant: #e4e1ee;
   --color-stitch-success: #10b981;
   --color-stitch-success-light: #ecfdf5;
   --color-stitch-success-dark: #047857;
@@ -159,7 +168,7 @@
   --color-stitch-error-rose: #e11d48;
   --color-stitch-error-light: #fef2f2;
   --color-stitch-secondary: #515f74;
-  --color-stitch-secondary-container: #d5e3fc;
+  --color-stitch-secondary-container: #ede9fe;
   --color-stitch-on-secondary: #ffffff;
   --color-stitch-on-secondary-container: #57657a;
   --color-stitch-tertiary: #005a82;
@@ -167,7 +176,7 @@
   --color-stitch-on-tertiary: #ffffff;
   --color-stitch-on-tertiary-container: #e4f2ff;
 
-  --font-stitch-headline: "Plus Jakarta Sans", sans-serif;
+  --font-stitch-headline: "Bricolage Grotesque", sans-serif;
   --font-stitch-body: "Inter", sans-serif;
   --radius-stitch: 12px;
   --radius-stitch-sm: 8px;
@@ -176,7 +185,7 @@
   --spacing-stitch-topbar: 64px;
 
   /* ── Typography ───────────────────────────────────────────────────── */
-  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
   --font-body: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
 
