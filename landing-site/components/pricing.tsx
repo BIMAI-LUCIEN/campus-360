@@ -7,19 +7,19 @@ const APK_URL =
   process.env.NEXT_PUBLIC_APK_DOWNLOAD_URL ??
   "https://campus360b.site/downloads/campus-360.apk";
 
-// V1 launch: everything is free (FREE_LAUNCH_MODE). Prices below apply after the launch,
-// aligned with the constants of the app (src/types.ts).
+// Model v2 (contexte.md §19): prices apply from day one, the launch only raises
+// the signup bonus. Aligned with mobile-api/lib/pricing.ts and stage-pricing.ts.
 const plans = [
   {
     name: "Découverte",
     icon: GraduationCap,
     price: "0 FCFA",
-    description: "Pour créer ton profil et tester l'app",
-    period: "",
+    description: "Lecture de tous les PDF et 3 actions IA par jour",
+    period: "Toujours gratuit",
     features: [
-      "Compte gratuit",
-      "Matching de stage avec score de correspondance",
-      "Coach IA de soutenance",
+      "1 000 coins offerts à l'inscription pendant le lancement (300 ensuite)",
+      "Tous les PDF et annales en lecture libre",
+      "Plan de rapport et de mémoire gratuits",
     ],
     cta: "Télécharger l'APK",
     ctaVariant: "secondary" as const,
@@ -28,41 +28,42 @@ const plans = [
   {
     name: "Candidature",
     icon: Send,
-    price: "500 FCFA",
-    description: "Par candidature envoyée",
-    period: "/ candidature",
+    price: "300 FCFA",
+    description: "CV adapté à l'offre et lettre compris",
+    period: "500 FCFA pour une offre rémunérée",
     features: [
-      "CV officiel RH et lettre de motivation",
-      "Envoi par WhatsApp RH, e-mail RH ou dans l'app",
-      "Relance à J+7 dans ton suivi",
+      "Pack Starter : 5 candidatures pour 1 000 FCFA",
+      "Pack Recherche active : 12 candidatures + 1 jour de Pass Révision pour 2 000 FCFA",
+      "Crédits valables 30 jours, rendus si l'envoi échoue",
     ],
     cta: "Télécharger l'APK",
     ctaVariant: "primary" as const,
     popular: true,
   },
   {
-    name: "Rapport de stage",
+    name: "Rédaction",
     icon: FileText,
     price: "2 000 FCFA",
-    description: "Rédaction IA d'un rapport de stage",
-    period: "/ rapport",
+    description: "Rapport de stage complet, après un plan gratuit",
+    period: "Mémoire : 4 000 FCFA ou 1 000 FCFA par chapitre",
     features: [
-      "Structure académique complète",
-      "Texte modifiable dans l'éditeur",
+      "Plan proposé gratuitement avant de payer",
+      "Mémoire rédigé chapitre par chapitre",
+      "Coins rendus si l'IA échoue",
     ],
     cta: "Télécharger l'APK",
     ctaVariant: "secondary" as const,
     popular: false,
   },
   {
-    name: "Mémoire",
+    name: "Pass Révision",
     icon: Zap,
-    price: "5 000 FCFA",
-    description: "Rédaction IA d'un mémoire de fin d'études",
-    period: "/ mémoire",
+    price: "200 FCFA",
+    description: "IA illimitée sur tous les PDF pendant 24 h",
+    period: "1 000 FCFA les 7 jours",
     features: [
-      "Problématique, revue de littérature, méthodologie",
-      "Texte modifiable dans l'éditeur",
+      "Résumés, fiches, quiz et questions sur chaque PDF",
+      "Payé une fois, sans renouvellement automatique",
     ],
     cta: "Télécharger l'APK",
     ctaVariant: "secondary" as const,
@@ -83,10 +84,10 @@ export function Pricing() {
             💰 Tarifs transparents en FCFA
           </div>
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[var(--color-ink)] mb-4">
-            Tout est gratuit pendant le lancement.
+            Tu paies seulement ce que tu utilises.
           </h2>
           <p className="text-lg text-[var(--color-ink-muted)] max-w-2xl mx-auto">
-            Pendant la V1, candidatures, CV, lettres, rapports, mémoires, coach de soutenance et PDF sont gratuits. Ensuite : paiement à l'usage par Orange Money ou MTN MoMo, sans abonnement.
+            Lecture des PDF gratuite, 1 000 coins offerts au lancement, puis paiement à l'usage par Orange Money ou MTN MoMo dès 500 FCFA. Aucun abonnement.
           </p>
         </div>
 
@@ -132,11 +133,9 @@ export function Pricing() {
 
                 <div className="mb-6">
                   <span className="font-display text-3xl lg:text-4xl font-extrabold text-[var(--color-ink)]">
-                    Gratuit
+                    {plan.price === "0 FCFA" ? "Gratuit" : plan.price}
                   </span>
-                  <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-                    {plan.price === "0 FCFA" ? "Toujours gratuit" : `Pendant le lancement, puis ${plan.price} ${plan.period}`}
-                  </p>
+                  <p className="mt-1 text-xs text-[var(--color-ink-muted)]">{plan.period}</p>
                 </div>
 
                 <ul className="space-y-3 mb-8 flex-1">

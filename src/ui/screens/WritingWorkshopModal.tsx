@@ -21,7 +21,6 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { stitchColors } from '../../theme/stitch';
-import { freeLabel, isFreeLaunch } from '../../config/launch';
 import { AppAlert } from '../AppAlert';
 import { authFetch } from '../../features/auth/betterAuth';
 import { copyToClipboard } from '../../features/whatsapp/whatsappService';
@@ -49,6 +48,13 @@ export function WritingWorkshopModal({
   const [outlineNotes, setOutlineNotes] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedDoc, setGeneratedDoc] = useState<string | null>(null);
+  // The plan is free; then the report (or each thesis chapter) is paid.
+  const [phase, setPhase] = useState<'plan' | 'done'>('plan');
+  const [planSections, setPlanSections] = useState<string[]>([]);
+  const [thesisMode, setThesisMode] = useState<'forfait' | 'chapitre'>('chapitre');
+  const [writtenChapters, setWrittenChapters] = useState<number[]>([]);
+  const [busyChapter, setBusyChapter] = useState<number | null>(null);
+  const generationId = React.useRef('');
   const outline = Array.isArray(templateReport?.table_of_contents) ? templateReport!.table_of_contents : [];
 
   // "Utiliser ce plan": start from the reference report's field and plan.
@@ -56,13 +62,61 @@ export function WritingWorkshopModal({
     if (!visible || !templateReport) return;
     setDocType('REPORT');
     setGeneratedDoc(null);
+    setPhase('plan');
     setField(templateReport.field || '');
   }, [visible, templateReport]);
 
   const pricing = {
-    REPORT: { get price() { return isFreeLaunch() ? freeLabel() : '2 000 FCFA'; }, title: 'Rapport de Stage', icon: FileText, desc: 'Structure académique complète (Intro, Missions, Bilan, Recommandations)' },
-    THESIS: { get price() { return isFreeLaunch() ? freeLabel() : '5 000 FCFA'; }, title: 'Mémoire / Soutenance', icon: GraduationCap, desc: 'Problématique, Revue de littérature, Méthodologie et Conclusion' },
-    CV: { get price() { return isFreeLaunch() ? freeLabel() : '500 FCFA'; }, title: 'CV & Bio Professionnelle', icon: Sparkles, desc: 'CV percutant ATS-compatible avec accroche personnalisée' },
+    REPORT: { price: 'Plan gratuit, puis 2 000 FCFA', title: 'Rapport de Stage', icon: FileText, desc: 'Plan gratuit, puis rapport complet (Intro, Missions, Bilan, Recommandations)' },
+    THESIS: { price: 'Plan gratuit, puis 4 000 F ou 1 000 F/chapitre', title: 'Mémoire / Soutenance', icon: GraduationCap, desc: 'Problématique et plan gratuits, puis rédaction chapitre par chapitre (forfait 4 000 F ou 1 000 F par chapitre)' },
+    CV: { price: '300 FCFA', title: 'CV & Bio Professionnelle', icon: Sparkles, desc: 'CV percutant ATS-compatible avec accroche personnalisée' },
+  };
+
+  // Numbered or titled lines of the plan the AI proposed (at most 12).
+  const parsePlan = (markdown: string): string[] =>
+    markdown
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => /^(#{1,3}\s+|\d+[.)]\s+|chapitre\s+\d+)/i.test(line))
+      .map((line) => line.replace(/^#{1,3}\s+/, '').replace(/^\d+[.)]\s+/, '').trim())
+      .filter((line) => line.length > 2 && !/^probl[ée]matique/i.test(line))
+      .slice(0, 12);
+
+  type StepInput = { step: 'plan' | 'full' | 'chapter'; chapterIndex?: number; chapterTitle?: string };
+
+  const runStep = async ({ step, chapterIndex, chapterTitle }: StepInput): Promise<string | null> => {
+    try {
+      const res = await authFetch('/api/mobile/documents/workshop', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: docType,
+          step,
+          topic: topic.trim(),
+          field: field.trim() || undefined,
+          notes: outlineNotes.trim() || undefined,
+          outline: step === 'plan' ? (docType === 'REPORT' && outline.length ? outline.slice(0, 30) : undefined) : planSections.length ? planSections : undefined,
+          thesisMode: step === 'chapter' ? thesisMode : undefined,
+          chapterIndex,
+          chapterTitle,
+          generationId: generationId.current,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { content?: string; error?: string; message?: string };
+      if (!res.ok) throw new Error(data.error || data.message || 'Rédaction impossible pour le moment.');
+      if (!data.content) throw new Error("L'IA n'a pas pu rédiger le document. Réessaie.");
+      return data.content;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Rédaction impossible pour le moment.';
+      if (/solde insuffisant/i.test(message) && onOpenWallet) {
+        AppAlert.alert('Solde insuffisant', message, [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Recharger', onPress: onOpenWallet },
+        ]);
+      } else {
+        AppAlert.alert('Rédaction impossible', message);
+      }
+      return null;
+    }
   };
 
   const handleGenerate = () => {
@@ -70,37 +124,42 @@ export function WritingWorkshopModal({
       AppAlert.alert('Champs requis', 'Veuillez renseigner le thème ou sujet principal.');
       return;
     }
-
+    // One id per document: the plan, the report and every chapter share it.
+    generationId.current = `${docType}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    setWrittenChapters([]);
     setIsGenerating(true);
     void (async () => {
-      try {
-        const res = await authFetch('/api/mobile/documents/workshop', {
-          method: 'POST',
-          body: JSON.stringify({
-            type: docType,
-            topic: topic.trim(),
-            field: field.trim() || undefined,
-            notes: outlineNotes.trim() || undefined,
-            outline: docType === 'REPORT' && outline.length ? outline.slice(0, 30) : undefined,
-            generationId: `${docType}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-          }),
-        });
-        const data = (await res.json()) as { content?: string };
-        if (!data.content) throw new Error("L'IA n'a pas pu rédiger le document. Réessaie.");
-        setGeneratedDoc(data.content);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Rédaction impossible pour le moment.';
-        if (/solde insuffisant/i.test(message) && onOpenWallet) {
-          AppAlert.alert('Solde insuffisant', message, [
-            { text: 'Annuler', style: 'cancel' },
-            { text: 'Recharger', onPress: onOpenWallet },
-          ]);
-        } else {
-          AppAlert.alert('Rédaction impossible', message);
-        }
-      } finally {
-        setIsGenerating(false);
+      const content = await runStep({ step: docType === 'CV' ? 'full' : 'plan' });
+      if (content) {
+        setGeneratedDoc(content);
+        setPlanSections(docType === 'CV' ? [] : parsePlan(content));
+        setPhase(docType === 'CV' ? 'done' : 'plan');
       }
+      setIsGenerating(false);
+    })();
+  };
+
+  const handleWriteReport = () => {
+    setIsGenerating(true);
+    void (async () => {
+      const content = await runStep({ step: 'full' });
+      if (content) {
+        setGeneratedDoc(content);
+        setPhase('done');
+      }
+      setIsGenerating(false);
+    })();
+  };
+
+  const handleWriteChapter = (index: number, title: string) => {
+    setBusyChapter(index);
+    void (async () => {
+      const content = await runStep({ step: 'chapter', chapterIndex: index, chapterTitle: title });
+      if (content) {
+        setGeneratedDoc((current) => `${current ?? ''}\n\n---\n\n${content}`);
+        setWrittenChapters((current) => (current.includes(index) ? current : [...current, index]));
+      }
+      setBusyChapter(null);
     })();
   };
 
@@ -211,7 +270,9 @@ export function WritingWorkshopModal({
                   ) : (
                     <>
                       <Sparkles size={18} color={stitchColors.white} />
-                      <Text style={styles.btnText}>Rédiger avec l'IA ({pricing[docType].price})</Text>
+                      <Text style={styles.btnText}>
+                        {docType === 'CV' ? "Rédiger le CV avec l'IA (300 FCFA)" : 'Obtenir le plan (gratuit)'}
+                      </Text>
                     </>
                   )}
                 </LinearGradient>
@@ -221,12 +282,82 @@ export function WritingWorkshopModal({
             <View style={styles.resultContainer}>
               <View style={styles.resultHeader}>
                 <CheckCircle2 size={18} color={stitchColors.emerald} />
-                <Text style={styles.resultHeaderText}>Document rédigé avec succès</Text>
+                <Text style={styles.resultHeaderText}>
+                  {phase === 'plan' ? 'Plan proposé (gratuit)' : 'Document rédigé avec succès'}
+                </Text>
               </View>
 
               <ScrollView style={styles.resultScroll} showsVerticalScrollIndicator={false}>
                 <Text style={styles.resultText}>{generatedDoc}</Text>
               </ScrollView>
+
+              {phase === 'plan' && docType === 'REPORT' ? (
+                <Pressable
+                  style={styles.stepBtn}
+                  onPress={handleWriteReport}
+                  disabled={isGenerating}
+                  testID="btn-write-report"
+                >
+                  {isGenerating ? (
+                    <ActivityIndicator size="small" color={stitchColors.white} />
+                  ) : (
+                    <Text style={styles.stepBtnText}>Rédiger le rapport complet (2 000 FCFA)</Text>
+                  )}
+                </Pressable>
+              ) : null}
+
+              {phase === 'plan' && docType === 'THESIS' ? (
+                <View style={styles.thesisBox}>
+                  <View style={styles.modeRow}>
+                    {(['forfait', 'chapitre'] as const).map((mode) => (
+                      <Pressable
+                        key={mode}
+                        style={[styles.modeChip, thesisMode === mode && styles.modeChipSelected]}
+                        onPress={() => setThesisMode(mode)}
+                        disabled={writtenChapters.length > 0}
+                      >
+                        <Text style={[styles.modeChipText, thesisMode === mode && styles.modeChipTextSelected]}>
+                          {mode === 'forfait' ? 'Forfait 4 000 F (tous les chapitres)' : '1 000 F par chapitre'}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  {planSections.length === 0 ? (
+                    <Text style={styles.docDesc}>Aucun chapitre reconnu dans le plan : relance la génération du plan.</Text>
+                  ) : (
+                    planSections.map((title, i) => {
+                      const index = i + 1;
+                      const done = writtenChapters.includes(index);
+                      const covered = done || (thesisMode === 'forfait' && writtenChapters.length > 0);
+                      return (
+                        <View key={`${index}-${title}`} style={styles.chapterRow}>
+                          <Text style={styles.chapterTitle} numberOfLines={2}>
+                            {index}. {title}
+                          </Text>
+                          <Pressable
+                            style={[styles.chapterBtn, done && styles.chapterBtnDone]}
+                            onPress={() => handleWriteChapter(index, title)}
+                            disabled={busyChapter !== null || done}
+                          >
+                            {busyChapter === index ? (
+                              <ActivityIndicator size="small" color={stitchColors.white} />
+                            ) : (
+                              <Text style={styles.chapterBtnText}>
+                                {done ? 'Rédigé' : covered ? 'Rédiger (payé)' : thesisMode === 'forfait' && writtenChapters.length === 0 ? 'Rédiger' : 'Rédiger · 1 000 F'}
+                              </Text>
+                            )}
+                          </Pressable>
+                        </View>
+                      );
+                    })
+                  )}
+                  <Text style={styles.docDesc}>
+                    {thesisMode === 'forfait'
+                      ? 'Le forfait de 4 000 F est débité au premier chapitre et couvre tous les autres.'
+                      : 'Chaque chapitre est payé une seule fois, et rendu si l’IA échoue.'}
+                  </Text>
+                </View>
+              ) : null}
 
               <View style={styles.resultFooter}>
                 <Pressable style={styles.copyBtn} onPress={handleCopy}>
@@ -238,6 +369,9 @@ export function WritingWorkshopModal({
                   onPress={() => {
                     setGeneratedDoc(null);
                     setTopic('');
+                    setPhase('plan');
+                    setPlanSections([]);
+                    setWrittenChapters([]);
                   }}
                 >
                   <Text style={styles.newDocBtnText}>Nouveau Document</Text>
@@ -369,6 +503,39 @@ const styles = StyleSheet.create({
     minHeight: 60,
     textAlignVertical: 'top',
   },
+  stepBtn: {
+    minHeight: 46,
+    borderRadius: 14,
+    backgroundColor: stitchColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  stepBtnText: { color: stitchColors.white, fontWeight: '700', fontSize: 15 },
+  thesisBox: { marginTop: 12, gap: 8 },
+  modeRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  modeChip: {
+    borderWidth: 1,
+    borderColor: stitchColors.outline,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  modeChipSelected: { borderColor: stitchColors.sienna, backgroundColor: stitchColors.siennaBg },
+  modeChipText: { fontSize: 13, color: stitchColors.inkSoft },
+  modeChipTextSelected: { color: stitchColors.sienna, fontWeight: '700' },
+  chapterRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  chapterTitle: { flex: 1, fontSize: 14, color: stitchColors.ink },
+  chapterBtn: {
+    minHeight: 36,
+    borderRadius: 10,
+    backgroundColor: stitchColors.primary,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chapterBtnDone: { backgroundColor: stitchColors.emeraldDeep },
+  chapterBtnText: { color: stitchColors.white, fontWeight: '700', fontSize: 13 },
   generateBtn: {
     marginTop: 10,
     borderRadius: 14,

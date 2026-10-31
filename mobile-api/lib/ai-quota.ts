@@ -53,3 +53,20 @@ export const enforceAiQuota = async (
     throw new RateLimitError(DAILY_LIMIT_MESSAGE, retryAfter);
   }
 };
+
+/**
+ * PDF contributions (Module 27, D27.1): their own hourly budget, outside the
+ * daily 60-call quota, since the 30 PDF/day cap already bounds the cost.
+ */
+export const enforcePdfIntakeQuota = async (request: NextRequest, options: { userId: string }): Promise<void> => {
+  if (!(await isFeatureEnabled('ai'))) {
+    throw new RateLimitError("L'analyse des PDF est temporairement indisponible. Réessaie plus tard.", 600);
+  }
+  const routeLimit = AI_ROUTE_LIMITS['pdf-intake'];
+  await enforceRateLimit(request, {
+    bucket: 'ai-pdf-intake',
+    max: routeLimit.max,
+    windowMs: routeLimit.windowMs,
+    userId: options.userId,
+  });
+};

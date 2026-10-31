@@ -60,10 +60,15 @@ Le monorepo comprend **4 services applicatifs** hébergés sur un VPS Linux de p
 
 ## 3. Modèle Économique & Lancement
 
-- **Pas d'abonnement récurrent** : Campus 360 fonctionne sur un modèle de portefeuille prépayé en coins (1 coin = 1 FCFA).
-- **Lancement gratuit** : Piloté par les variables d'environnement `FREE_LAUNCH_MODE=true` et `FREE_LAUNCH_UNTIL` (accès gratuit aux PDF et aux fonctionnalités d'assistance pendant la période d'amorçage).
-- **Paiements réels** : Intégration **Notch Pay** pour les recharges Mobile Money (MTN MoMo, Orange Money) avec validation par webhook signé.
-- **Plafond IA** : Quota journalier anti-abus (60 requêtes IA par utilisateur et par 24h) imposé sur toutes les routes de génération et chat.
+> Grille complète : `contexte.md` §19 (modèle v2, validé le 2026-10-30). Source de vérité des montants : `mobile-api/lib/pricing.ts` et `mobile-api/lib/stage-pricing.ts` (copie identique dans `src/features/stages/stagePricing.ts`).
+
+- **Pas d'abonnement récurrent** : portefeuille prépayé en coins (1 coin = 1 FCFA). Packs et Pass s'achètent une seule fois.
+- **Candidature** (CV adapté et lettre compris) : 300 FCFA (offre non rémunérée), 500 FCFA (offre rémunérée ou emploi). Packs : Starter 1 000 FCFA = 5 crédits, Recherche active 2 000 FCFA = 12 crédits + 1 jour de Pass Révision ; crédits valables 30 jours, consommés avant les coins (1 ou 2 par candidature), rendus si l'envoi échoue.
+- **Rédaction** : plan gratuit ; rapport 2 000 FCFA ; mémoire 4 000 FCFA au forfait ou 1 000 FCFA par chapitre.
+- **PDF** : lecture gratuite. IA sur les PDF : 3 actions gratuites par jour (5 questions = 1 action), puis Pass Révision 200 FCFA / 24 h ou 1 000 FCFA / 7 jours.
+- **Lancement** : `FREE_LAUNCH_MODE` / `FREE_LAUNCH_UNTIL` ne rendent plus rien gratuit ; ils fixent le bonus d'inscription (1 000 coins pendant le lancement, 300 ensuite ; `STARTING_COINS` le remplace s'il est posé).
+- **Paiements réels** : recharge Mobile Money (MTN MoMo, Orange Money) dès 500 FCFA, validée par webhook signé.
+- **Plafond IA** : quota journalier anti-abus (60 requêtes IA par utilisateur et par 24 h) sur toutes les routes de génération et chat, Pass ou non.
 
 ---
 

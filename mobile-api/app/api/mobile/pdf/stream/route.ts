@@ -1,4 +1,3 @@
-import { isFreeAccess } from '@/lib/purchase-price';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getCloudinaryConfig } from '@/lib/cloudinary';
@@ -27,21 +26,8 @@ const requireEnv = (name: string) => {
   return value;
 };
 
-const canReadFullDocument = async (document: CatalogDocument, user: MobileUser) => {
-  if (isFreeAccess(document)) return true;
-
-  const allowed = await databasePool.query(
-    `select 1 from public.app_document_purchases
-       where document_id = $1 and buyer_id = $2
-     union all
-     select 1 from public.app_pack_purchases pp
-       join public.pdf_pack_items pi on pi.pack_id = pp.pack_id
-       where pp.buyer_id = $2 and pi.document_id = $1
-     limit 1`,
-    [document.id, user.id],
-  );
-  return Boolean(allowed.rows[0]);
-};
+// Reading every PDF is free (contexte.md §19); only the AI on a PDF is limited.
+const canReadFullDocument = async (_document: CatalogDocument, _user: MobileUser) => true;
 
 const isCloudinaryHost = (hostname: string) =>
   hostname === 'cloudinary.com' || hostname.endsWith('.cloudinary.com');

@@ -94,7 +94,7 @@ export default function HomePage() {
 
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-[var(--color-ink-subtle)]">
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-[var(--color-emerald)]" /> Gratuit pendant le lancement
+                  <CheckCircle2 className="h-4 w-4 text-[var(--color-emerald)]" /> 1 000 coins offerts au lancement
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 text-[var(--color-emerald)]" /> Orange Money & MTN MoMo
@@ -228,7 +228,7 @@ export default function HomePage() {
               <TiltCard style={{ "--delay": "450ms" } as CSSProperties} className="reveal reveal-3d rounded-3xl border border-[var(--color-ink-faint)] bg-[var(--color-paper-soft)] p-7">
                 <Wallet className="mb-4 h-6 w-6 text-[var(--color-sienna)]" strokeWidth={2} />
                 <h3 className="mb-2 font-display text-xl">Wallet Mobile Money</h3>
-                <p className="text-sm text-[var(--color-ink-muted)]">Gratuit pendant le lancement. Ensuite, paiement à l'usage par Orange Money ou MTN MoMo.</p>
+                <p className="text-sm text-[var(--color-ink-muted)]">PDF gratuits, candidatures dès 300 FCFA, paiement à l'usage par Orange Money ou MTN MoMo.</p>
               </TiltCard>
             </div>
 
@@ -252,7 +252,7 @@ export default function HomePage() {
               Ton <span className="text-gradient-brand">parcours</span>, à 360°.
             </h2>
             <p className="mx-auto mb-10 max-w-lg text-[var(--color-ink-muted)]">
-              Application Android gratuite, sans publicité. Toutes les fonctions sont gratuites pendant le lancement.
+              Application Android gratuite, sans publicité. 1 000 coins offerts à l&apos;inscription pendant le lancement.
             </p>
             <a href={APK_URL} download="campus-360.apk">
               <Button size="lg" variant="primary" className="gap-2 px-8 font-bold">

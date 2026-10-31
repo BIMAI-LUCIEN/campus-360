@@ -6,17 +6,25 @@ import { NextResponse, type NextRequest } from 'next/server';
 // cookies are never forwarded.
 
 const SEGMENT = /^[A-Za-z0-9-]{1,64}$/;
+// Admin areas of mobile-api this relay may reach (Module 24 templates, Module 27 PDF intake).
+const PREFIXES = ['templates', 'pdf-intake'] as const;
+export type MobileApiAdminPrefix = (typeof PREFIXES)[number];
 
-export const forwardToMobileApi = async (request: NextRequest, segments: string[], adminUserId: string) => {
+export const forwardToMobileApi = async (
+  request: NextRequest,
+  segments: string[],
+  adminUserId: string,
+  prefix: MobileApiAdminPrefix = 'templates',
+) => {
   const base = process.env.MOBILE_API_INTERNAL_URL?.replace(/\/+$/, '');
   const secret = process.env.ADMIN_SERVICE_SECRET;
   if (!base || !secret) {
-    return NextResponse.json({ error: 'Service des modèles indisponible.' }, { status: 503 });
+    return NextResponse.json({ error: 'Service indisponible.' }, { status: 503 });
   }
-  if (!segments.every((s) => SEGMENT.test(s))) {
+  if (!PREFIXES.includes(prefix) || !segments.every((s) => SEGMENT.test(s))) {
     return NextResponse.json({ error: 'Chemin invalide.' }, { status: 400 });
   }
-  const url = `${base}/api/admin/templates${segments.length ? `/${segments.join('/')}` : ''}${request.nextUrl.search}`;
+  const url = `${base}/api/admin/${prefix}${segments.length ? `/${segments.join('/')}` : ''}${request.nextUrl.search}`;
   const headers: Record<string, string> = {
     'x-admin-service-key': secret,
     'x-admin-user-id': adminUserId,
@@ -44,6 +52,6 @@ export const forwardToMobileApi = async (request: NextRequest, segments: string[
     });
   } catch (error) {
     console.error('[mobile-api-proxy] relay failed', error);
-    return NextResponse.json({ error: 'Service des modèles injoignable.' }, { status: 502 });
+    return NextResponse.json({ error: 'Service injoignable.' }, { status: 502 });
   }
 };

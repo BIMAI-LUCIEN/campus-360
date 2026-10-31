@@ -733,7 +733,7 @@ export function WalletCard({
           style={styles.walletIAPill}
         >
           <Sparkles size={11} color={stitchColors.white} strokeWidth={2} />
-          <Text style={styles.walletIAPillText}>{iaCredits} IA</Text>
+          <Text style={styles.walletIAPillText}>{iaCredits} crédits</Text>
         </LinearGradient>
       </View>
 
@@ -897,12 +897,12 @@ export function TransactionRow({
   label: string;
   date: string;
   amount: number;
-  type: 'topup' | 'purchase' | 'withdrawal' | 'commission' | 'report' | 'stage_token' | 'subscription';
+  type: 'topup' | 'purchase' | 'withdrawal' | 'commission' | 'report' | 'stage_token' | 'subscription' | 'contribution_reward';
   formatCoins: (n: number) => string;
 }) {
   const isPositive = amount > 0;
   const iconColor =
-    type === 'topup' || type === 'stage_token' ? stitchColors.emerald
+    type === 'topup' || type === 'stage_token' || type === 'contribution_reward' ? stitchColors.emerald
     : type === 'commission' || type === 'report' || type === 'subscription' ? stitchColors.sienna
     : stitchColors.inkMuted;
   const Icon =

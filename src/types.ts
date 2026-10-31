@@ -1,15 +1,15 @@
 // ── Grille Tarifaire Officielle Campus 360 (Pay-Per-Action en FCFA) ─────
-export const PRICE_STAGE_APPLY = 500; // Candidature à une offre non rémunérée (1 000 si rémunérée, voir features/stages/stagePricing.ts)
-export const PRICE_REPORT = 2000;      // Rédaction Rapport de stage IA (25-45 pages)
-export const PRICE_THESIS = 5000;      // Rédaction Mémoire de fin d'études IA (50-100 pages)
-export const PRICE_PDF = 250;          // Document / épreuve (annales gratuites)
+export const PRICE_STAGE_APPLY = 300; // Candidature à une offre non rémunérée, CV adapté compris (500 si rémunérée, voir features/stages/stagePricing.ts)
+export const PRICE_REPORT = 2000;      // Rapport de stage IA (plan gratuit)
+export const PRICE_THESIS = 4000;      // Mémoire IA au forfait (ou 1 000 par chapitre ; plan gratuit)
+export const PRICE_PDF = 0;            // Lecture de tous les PDF gratuite (l'IA : 3 actions/jour, puis Pass Révision)
 export const MIN_WALLET_RECHARGE = 500;// Seuil de recharge minimum Mobile Money
 
 export type Transaction = {
   id: string;
   label: string;
   amount: number;
-  type: 'topup' | 'purchase' | 'withdrawal' | 'commission' | 'report' | 'stage_token' | 'subscription';
+  type: 'topup' | 'purchase' | 'withdrawal' | 'commission' | 'report' | 'stage_token' | 'subscription' | 'contribution_reward';
   status: 'success' | 'pending' | 'failed';
   date: string;
 };
@@ -63,6 +63,7 @@ export type StageJob = {
   stipend?: string; // ex: 'Rémunéré (50 000 FCFA/mois)', 'Non rémunéré'
   isPaid?: boolean; // offre rémunérée (envoyé par le serveur)
   applyPriceCoins?: number; // prix de la candidature en coins (1 coin = 1 FCFA)
+  applyCredits?: number; // crédits de pack consommés (1 offre non rémunérée, 2 offre rémunérée)
   company?: StageCompany;
   matchScore?: number; // Calculé dynamiquement (ex: 85)
   matchHeadline?: string; // ex: 'Match Exceptionnel (95%)'

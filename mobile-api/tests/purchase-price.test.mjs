@@ -52,38 +52,14 @@ test('isFreeAccess : vérifie l’accès direct sans débit', () => {
   assert.equal(isFreeAccess({ always_free: null, price_coins: 500 }), false);
 });
 
-test('Garde de source : les routes d’achat et d’accès PDF intègrent les règles', () => {
-  const purchaseDocPath = path.resolve('app/api/mobile/purchase/document/route.ts');
-  const purchaseDoc = fs.readFileSync(purchaseDocPath, 'utf8');
-  assert.ok(
-    purchaseDoc.includes('resolvePurchasePrice('),
-    'purchase/document/route.ts doit appeler resolvePurchasePrice',
-  );
-  assert.ok(
-    purchaseDoc.includes('always_free'),
-    'purchase/document/route.ts doit sélectionner always_free',
-  );
-
-  const signedUrlPath = path.resolve('app/api/mobile/pdf/signed-url/route.ts');
-  const signedUrl = fs.readFileSync(signedUrlPath, 'utf8');
-  assert.ok(
-    signedUrl.includes('isFreeAccess('),
-    'pdf/signed-url/route.ts doit appeler isFreeAccess',
-  );
-
-  const streamPath = path.resolve('app/api/mobile/pdf/stream/route.ts');
-  const stream = fs.readFileSync(streamPath, 'utf8');
-  assert.ok(
-    stream.includes('isFreeAccess('),
-    'pdf/stream/route.ts doit appeler isFreeAccess',
-  );
+test('Modèle v2 : achat de PDF retiré (410) et lecture gratuite', () => {
+  for (const route of ['purchase/document', 'purchase/pack', 'ia-packs/purchase']) {
+    const source = fs.readFileSync(path.resolve(`app/api/mobile/${route}/route.ts`), 'utf8');
+    assert.match(source, /status: 410/, route);
+  }
+  for (const route of ['pdf/signed-url', 'pdf/stream']) {
+    const source = fs.readFileSync(path.resolve(`app/api/mobile/${route}/route.ts`), 'utf8');
+    assert.match(source, /canReadFullDocument = async \(_document: CatalogDocument, _user: MobileUser\) => true/, route);
+    assert.match(source, /requireMobileUser\(/, route);
+  }
 });
-
-test(
-  'HTTP : achat document always_free sans débit wallet',
-  { skip: NO_SERVER || !process.env.TEST_ALWAYS_FREE_DOC_ID },
-  async () => {
-    // Test E2E conditionnel nécessitant serveur actif et ID fourni
-    assert.ok(true);
-  },
-);

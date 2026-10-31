@@ -49,8 +49,9 @@ import { getStudentAccount, updateStudentProfile } from '../auth/betterAuth';
 import { PaymentModal } from '../wallet/PaymentModal';
 import { cleanPhoneNumber } from '../whatsapp/whatsappService';
 import { stitchColors, fontFamilies, stitchRadius } from '../../theme/stitch';
-import { isFreeLaunch } from '../../config/launch';
-import { applyPriceLabel, jobApplyPrice, jobIsPaid } from './applyPrice';
+import { fetchOffers } from '../wallet/offersApi';
+import { OffersModal } from '../wallet/OffersModal';
+import { applyPriceLabel, jobApplyCredits, jobApplyPrice, jobIsPaid } from './applyPrice';
 import { saveCvToLibrary } from './cvLibrary';
 import { CvEditor } from './CvEditor';
 import { CvBackgroundScreen } from '../profile/CvBackgroundScreen';
@@ -128,6 +129,9 @@ export function AiApplyModal({
   }, [visible]);
   // Wallet balance in coins (1 coin = 1 FCFA): the application is paid before the AI writes it.
   const [balanceCoins, setBalanceCoins] = useState<number | null>(null);
+  // Pack credits valid now: used before the coins (1, or 2 for a paid offer).
+  const [credits, setCredits] = useState(0);
+  const [showOffers, setShowOffers] = useState(false);
 
   const refreshBalance = async () => {
     try {
@@ -135,6 +139,11 @@ export function AiApplyModal({
       setBalanceCoins(account.wallet.balanceCoins);
     } catch {
       setBalanceCoins(null);
+    }
+    try {
+      setCredits((await fetchOffers()).credits);
+    } catch {
+      setCredits(0);
     }
   };
 
@@ -225,8 +234,11 @@ export function AiApplyModal({
   useEffect(() => () => progressTimers.current.forEach(clearTimeout), []);
 
   const applyPrice = job ? jobApplyPrice(job) : 0;
-  const mustPay = !isFreeLaunch() && applyPrice > 0;
-  const canAfford = !mustPay || (balanceCoins !== null && balanceCoins >= applyPrice);
+  const applyCredits = job ? jobApplyCredits(job) : 1;
+  const mustPay = applyPrice > 0;
+  const paysWithCredits = credits >= applyCredits;
+  const canAfford = !mustPay || paysWithCredits || (balanceCoins !== null && balanceCoins >= applyPrice);
+  const creditsLabel = `${applyCredits} crédit${applyCredits > 1 ? 's' : ''}`;
 
   // Letter and match are written on the device; the CV is filled by the AI
   // (/api/mobile/stages/cv), which charges the application first. When the AI
@@ -634,15 +646,13 @@ export function AiApplyModal({
                   </View>
                 )}
 
-                {!isFreeLaunch() && (
-                  <Pressable
-                    onPress={() => setShowPaymentModal(true)}
-                    style={styles.rechargeHeaderBtn}
-                    testID="btn-open-payment"
-                  >
-                    <Text style={styles.rechargeHeaderBtnText}>Recharge MoMo</Text>
-                  </Pressable>
-                )}
+                <Pressable
+                  onPress={() => setShowPaymentModal(true)}
+                  style={styles.rechargeHeaderBtn}
+                  testID="btn-open-payment"
+                >
+                  <Text style={styles.rechargeHeaderBtnText}>Recharge MoMo</Text>
+                </Pressable>
 
                 <Pressable
                   onPress={onClose}
@@ -729,14 +739,17 @@ export function AiApplyModal({
                   {mustPay && (
                     <View style={styles.payGate} testID="apply-pay-gate">
                       <Text style={styles.payGateText}>
-                        Candidature : {applyPriceLabel(job)} • Ton solde :{' '}
-                        {balanceCoins === null ? '…' : `${balanceCoins} FCFA`}
+                        Candidature : {applyPriceLabel(job)} ou {creditsLabel} • Ton solde :{' '}
+                        {balanceCoins === null ? '…' : `${balanceCoins} FCFA`} • Crédits : {credits}
                       </Text>
                       <Text style={styles.payGateHint}>
                         {canAfford
-                          ? "Débité une seule fois au moment de la génération. Rendu si l'IA échoue."
-                          : 'Recharge ton portefeuille pour que l’IA rédige ton CV et ta lettre.'}
+                          ? "CV adapté et lettre compris. Payé une seule fois à la génération, rendu si l'IA ou l'envoi échoue."
+                          : 'Recharge ton portefeuille ou prends un pack pour que l’IA rédige ton CV et ta lettre.'}
                       </Text>
+                      <Pressable onPress={() => setShowOffers(true)} testID="btn-open-packs">
+                        <Text style={styles.payGateLink}>Packs : 5 candidatures pour 1 000 F, 12 pour 2 000 F</Text>
+                      </Pressable>
                     </View>
                   )}
                   <Pressable
@@ -748,7 +761,9 @@ export function AiApplyModal({
                     <Text style={styles.primaryOneClickBtnText}>
                       {canAfford
                         ? mustPay
-                          ? `Payer ${applyPriceLabel(job)} et générer`
+                          ? paysWithCredits
+                            ? `Utiliser ${creditsLabel} et générer`
+                            : `Payer ${applyPriceLabel(job)} et générer`
                           : 'Générer mon CV et ma lettre'
                         : 'Recharger mon portefeuille'}
                     </Text>
@@ -1021,7 +1036,7 @@ export function AiApplyModal({
                   <Text style={styles.applyPriceBanner} testID="apply-modal-price">
                     {jobApplyPrice(job) === 0
                       ? 'Cette candidature est gratuite.'
-                      : `Cette candidature coûte ${applyPriceLabel(job)} (${jobIsPaid(job) ? 'offre rémunérée' : 'offre non rémunérée'}), déjà réglée à la génération : l'envoi ne coûte rien de plus.`}
+                      : `Cette candidature coûte ${applyPriceLabel(job)} ou ${creditsLabel} (${jobIsPaid(job) ? 'offre rémunérée' : 'offre non rémunérée'}), déjà réglée à la génération : l'envoi ne coûte rien de plus.`}
                   </Text>
 
                   {/* Segmented Channel Selector */}
@@ -1285,6 +1300,17 @@ export function AiApplyModal({
         visible={showBackground}
         onClose={() => setShowBackground(false)}
         onSaved={(b) => setBackgroundCount(cvBackgroundFilledCount(b))}
+      />
+
+      <OffersModal
+        visible={showOffers}
+        focus="pack"
+        reasonMessage="Un pack donne des crédits de candidature valables 30 jours : 1 crédit par offre non rémunérée, 2 par offre rémunérée."
+        onClose={() => setShowOffers(false)}
+        onPurchased={(state) => {
+          setCredits(state.credits);
+          void refreshBalance();
+        }}
       />
 
       {/* Modal Paiement Mobile Money si solde épuisé */}
@@ -1713,6 +1739,12 @@ const styles = StyleSheet.create({
   payGateHint: {
     fontSize: 12,
     color: stitchColors.inkMuted,
+  },
+  payGateLink: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: stitchColors.sienna,
+    marginTop: 4,
   },
   cvPreviewArea: {
     flex: 1,

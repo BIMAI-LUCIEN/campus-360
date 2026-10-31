@@ -6,7 +6,7 @@ import { PageHero } from "@/components/landing/page-hero";
 export const metadata: Metadata = {
   title: "Tarifs Campus 360 — Orange Money & MTN MoMo",
   description:
-    "Campus 360 est gratuit pendant le lancement. Ensuite : candidature à 500 FCFA, rapport de stage à 2 000 FCFA, mémoire à 5 000 FCFA, sans abonnement.",
+    "Candidature à 300 FCFA avec CV adapté, packs dès 1 000 FCFA, rapport de stage à 2 000 FCFA, mémoire à 4 000 FCFA, PDF gratuits. Sans abonnement.",
   alternates: { canonical: "/tarifs" },
   openGraph: {
     title: "Tarifs Campus 360",
@@ -22,22 +22,22 @@ const faq = [
   },
   {
     q: "Y a-t-il un abonnement avec précompte automatique ?",
-    a: "Non. Il n'y a pas d'abonnement : ton wallet est débité seulement quand tu lances une action (candidature, rapport, mémoire, PDF).",
+    a: "Non. Il n'y a pas d'abonnement : ton wallet est débité seulement quand tu lances une action ou achètes un pack ou un Pass, une seule fois.",
   },
   {
     q: "Combien coûte une candidature ?",
-    a: "Rien pendant le lancement. Ensuite, 500 FCFA par candidature envoyée.",
+    a: "300 FCFA pour une offre non rémunérée, 500 FCFA pour une offre rémunérée, CV adapté et lettre compris. Avec un pack : 5 candidatures pour 1 000 FCFA ou 12 pour 2 000 FCFA.",
   },
   {
     q: "Puis-je tester l'IA gratuitement ?",
-    a: "Oui, et sans limite pendant le lancement : candidatures, CV officiel RH, lettres, rapports et coach de soutenance sont gratuits.",
+    a: "Oui : tous les PDF se lisent gratuitement, avec 3 actions IA gratuites par jour. Pendant le lancement, 1 000 coins sont offerts à l'inscription.",
   },
 ];
 
 export default function TarifsPage() {
   return (
     <SiteShell>
-      <PageHero kicker="Lancement V1" title="Tout est gratuit pendant le" accent="lancement." subtitle="Candidatures, CV, lettres, rapports, mémoires, coach de soutenance et PDF : teste tout sans payer. Les tarifs à l'usage s'appliqueront ensuite, sans abonnement." />
+      <PageHero kicker="Tarifs" title="Tu paies seulement ce que tu" accent="utilises." subtitle="PDF gratuits, 1 000 coins offerts au lancement, candidatures dès 300 FCFA avec CV adapté. Aucun abonnement." />
 
       <Pricing />
 

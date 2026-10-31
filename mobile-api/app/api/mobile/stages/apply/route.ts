@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { createStageApplication, ensureStageStudent, getStageJob } from '@/lib/stages-db';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
-import { chargeStageApplication, refundStageApplication } from '@/lib/stage-charge';
+import { chargeStageApplication, isCharged, refundStageApplication } from '@/lib/stage-charge';
 import { stageErrorStatus } from '@/lib/stages-errors';
 import { isFeatureEnabled } from '@/lib/app-config';
 
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const studentId = await ensureStageStudent(access.user!);
     const payment = await chargeStageApplication(access.user!.id, job);
     const application = await createStageApplication({ ...input, studentId }).catch(async (error) => {
-      if (payment.charged > 0) await refundStageApplication(access.user!.id, job.id).catch(() => undefined);
+      if (isCharged(payment)) await refundStageApplication(access.user!.id, job.id).catch(() => undefined);
       throw error;
     });
     return withCors(NextResponse.json({ success: true, application, payment }), request);

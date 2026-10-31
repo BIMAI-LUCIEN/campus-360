@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { databasePool } from '@/lib/database';
-import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
+import { corsPreflight, MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { ACCOUNT_DELETION_CONFIRM, deleteAccount } from '@/lib/account-deletion';
 import { getInstanceName, logoutInstance } from '@/lib/evolution-api';
 import { canStoreFiles, deleteStoredFile } from '@/lib/file-storage';
@@ -12,19 +12,7 @@ import { rateLimit } from '@/lib/rate-limit';
 export const runtime = 'nodejs';
 
 export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin');
-  const headers: Record<string, string> = {
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-    'Access-Control-Allow-Headers':
-      'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
-  };
-  if (origin) {
-    headers['Access-Control-Allow-Origin'] = origin;
-    headers['Access-Control-Allow-Credentials'] = 'true';
-  } else {
-    headers['Access-Control-Allow-Origin'] = '*';
-  }
-  return new NextResponse(null, { status: 204, headers });
+  return corsPreflight(request);
 }
 
 // Partial update: every field is optional and an empty string means "keep the current value".

@@ -1,22 +1,35 @@
 import { toNextJsHandler } from 'better-auth/next-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { auth } from '@/lib/auth';
+import { AUTH_CONFIG, auth } from '@/lib/auth';
+import { isTrustedOrigin } from '@/lib/origins';
 
 export const runtime = 'nodejs';
 
 const authHandler = toNextJsHandler(auth);
 
-const withCorsHeaders = (res: Response, req?: Request | null): NextResponse => {
-  const origin = req?.headers.get('origin') || '*';
-  const headers = new Headers(res.headers);
-  headers.set('Access-Control-Allow-Origin', origin);
-  headers.set('Access-Control-Allow-Credentials', 'true');
+// Same origins as Better Auth's own `trustedOrigins`: any other site gets no
+// CORS header, so it can never read a session response with credentials.
+const setCorsHeaders = (headers: Headers, req?: Request | null) => {
+  const origin = req?.headers.get('origin');
+  if (origin && (isTrustedOrigin(origin, process.env) || AUTH_CONFIG.trustedOrigins.includes(origin))) {
+    headers.set('Access-Control-Allow-Origin', origin);
+    headers.set('Access-Control-Allow-Credentials', 'true');
+  } else if (!origin) {
+    // Native mobile clients do not send an Origin header.
+    headers.set('Access-Control-Allow-Origin', '*');
+  }
+  headers.append('Vary', 'Origin');
   headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   headers.set(
     'Access-Control-Allow-Headers',
     'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
   );
+};
+
+const withCorsHeaders = (res: Response, req?: Request | null): NextResponse => {
+  const headers = new Headers(res.headers);
+  setCorsHeaders(headers, req);
 
   return new NextResponse(res.body, {
     status: res.status,
@@ -27,14 +40,7 @@ const withCorsHeaders = (res: Response, req?: Request | null): NextResponse => {
 
 export async function OPTIONS(request: NextRequest) {
   const headers = new Headers();
-  const origin = request.headers.get('origin') || '*';
-  headers.set('Access-Control-Allow-Origin', origin);
-  headers.set('Access-Control-Allow-Credentials', 'true');
-  headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  headers.set(
-    'Access-Control-Allow-Headers',
-    'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
-  );
+  setCorsHeaders(headers, request);
   return new NextResponse(null, { status: 204, headers });
 }
 

@@ -1,15 +1,21 @@
+import { consumeAiAllowance } from '@/lib/ai-allowance';
 import { enforceAiQuota } from '@/lib/ai-quota';
+import { buildZoneUserContent, parsePdfZone, PdfZoneError, visionModelsToTry, ZONE_SYSTEM_RULE, type PdfZone } from '@/lib/pdf-zone';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { databasePool } from '@/lib/database';
-import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
+import { corsPreflight, MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 const bodySchema = z
   .object({
     question: z.string().optional().default('Explique ce cours'),
+    // What the student asked for: counted against the 3 free AI actions of the day.
+    action: z.enum(['summary', 'sheet', 'quiz', 'question']).optional().default('question'),
     pdfContext: z.any().optional(),
+    // Zone circled on a page (Module 30), checked by parsePdfZone.
+    zone: z.unknown().optional(),
     messages: z
       .array(
         z
@@ -35,19 +41,7 @@ const CANDIDATE_MODELS = [
 export const runtime = 'nodejs';
 
 export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin');
-  const headers: Record<string, string> = {
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-    'Access-Control-Allow-Headers':
-      'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
-  };
-  if (origin) {
-    headers['Access-Control-Allow-Origin'] = origin;
-    headers['Access-Control-Allow-Credentials'] = 'true';
-  } else {
-    headers['Access-Control-Allow-Origin'] = '*';
-  }
-  return new NextResponse(null, { status: 204, headers });
+  return corsPreflight(request);
 }
 
 
@@ -61,9 +55,20 @@ export async function POST(request: NextRequest) {
 
     const raw = (await request.json().catch(() => ({}))) as unknown;
     const parsed = bodySchema.safeParse(raw);
-    const { question, pdfContext, messages } = parsed.success
+    const { question, pdfContext, messages, action } = parsed.success
       ? parsed.data
-      : { question: 'Explique ce cours', pdfContext: '', messages: [] };
+      : { question: 'Explique ce cours', pdfContext: '', messages: [], action: 'question' as const };
+    const rawZone = parsed.success ? parsed.data.zone : undefined;
+    let zone: PdfZone | null = null;
+    if (rawZone !== undefined && rawZone !== null) {
+      try {
+        zone = parsePdfZone(rawZone);
+      } catch (error) {
+        if (error instanceof PdfZoneError) throw new MobileApiError(error.message, 400);
+        throw error;
+      }
+    }
+    const allowance = await consumeAiAllowance(userId, action);
 
     const apiKey = process.env.OPENROUTER_API_KEY;
 
@@ -97,6 +102,7 @@ export async function POST(request: NextRequest) {
       '3. PÉDAGOGIE STRUCTURÉE : Formate ta réponse en Markdown soigné (mots clés en gras, étapes numérotées, exemples concrets, analogies pédagogiques).',
       '4. ADAPTATION : Si la question est courte (ex: "OK", "J"), demande-lui avec bienveillance sur quel chapitre, notion ou exercice du cours il souhaite travailler.',
       '5. Réponds toujours en français chaleureux, encourageant et stimulant.',
+      zone ? ZONE_SYSTEM_RULE : '',
       '',
       '=== CONTEXTE ACADÉMIQUE DU COURS ===',
       contextStr || 'Document de cours académique.',
@@ -113,7 +119,10 @@ export async function POST(request: NextRequest) {
     const conversation = [
       { role: 'system', content: systemPrompt },
       ...formattedMessages.filter((m) => m.content.trim().length > 0),
-      { role: 'user', content: question || 'Explique ce cours' },
+      {
+        role: 'user',
+        content: zone ? buildZoneUserContent(question || 'Explique cette partie', zone) : question || 'Explique ce cours',
+      },
     ];
 
     if (!apiKey) {
@@ -124,7 +133,9 @@ export async function POST(request: NextRequest) {
     }
 
     const preferredModel = process.env.OPENROUTER_MODEL || CANDIDATE_MODELS[0];
-    const modelsToTry = Array.from(new Set([preferredModel, ...CANDIDATE_MODELS]));
+    const modelsToTry = zone
+      ? visionModelsToTry(process.env.OPENROUTER_MODEL)
+      : Array.from(new Set([preferredModel, ...CANDIDATE_MODELS]));
 
     let lastError: unknown = null;
     for (const model of modelsToTry) {
@@ -160,6 +171,8 @@ export async function POST(request: NextRequest) {
             NextResponse.json({
               answer: aiAnswer,
               model,
+              freeActionsLeft: allowance.remaining,
+              passActive: allowance.pass,
             }),
             request,
           );
@@ -171,8 +184,11 @@ export async function POST(request: NextRequest) {
     }
 
     console.warn('[ai/pdf-chat] All AI models failed:', lastError);
+    const unavailable = zone
+      ? "L'IA ne peut pas lire cette zone pour le moment. Réessaie dans un instant."
+      : "L'assistant est indisponible pour le moment.";
     return withCors(
-      NextResponse.json({ error: "L'assistant est indisponible pour le moment." }, { status: 503 }),
+      NextResponse.json({ error: unavailable }, { status: 503 }),
       request,
     );
   } catch (error) {

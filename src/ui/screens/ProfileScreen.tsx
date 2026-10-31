@@ -31,6 +31,7 @@ import {
 } from 'lucide-react-native';
 import { TransactionRow } from '../GlassComponents';
 import { CvBackgroundScreen } from '../../features/profile/CvBackgroundScreen';
+import { OffersModal } from '../../features/wallet/OffersModal';
 import { fetchStudentApplications } from '../../features/stages/stagesApi';
 import type { StudentProfile } from '../../features/auth/betterAuth';
 import type { Transaction } from '../../types';
@@ -165,8 +166,17 @@ export function ProfileScreen({
   }, [studentProfile?.id]);
 
   const [backgroundOpen, setBackgroundOpen] = React.useState(false);
+  const [offersOpen, setOffersOpen] = React.useState(false);
 
   const activityRows: MenuRow[] = [
+    {
+      key: 'offers',
+      label: 'Packs de candidatures & Pass Révision',
+      Icon: Sparkles,
+      iconBg: stitchColors.siennaBg,
+      iconColor: stitchColors.primary,
+      onPress: () => setOffersOpen(true),
+    },
     {
       key: 'background',
       label: 'Mon parcours (pour mes CV)',
@@ -376,7 +386,7 @@ export function ProfileScreen({
               onPress={onLibrary}
             >
               <Text style={styles.statNumber}>{purchasedDocumentsCount}</Text>
-              <Text style={styles.statLabel}>PDF Débloqués</Text>
+              <Text style={styles.statLabel}>PDF enregistrés</Text>
             </Pressable>
           </View>
         </View>
@@ -396,7 +406,7 @@ export function ProfileScreen({
               </View>
               <View style={styles.neobankIaPill}>
                 <Sparkles size={11} color={stitchColors.white} strokeWidth={2.4} />
-                <Text style={styles.neobankIaText}>{iaCredits} CRÉDITS IA</Text>
+                <Text style={styles.neobankIaText}>{iaCredits} CRÉDIT{iaCredits > 1 ? 'S' : ''} CANDIDATURE</Text>
               </View>
             </View>
 
@@ -447,6 +457,7 @@ export function ProfileScreen({
       </ScrollView>
 
       <CvBackgroundScreen visible={backgroundOpen} onClose={() => setBackgroundOpen(false)} />
+      <OffersModal visible={offersOpen} onClose={() => setOffersOpen(false)} onPurchased={() => onSync?.()} />
     </>
   );
 }

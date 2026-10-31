@@ -160,7 +160,8 @@ const mapDocumentRow = (row: SupabaseDocumentRow): CampusDocument => ({
   teacher: row.teacher ?? 'Non renseigne',
   level: row.level,
   academicYear: row.academic_year,
-  price: row.price_coins,
+  // Reading every PDF is free (modèle v2): only the AI on a PDF is limited.
+  price: 0,
   pageCount: row.page_count,
   fileSize: row.file_size ?? 'PDF',
   filePath: row.file_path,
@@ -172,7 +173,7 @@ const mapDocumentRow = (row: SupabaseDocumentRow): CampusDocument => ({
   uploaderName: 'Admin Campus 3602',
   status: row.status,
   kind: (row.kind as any) || undefined,
-  alwaysFree: row.always_free === true,
+  alwaysFree: true,
   commissionRate: row.commission_rate,
   createdAt: new Date(row.created_at).toLocaleDateString('fr-FR'),
   aiSummary: row.ai_summary ?? undefined,
@@ -229,13 +230,22 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
   return response.json() as Promise<T>;
 };
 
+// Explicit columns: the duplicate-detection fields (file_sha256, minhash,
+// embedding, contributor_id) must not reach the app.
+const CATALOGUE_COLUMNS = [
+  'id', 'title', 'description', 'university', 'faculty', 'subject', 'teacher', 'level', 'academic_year',
+  'price_coins', 'page_count', 'file_path', 'preview_path', 'file_size', 'kind', 'always_free', 'status',
+  'commission_rate', 'rating', 'sales_count', 'downloads_count', 'ai_summary', 'ai_tags', 'ai_difficulty',
+  'suggested_price_coins', 'quality_score', 'ai_study_plan', 'ai_quiz', 'created_at',
+].join(',');
+
 export const listPublishedPdfDocuments = async (): Promise<CampusDocument[]> => {
   if (!isSupabaseConfigured()) {
     throw new Error('Catalogue indisponible pour le moment.');
   }
   let response: Response;
   try {
-    response = await fetch(`${getBaseUrl()}/rest/v1/documents?select=*&order=created_at.desc`, {
+    response = await fetch(`${getBaseUrl()}/rest/v1/documents?select=${CATALOGUE_COLUMNS}&order=created_at.desc`, {
       headers: getHeaders(),
     });
   } catch {
@@ -409,7 +419,7 @@ export const createPdfDocument = async (
 ): Promise<CampusDocument> => {
   assertConfigured();
 
-  const url = `${getBaseUrl()}/rest/v1/documents?select=*`;
+  const url = `${getBaseUrl()}/rest/v1/documents?select=${CATALOGUE_COLUMNS}`;
   const rows = await handleResponse<SupabaseDocumentRow[]>(
     await fetch(url, {
       method: 'POST',

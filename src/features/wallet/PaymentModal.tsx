@@ -226,7 +226,7 @@ export function PaymentModal({
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Recharge Mobile Money</Text>
               <Text style={styles.subtitle}>
-                {reasonMessage || 'Débloquez vos candidatures IA et vos relances instantanées.'}
+                {reasonMessage || 'Recharge ton solde pour postuler, prendre un pack de candidatures ou un Pass Révision.'}
               </Text>
             </View>
             <Pressable

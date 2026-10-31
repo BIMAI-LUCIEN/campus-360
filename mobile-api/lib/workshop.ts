@@ -1,42 +1,80 @@
 import { z } from 'zod';
 
 import { databasePool } from './database';
-import { isFreeLaunch } from './free-launch';
 import type { LlmMessage } from './llm';
 import { MobileApiError } from './mobile-access';
+import { EXTERNAL_CV_PRICE, REPORT_PRICE, THESIS_CHAPTER_PRICE, THESIS_FLAT_PRICE } from './pricing';
+import { chargeWorkshopOn, refundWorkshopOn, WorkshopFundsError, type WorkshopClient } from './workshop-charge-core';
 
-// AI writing workshop (Ressources > Atelier IA / "Utiliser ce plan"): drafts a
-// report, thesis outline or CV from the student's topic, optionally following
-// the table of contents of a reference report.
+// AI writing workshop (Ressources > Atelier IA / "Utiliser ce plan"): the plan
+// is free; then a report or CV is written in one go and a thesis chapter by
+// chapter (flat price or per chapter), optionally following the table of
+// contents of a reference report.
 
-export const WORKSHOP_PRICES = { REPORT: 2000, THESIS: 5000, CV: 500 } as const;
+export const WORKSHOP_PRICES: Record<'REPORT' | 'THESIS' | 'CV', number> = {
+  REPORT: REPORT_PRICE,
+  THESIS: THESIS_FLAT_PRICE,
+  CV: EXTERNAL_CV_PRICE,
+};
 export type WorkshopType = keyof typeof WORKSHOP_PRICES;
+
+const WORKSHOP_STEP_PRICES = {
+  REPORT: REPORT_PRICE,
+  CV: EXTERNAL_CV_PRICE,
+  THESIS_FLAT: THESIS_FLAT_PRICE,
+  THESIS_CHAPTER: THESIS_CHAPTER_PRICE,
+};
 
 const text = (max: number) => z.string().trim().max(max);
 
-export const workshopRequestSchema = z.object({
-  type: z.enum(['REPORT', 'THESIS', 'CV']),
-  topic: text(300).min(3),
-  field: text(200).optional(),
-  notes: text(3000).optional(),
-  outline: z.array(text(200)).max(30).optional(),
-  // One id per tap: retrying the same generation is never charged twice.
-  generationId: text(200).min(8),
-});
+export const workshopRequestSchema = z
+  .object({
+    type: z.enum(['REPORT', 'THESIS', 'CV']),
+    // 'plan' is free; a thesis is then written chapter by chapter.
+    step: z.enum(['plan', 'full', 'chapter']).default('full'),
+    thesisMode: z.enum(['forfait', 'chapitre']).optional(),
+    chapterIndex: z.number().int().min(1).max(12).optional(),
+    chapterTitle: text(200).optional(),
+    topic: text(300).min(3),
+    field: text(200).optional(),
+    notes: text(3000).optional(),
+    outline: z.array(text(200)).max(30).optional(),
+    // One id per tap: retrying the same generation is never charged twice.
+    generationId: text(200).min(8),
+  })
+  .refine((input) => !(input.type === 'THESIS' && input.step === 'full'), {
+    message: 'Le mémoire se rédige chapitre par chapitre.',
+  })
+  .refine(
+    (input) => input.step !== 'chapter' || (input.type === 'THESIS' && !!input.chapterIndex && !!input.thesisMode),
+    { message: 'Chapitre, numéro et mode de paiement requis.' },
+  );
 export type WorkshopRequest = z.infer<typeof workshopRequestSchema>;
 
-export const workshopPrice = (type: WorkshopType, freeLaunch = isFreeLaunch()) =>
-  freeLaunch ? 0 : WORKSHOP_PRICES[type];
+export const workshopPrice = (type: WorkshopType) => WORKSHOP_PRICES[type];
 
 const KIND_LABEL: Record<WorkshopType, string> = {
   REPORT: 'un rapport de stage académique',
-  THESIS: "un projet de mémoire de fin d'études (problématique, revue de littérature, méthodologie, résultats attendus)",
+  THESIS: "un mémoire de fin d'études (problématique, revue de littérature, méthodologie, résultats attendus)",
   CV: 'un CV professionnel avec une accroche et des compétences clés',
+};
+
+const taskLine = (input: WorkshopRequest): string => {
+  if (input.step === 'plan') {
+    return input.type === 'THESIS'
+      ? "Pour un mémoire de fin d'études, propose la problématique puis le plan détaillé (chapitres numérotés, 4 à 7). Ne rédige pas les chapitres."
+      : `Pour ${KIND_LABEL[input.type]}, propose uniquement le plan détaillé (parties numérotées). Ne rédige pas le contenu.`;
+  }
+  if (input.step === 'chapter') {
+    const title = input.chapterTitle ? ` « ${input.chapterTitle} »` : '';
+    return `Rédige uniquement le chapitre ${input.chapterIndex}${title} d'un mémoire de fin d'études.`;
+  }
+  return `Rédige ${KIND_LABEL[input.type]}.`;
 };
 
 export const buildWorkshopMessages = (input: WorkshopRequest): LlmMessage[] => {
   const outline = input.outline?.length
-    ? `\nSuis exactement ce plan, tiré d'un rapport de référence (adapte le contenu au sujet) :\n${input.outline
+    ? `\nSuis exactement ce plan${input.step === 'chapter' ? ' (pour situer le chapitre)' : ", tiré d'un rapport de référence (adapte le contenu au sujet)"} :\n${input.outline
         .map((s, i) => `${i + 1}. ${s}`)
         .join('\n')}`
     : '';
@@ -52,7 +90,7 @@ export const buildWorkshopMessages = (input: WorkshopRequest): LlmMessage[] => {
     {
       role: 'user',
       content:
-        `Rédige ${KIND_LABEL[input.type]}.\nSujet : ${input.topic}\n` +
+        `${taskLine(input)}\nSujet : ${input.topic}\n` +
         (input.field ? `Filière / établissement : ${input.field}\n` : '') +
         (input.notes ? `Consignes de l'étudiant : ${input.notes}\n` : '') +
         outline,
@@ -60,78 +98,31 @@ export const buildWorkshopMessages = (input: WorkshopRequest): LlmMessage[] => {
   ];
 };
 
-const reference = (generationId: string) => `workshop:${generationId}`;
-
-/** Debits the workshop price once per generationId. 409 when the balance is too low. */
-export const chargeWorkshop = async (userId: string, type: WorkshopType, generationId: string) => {
-  const price = workshopPrice(type);
-  if (price === 0) return { charged: 0 };
+const inTransaction = async <T>(work: (client: WorkshopClient) => Promise<T>): Promise<T> => {
   const client = await databasePool.connect();
   try {
     await client.query('begin');
-    const wallet = await client.query<{ balance_coins: number }>(
-      'select balance_coins from public.app_wallets where user_id = $1 for update',
-      [userId],
-    );
-    const already = await client.query(
-      `select 1 from public.app_wallet_transactions
-        where user_id = $1 and reference_id = $2 and type = 'purchase' and status = 'success' limit 1`,
-      [userId, reference(generationId)],
-    );
-    if (already.rows[0]) {
-      await client.query('commit');
-      return { charged: 0 };
-    }
-    const balance = Number(wallet.rows[0]?.balance_coins ?? 0);
-    if (!wallet.rows[0] || balance < price) {
-      throw new MobileApiError(
-        `Solde insuffisant : ce document coûte ${price} FCFA, ton solde est de ${balance} FCFA.`,
-        409,
-      );
-    }
-    await client.query(
-      'update public.app_wallets set balance_coins = balance_coins - $1, updated_at = now() where user_id = $2',
-      [price, userId],
-    );
-    await client.query(
-      `insert into public.app_wallet_transactions (user_id, type, amount_coins, reference_id, status)
-       values ($1, 'purchase', $2, $3, 'success')`,
-      [userId, -price, reference(generationId)],
-    );
+    const result = await work(client);
     await client.query('commit');
-    return { charged: price };
+    return result;
   } catch (error) {
     await client.query('rollback');
     throw error;
   } finally {
     client.release();
+  }
+};
+
+/** Debits a workshop step once (the plan is free). 409 when the balance is too low. */
+export const chargeWorkshop = async (userId: string, input: WorkshopRequest) => {
+  try {
+    return await inTransaction((client) => chargeWorkshopOn(client, userId, input, WORKSHOP_STEP_PRICES));
+  } catch (error) {
+    if (error instanceof WorkshopFundsError) throw new MobileApiError(error.message, 409);
+    throw error;
   }
 };
 
 /** Gives the coins back when the AI could not write the document. */
-export const refundWorkshop = async (userId: string, generationId: string) => {
-  const client = await databasePool.connect();
-  try {
-    await client.query('begin');
-    const removed = await client.query<{ amount_coins: number }>(
-      `update public.app_wallet_transactions
-          set status = 'failed', failure_message = 'Rédaction IA échouée : coins rendus.'
-        where user_id = $1 and reference_id = $2 and type = 'purchase' and status = 'success'
-        returning amount_coins`,
-      [userId, reference(generationId)],
-    );
-    const amount = Math.abs(Number(removed.rows[0]?.amount_coins ?? 0));
-    if (amount > 0) {
-      await client.query(
-        'update public.app_wallets set balance_coins = balance_coins + $1, updated_at = now() where user_id = $2',
-        [amount, userId],
-      );
-    }
-    await client.query('commit');
-  } catch (error) {
-    await client.query('rollback');
-    throw error;
-  } finally {
-    client.release();
-  }
-};
+export const refundWorkshop = async (userId: string, input: WorkshopRequest, reference: string) =>
+  inTransaction((client) => refundWorkshopOn(client, userId, input, reference));

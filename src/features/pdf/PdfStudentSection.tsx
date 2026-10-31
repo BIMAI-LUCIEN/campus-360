@@ -631,7 +631,7 @@ export function PdfStudentSection({
     });
 
     try {
-      const answer = await askPdfAssistant({ document, question: cleanQuestion, messages: nextMessages });
+      const { answer } = await askPdfAssistant({ document, question: cleanQuestion, messages: nextMessages });
       const assistantMsg: PdfAssistantMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -668,7 +668,7 @@ export function PdfStudentSection({
           <View style={styles.rule} />
           <Text style={styles.editorialTitle}>Mes Achats</Text>
           <Text style={styles.editorialSubtitle}>
-            Retrouve ici tous les PDF et Packs que tu as débloqués.
+            Retrouve ici les PDF que tu as enregistrés. Tous les PDF se lisent gratuitement.
           </Text>
         </View>
       )}
@@ -800,10 +800,10 @@ export function PdfStudentSection({
             <Text style={styles.stateBadgeMono}>0</Text>
           </View>
           <Text style={styles.stateTitle}>
-            {viewMode === 'library' ? 'aucun PDF débloqué' : 'aucun PDF trouvé'}
+            {viewMode === 'library' ? 'aucun PDF enregistré' : 'aucun PDF trouvé'}
           </Text>
           <Text style={styles.bodyMuted}>
-            {viewMode === 'library' ? "Tu n'as pas encore débloqué de PDF." : "Essaie une autre recherche."}
+            {viewMode === 'library' ? "Tu n'as pas encore enregistré de PDF." : "Essaie une autre recherche."}
           </Text>
         </View>
       ) : null}
@@ -825,7 +825,7 @@ export function PdfStudentSection({
           <View style={styles.flex}>
             <Text style={styles.eyebrow}>Bibliothèque</Text>
             <View style={styles.rule} />
-            <Text style={styles.editorialTitle}>Tes contenus débloqués</Text>
+            <Text style={styles.editorialTitle}>Tes PDF enregistrés</Text>
             <Text style={styles.bodyMuted}>
               {purchasedCount} PDF, {purchasedPackIds.length} packs et {ownedPageCount} pages disponibles.
             </Text>
@@ -1252,7 +1252,7 @@ export function PdfStudentSection({
                     <View style={styles.previewUnlockBanner}>
                       <Lock size={20} color={$.sienna} style={{ marginBottom: 6 }} />
                       <Text style={styles.previewUnlockText}>
-                        Ce document contient {readerDocument.pageCount} pages. Débloque-le pour y accéder et utiliser les outils IA.
+                        Ce document contient {readerDocument.pageCount} pages. Ouvre-le gratuitement : l'IA te donne 3 actions par jour.
                       </Text>
                       <Pressable
                         style={styles.previewUnlockButton}

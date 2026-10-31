@@ -6,7 +6,7 @@ import { getCvBackground } from '@/lib/cv-background-db';
 import { buildCvFillMessages, cvFillRequestSchema, parseCvFill } from '@/lib/cv-fill';
 import { callLlm, isLlmConfigured } from '@/lib/llm';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
-import { chargeStageApplication, refundStageApplication } from '@/lib/stage-charge';
+import { chargeStageApplication, isCharged, refundStageApplication } from '@/lib/stage-charge';
 import { getStageJob } from '@/lib/stages-db';
 
 export const runtime = 'nodejs';
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const userId = access.user.id;
     const payment = await chargeStageApplication(userId, job);
     const refund = () =>
-      payment.charged > 0 ? refundStageApplication(userId, job.id).catch(() => undefined) : undefined;
+      isCharged(payment) ? refundStageApplication(userId, job.id).catch(() => undefined) : undefined;
 
     // The background saved on the account ("Mon parcours") counts as the student's
     // own words, like the notes: the model may use it, the grounding check accepts it.
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
     if (!cv) {
       await refund();
-      throw new MobileApiError("L'IA n'a pas pu remplir le CV. Tes coins t'ont été rendus, réessaie.", 502);
+      throw new MobileApiError("L'IA n'a pas pu remplir le CV. Tes coins ou crédits t'ont été rendus, réessaie.", 502);
     }
 
     return withCors(NextResponse.json({ cv, payment }), request);

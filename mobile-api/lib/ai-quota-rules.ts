@@ -24,6 +24,8 @@ export const AI_ROUTE_LIMITS = {
   workshop: { max: 10, windowMs: 600_000 },
   'cv-import': { max: 5, windowMs: 600_000 },
   'external-offer': { max: 10, windowMs: 600_000 },
+  // Student PDF contributions (D27.1): 30 per hour, still capped at 30 PDF a day.
+  'pdf-intake': { max: 30, windowMs: 3_600_000 },
 } as const;
 
 export type AiRoute = keyof typeof AI_ROUTE_LIMITS;

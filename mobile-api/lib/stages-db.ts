@@ -1,6 +1,5 @@
 import { databasePool } from './database';
-import { isFreeLaunch } from './free-launch';
-import { isPaidOffer, stageApplyPrice } from './stage-pricing';
+import { isPaidOffer, stageApplyCredits, stageApplyPrice } from './stage-pricing';
 
 export type StageStatus =
   | 'PENDING'
@@ -114,7 +113,8 @@ const mapJob = (row: StageJobRow) => ({
   duration: row.duration ?? undefined,
   stipend: row.stipend ?? undefined,
   isPaid: isPaidOffer(row),
-  applyPriceCoins: stageApplyPrice(row, isFreeLaunch()),
+  applyPriceCoins: stageApplyPrice(row),
+  applyCredits: stageApplyCredits(row),
   flyerUrl: row.flyer_url ?? undefined,
   videoUrl: row.video_url ?? undefined,
   createdAt: new Date(row.created_at).toISOString(),

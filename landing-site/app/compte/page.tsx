@@ -84,7 +84,7 @@ export default async function ComptePage() {
               <Sparkles className="w-8 h-8 mb-3" />
               <h3 className="font-bold font-display mb-1">Recharger mon wallet</h3>
               <p className="text-sm text-white/80">
-                Recharge ton solde de coins selon tes besoins pour acheter tes PDF ou exporter tes rapports.
+                Recharge ton solde de coins selon tes besoins pour postuler, prendre un pack ou un Pass Révision.
               </p>
             </Link>
           </div>

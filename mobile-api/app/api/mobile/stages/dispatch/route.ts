@@ -16,7 +16,7 @@ import {
 import { stageErrorStatus } from '@/lib/stages-errors';
 import { missingDispatchTarget } from '@/lib/dispatch-target';
 import { MobileApiError } from '@/lib/mobile-error';
-import { chargeStageApplication, refundStageApplication } from '@/lib/stage-charge';
+import { chargeStageApplication, isCharged, refundStageApplication } from '@/lib/stage-charge';
 import {
   dispatchStageApplicationRecord,
   ensureStageStudent,
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     // Pay-per-action: debited once per offer, given back below if delivery fails.
     const payment = await chargeStageApplication(user.id, job);
-    if (payment.charged > 0) refundIfFailed = () => refundStageApplication(user.id, input.jobId);
+    if (isCharged(payment)) refundIfFailed = () => refundStageApplication(user.id, input.jobId);
 
     // Persist CV PDF to Supabase Storage if base64 provided
     let cvPdfUrl = input.cvPdfUrl;

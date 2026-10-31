@@ -28,7 +28,7 @@ const categories = [
       },
       {
         q: "L'app est gratuite ?",
-        a: "Oui. Pendant le lancement, toutes les fonctions sont gratuites : candidatures, CV, lettres, rapports, mémoires, coach et PDF. Ensuite, le paiement se fera à l'usage avec ton wallet.",
+        a: "L'inscription et la lecture des PDF sont gratuites, avec 3 actions IA gratuites par jour. Pendant le lancement, 1 000 coins te sont offerts à l'inscription. Le reste se paie à l'usage avec ton wallet, sans abonnement.",
       },
       {
         q: "Y a-t-il une version iPhone ?",
@@ -68,7 +68,7 @@ const categories = [
       },
       {
         q: "Combien coûte chaque action ?",
-        a: "Rien pendant le lancement : tout est gratuit. Ensuite : candidature 500 FCFA, rapport de stage IA 2 000 FCFA, mémoire IA 5 000 FCFA, document PDF 250 FCFA.",
+        a: "Candidature : 300 FCFA (500 FCFA pour une offre rémunérée), CV adapté compris. Packs : 5 candidatures pour 1 000 FCFA, 12 pour 2 000 FCFA. Rapport de stage : 2 000 FCFA après un plan gratuit. Mémoire : 4 000 FCFA ou 1 000 FCFA par chapitre. PDF : gratuits. Pass Révision : 200 FCFA les 24 h, 1 000 FCFA les 7 jours.",
       },
     ],
   },

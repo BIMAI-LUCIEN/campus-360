@@ -25,8 +25,11 @@ test('hors production, l’absence de variable garde le gratuit', () => {
   assert.equal(m.resolveFreeLaunch({ NODE_ENV: 'development' }).active, true);
 });
 
-test('solde de départ : 5 000 coins par défaut, borné', () => {
-  assert.equal(m.resolveStartingCoins({}), 5000);
+test('solde de départ : 1 000 pendant le lancement, 300 ensuite, borné', () => {
+  const launch = { NODE_ENV: 'production', FREE_LAUNCH_MODE: 'true', FREE_LAUNCH_UNTIL: '2027-01-01' };
+  assert.equal(m.resolveStartingCoins(launch, new Date('2026-11-01T00:00:00Z')), 1000);
+  assert.equal(m.resolveStartingCoins(launch, new Date('2027-02-01T00:00:00Z')), 300);
+  assert.equal(m.resolveStartingCoins({ NODE_ENV: 'production', FREE_LAUNCH_MODE: 'false' }), 300);
   assert.equal(m.resolveStartingCoins({ STARTING_COINS: '2500' }), 2500);
   assert.throws(() => m.resolveStartingCoins({ STARTING_COINS: '-1' }));
   assert.throws(() => m.resolveStartingCoins({ STARTING_COINS: 'abc' }));
@@ -46,4 +49,10 @@ test('la copie de recruiter-web est identique', () => {
   const a = fs.readFileSync(path.resolve('lib/free-launch.ts'), 'utf8');
   const b = fs.readFileSync(path.resolve('../recruiter-web/lib/free-launch.ts'), 'utf8');
   assert.equal(b, a, 'modifier les deux fichiers ensemble');
+});
+
+test('bonus aligné sur la grille de pricing.ts', async () => {
+  const p = await loadTs('lib/pricing.ts');
+  assert.equal(m.LAUNCH_STARTING_COINS, p.LAUNCH_SIGNUP_BONUS);
+  assert.equal(m.STARTING_COINS, p.SIGNUP_BONUS);
 });

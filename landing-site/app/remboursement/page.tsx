@@ -24,9 +24,9 @@ export default function RemboursementPage() {
         <p>La demande doit être formulée avec la référence de transaction Notch Pay et le numéro de téléphone émetteur.</p>
       </LegalSection>
 
-      <LegalSection title="3. Achats de documents du catalogue">
-        <p>Un document acheté présentant une erreur majeure (fichier corrompu, document incomplet ou ne correspondant pas au descriptif officiel) fait l&apos;objet d&apos;un recrédit immédiat de ton wallet en coins après signalement au support.</p>
-        <p>Rappel : les cours et anciens sujets sont gratuits par nature et ne font l&apos;objet d&apos;aucune transaction payante.</p>
+      <LegalSection title="3. Candidatures, rédaction, packs et Pass">
+        <p>Une candidature qui n&apos;a pas pu être envoyée rend automatiquement ses coins ou ses crédits. Une rédaction IA échouée (rapport, chapitre de mémoire, CV) est recréditée immédiatement. Les packs et les Pass Révision, achetés une seule fois, ne sont pas remboursables une fois activés ; un défaut technique signalé au support donne lieu à un recrédit en coins.</p>
+        <p>Rappel : la lecture des PDF est gratuite et ne fait l&apos;objet d&apos;aucune transaction payante. Une candidature non envoyée ou une rédaction IA échouée est recréditée automatiquement.</p>
       </LegalSection>
 
       <LegalSection title="4. Procédure de réclamation">

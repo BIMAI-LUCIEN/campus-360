@@ -6,7 +6,8 @@ import { timingSafeEqual } from 'node:crypto';
 
 export type AdminServiceCheck = { ok: true; betterAuthUserId: string } | { ok: false; status: 401 };
 
-const sameSecret = (provided: string, expected: string) => {
+// Constant-time comparison of a shared secret (also used by the n8n ingest route).
+export const sameSecret = (provided: string, expected: string) => {
   const a = Buffer.from(provided, 'utf8');
   const b = Buffer.from(expected, 'utf8');
   return a.length === b.length && timingSafeEqual(a, b);

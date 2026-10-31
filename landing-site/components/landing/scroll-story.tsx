@@ -34,8 +34,8 @@ const steps = [
   },
   {
     n: "05",
-    title: "Gratuit pendant le lancement",
-    desc: "Pendant la V1, tout est gratuit. Ensuite, paiement à l'usage par MTN MoMo ou Orange Money.",
+    title: "1 000 coins offerts au lancement",
+    desc: "PDF gratuits, candidatures dès 300 FCFA avec CV adapté, paiement à l'usage par MTN MoMo ou Orange Money.",
     shot: "/images/screens/wallet.png",
     alt: "Recharge du wallet par Mobile Money",
   },

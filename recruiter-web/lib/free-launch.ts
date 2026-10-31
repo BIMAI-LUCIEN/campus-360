@@ -1,8 +1,9 @@
-// V1 launch: paid actions are free for a limited time so students can try the app.
+// V1 launch: prices apply from day one; the launch period only raises the signup
+// bonus (contexte.md §19).
 // Everything is driven by environment variables and must be explicit in production:
 //   FREE_LAUNCH_MODE   'true' | 'false'  (required in production)
 //   FREE_LAUNCH_UNTIL  ISO date           (required in production when the mode is 'true')
-//   STARTING_COINS     coins given once at account creation (default 5000, 1 coin = 1 FCFA)
+//   STARTING_COINS     overrides the signup bonus (default 1000 during the launch, 300 after; 1 coin = 1 FCFA)
 //   AI_COST_*          AI credits per action once the free launch is over
 // Errors are thrown on first use, never at import time (next build has no env).
 // This file exists twice, identical: mobile-api/lib/free-launch.ts and
@@ -52,8 +53,17 @@ const boundedInt = (raw: string | undefined, fallback: number, max: number, mess
   return value;
 };
 
-export const resolveStartingCoins = (env: Env): number =>
-  boundedInt(env.STARTING_COINS, 5000, 100000, 'STARTING_COINS doit être un entier entre 0 et 100000.');
+// Same values as LAUNCH_SIGNUP_BONUS / SIGNUP_BONUS in mobile-api/lib/pricing.ts (test).
+export const LAUNCH_STARTING_COINS = 1000;
+export const STARTING_COINS = 300;
+
+export const resolveStartingCoins = (env: Env, now: Date = new Date()): number =>
+  boundedInt(
+    env.STARTING_COINS,
+    resolveFreeLaunch(env, now).active ? LAUNCH_STARTING_COINS : STARTING_COINS,
+    100000,
+    'STARTING_COINS doit être un entier entre 0 et 100000.',
+  );
 
 export type AiCostKind = 'passage' | 'careerDoc' | 'fullDoc';
 

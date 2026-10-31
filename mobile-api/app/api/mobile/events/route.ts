@@ -2,24 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { databasePool } from '@/lib/database';
-import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
+import { corsPreflight, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 
 export const runtime = 'nodejs';
 
 export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin');
-  const headers: Record<string, string> = {
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-    'Access-Control-Allow-Headers':
-      'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
-  };
-  if (origin) {
-    headers['Access-Control-Allow-Origin'] = origin;
-    headers['Access-Control-Allow-Credentials'] = 'true';
-  } else {
-    headers['Access-Control-Allow-Origin'] = '*';
-  }
-  return new NextResponse(null, { status: 204, headers });
+  return corsPreflight(request);
 }
 
 const eventSchema = z.object({

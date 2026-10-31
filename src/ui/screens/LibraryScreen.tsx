@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { BookOpen } from 'lucide-react-native';
-import { DocumentGridCard, ScreenMasthead, EmptyState } from '../GlassComponents';
+import { BookOpen, Upload } from 'lucide-react-native';
+import { DocumentGridCard, ScreenMasthead, EmptyState, SecondaryButton, SiennaButton } from '../GlassComponents';
 import type { CampusDocument } from '../../types';
 import { stitchColors, stitchSpacing } from '../../theme/stitch';
 
@@ -10,6 +10,9 @@ interface LibraryScreenProps {
   onOpenDocument: (doc: CampusDocument) => void;
   onExplore?: () => void;
   hideHeader?: boolean;
+  // Module 27: share PDF (+10 coins each) and follow their review.
+  onSharePdfs?: () => void;
+  onOpenContributions?: () => void;
 }
 
 export function LibraryScreen({
@@ -17,6 +20,8 @@ export function LibraryScreen({
   onOpenDocument,
   onExplore,
   hideHeader = false,
+  onSharePdfs,
+  onOpenContributions,
 }: LibraryScreenProps) {
   const count = ownedDocuments.length;
 
@@ -34,6 +39,23 @@ export function LibraryScreen({
                 : `${count} document${count !== 1 ? 's' : ''} acqui${count !== 1 ? 's' : ''}, prêt${count !== 1 ? 's' : ''} à relire.`
             }
           />
+        </View>
+      )}
+
+      {/* Outside the header: also shown in the Resources tab (hideHeader). */}
+      {(onSharePdfs || onOpenContributions) && (
+        <View style={styles.actions}>
+          {onSharePdfs && (
+            <SiennaButton
+              label="Partager des PDF"
+              icon={<Upload size={16} color={stitchColors.paper} />}
+              onPress={onSharePdfs}
+              style={styles.actionButton}
+            />
+          )}
+          {onOpenContributions && (
+            <SecondaryButton label="Mes contributions" onPress={onOpenContributions} style={styles.actionButton} />
+          )}
         </View>
       )}
 
@@ -71,6 +93,16 @@ const styles = StyleSheet.create({
   headerPad: {
     paddingHorizontal: stitchSpacing.containerMargin,
     paddingTop: stitchSpacing.stackMd,
+  },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: stitchSpacing.containerMargin,
+    paddingTop: stitchSpacing.stackSm,
+  },
+  actionButton: {
+    flexGrow: 1,
   },
   gridContent: {
     flexDirection: 'row',

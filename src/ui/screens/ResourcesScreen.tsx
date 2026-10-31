@@ -31,6 +31,8 @@ interface ResourcesScreenProps {
   onRefreshDocuments?: () => void;
   onOpenAssistant?: () => void;
   onOpenWallet?: () => void;
+  onSharePdfs?: () => void;
+  onOpenContributions?: () => void;
 }
 
 export function ResourcesScreen({
@@ -49,6 +51,8 @@ export function ResourcesScreen({
   onRefreshDocuments = () => {},
   onOpenAssistant,
   onOpenWallet,
+  onSharePdfs,
+  onOpenContributions,
 }: ResourcesScreenProps) {
   const [activeSubTab, setActiveSubTab] = useState<'catalogue' | 'library' | 'reports'>('catalogue');
   const [writingModalVisible, setWritingModalVisible] = useState(false);
@@ -176,6 +180,8 @@ export function ResourcesScreen({
             ownedDocuments={ownedDocuments}
             onOpenDocument={onOpenPdf}
             onExplore={() => setActiveSubTab('catalogue')}
+            onSharePdfs={onSharePdfs}
+            onOpenContributions={onOpenContributions}
             hideHeader={true}
           />
         ) : (

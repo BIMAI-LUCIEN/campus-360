@@ -20,6 +20,8 @@ import {
   Plus,
 } from 'lucide-react';
 import type { PdfDocument, PdfPack } from '@/lib/course-db';
+import { BatchImport } from './BatchImport';
+import { ContributionsReview } from './ContributionsReview';
 
 type Props = {
   initialDocuments: PdfDocument[];
@@ -223,6 +225,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
   const [currentPage, setCurrentPage] = useState(1);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [tab, setTab] = useState<'catalogue' | 'import' | 'contributions'>('catalogue');
   // Batch upload: analyze each PDF and publish it straight away when the AI
   // score clears the quality bar (else it lands in "à corriger" for review).
   const [autoPublish, setAutoPublish] = useState(true);
@@ -648,7 +651,7 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
           </button>
           <button
             type="button"
-            onClick={() => setUploadOpen(true)}
+            onClick={() => setTab('import')}
             className="flex items-center gap-2 px-6 py-2 bg-stitch-primary text-stitch-on-primary font-label-md rounded-lg hover:opacity-90 transition-all shadow-sm"
           >
             <Plus size={18} />
@@ -657,6 +660,35 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
         </div>
       </div>
 
+      {/* ── Tabs ─────────────────────────────────────────────────── */}
+      <div role="tablist" className="mb-6 flex flex-wrap gap-2 border-b border-stitch-outline-variant">
+        {([
+          ['catalogue', 'Catalogue'],
+          ['import', 'Import en lot'],
+          ['contributions', 'Contributions étudiantes'],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={tab === value}
+            onClick={() => setTab(value)}
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold transition-colors ${
+              tab === value
+                ? 'border-stitch-primary text-stitch-primary'
+                : 'border-transparent text-stitch-on-surface-variant hover:text-stitch-on-surface'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'import' && <BatchImport onPublished={refresh} />}
+      {tab === 'contributions' && <ContributionsReview onPublished={refresh} />}
+
+      {tab === 'catalogue' && (
+      <>
       {/* ── Filter Bar ──────────────────────────────────────────── */}
       <div className="mb-6 bg-white rounded-xl border border-stitch-outline-variant shadow-sm p-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -857,6 +889,9 @@ export function PdfDashboardClient({ initialDocuments }: Props) {
           value={`${formatCoins(metrics.totalRevenue)} C`}
         />
       </div>
+
+      </>
+      )}
 
       {/* ── Upload Modal ────────────────────────────────────────── */}
       {uploadOpen && (

@@ -274,6 +274,10 @@ export const requireMobileUser = async (
 };
 
 
+// Answer to a CORS preflight: the same trusted-origin rule as withCors.
+export const corsPreflight = (request: NextRequest | Request): NextResponse =>
+  withCors(new NextResponse(null, { status: 204 }), request);
+
 export const withCors = (
   response: NextResponse,
   request?: NextRequest | Request | null,

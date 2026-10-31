@@ -10,11 +10,11 @@ export const revalidate = 0;
 export const metadata: Metadata = {
   title: "Inscription gratuite — Stage IA & CV officiel RH",
   description:
-    "Inscris-toi gratuitement à Campus 360 : matching de stage par IA, CV officiel RH, coach de soutenance : tout est gratuit pendant le lancement.",
+    "Inscris-toi gratuitement à Campus 360 : matching de stage par IA, CV officiel RH, coach de soutenance : 1 000 coins offerts pendant le lancement.",
   alternates: { canonical: "/inscription" },
   openGraph: {
     title: "Inscription gratuite Campus 360",
-    description: "Toutes les fonctions sont gratuites pendant le lancement.",
+    description: "1 000 coins offerts à l'inscription pendant le lancement.",
     url: "/inscription",
   },
 };
@@ -32,7 +32,7 @@ export default function InscriptionPage() {
                     Crée ton compte gratuit
                   </h1>
                   <p className="text-sm text-[var(--color-ink-light)]">
-                    2 minutes. Tout est gratuit pendant le lancement. Aucun engagement.
+                    2 minutes. 1 000 coins offerts pendant le lancement. Aucun engagement.
                   </p>
                 </div>
                 <InscriptionForm />
@@ -49,7 +49,7 @@ export default function InscriptionPage() {
                 </h2>
                 <ul className="space-y-3 text-sm">
                   {[
-                    "Toutes les fonctions gratuites pendant le lancement",
+                    "1 000 coins offerts pendant le lancement",
                     "CV officiel RH et lettre de motivation générés par l'IA",
                     "Matching de stage avec score de correspondance",
                     "Suivi de tes candidatures et relance à J+7",

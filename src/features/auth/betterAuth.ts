@@ -56,7 +56,7 @@ export type StudentAccount = {
   transactions: Array<{
     id: string;
     amount_coins: number;
-    type: 'topup' | 'purchase' | 'withdrawal' | 'commission' | 'report';
+    type: 'topup' | 'purchase' | 'withdrawal' | 'commission' | 'report' | 'contribution_reward';
     status: 'success' | 'pending' | 'failed';
     reference_id?: string | null;
     reference_title?: string | null;

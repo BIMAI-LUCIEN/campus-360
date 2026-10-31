@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getDocumentFile } from '@/lib/document-files-db';
-import { requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
+import { corsPreflight, requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
 import {
   getDocumentById,
   getDocumentSections,
@@ -15,19 +15,7 @@ import {
 export const runtime = 'nodejs';
 
 export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin');
-  const headers: Record<string, string> = {
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-    'Access-Control-Allow-Headers':
-      'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
-  };
-  if (origin) {
-    headers['Access-Control-Allow-Origin'] = origin;
-    headers['Access-Control-Allow-Credentials'] = 'true';
-  } else {
-    headers['Access-Control-Allow-Origin'] = '*';
-  }
-  return new NextResponse(null, { status: 204, headers });
+  return corsPreflight(request);
 }
 
 type RouteContext = { params: Promise<{ id: string }> };

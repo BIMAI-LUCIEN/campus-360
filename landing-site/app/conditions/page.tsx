@@ -23,9 +23,9 @@ export default function ConditionsPage() {
       <LegalSection title="2. Modèle économique, coins et gratuité">
         <p><strong>Aucun abonnement récurrent :</strong> Campus 360 ne propose aucun abonnement payant récurrent et ne prélève aucun montant automatique.</p>
         <p><strong>Portefeuille de coins :</strong> le service fonctionne avec un wallet en coins (1 coin = 1 FCFA), rechargeable par Mobile Money (Orange Money, MTN Mobile Money).</p>
-        <p><strong>Bonus de bienvenue :</strong> 3 000 coins sont offerts une seule fois à tout nouvel étudiant lors de son inscription.</p>
-        <p><strong>Gratuité permanente des cours :</strong> les cours et anciens sujets d&apos;examen du catalogue sont gratuits par nature et le restent en permanence.</p>
-        <p><strong>Période de lancement gratuit :</strong> pendant toute la phase de lancement officiel, l&apos;ensemble des fonctionnalités de rédaction et d&apos;assistance IA sont accessibles gratuitement dans la limite des quotas journaliers équitables.</p>
+        <p><strong>Bonus de bienvenue :</strong> 1 000 coins sont offerts une seule fois à tout nouvel étudiant inscrit pendant la période de lancement, 300 coins ensuite.</p>
+        <p><strong>Lecture gratuite :</strong> tous les documents PDF du catalogue se lisent gratuitement. L&apos;assistance IA sur un PDF est gratuite dans la limite de 3 actions par jour ; au-delà, un Pass Révision (24 heures ou 7 jours) est proposé.</p>
+        <p><strong>Packs et Pass :</strong> les packs de candidatures (crédits valables 30 jours) et les Pass Révision sont payés une seule fois depuis le wallet, sans renouvellement automatique. Les crédits non utilisés à l&apos;échéance sont perdus. Une candidature qui n&apos;a pas pu être envoyée est recréditée.</p>
       </LegalSection>
 
       <LegalSection title="3. Utilisation acceptable">

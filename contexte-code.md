@@ -1768,3 +1768,9 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
   - Tâche 23.20 (Export PDF opérationnel VPS) : lib/health-secret.ts (timing-safe), app/api/health/pdf/route.ts (x-health-secret, timeout 10s, 503 sans fuite technique), deploy-vps.sh (installation Chromium Puppeteer & vérification health check), tests health-pdf.test.mjs 2/2 pass, npm test 185/0 pass, tsc code 0.
   - Tâche 23.21 (Sauvegardes, surveillance et rollback) : scripts/backup-db.sh, backup-uploads.sh, purge-orphan-uploads.cjs (--max-delete, --force), deploy-vps.sh (PREV_SHA, health checks 5x5s, rollback automatique sans défaire les migrations), docs/deploy/OPERATIONS.md, bash -n code 0.
 
+- **2026-10-29** — **Intégration d'épreuves authentiques d'enseignement supérieur (Concours & SN)** :
+  - Collecte et scraping de 18 épreuves réelles scannées de l'enseignement supérieur camerounais (ENSP Yaoundé, FMSB Médecine, ENS Yaoundé, ENAM, IUT Douala, ENSET Bambili, UY1 Informatique & Mathématiques, UY2 Droit, Économie & Gestion). Zéro épreuve synthétique ou secondaire (zéro BAC/Probatoire).
+  - Téléversement direct sur Cloudinary (`campus-360/annales/`) et miroir statique haute vitesse Nginx VPS (`/var/www/campus360-downloads/annales/`).
+  - Base de données PostgreSQL (`public.documents`) synchronisée avec les vrais nombres de pages (1 à 20 pages), les vraies tailles de fichiers (209 KB à 3.8 MB) et les URLs Cloudinary.
+  - Sécurité et affichage mobile : `public/pdf-viewer.html` optimisé avec `renderCloudinaryImages` pour le rendu pleine résolution page par page (`/pg_1/` à `/pg_N/`) évitant le blocage 401 de livraison directe PDF ; `SimplePdfReaderModal.tsx` sécurisé pour rediriger vers le visualiseur web enrichi.
+  - Typecheck validé à 100% sans erreur : mobile app (`tsc --noEmit`), `mobile-api` (`tsc --noEmit`), `recruiter-web` (`tsc --noEmit`).

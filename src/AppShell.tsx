@@ -100,6 +100,8 @@ import { HomeScreen } from './ui/screens/HomeScreen';
 import { ExploreScreen } from './ui/screens/ExploreScreen';
 import { LibraryScreen } from './ui/screens/LibraryScreen';
 import { SimplePdfReaderModal } from './features/pdf/SimplePdfReaderModal';
+import { SharePdfsModal } from './features/pdf/SharePdfsModal';
+import { MyContributionsScreen } from './features/pdf/MyContributionsScreen';
 import { ProfileScreen } from './ui/screens/ProfileScreen';
 import { AuthScreen } from './ui/screens/AuthScreen';
 import { DocumentsScreen } from './features/documents/DocumentsScreen';
@@ -109,6 +111,7 @@ import { ResourcesScreen } from './ui/screens/ResourcesScreen';
 import { setFreeLaunch } from './config/launch';
 import { OPERATOR_LABELS, operatorMismatchMessage, parseCameroonMobile } from './features/wallet/cameroonPhone';
 import { ORANGE_MONEY_APPROVAL_USSD } from './features/wallet/PaymentModal';
+import { fetchOffers } from './features/wallet/offersApi';
 import { AppAlert, AppAlertHost } from './ui/AppAlert';
 
 const logo = require('../assets/icon.png');
@@ -180,7 +183,7 @@ type AppSection = 'stages' | 'applications' | 'resources' | 'account' | 'home' |
 
 const onboardingSlides = [
   { title: 'Trouve le bon PDF', text: 'Recherche par université, filière, matière ou niveau.' },
-  { title: 'Preview puis achat', text: 'Regarde un aperçu, puis débloque le PDF avec ton wallet.' },
+  { title: 'Lecture libre', text: 'Lis tous les PDF gratuitement. L’IA te donne 3 actions par jour, puis le Pass Révision.' },
   { title: 'Lis et revise', text: 'Garde tes achats et utilise l assistant pour réviser plus vite.' },
 ];
 
@@ -301,7 +304,8 @@ export function AppShell() {
   }, []);
   const [supportModalVisible, setSupportModalVisible] = React.useState(false);
   const [balance, setBalance] = React.useState(0);
-  const [iaCredits, setIaCredits] = React.useState(5);
+  // Application credits from packs (modèle v2), shown where the old AI credits were.
+  const [iaCredits, setIaCredits] = React.useState(0);
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [purchasedDocuments, setPurchasedDocuments] = React.useState<string[]>([]);
   const [purchasedPacks, setPurchasedPacks] = React.useState<string[]>([]);
@@ -312,6 +316,11 @@ export function AppShell() {
   const [purchasingDocumentId, setPurchasingDocumentId] = React.useState<string | null>(null);
   const [purchasingPackId, setPurchasingPackId] = React.useState<string | null>(null);
   const [rechargeVisible, setRechargeVisible] = React.useState(false);
+  const [shareVisible, setShareVisible] = React.useState(false);
+  const [contributionsVisible, setContributionsVisible] = React.useState(false);
+  const syncAccountRef = React.useRef<() => void>(() => undefined);
+  // Stable for MyContributionsScreen's effect; points at the latest sync.
+  const refreshAfterContributions = React.useCallback(() => syncAccountRef.current(), []);
   const [rechargeAmount, setRechargeAmount] = React.useState('1000');
   const [provider, setProvider] = React.useState<'MTN MoMo' | 'Orange Money'>('MTN MoMo');
   const [insufficientVisible, setInsufficientVisible] = React.useState(false);
@@ -631,6 +640,7 @@ export function AppShell() {
       .finally(() => { if (mounted) setDocumentsLoading(false); });
   };
 
+  syncAccountRef.current = () => void syncStudentAccount(studentSession ?? undefined);
   const syncStudentAccount = async (_session?: StudentSession) => {
     setSyncingAccount(true);
     try {
@@ -642,7 +652,7 @@ export function AppShell() {
         void setOnboardingCompletedPermanent();
       }
       setBalance(account.wallet.balanceCoins);
-      setIaCredits(account.wallet.iaCredits);
+      void fetchOffers().then((state) => setIaCredits(state.credits)).catch(() => setIaCredits(0));
       setFreeLaunch(account.wallet.freeLaunch === true, account.wallet.freeLaunchUntil ?? null);
       setPurchasedDocuments(account.purchasedDocumentIds);
       setPurchasedPacks(account.purchasedPackIds);
@@ -657,7 +667,9 @@ export function AppShell() {
               ? 'Recharge wallet PDF'
               : row.type === 'withdrawal'
                 ? 'Retrait wallet'
-                : 'Commission PDF',
+                : row.type === 'contribution_reward'
+                  ? 'Récompense contribution PDF'
+                  : 'Commission PDF',
           amount: row.amount_coins,
           type: row.type,
           status: row.status,
@@ -886,7 +898,7 @@ export function AppShell() {
       setReadingDocument(document);
       return;
     }
-    if (!studentSession) { setAuthMode('sign-in'); setAuthNotice('Connecte-toi pour débloquer ce PDF.'); setAuthVisible(true); return; }
+    if (!studentSession) { setAuthMode('sign-in'); setAuthNotice('Connecte-toi pour lire ce PDF.'); setAuthVisible(true); return; }
     setPurchasingDocumentId(document.id);
     recordPdfAnalyticsEvent({ eventType: 'purchase_start', documentId: document.id, accessToken: 'better-auth', metadata: { price: document.price, subject: document.subject, level: document.level } });
     purchasePdfDocument(document.id)
@@ -1114,6 +1126,8 @@ export function AppShell() {
     if (type === 'job_match' || type === 'welcome') openSection('stages');
     else if (type === 'wallet_topup') { openSection('account'); void syncStudentAccount(studentSession); }
     else if (type === 'purchase' || type === 'pack_purchase') { openSection('library'); void syncStudentAccount(studentSession); }
+    else if (type === 'contribution_published') { setContributionsVisible(true); void syncStudentAccount(studentSession); }
+    else if (type === 'contribution_published') { setContributionsVisible(true); void syncStudentAccount(studentSession); }
     else if (type === 'document_generated') {
       const documentId = (data as { documentId?: unknown }).documentId;
       if (typeof documentId === 'string' && documentId) setEditingDocumentId(documentId);
@@ -1335,6 +1349,8 @@ export function AppShell() {
                   onRefreshDocuments={() => refreshDocuments()}
                   onOpenAssistant={() => openSection('documents')}
                   onOpenWallet={() => setRechargeVisible(true)}
+                  onSharePdfs={() => setShareVisible(true)}
+                  onOpenContributions={() => setContributionsVisible(true)}
                 />
               )}
 
@@ -1383,6 +1399,8 @@ export function AppShell() {
                   ownedDocuments={ownedLibrary}
                   onOpenDocument={setReadingDocument}
                   onExplore={() => openSection('resources')}
+                  onSharePdfs={() => setShareVisible(true)}
+                  onOpenContributions={() => setContributionsVisible(true)}
                 />
               )}
 
@@ -1452,6 +1470,32 @@ export function AppShell() {
               onClose={() => setReadingDocument(null)}
             />
 
+            <SharePdfsModal
+              visible={shareVisible}
+              onClose={() => setShareVisible(false)}
+              onOpenContributions={() => {
+                setShareVisible(false);
+                setContributionsVisible(true);
+              }}
+              onOpenDocument={(documentId) => {
+                const doc = pdfDocuments.find((d) => d.id === documentId);
+                if (doc) {
+                  setShareVisible(false);
+                  setReadingDocument(doc);
+                }
+              }}
+            />
+
+            <MyContributionsScreen
+              visible={contributionsVisible}
+              onClose={() => setContributionsVisible(false)}
+              onShare={() => {
+                setContributionsVisible(false);
+                setShareVisible(true);
+              }}
+              onRefreshAccount={refreshAfterContributions}
+            />
+
             {/* BottomNav */}
             <BottomNav
               activeSection={activeSection}
@@ -1483,7 +1527,7 @@ export function AppShell() {
                 </Pressable>
               </View>
               <Text style={styles.walletAmount}>{formatCoins(balance)} FCFA</Text>
-              <Text style={styles.walletHint}>Portefeuille prépayé • {iaCredits} cr IA</Text>
+              <Text style={styles.walletHint}>Portefeuille prépayé • {iaCredits} crédit{iaCredits > 1 ? 's' : ''} de candidature</Text>
             </View>
             <View style={styles.accountQuickRow}>
               <Pressable style={styles.accountQuickAction} onPress={() => { setAccountVisible(false); openSection('library'); }}>

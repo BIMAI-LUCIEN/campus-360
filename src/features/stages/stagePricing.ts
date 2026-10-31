@@ -4,8 +4,11 @@
 // No imports: the mobile app keeps an identical copy of these rules in
 // src/features/stages/stagePricing.ts (a test compares the two).
 
-export const STAGE_APPLY_PRICE_PAID = 1000;
-export const STAGE_APPLY_PRICE_UNPAID = 500;
+export const STAGE_APPLY_PRICE_PAID = 500;
+export const STAGE_APPLY_PRICE_UNPAID = 300;
+// Credits taken from a pack instead of coins (contexte.md §19).
+export const STAGE_APPLY_CREDITS_PAID = 2;
+export const STAGE_APPLY_CREDITS_UNPAID = 1;
 
 // Placeholder once written by the n8n ingest route instead of a real value.
 const PLACEHOLDER_STIPENDS = new Set(['indemnité de stage', 'indemnite de stage']);
@@ -26,7 +29,9 @@ export const isPaidOffer = (job: StagePricingInput): boolean => {
   return true;
 };
 
-export const stageApplyPrice = (job: StagePricingInput, freeLaunch = false): number => {
-  if (freeLaunch) return 0;
-  return isPaidOffer(job) ? STAGE_APPLY_PRICE_PAID : STAGE_APPLY_PRICE_UNPAID;
-};
+// The launch period no longer makes applications free: it only raises the signup bonus.
+export const stageApplyPrice = (job: StagePricingInput): number =>
+  isPaidOffer(job) ? STAGE_APPLY_PRICE_PAID : STAGE_APPLY_PRICE_UNPAID;
+
+export const stageApplyCredits = (job: StagePricingInput): number =>
+  isPaidOffer(job) ? STAGE_APPLY_CREDITS_PAID : STAGE_APPLY_CREDITS_UNPAID;

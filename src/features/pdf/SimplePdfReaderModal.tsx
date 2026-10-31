@@ -30,7 +30,8 @@ import {
 import { WebView } from 'react-native-webview';
 import { authWebBaseUrl, mobileApiBaseUrl } from '../auth/betterAuth';
 import { createSignedPdfUrl, recordPdfAnalyticsEvent } from './pdfApi';
-import { askPdfAssistant, type PdfAssistantMessage } from './pdfAssistant';
+import { askPdfAssistant, PassRequiredError, type PdfAssistantMessage } from './pdfAssistant';
+import { OffersModal } from '../wallet/OffersModal';
 import { loadPdfChatHistory, savePdfChatHistory, clearPdfChatHistory } from './chatHistoryStorage';
 import { FormattedMarkdown } from '../../components/FormattedMarkdown';
 import type { CampusDocument } from '../../types';
@@ -58,6 +59,16 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
 
   // Quiz state
   const [revealedQuiz, setRevealedQuiz] = useState<Record<number, boolean>>({});
+
+  const handleOpenExternal = () => {
+    if (!url) return;
+    if (url.includes('cloudinary.com')) {
+      const viewerUrl = `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}&id=${encodeURIComponent(document?.id || "")}&pages=${document?.pageCount || ""}&title=${encodeURIComponent(document?.title || "")}&api=${encodeURIComponent(mobileApiBaseUrl)}`;
+      void Linking.openURL(viewerUrl);
+    } else {
+      void Linking.openURL(url);
+    }
+  };
 
   useEffect(() => {
     if (!document) {
@@ -142,6 +153,10 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
     );
   };
 
+  // Free AI actions left today (null until the first answer), or 'pass' when a Revision Pass is active.
+  const [aiAllowance, setAiAllowance] = useState<number | 'pass' | null>(null);
+  const [passOffer, setPassOffer] = useState<string | null>(null);
+
   const handleAskAssistant = async (questionText: string) => {
     const cleanQuestion = questionText.trim();
     if (!cleanQuestion || !document || assistantLoading) return;
@@ -167,11 +182,12 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
     });
 
     try {
-      const answer = await askPdfAssistant({
+      const { answer, freeActionsLeft, passActive } = await askPdfAssistant({
         document,
         question: cleanQuestion,
         messages: nextMessages,
       });
+      setAiAllowance(passActive ? 'pass' : freeActionsLeft);
       const assistantMsg: PdfAssistantMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -181,6 +197,10 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
       setAssistantMessages(updated);
       void savePdfChatHistory(document.id, updated);
     } catch (err) {
+      if (err instanceof PassRequiredError) {
+        setAiAllowance(0);
+        setPassOffer(err.message);
+      }
       const msg = err instanceof Error ? err.message : "Je ne peux pas joindre le serveur IA actuellement. Réessaie dans un instant.";
       const errorMsg: PdfAssistantMessage = {
         id: `assistant-${Date.now()}`,
@@ -217,9 +237,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
           {url ? (
             <Pressable
               style={styles.openExternalBtn}
-              onPress={() => {
-                if (url) void Linking.openURL(url);
-              }}
+              onPress={handleOpenExternal}
             >
               <ExternalLink size={16} color={stitchColors.sienna} />
             </Pressable>
@@ -324,9 +342,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                   <View style={styles.pdfToolbar}>
                     <Pressable
                       style={styles.pdfToolbarBtn}
-                      onPress={() => {
-                        if (url) void Linking.openURL(url);
-                      }}
+                      onPress={handleOpenExternal}
                     >
                       <ExternalLink size={14} color={stitchColors.sienna} />
                       <Text style={styles.pdfToolbarBtnText}>Plein écran / Lecteur externe</Text>
@@ -334,13 +350,13 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                   </View>
                   {Platform.OS === 'web' ? (
                     createElement('iframe', {
-                      src: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}&id=${encodeURIComponent(document.id)}&api=${encodeURIComponent(mobileApiBaseUrl)}`,
+                      src: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}&id=${encodeURIComponent(document.id)}&pages=${document.pageCount || ""}&title=${encodeURIComponent(document.title || "")}&api=${encodeURIComponent(mobileApiBaseUrl)}`,
                       title: document.title,
                       style: { width: '100%', height: '100%', border: '0', backgroundColor: stitchColors.paper },
                     })
                   ) : (
                     <WebView
-                      source={{ uri: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}&id=${encodeURIComponent(document.id)}&api=${encodeURIComponent(mobileApiBaseUrl)}` }}
+                      source={{ uri: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}&id=${encodeURIComponent(document.id)}&pages=${document.pageCount || ""}&title=${encodeURIComponent(document.title || "")}&api=${encodeURIComponent(mobileApiBaseUrl)}` }}
                       style={styles.webview}
                       startInLoadingState
                       renderLoading={() => (
@@ -353,7 +369,10 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                       domStorageEnabled
                       sharedCookiesEnabled
                       thirdPartyCookiesEnabled
-                      scalesPageToFit
+                      scalesPageToFit={Platform.OS === "android" ? false : true}
+                      pinchGestureEnabled
+                      androidLayerType="hardware"
+                      bounces={false}
                     />
                   )}
                 </View>
@@ -575,6 +594,22 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                 ) : null}
               </ScrollView>
 
+              {/* Free AI actions of the day, or the active Revision Pass */}
+              <View style={styles.allowanceRow}>
+                <Text style={styles.allowanceText}>
+                  {aiAllowance === 'pass'
+                    ? 'Pass Révision actif : questions illimitées'
+                    : aiAllowance === null
+                      ? 'Lecture gratuite · 3 actions IA gratuites par jour (5 questions = 1 action)'
+                      : `${aiAllowance} action${aiAllowance > 1 ? 's' : ''} IA gratuite${aiAllowance > 1 ? 's' : ''} restante${aiAllowance > 1 ? 's' : ''} aujourd'hui`}
+                </Text>
+                {aiAllowance !== 'pass' ? (
+                  <Pressable onPress={() => setPassOffer('Pass Révision : IA illimitée sur tous les PDF.')}>
+                    <Text style={styles.allowanceLink}>Pass Révision</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+
               {/* Chat Input Bar */}
               <View style={styles.chatInputBar}>
                 <TextInput
@@ -601,6 +636,15 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
           ) : null}
         </View>
       </View>
+      <OffersModal
+        visible={Boolean(passOffer)}
+        focus="pass"
+        reasonMessage={passOffer ?? undefined}
+        onClose={() => setPassOffer(null)}
+        onPurchased={(state) => {
+          if (state.passUntil) setAiAllowance('pass');
+        }}
+      />
     </Modal>
   );
 }
@@ -1005,6 +1049,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: stitchColors.inkFaint,
   },
+  allowanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  allowanceText: { flex: 1, fontSize: 12, color: stitchColors.inkMuted },
+  allowanceLink: { fontSize: 12, fontWeight: '700', color: stitchColors.sienna },
   chatTextInput: {
     flex: 1,
     backgroundColor: stitchColors.paper,

@@ -232,6 +232,8 @@ Loisirs : sport, lecture
 
 ## 5.1 Modèle Économique : 100% Wallet Prépayé à l'Usage (Zéro Abonnement)
 
+> ⚠️ **Remplacé par le §19 (modèle économique v2, 2026-10-30).** La grille ci-dessous est l'historique.
+
 > **Arbitrage Stratégique Fondateur (CPO & CTO) :**
 > Suppression définitive de tous les plans d'abonnement récurrents (Free, Pro, Elite, Pass mensuels).
 > Remplacement par un modèle **Pay-per-Action par débit direct du Wallet FCFA**, sans engagement, optimisé pour les habitudes Mobile Money (MTN MoMo & Orange Money).
@@ -1000,3 +1002,147 @@ Après ton accord : `/plan-task` pour découper ce cadrage en tâches.
 - Navigation admin : entrée Rédactions retirée de `NAV_GROUPS`.
 - Zéro occurrence restante de `guest-student` dans le code source du projet.
 - Build Next.js `recruiter-web` (20/20 pages) et tests unitaires `mobile-api` validés à 100% (170/170 passés).
+
+## 17. Cadrage validé : Dashboard admin, pilotage de l'app mobile (2026-10-29, voie Bounded)
+
+Décisions prises par l'agent à la demande de l'utilisateur (« fais les meilleures décisions »).
+
+### 2. Fonctionnalités
+- **V1**
+  1. **Offres stages et emplois en CRUD** : même table `stage_jobs`, distinguées par `kind` (`stage` / `emploi`). Création et modification depuis le dashboard (titre, entreprise existante ou nouvelle, ville, type, contrat, description, compétences, date limite, lien ou e-mail de candidature, sponsorisée). Une offre créée par l'admin est publiée directement (`source = 'admin'`). Filtre par type et par statut.
+  2. **Fiche étudiant 360°** : profil, wallet (solde et historique), candidatures, documents, usage IA des dernières 24 h, sessions. Actions : créditer ou débiter des coins avec un motif obligatoire, bannir / débannir, changer le rôle, réinitialiser le quota IA, révoquer les sessions. Recherche, filtres, export CSV.
+  3. **Pilotage de l'app mobile** : table `app_config` (clé/valeur JSON) éditée dans une page « App mobile » : mode maintenance + message, version minimale et version recommandée (Android/iOS) avec lien de mise à jour, interrupteurs (IA, paiements, stages, PDF, documents), mode lancement gratuit (la base prime sur `FREE_LAUNCH_MODE`), bandeau d'annonce sur l'accueil.
+  4. **Journal d'audit admin** (table `admin_audit_log`) : obligatoire avec le crédit de coins ; enregistre aussi bans, rôles, publications, changements de config.
+- **V1.5** : notifications push (tous, ou segment : filière, ville, inactifs 7 j) via les jetons Expo de `app_user_push_tokens`, avec historique des envois.
+- **V2** : comptes recruteurs qui publient leurs offres (modération nécessaire) ; statut de relecture pour `scraped_stage_reports`.
+- **Le crédit manuel reste en V1**, plafonné à 50 000 coins par opération, motif obligatoire, tracé dans l'audit et dans `app_wallet_transactions` (type `admin_adjustment`).
+
+### 3. Parcours et écrans
+- **Navigation** (barre latérale groupée) : Pilotage (Vue d'ensemble, Analytics, App mobile) · Offres (Stages & emplois, À valider, Candidatures, Entreprises) · Étudiants (Liste, fiche) · Contenus (PDF, Packs, Templates) · Argent (Paiements) · Système (Journal d'audit, Réglages).
+- **Ajouter une offre en 3 étapes** : « Nouvelle offre » → formulaire avec aperçu de la carte telle qu'elle apparaîtra dans l'app → Publier (visible immédiatement dans le feed mobile).
+- **Gérer un étudiant** : recherche → fiche en panneau latéral avec onglets (Profil, Wallet, Candidatures, Documents, Activité) → action confirmée par une boîte de dialogue.
+- **Vue d'ensemble** : santé (API, base), étudiants actifs 24 h / 7 j, inscriptions, offres en attente de validation, recharges du jour, requêtes IA, état de l'app (maintenance, version minimale) en un coup d'œil.
+
+### 6. Stack et architecture
+- On reste sur l'existant : `recruiter-web` (Next.js 15, Tailwind v4), routes `/api/admin/*` protégées par `requireAdminApi`, `pg` direct.
+- **Config mobile** : `recruiter-web` écrit dans `app_config` ; `mobile-api` expose `GET /api/mobile/config` (public, mis en cache 60 s) ; l'app la lit au démarrage et au retour au premier plan, et affiche l'écran maintenance / mise à jour forcée / bandeau. Repli : en cas d'échec réseau, l'app garde la dernière config connue et ne bloque jamais l'utilisateur.
+- Les interrupteurs sont aussi appliqués **côté serveur** dans `mobile-api` (une IA coupée renvoie 503 même pour un ancien APK).
+- Migrations dans `mobile-api/migrations` : `app_config`, `admin_audit_log`, ajout éventuel de colonnes `stage_jobs` (`source`, `contract_type`, `apply_url`) si absentes.
+- **Limite connue** : maintenance et version minimale ne s'affichent que sur les builds qui embarquent le nouveau code → mise à jour OTA nécessaire.
+- **Design** : refonte via `/frontend-design` en cohérence avec la charte Clean White & Royal Violet (`#7C3AED`), tableaux denses, panneaux latéraux, états vides et de chargement, responsive.
+
+### 8. Risques
+- Crédit de coins abusif → plafond, motif, audit.
+- Mauvaise config qui bloque toute l'app → confirmation avant d'activer la maintenance, valeur par défaut sûre si la clé manque.
+- Données personnelles dans l'export CSV → réservé aux admins, journalisé.
+
+## 18. Cadrage validé : Import PDF en lot, analyse IA, anti-doublon et contributions étudiantes (2026-10-29, voie Bounded)
+
+### 2. Fonctionnalités
+- **V1 :** upload de 1 à 10 PDF par lot (admin `recruiter-web` et étudiants dans l'app), avec un statut par fichier (en analyse, doublon, prêt, rejeté) ; fiche rédigée par l'IA (titre, matière, école ou concours, année, niveau, type annale/cours/TD/corrigé, résumé, mots-clés) que l'admin peut corriger ; anti-doublon strict avant publication.
+- **V1.5 :** modération manuelle des contributions étudiantes ; coins crédités à la publication.
+- **V2 :** classement des contributeurs, bonus selon les consultations, détection des copies partielles (reportés faute de volume).
+
+### 3. Parcours
+- **Étudiant :** « Partager des PDF » dans la bibliothèque (1 à 10 fichiers) → progression par fichier, fiche IA modifiable ou « Déjà disponible » avec un lien vers l'existant → écran « Mes contributions » (statuts) et notification du crédit de +10 coins.
+- **Admin :** page d'import en lot (glisser-déposer, fiches pré-remplies, « Publier tout ce qui est prêt ») ; onglet « Contributions étudiantes » (valider/refuser, doublons probables côte à côte).
+
+### 4. Récompense (option C)
+- 10 coins par PDF **publié**, une seule écriture de wallet par PDF (clé unique, pas de double crédit possible).
+- Pré-filtre automatique : texte lisible (OCR pour les scans), contenu académique selon l'IA, 20 Mo au maximum par fichier.
+- Plafonds : 10 PDF par lot, 30 PDF par étudiant et par jour.
+- Doublon refusé = 0 coin (le premier qui envoie gagne). Le motif de refus est affiché à l'étudiant.
+
+### 6. Anti-doublon (option C, trois niveaux)
+- Hash SHA-256 du fichier identique → refus automatique (contrainte unique en base).
+- Empreinte du texte normalisé + similarité MinHash supérieure à 90 % → refus automatique, avec un lien vers le PDF existant.
+- Similarité de 70 à 90 %, ou mêmes métadonnées (concours + année + matière), ou embeddings proches → « doublon probable », l'admin tranche.
+- Périmètre de la comparaison : PDF publiés, PDF en attente de modération et autres fichiers du même lot.
+- Les doublons évidents sont rejetés avant tout appel IA.
+
+### 8. Risques
+- **Droits d'auteur :** case de déclaration obligatoire ; ISBN ou copyright détecté → validation manuelle ; bouton « Signaler ».
+- **Coût IA :** seulement 3 à 5 pages de texte envoyées à l'IA ; choix entre le quota existant de 60 requêtes par jour et un quota dédié → à trancher en planification.
+- **Panne IA :** statut « en attente d'analyse » et nouvelle tentative plus tard ; saisie manuelle possible ; rien n'est publié sans fiche.
+- **Fichiers malveillants :** signature `%PDF` vérifiée, 20 Mo au maximum, extraction de texte côté serveur.
+- **Données personnelles :** noms ou matricules détectés → validation manuelle et avertissement à l'étudiant.
+- **Mise à jour 2026-10-29 :** V1 réalisée sans le journal d'audit (point 4 retiré par l'utilisateur) ; le crédit de coins est tracé dans app_wallet_transactions (type admin_adjustment, colonne note). Le mode lancement gratuit reste piloté par FREE_LAUNCH_MODE (non déplacé en base).
+
+## 19. Cadrage validé : Modèle économique v2 (2026-10-30, voie Bounded)
+
+> Remplace la grille du §5.1. Principe inchangé : wallet prépayé en coins (1 coin = 1 FCFA), recharge Mobile Money via Notch Pay, **aucun abonnement automatique**. Packs et pass s'achètent une seule fois.
+
+### 1. Problème et cible
+- Seuls les étudiants paient, et ils ont peu d'argent : le paiement à chaque clic freine l'usage et le bonus de 5 000 coins retardait la première recharge.
+- Cible du paiement : l'étudiant en recherche de stage ou en période d'examens. Recruteurs et écoles → V2.
+
+### 4. Modèle économique
+**Candidatures** (CV adapté à l'offre + lettre toujours inclus, plus de CV facturé à part)
+- Unité : 300 F (offre non payée), 500 F (offre payée ou emploi).
+- Pack **Starter** : 1 000 F = 5 crédits, valables 30 jours.
+- Pack **Recherche active** : 2 000 F = 12 crédits + 1 jour de Pass Révision, valables 30 jours.
+- 1 crédit = 1 candidature à une offre non payée ; 2 crédits = offre payée ou emploi. Crédits perdus après 30 jours.
+- CV adapté à une offre trouvée hors de l'app : 300 F.
+
+**Rédaction**
+- Rapport de stage : plan gratuit, puis 2 000 F.
+- Mémoire : plan et problématique gratuits, puis forfait 4 000 F ou 1 000 F par chapitre (au choix de l'étudiant).
+
+**Bibliothèque et IA**
+- Lecture de tous les PDF : gratuite (plus de PDF premium payant).
+- IA sur les PDF : 3 actions gratuites par jour. 1 action = 1 résumé, 1 fiche, 1 quiz, ou 1 conversation de 5 questions.
+- Pass Révision : 200 F les 24 h, 1 000 F les 7 jours ; IA illimitée dans la limite du quota de 60 requêtes / 24 h.
+
+**Coins gratuits**
+- Inscription : 1 000 coins pendant la période de lancement (`FREE_LAUNCH_UNTIL`), 300 coins ensuite (remplace 5 000).
+- Contribution d'un PDF publié : 50 coins (remplace 10 ; à répercuter sur le Module 27).
+- Parrainage (V1.5) : 200 coins au parrain à la première recharge du filleul.
+
+**Lancement** : les prix s'appliquent dès le lancement ; `FREE_LAUNCH_MODE` ne met plus les prix à 0, le lancement se traduit par le bonus de 1 000 coins.
+
+**Paiement** : recharge minimale 500 F (MTN MoMo, Orange Money) ; solde insuffisant → recharge ouverte sans perdre le travail en cours.
+
+### 5. Outils
+- Notch Pay conservé. **À vérifier** : frais sur les petits montants (500 à 1 000 F) et coût réel d'un appel IA, pour confirmer la rentabilité du Pass 7 jours.
+
+### Impact code (à planifier)
+- Prix : `mobile-api/lib/stage-pricing.ts` et sa copie `src/features/stages/stagePricing.ts`, `mobile-api/lib/workshop.ts` (CV inclus dans la candidature, mémoire par chapitre), `STARTING_COINS` / `free-launch.ts`.
+- Nouveau : tables packs, crédits à expiration, pass révision ; compteur d'actions IA gratuites par jour ; écran d'achat des packs et pass.
+
+### V2
+- Revenus B2B : offres mises en avant, accès recruteurs, licence établissement.
+
+## 20. Cadrage validé : Entourer une zone du PDF pour questionner l'IA (2026-10-31, voie Bounded)
+
+### Constat (code relu)
+- Le lecteur `src/features/pdf/SimplePdfReaderModal.tsx` affiche `pdf-viewer.html` dans une WebView (iframe sur le web), à côté des onglets Résumé, Plan, Quiz, Assistant.
+- Les pages sont surtout des images Cloudinary (`pg_N`), pdf.js (canvas) en secours : pas de couche texte, donc pas de sélection de texte.
+- `/api/ai/pdf-chat` n'envoie à l'IA que les métadonnées (titre, matière, résumé, plan, quiz) : l'IA ne voit jamais le contenu du PDF. La zone entourée comble ce manque.
+
+### 2. Fonctionnalités
+- **V1** : bouton flottant ✨ IA dans le viewer ; mode « entourer » (défilement figé) ; lasso au doigt converti en rectangle englobant, affiché pour confirmation ; simple toucher sans tracé = page entière ; feuille du bas avec miniature, 3 raccourcis (« Explique », « Résous pas à pas », « Donne un exemple similaire ») et question libre ; réponse dans la feuille, puis « Continuer dans l'Assistant » (miniature dans la bulle).
+- **V2 (repoussé)** : plusieurs zones par question, surlignages ou annotations enregistrés, OCR en amont. Raison : prouver l'usage d'abord.
+- Boucle : révision d'annale, blocage, entourer, comprendre, exercice suivant.
+
+### 3. Parcours
+1. Lecture, appui sur ✨ IA, bandeau « Entoure la partie qui te bloque ».
+2. Tracé, feuille du bas avec miniature, raccourcis et champ de saisie.
+3. Réponse dans la feuille (lecteur visible au-dessus), suite possible dans l'Assistant.
+
+### 6. Technique
+- **Découpe dans le viewer (T1)** : `pdf-viewer.html` recadre la zone dans un canvas, JPEG ≤ 300 Ko, puis `{type:'zone', page, image}` via `window.ReactNativeWebView.postMessage` (mobile) ou `parent.postMessage` avec contrôle d'origine (web). Les deux copies `mobile-api/public/pdf-viewer.html` et `landing-site/public/pdf-viewer.html` restent identiques.
+- **Prérequis à vérifier en premier** : Cloudinary autorise la lecture des pixels (CORS, `crossOrigin="anonymous"`). Plan B (T2) : envoyer seulement `page + x,y,l,h`, le serveur retrouve le PDF par son id et fait recadrer la page par Cloudinary.
+- **App** : `onMessage` sur la WebView et écouteur `message` sur l'iframe ; feuille du bas ; `askPdfAssistant` reçoit un champ `zone`.
+- **Serveur** `/api/ai/pdf-chat` : champ optionnel `zone: {page, image}` validé (JPEG/PNG, ≤ 1,5 Mo) ; message multimodal (texte + `image_url`) ; avec une zone, seuls les modèles vision sont essayés (gpt-4o-mini, Gemini Flash ; Llama 3.3 écarté) ; aucune image stockée.
+- **Conversation** : l'image reste jointe tant que l'étudiant continue dans la même feuille ; une nouvelle zone la remplace ; l'historique local garde le numéro de page et la miniature.
+- Hors V1 : le mode « Lecteur externe » (navigateur) n'affiche pas le bouton IA.
+
+### 4. Coût et décompte
+- Coût estimé : 0,0004 à 0,002 $ par question avec image (≈ 0,3 à 1,2 FCFA), à vérifier sur la facture OpenRouter.
+- Décompte : une question sur une zone compte comme une question normale (`kind: 'question'`), même règle que §19 ; plafond de 60 requêtes IA par jour inchangé. Pas de nouveau prix.
+
+### 8. Risques
+- CORS Cloudinary bloquant, d'où le plan B T2.
+- Scans flous ou manuscrits : le modèle doit dire quand il ne lit pas ; l'étudiant peut entourer plus large.
+- Modèle vision indisponible : bascule sur Gemini Flash, sinon message clair sans réponse inventée.
+- Données : images non stockées, seulement transmises à OpenRouter.

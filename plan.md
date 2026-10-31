@@ -6,10 +6,13 @@
 
 ---
 ## Reprise
-- **Tâche en cours :** aucune (26.6 livrée le 2026-10-24 : VPS `85cb5db`, OTA `014b254`)
-- **Prochaine :** poser `ADMIN_SERVICE_SECRET` et `MOBILE_API_INTERNAL_URL` en local, puis parcours de l'atelier admin (24.10, session admin ouverte par l'utilisateur) → publier un modèle de test → parcours galerie (24.11) → 24.12. Module 25 : décision sur 25.18.
+- **Tâche en cours :** 27.6 et 27.7 `[~]` (code écrit, parcours navigateur à faire) ; 27.1 à 27.5 validées le 2026-10-30.
+- **Prochaine (Module 27) :** migration 0023 appliquée le 2026-10-30 (avec 0024_pricing_v2, venue d'un autre chantier : ne plus modifier ce fichier). Poser `ADMIN_SERVICE_SECRET` et `MOBILE_API_INTERNAL_URL` dans les `.env.local` locaux, puis parcours navigateur 27.6 (admin) et 27.7 (`expo-web-local`, 375 px) avec des sessions ouvertes par l'utilisateur, puis 27.8. `lint:colors` échoue sur `DocumentsScreen.tsx` (+4, commit `65679ce`, hors Module 27).
+- **Module 28 (modèle économique v2) :** exécuté le 2026-10-30 : 28.1 à 28.7 et 28.13 `[X]` ; 28.8 à 28.12 `[!]` (interface écrite et typée, parcours navigateur à faire avec une session étudiante ; 0024 déjà appliquée). Suite : `/test-and-verify` 28.8–28.11. Points ouverts : `documents/generate` et `generate-full` encore sur les crédits IA (`aiCost`, gratuit pendant le lancement) ; frais passerelle et coût IA à vérifier ; `lint:colors` en échec sur `DocumentsScreen.tsx` (15 > 11, déjà dans HEAD) ; rien n'est commité.
+- **Module 30 (zone du PDF pour l'IA) :** planifié le 2026-10-31 (contexte.md §20), 9 tâches `[ ]` (30.1 à 30.9). Suite : `/plan-detail Module 30`, puis `/plan-check` et `/execute`. Deux décisions à prendre avant 30.1 et 30.6 (appel test payant, miniature dans l'historique).
 - **Reste :** Module 24 : 24.6, 24.10, 24.11, 24.12 `[!]`, 24.13 `[ ]` ; Module 25 : 25.18, 25.2, 25.10, 25.15, 25.16 `[!]` ; modules 23 et 19 : voir `Progression globale`
 - **Points ouverts :**
+  - 🔴 **Sécurité (audit 2026-10-31, tâche 29.1) :** le secret Cloudinary réel reste dans l'historique git (le code ne le contient plus) : 🔒 le régénérer chez Cloudinary et mettre à jour les `.env` (local, VPS). Module 29 : 29.2 à 29.5 validées, non commitées ; restent 29.6 (CSP/HSTS) et 29.7 (npm audit).
   - **26.6 (paiement Nyole) :** non vérifié dans le navigateur (connexion requise, aucun compte de test fourni) ; à tester avec un compte de test et une clé `af_test_sec_` : numéro Orange saisi en MTN → bascule auto, `+33…` refusé, session test + bouton Sandbox. Préfixes MTN/Orange non confirmés par une source officielle ART (table unique dans `cameroon-phone.ts`). Webhook Nyole : cocher `payment.cancelled` dans « API et journaux ». Livré (VPS `85cb5db`, OTA `014b254`).
   - **Export PDF en production :** Chrome ne démarre pas sur le VPS (bibliothèques système manquantes, `libatk-1.0.so.0`…) ; installation `apt-get` à valider par l'utilisateur.
   - 🔒 **24.6 : ouvrir `.agent/screenshots/m24/exemple-reference.docx` dans Word** (bandeau, pied encadré, puces ❖, garde) et noter le retour.
@@ -23,7 +26,7 @@
   - 🔒 **Module 25 :** 25.18 (choix A/B et feu vert VPS), 25.2, 25.10, 25.15, 25.16 (inchangés).
   - **Migrations :** toutes appliquées (0000, 0004 à 0015) ; 0013 le 2026-10-23.
 - **Commit de référence :** commit « feat(documents): modèle IUT de Douala fidèle au rapport de référence », parent af05514.
-- **Dernière entrée journal :** 2026-10-24 · Livraison 26.6 (VPS + OTA) · vps-deploy
+- **Dernière entrée journal :** 2026-10-31 · Module 30 planifié · plan-task
 ---
 
 ## 🏛️ HISTORIQUE DES MODULES DÉJÀ VALIDÉS (1 à 8)
@@ -2839,6 +2842,390 @@ L'utilisateur a demandé que les questions ouvertes soient tranchées sans lui. 
     - App : l'opérateur se sélectionne seul à la saisie d'un numéro reconnu, message « Numéro MTN MoMo détecté (+237…) » ou erreur sous le champ, envoi bloqué si invalide.
     - Doc Nyole : une session FAILED reste payable, donc un succès ultérieur est crédité (webhook et polling) ; `payment.updated` (retour PENDING, REFUNDED) ne marque plus la transaction en échec ; signature acceptée seulement sur `${t}.${corps}` (repli « corps seul » retiré) ; plus d'e-mail inventé envoyé à Nyole ; bouton « Simuler (Sandbox) » affiché seulement si la session est en `livemode: false` ; textes d'attente honnêtes (page Nyole puis code secret, `#150*50#` Orange, `*126#` MTN).
   - **DoD :** `cd mobile-api && npm test` 235 pass / 0 fail / 19 skip ; `node --test tests/cameroon-phone.test.mjs tests/payments.test.mjs` 16/16 ; `npm run typecheck` (app et `mobile-api`) code 0 ; `npm run lint:colors` 189/189.
+
+---
+
+## 📚 MODULE 27 : Import PDF en lot, analyse IA, anti-doublon strict et contributions étudiantes récompensées
+
+> **Objectif :** permettre l'import de 1 à 10 PDF par lot (admin et étudiants), faire rédiger la fiche de publication de chaque PDF par l'IA, bloquer tout doublon avant publication et créditer 10 coins par PDF étudiant publié. Cadrage : `contexte.md` §18.
+
+**Décisions prises (cadrage §18) :** anti-doublon sur trois niveaux (SHA-256 avec contrainte unique, texte normalisé + MinHash > 90 % refusé, 70 à 90 % / métadonnées / embeddings proches → « doublon probable » tranché par l'admin) ; comparaison avec les PDF publiés, en attente et ceux du même lot ; doublons évidents rejetés avant l'IA ; 10 coins à la publication seulement, une écriture de wallet par PDF ; plafonds de 10 PDF par lot et 30 par étudiant et par jour ; 20 Mo maximum, signature `%PDF` ; 3 à 5 pages envoyées à l'IA ; modération manuelle des contributions étudiantes (V1.5) ; ISBN/copyright ou données personnelles détectés → validation manuelle obligatoire ; case de déclaration des droits.
+
+**Décisions d'architecture prises au détail (2026-10-30, d'après le code) :**
+- **Toute la chaîne vit dans `mobile-api`** (analyse, doublons, publication, crédit, push). `recruiter-web` ne fait que relayer ses routes admin vers `mobile-api` par le mécanisme existant (`recruiter-web/lib/mobile-api-proxy.ts` + `mobile-api/lib/admin-service.ts`, secret `ADMIN_SERVICE_SECRET`). Raisons : `callLlm` (`mobile-api/lib/llm.ts`), `sendPushToUser` (`lib/push.ts`), `extractSource` (`lib/source-extraction.ts`), `validateUpload` et le quota IA n'existent que là. Conséquence : **pas de fichier jumeau** `pdf-dedup.ts` dans `recruiter-web` (le plan initial en prévoyait un).
+- **Un fichier par requête HTTP**, avec un `batchId` (uuid) commun généré par le client. Raison : `client_max_body_size 25m` sur Nginx et `MAX_REQUEST_BYTES = 25 Mo` sur la route PDF admin ; 10 × 20 Mo = 200 Mo en mémoire. Le plafond « 10 par lot » est contrôlé en base par `batchId`.
+- **Type de transaction** `contribution_reward` (nouveau), avec un libellé dans l'app et dans l'admin.
+
+### Guide pour l'IA exécutante (Module 27)
+- **Lire d'abord :** `contexte-code.md` §3.3 (documents, extraction), §3.4 (wallet), §3.5 (portail admin), §5 (tables, migrations), §7 (conventions : textes français accentués, `lint:colors`), §8 (jumeaux), §10 (pièges), §11 (sécurité). Ne pas recopier : y renvoyer.
+- **Migrations :** `cd mobile-api && npm run migrate` touche la **base réelle partagée** (le runner lit `.env.production` avant `.env.local`, `scripts/migrate.mjs:38-40`) : 🔒 ne jamais la lancer sans accord explicite. Tester avec `MIGRATE_TEST_DATABASE_URL` (base jetable) ou `node scripts/migrate.mjs --dry-run`. Une migration appliquée ne se modifie plus (erreur de checksum, `migrate.mjs:129-136`). Conventions imposées par `tests/migrate.test.mjs:17-50` : `IF NOT EXISTS` sur chaque `CREATE TABLE` et `ADD COLUMN`.
+- **Tests :** `cd mobile-api && node --test tests/<fichier>.test.mjs`. TypeScript chargé par `tests/helpers/load-ts.mjs` : `loadTs` (module n'important que `node:`), `loadTsWithPackages(path, [deps locales])`. Pas d'alias `@/` dans un module testé. `recruiter-web` n'a **aucun** harnais de test : ses tests vivent dans `mobile-api/tests/`.
+- **Routes mobile :** motif `requireMobileUser` → `withCors` → `mobileErrorResponse` (`mobile-api/lib/mobile-access.ts`). Attraper `FileValidationError` **avant** `mobileErrorResponse` (sinon 500), et attraper le code pg `23505` soi-même (sinon message « Cet achat a deja ete effectue. »).
+- **Routes admin :** côté `mobile-api`, `requireAdminService(request)` (`lib/admin-service.ts:13`) ; côté `recruiter-web`, `requireAdminApi()` (`lib/access.ts:99`, 401 sans session, 403 non-admin) puis `forwardToMobileApi`.
+- **Identifiants :** `app_users.id` est un uuid ; l'id Better Auth est un `text` (`app_users.better_auth_user_id`). `documents.id` est un `text` (`pdf_<18 hex>`).
+- **Environnement local :** `expo-web-local` (pas `expo-web`, qui vise la production), `mobile-api` (3002), `recruiter-web-preview` (3001) dans `.claude/launch.json`. Les sessions admin et étudiante sont ouvertes par l'utilisateur ; ne jamais saisir de mot de passe. `mobile-api` en local peut dépasser le délai de connexion à la base distante (voir Reprise).
+- **Livraison :** serveur et migration déployés **avant** l'OTA de l'app ; une OTA diffuse aussi les changements non commités de `src/` (vérifier `git status`). 🔒 commit, déploiement, migration, OTA : accord explicite.
+
+### Décisions arbitrées le 2026-10-30
+Toutes les recommandations ont été acceptées par l'utilisateur :
+
+| Décision | Choix retenu |
+|---|---|
+| D27.1 | Quota dédié `pdf-intake` (30 par heure), hors des 60 requêtes IA par jour |
+| D27.2 | Pas d'OCR en V1 : PDF scanné refusé avec un message clair |
+| D27.3 | Pas d'embeddings en V1 ; colonne `real[]` gardée pour plus tard |
+| D27.4 | Cloudinary, dossier `campus-360/contributions` |
+| D27.5 | Push `sendPushToUser` + statut dans « Mes contributions » |
+| D27.6 | `always_free = true` pour les PDF issus de contributions |
+| D27.7 | Ancien import retiré de l'interface, route `POST /api/pdf` gardée |
+
+**Rappel des options d'origine :**
+- D27.1 : quota des analyses PDF étudiantes (recommandé : quota dédié `pdf-intake`, 30 par heure, hors des 60 requêtes IA par jour ; le plafond de 30 PDF par jour borne déjà le coût).
+- D27.2 : OCR des PDF scannés (recommandé en V1 : pas d'OCR, refus clair « PDF scanné sans texte » ; OCR en V2 avec un service à chiffrer).
+- D27.3 : embeddings (recommandé en V1 : aucun, hash + empreinte + MinHash + métadonnées suffisent ; colonne `real[]` prévue, pgvector non installé).
+- D27.4 : stockage d'un envoi en attente (recommandé : Cloudinary dans un dossier séparé `campus-360/contributions`, comme le catalogue ; `UPLOAD_ROOT` n'existe pas sur Vercel).
+- D27.5 : notification du crédit (recommandé : push via `sendPushToUser`, déjà en place, plus le statut dans « Mes contributions »).
+- D27.6 : PDF issu d'une contribution toujours gratuit (`always_free = true`) (recommandé : oui).
+- D27.7 : ancien import admin `POST /api/pdf` (recommandé : retiré de l'interface, route gardée pour l'instant).
+
+### Lot A : Données
+- [X] **Tâche 27.1 : Migration empreintes et contributions** - validée le 2026-10-30 (test sur base sauté : pas de MIGRATE_TEST_DATABASE_URL ; migration non appliquée, 🔒)
+  - **Pourquoi :** sans hash unique en base, deux envois simultanés du même fichier passent tous les contrôles applicatifs ; sans table de récompense à clé unique, une double publication crédite deux fois.
+  - **État actuel :** `public.documents` = `mobile-api/sql/0000_baseline.sql:125-154` (id `text`, statut `draft|analyzing|needs_review|published|archived`) + `kind`, `always_free` (`0009_document_kind.sql:5-18`). Aucune colonne d'empreinte, aucune extension `vector` dans le dépôt. Contrainte `app_wallet_transactions_type_check` : dernière définition dans `0021_admin_control.sql:36-41` (8 types : `topup, purchase, withdrawal, commission, subscription, ia_pack, bonus, admin_adjustment`) ; **0021 n'est pas suivi par git** (~ appliqué en production non vérifié). Dernier fichier : `0022_student_private_offers.sql`. Modèle de test statique : `tests/migration-0014.test.mjs` ; modèle de test sur base : `tests/migrate.test.mjs:73-93` (`skip: !process.env.MIGRATE_TEST_DATABASE_URL`).
+  - **Fichiers :** `mobile-api/sql/0023_pdf_dedup_contributions.sql` (nouveau), `mobile-api/tests/migration-0023.test.mjs` (nouveau)
+  - **Étapes :**
+    1. En-tête `-- Migration 0023 : empreintes PDF, envois en lot, récompenses de contribution` puis `-- Idempotent : peut etre execute plusieurs fois sans erreur.`
+    2. `alter table public.documents add column if not exists` : `file_sha256 text`, `text_fingerprint text`, `minhash integer[]`, `embedding real[]` (sauf si D27.3 choisit pgvector), `source text not null default 'admin'`, `contributor_id uuid references public.app_users(id) on delete set null`.
+    3. Contrainte `documents_source_check` (`source in ('admin','student')`) dans un bloc `do $$ ... if not exists (select 1 from pg_constraint where conname = ...)` (modèle `0009:11-19`).
+    4. `create unique index if not exists documents_file_sha256_uidx on public.documents (file_sha256) where file_sha256 is not null;` (partiel : les lignes existantes n'ont pas de hash) ; `create index if not exists documents_text_fingerprint_idx on public.documents (text_fingerprint);`
+    5. `create table if not exists public.pdf_uploads` : `id uuid primary key default gen_random_uuid()`, `batch_id uuid not null`, `uploader_id uuid not null references public.app_users(id) on delete cascade`, `source text not null check (source in ('admin','student'))`, `status text not null check (status in ('analyzing','duplicate','probable_duplicate','ready','pending_review','published','rejected'))`, `original_name text not null`, `file_size integer not null`, `storage_url text`, `file_sha256 text not null`, `text_fingerprint text`, `minhash integer[]`, `embedding real[]`, `page_count integer`, `extracted_text text`, `ai_sheet jsonb not null default '{}'`, `duplicate_of_document text references public.documents(id) on delete set null`, `duplicate_of_upload uuid`, `similarity numeric`, `reject_reason text`, `rights_declared boolean not null default false`, `copyright_flag boolean not null default false`, `personal_data_flag boolean not null default false`, `ai_attempts integer not null default 0`, `document_id text references public.documents(id) on delete set null`, `reviewed_by uuid`, `reviewed_at timestamptz`, `created_at`, `updated_at timestamptz not null default now()`.
+    6. Index : `(uploader_id, created_at desc)`, `(batch_id)`, `(status)`, `(file_sha256)` ; index unique partiel `pdf_uploads_active_sha_uidx on (file_sha256) where status in ('analyzing','ready','pending_review','probable_duplicate')` (deux envois en attente du même fichier impossibles).
+    7. `create table if not exists public.contribution_rewards` : `upload_id uuid primary key references public.pdf_uploads(id) on delete cascade`, `user_id uuid not null references public.app_users(id) on delete cascade`, `amount_coins integer not null check (amount_coins > 0)`, `created_at timestamptz not null default now()`.
+    8. `alter table public.app_wallet_transactions drop constraint if exists app_wallet_transactions_type_check;` puis `add constraint ... check (type in ('topup','purchase','withdrawal','commission','subscription','ia_pack','bonus','admin_adjustment','contribution_reward'))` : **les 8 types de 0021 + le nouveau**.
+    9. Aucune suppression (`drop table`, `delete from`, `truncate` interdits).
+  - **Tests à écrire :** statiques (sans base) : la chaîne contient `create table if not exists public.pdf_uploads`, `create table if not exists public.contribution_rewards`, `create unique index if not exists documents_file_sha256_uidx` avec `where file_sha256 is not null`, les 9 types de transaction, `drop constraint if exists` avant `add constraint`, aucun mot interdit. Sur base (`skip` sans `MIGRATE_TEST_DATABASE_URL`) : migrer deux fois → 2ᵉ passe sans `appliquée : 0023` ; dans une transaction annulée (`rollback`), deux `documents` avec le même `file_sha256` → erreur `23505` ; deux `contribution_rewards` avec le même `upload_id` → `23505`.
+  - **DoD :** `cd mobile-api && node --test tests/migration-0023.test.mjs` passe (tests sur base sautés si la variable est absente, signalé dans le verdict) ; `node --test tests/migrate.test.mjs` passe ; `node scripts/migrate.mjs --dry-run` liste 0023 sans erreur. 🔒 Application réelle de la migration : sur accord de l'utilisateur seulement.
+  - **Pièges :** ne pas supposer 0021 appliqué : la contrainte reconstruite doit contenir `admin_adjustment`. `contributor_id` en `on delete set null` (suppression de compte RGPD, `lib/account-deletion.ts`). Le catalogue étudiant lit `documents` en REST Supabase avec `select=*` (`src/features/pdf/pdfApi.ts:238`) : les nouvelles colonnes (`minhash`, `embedding`, `contributor_id`) seraient exposées ; voir 27.7 étape 1.
+  - **Dépendances :** D27.3 (type de la colonne `embedding`).
+
+### Lot B : Services et API
+- [X] **Tâche 27.2 : Bibliothèque pure de détection des doublons** - validée le 2026-10-30
+  - **Pourquoi :** une logique pure, testée sans base, décide du sort de chaque fichier ; la base n'est que la garde ultime.
+  - **État actuel :** aucun calcul de hash ni d'empreinte dans le dépôt (seul `sha256` : `recruiter-web/lib/login-throttle.ts:34`). Plus de jumeau prévu (décision d'architecture ci-dessus).
+  - **Fichiers :** `mobile-api/lib/pdf-dedup.ts` (nouveau, n'importe que `node:crypto`), `mobile-api/tests/pdf-dedup.test.mjs` (nouveau)
+  - **Étapes :**
+    1. `sha256(buf: Buffer): string` (hex).
+    2. `normalizeText(text)` : `normalize('NFD')` puis retrait des diacritiques, minuscules, retrait des ligatures, des numéros de page isolés (`^\s*\d+\s*$` par ligne) et des lignes répétées sur plus de la moitié des pages (en-têtes et pieds), ponctuation → espace, espaces fusionnés.
+    3. `textFingerprint(normalized)` = sha256 du texte normalisé ; `null` si moins de 200 caractères utiles.
+    4. `minhashSignature(normalized, { k: 5, size: 128 })` : shingles de 5 mots, 128 fonctions de hachage déterministes (graines fixes) ; `null` si moins de 20 shingles.
+    5. `similarity(a, b)` = proportion de positions égales.
+    6. `classifyDuplicate(candidate, existing[])` avec `candidate = { sha256, fingerprint, minhash, meta? }` et `existing = { ref, kind: 'document'|'upload', sha256, fingerprint, minhash, meta? }[]` ; renvoie `{ verdict: 'exact'|'text_duplicate'|'probable'|'unique', match?: ref, score? }`. Règles dans l'ordre : sha256 égal → `exact` ; empreinte égale ou similarité > 0,90 → `text_duplicate` ; similarité entre 0,70 et 0,90 → `probable` ; métadonnées égales (`concours|ecole` + `annee` + `matiere`, normalisées, toutes non vides) → `probable` ; sinon `unique`. Constantes exportées `DUPLICATE_THRESHOLD = 0.9`, `PROBABLE_THRESHOLD = 0.7`.
+    7. `cosine(a, b)` pour les embeddings (utilisée en 27.3 si D27.3 retient les embeddings) : > 0,95 → `probable`.
+  - **Tests à écrire :** même octets → `exact` ; même texte avec accents retirés, casse et espaces changés → `text_duplicate` ; texte dont 20 % des phrases sont remplacées → `probable` ; deux cours différents → `unique` ; même concours + année + matière, textes différents → `probable` ; texte de 50 caractères → empreinte `null`, verdict `unique` sans exception ; deux candidats identiques dans le même lot (le premier mis dans `existing`) → le second est `exact` ; même entrée deux fois → même signature (déterminisme).
+  - **DoD :** `cd mobile-api && node --test tests/pdf-dedup.test.mjs` : tous les cas passent ; `npm run typecheck` code 0.
+  - **Pièges :** un module chargé par `loadTs` ne doit importer que `node:`. Le texte court rend la similarité instable : d'où les minimums. Les seuils sont ceux du cadrage, ne pas les « ajuster » pour faire passer un test.
+  - **Dépendances :** aucune.
+
+- [X] **Tâche 27.3 : Extraction, pré-filtre et analyse IA d'un PDF** - validée le 2026-10-30
+  - **Pourquoi :** une seule chaîne d'analyse, ordonnée pour ne rien dépenser (quota, IA) sur un fichier refusé.
+  - **État actuel :** validation `mobile-api/lib/file-validation.ts:88-117` (`validateUpload(data, 'source', mime)` : vide 400, > 20 Mo 413, accepte aussi DOCX/TXT). Extraction `mobile-api/lib/source-extraction.ts:44-81` (`extractSource`, pdfjs legacy, 200 pages max, lève `ExtractionError` « Aucun texte trouvé dans ce PDF (document scanné ?)… » pour un scan, « protégé par un mot de passe », « illisible ou endommagé »). IA `mobile-api/lib/llm.ts:31` `callLlm(messages, options)` → `string | null` (4 modèles de repli, 60 s chacun par défaut). Quota `lib/ai-quota.ts` `enforceAiQuota(request, { userId, route })` (lève `RateLimitError`, réserve un créneau non remboursé) ; routes listées dans `lib/ai-quota-rules.ts:13-27` (`AI_ROUTE_LIMITS`). L'analyse admin actuelle (`recruiter-web/lib/pdf-intelligence.ts:117-211`) échoue en silence : **ne pas la réutiliser**, mais son prompt (l.146-161) sert de base.
+  - **Fichiers :** `mobile-api/lib/pdf-intake.ts` (nouveau, pur, dépendances injectées), `mobile-api/lib/ai-quota-rules.ts` (nouvelle clé `'pdf-intake'`), `mobile-api/tests/pdf-intake.test.mjs` (nouveau)
+  - **Étapes :**
+    1. `export const PDF_SHEET_SCHEMA` (zod) : `title` (3-200), `subject`, `school` (école ou concours), `year` (`^\d{4}(-\d{4})?$` ou vide), `level`, `kind` ∈ `cours|ancien_sujet|corrige|rapport|memoire|autre` (valeurs de `documents_kind_check`), `summary` (≤ 800), `keywords` (3 à 8), `is_academic` boolean, `copyright_flag` boolean, `personal_data_flag` boolean.
+    2. `analyzePdf(input, deps)` avec `input = { buffer, declaredMime, batchSiblings }` et `deps = { extract, findDuplicates, reserveQuota, callLlm, embed? }`. Ordre **imposé** : (a) `validateUpload` + exiger `extension === 'pdf'`, sinon `{ status: 'rejected', reason: "Ce fichier n'est pas un vrai PDF." }` ; (b) `sha256` → doublon exact contre `findDuplicates` + `batchSiblings` → `{ status: 'duplicate', duplicateOf }`, **sans appel IA ni quota** ; (c) `extract` ; erreur scan → selon D27.2 (V1 sans OCR : `rejected`, « PDF scanné sans texte : ajoutez une version texte. ») ; mot de passe → `rejected` ; texte utile < 200 caractères → `rejected` « PDF vide ou illisible. » ; (d) empreinte + MinHash → `classifyDuplicate` : `exact|text_duplicate` → `duplicate` ; (e) `reserveQuota()` ; (f) `callLlm` sur les 5 premières pages, tronquées à 12 000 caractères, `timeoutMs: 20_000`, deux modèles au plus ; `null` → `{ status: 'analyzing', aiFailed: true }` ; JSON invalide au schéma → une seule nouvelle tentative, puis `analyzing` ; (g) `is_academic === false` → `rejected` « Ce document ne semble pas académique. » ; (h) `classifyDuplicate` refait avec les métadonnées de la fiche (et l'embedding si D27.3) → `probable` donne `probable_duplicate` ; (i) sinon `ready`. Le statut final (`ready` côté admin, `pending_review` côté étudiant) est choisi par l'appelant.
+    3. Détection locale complémentaire, sans IA : regex ISBN (`ISBN(?:-1[03])?:?\s*[\d-]{10,17}`) ou `©`/`copyright` → `copyright_flag = true` ; matricule (motif à tirer des exemples existants, ~) → `personal_data_flag = true`. Les deux drapeaux sont combinés en OU avec ceux de l'IA.
+    4. Prompt système en français accentué : catalogueur de documents académiques camerounais, réponse JSON stricte, champ vide si l'information est absente, jamais inventée.
+    5. `ai-quota-rules.ts` : ajouter `'pdf-intake': { max: 30, windowMs: 3_600_000 }` (ou selon D27.1).
+  - **Tests à écrire :** avec des dépendances simulées et un compteur d'appels : octets `hello.pdf` sans signature → `rejected` ; 20 Mo + 1 octet avec en-tête `%PDF-1.4` → 413 (`FileValidationError`) ; PDF blanc (fabriqué avec `pdf-lib`) → `rejected` « vide » ; même hash qu'un document existant → `duplicate`, `callLlm` et `reserveQuota` appelés 0 fois ; même hash qu'un frère du lot → `duplicate` ; `callLlm` renvoie `'pas du json'` deux fois → `analyzing` ; `callLlm` renvoie `null` → `analyzing` avec `aiFailed` ; fiche valide → `ready` ; texte contenant `ISBN 978-2-07-036822-8` → `copyright_flag` vrai ; fixture `tests/fixtures/source-3-pages.pdf` → l'IA ne reçoit pas plus de 5 pages.
+  - **DoD :** `cd mobile-api && node --test tests/pdf-intake.test.mjs` : tous les cas passent ; `node --test tests/ai-quota.test.mjs` passe ; `npm run typecheck` code 0.
+  - **Pièges :** `pdf-intake.ts` ne doit pas importer `database.ts` ni `ai-quota.ts` (sinon le test exige une base) : tout passe par `deps`. `callLlm` dans son état par défaut peut prendre environ 4 minutes, d'où le timeout et la liste de modèles réduite. Le texte complet sert aux empreintes, seulement 5 pages à l'IA.
+  - **Dépendances :** D27.1 (quota), D27.2 (OCR), D27.3 (embeddings).
+
+- [X] **Tâche 27.4 : API d'envoi côté étudiant** - validée le 2026-10-30 (tests sur base et HTTP sautés : migration 0023 non appliquée, serveur non lancé)
+  - **Pourquoi :** c'est le point d'entrée des contributions ; il doit appliquer toutes les règles avant le moindre crédit.
+  - **État actuel :** seule route multipart de `mobile-api` : `app/api/mobile/documents/[id]/files/route.ts` (`runtime='nodejs'`, `maxDuration=60` l.20-21 ; refus 413 sur `content-length` l.72-75 ; `formData()` l.80-88 ; `validateUpload` l.90-91 ; nom assaini l.98-100 ; nettoyage du fichier si l'insertion échoue l.104-122 ; `FileValidationError` l.129-131). Session `requireMobileUser` (`lib/mobile-access.ts`), limiteur `enforceRateLimit` (`lib/route-rate-limit.ts:16`). Stockage : `lib/cloudinary.ts` (utilisé par le catalogue) ou `lib/file-storage.ts` (`UPLOAD_ROOT`, faux sur Vercel).
+  - **Fichiers :** `mobile-api/app/api/mobile/contributions/route.ts` (nouveau : `POST` un fichier, `GET` liste, `OPTIONS`), `mobile-api/app/api/mobile/contributions/[id]/route.ts` (nouveau : `PATCH` fiche, `OPTIONS`), `mobile-api/lib/contributions-rules.ts` (nouveau, pur), `mobile-api/lib/contributions-db.ts` (nouveau), `mobile-api/tests/contributions.test.mjs` (nouveau), `mobile-api/tests/ai-quota.test.mjs` (ajouter la route)
+  - **Étapes :**
+    1. `contributions-rules.ts` : `MAX_PER_BATCH = 10`, `MAX_PER_DAY = 30`, `checkBatchAllowance({ inBatch, inLast24h })` → `{ ok } | { ok: false, status: 400|429, error }` ; `EDITABLE_STATUSES = ['pending_review','probable_duplicate']` ; `sanitizeSheetPatch(body)` (champs de `PDF_SHEET_SCHEMA` seulement, sauf les drapeaux).
+    2. `POST /api/mobile/contributions` (multipart, **un fichier** `file`, champs `batchId` uuid et `rightsDeclared` = `"true"`) : session obligatoire (401) ; `enforceRateLimit({ bucket: 'contributions-upload', max: 20, windowMs: 60_000 })` ; `content-length` > 20 Mo + 512 Ko → 413 ; `rightsDeclared !== 'true'` → 400 « Confirmez que vous avez le droit de partager ce document. » ; `batchId` invalide → 400 ; comptes en base (`pdf_uploads` du `batchId` pour cet uploader, et 24 h glissantes) → `checkBatchAllowance` : 11ᵉ du lot → 400 « 10 PDF au maximum par envoi. », 31ᵉ du jour → 429 « Limite de 30 PDF par jour atteinte. » avec `Retry-After`.
+    3. Puis `analyzePdf` avec les dépendances réelles : `findDuplicates` = requête sur `documents` (publiés et non archivés) + `pdf_uploads` (statuts actifs) par sha256 / empreinte, et MinHash seulement sur les lignes de même `kind` ou de même matière (limite 500 lignes, ~ à mesurer) ; `reserveQuota` = `enforceAiQuota(request, { userId, route: 'pdf-intake' })`.
+    4. Stockage du fichier (D27.4) **seulement** si le statut n'est ni `duplicate` ni `rejected` ; insertion `pdf_uploads` (`source='student'`, statut `pending_review` à la place de `ready`) ; si l'insertion échoue avec `23505` sur `pdf_uploads_active_sha_uidx` → statut `duplicate` (course entre deux envois), et suppression du fichier stocké.
+    5. Réponse 201 : `{ upload: { id, status, originalName, sheet, duplicateOf?: { id, title }, rejectReason? } }`. Un doublon ou un refus est aussi une réponse 200 avec son statut (ce n'est pas une erreur de requête), et rien n'est stocké.
+    6. `GET` : envois de l'utilisateur seulement (`uploader_id = user.id`), 50 derniers, champs utiles, sans `extracted_text` ni `minhash`. `PATCH /[id]` : 404 si l'envoi n'est pas à l'utilisateur, 409 si le statut n'est pas modifiable, met à jour `ai_sheet` via `sanitizeSheetPatch`.
+    7. Aucun crédit de coins ici.
+  - **Tests à écrire :** purs : 10ᵉ fichier du lot accepté, 11ᵉ → 400 ; 30ᵉ du jour accepté, 31ᵉ → 429 ; `sanitizeSheetPatch` ignore `copyright_flag` et `status`. HTTP (`skip` si `localhost:3002` ne répond pas) : `POST` sans session → 401 ; `GET` sans session → 401 ; `OPTIONS` → 204. Sur base (`skip` sans base de test) : deux envois du même fichier → le second `duplicate` ; `GET` d'un autre étudiant ne contient pas l'envoi.
+  - **DoD :** `cd mobile-api && node --test tests/contributions.test.mjs tests/ai-quota.test.mjs` passe (sauts signalés) ; `npm run typecheck` code 0 ; `npm test` 0 fail.
+  - **Pièges :** `mobileErrorResponse` traduit `23505` en message d'achat : intercepter avant. `maxDuration = 60` : un fichier par requête tient dans ce délai, pas dix. Ne jamais faire confiance au MIME déclaré. Noms de fichiers assainis.
+  - **Dépendances :** 27.1, 27.2, 27.3 ; D27.4 (stockage).
+
+- [X] **Tâche 27.5 : API admin d'import, de modération et de publication avec crédit** - validée le 2026-10-30 (crédit unique testé sur un faux client pg ; test concurrent sur base sauté)
+  - **Pourquoi :** la publication est le seul moment où un PDF entre au catalogue et où des coins sont créés : tout doit s'y passer dans une seule transaction.
+  - **État actuel :** routes admin de `mobile-api` : `app/api/admin/templates/*` protégées par `requireAdminService` (`lib/admin-service.ts:13`, renvoie `admin.appUserId`) ; relais côté portail `recruiter-web/lib/mobile-api-proxy.ts:10` `forwardToMobileApi(request, segments, adminUserId)`, **chemin figé sur `/api/admin/templates`** (l.19). Aucune fonction générique de crédit : modèle d'écriture `recruiter-web/lib/admin-students.ts:291-328` (`adjustStudentWallet`, non idempotent) ; modèle d'idempotence `mobile-api/lib/workshop.ts:66-137` (`for update` + contrôle par référence). Push : `mobile-api/lib/push.ts:25` `sendPushToUser(userId, { title, body, data })`. Insertion catalogue actuelle : `recruiter-web/lib/supabase-pdf.ts:180-258` (liste de colonnes fixe, ne connaît pas les nouvelles colonnes). Stockage Cloudinary : `mobile-api/lib/cloudinary.ts`, dossier `campus-360/documents` (comme `recruiter-web/app/api/pdf/route.ts`).
+  - **Fichiers :** `mobile-api/app/api/admin/pdf-intake/route.ts` (nouveau : `POST` un fichier admin, `GET` liste filtrable), `mobile-api/app/api/admin/pdf-intake/[id]/route.ts` (nouveau : `PATCH` fiche, action `publish` / `reject` / `reanalyze`), `mobile-api/lib/contribution-publish.ts` (nouveau), `recruiter-web/lib/mobile-api-proxy.ts` (préfixe paramétrable), `recruiter-web/app/api/pdf/intake/[[...path]]/route.ts` (nouveau, relais), `mobile-api/tests/contribution-publish.test.mjs` (nouveau)
+  - **Étapes :**
+    1. `mobile-api-proxy.ts` : ajouter un paramètre `prefix` (`'templates' | 'pdf-intake'`, liste blanche) sans changer le comportement des appelants existants (valeur par défaut `'templates'`) ; message 503 neutre (« Service indisponible. »).
+    2. Relais `recruiter-web/app/api/pdf/intake/[[...path]]/route.ts` : `requireAdminApi()` puis `forwardToMobileApi(request, segments, user.id, 'pdf-intake')` pour `GET`, `POST`, `PATCH`.
+    3. `POST /api/admin/pdf-intake` : même chaîne que 27.4 (même `analyzePdf`, `source='admin'`, `uploader_id = admin.appUserId`, sans plafond journalier, `batchId` obligatoire, 10 par lot), statut final `ready`, quota IA non appliqué à l'admin (garder le limiteur de débit).
+    4. `GET` : filtres `source`, `status`, `batchId` ; pour un doublon probable, joindre le titre et l'URL du document visé.
+    5. `contribution-publish.ts` `publishUpload(client, { uploadId, adminAppUserId, sheet, force })` sur **un seul client** `databasePool.connect()` : `begin` ; `select ... from pdf_uploads where id = $1 for update` ; déjà `published` → renvoyer le document existant sans rien refaire (idempotent) ; statut non publiable (`duplicate`, `rejected`, `analyzing`) → 409 ; `probable_duplicate` ou un drapeau (`copyright_flag`, `personal_data_flag`) sans `force: true` → 409 « Confirmation explicite requise. » ; insert `documents` (id `pdf_<18 hex>`, champs de la fiche, `file_sha256`, `text_fingerprint`, `minhash`, `source`, `contributor_id` = uploader si `source='student'`, `status='published'`, `price_coins = 0`, `always_free` selon D27.6) ; `23505` sur `documents_file_sha256_uidx` → `rollback`, statut `duplicate`, 409 « Ce PDF existe déjà dans le catalogue. » ; si `source='student'` : `insert into contribution_rewards (upload_id, user_id, amount_coins) values ($1,$2,10) on conflict (upload_id) do nothing returning upload_id` et, **seulement si une ligne revient**, upsert `app_wallets` + insert `app_wallet_transactions` (`type='contribution_reward'`, `amount_coins=10`, `reference_id='contribution:<uploadId>'`, `status='success'`, `note` = titre) ; `update pdf_uploads set status='published', document_id, reviewed_by, reviewed_at` ; `commit`. Après le commit seulement : `sendPushToUser` (si D27.5 = push), sans bloquer la réponse.
+    6. `reject` : raison obligatoire (3 à 300 caractères), statut `rejected`, aucun crédit ; `reanalyze` : seulement depuis `analyzing`, relance `analyzePdf` sur le fichier stocké, `ai_attempts + 1`, maximum 3.
+    7. Trace : réutiliser la table d'audit admin existante si elle est créée par migration (~ `admin_audit_logs` est créée au runtime par `recruiter-web/lib/course-db.ts:348-371` : ne pas copier ce DDL).
+  - **Tests à écrire :** `publishUpload` avec un faux client `pg` (enregistre les requêtes) : contribution étudiante → une insertion `contribution_rewards`, un crédit de 10 ; deuxième appel sur le même upload → aucun nouveau crédit ; `on conflict` qui ne renvoie rien → aucun crédit ; erreur `23505` sur `documents` → `rollback` et statut `duplicate` ; `probable_duplicate` sans `force` → 409 ; import admin → aucun crédit. Sur base (`skip`) : deux publications concurrentes du même upload → un seul crédit. HTTP (`skip`) : `POST /api/admin/pdf-intake` sans secret → 401 ; relais `recruiter-web` sans session → 401.
+  - **DoD :** `cd mobile-api && node --test tests/contribution-publish.test.mjs` passe ; `npm run typecheck` code 0 ; `cd recruiter-web && npm run typecheck && npm run build` code 0 ; les appels existants de l'atelier de modèles (`/api/admin/templates`) répondent comme avant (vérifier `tests/admin-templates.test.mjs`).
+  - **Pièges :** ne pas appeler `createPdf` ni `upsertSupabasePdf` (autre pool, colonnes fixes, échec silencieux sans `DATABASE_URL`). `app_wallets.balance_coins >= 0` : un crédit ne casse pas. Le push ne doit jamais faire échouer la publication. L'ancienne route d'import admin (`recruiter-web/app/api/pdf/route.ts`) contourne l'anti-doublon : elle est remplacée dans l'interface en 27.6 (D27.7 pour son sort).
+  - **Dépendances :** 27.1 à 27.4 ; D27.4, D27.5, D27.6, D27.7.
+
+### Lot C : Interface
+- [~] **Tâche 27.6 : Page admin d'import en lot et onglet des contributions** - code écrit, typecheck et build OK ; parcours navigateur non fait (migration 0023 non appliquée)
+  - **Pourquoi :** l'admin doit voir le sort de chaque fichier et ne jamais publier un doublon par erreur.
+  - **État actuel :** `recruiter-web/app/admin/pdf/page.tsx:9-15` (rend `PdfDashboardClient` avec `initialDocuments`). `PdfDashboardClient.tsx` (1 223 lignes) : pas d'onglets ; import multiple déjà présent mais séquentiel et sans anti-doublon (`onFileChange` l.438-519, `uploadAnalyzedFile` l.342-436 : extraction pdfjs dans le navigateur, `POST /api/pdf`, `/analyze`, `/status`) ; entrée fichier l.1129-1137 ; style `stitch-*` (cartes, boutons, badges `badgeClass` l.619-625), icônes `lucide-react`, modale maison l.862-868. Modèle de barre d'onglets : `recruiter-web/app/admin/students/StudentsClient.tsx:211-218` et l.329 (fichier non commité, ~).
+  - **Fichiers :** `recruiter-web/app/admin/pdf/PdfDashboardClient.tsx`, `recruiter-web/app/admin/pdf/BatchImport.tsx` (nouveau), `recruiter-web/app/admin/pdf/ContributionsReview.tsx` (nouveau), `recruiter-web/app/admin/pdf/intakeApi.ts` (nouveau, appels `/api/pdf/intake`)
+  - **Étapes :**
+    1. Onglets « Catalogue » (contenu actuel) et « Import en lot » et « Contributions étudiantes » (avec un compteur des `pending_review` + `probable_duplicate`).
+    2. `BatchImport` : zone de glisser-déposer et sélecteur (`accept="application/pdf"`, `multiple`) ; refus côté client au-delà de 10 fichiers (« 10 PDF au maximum par lot. ») et des fichiers > 20 Mo, avant tout envoi ; un `batchId` (`crypto.randomUUID()`) ; envoi d'**un fichier par requête**, deux en parallèle au maximum ; une ligne par fichier : nom, barre de progression, badge (`En analyse`, `Doublon`, `Doublon probable`, `Prêt`, `Refusé`), lien « Voir l'existant » pour un doublon, motif pour un refus.
+    3. Fiche modifiable sous chaque ligne `ready` (titre, matière, école ou concours, année, niveau, type, résumé, mots-clés) ; bouton « Publier » par ligne et « Publier tout ce qui est prêt » (n'envoie que les `ready`, jamais les `probable_duplicate`).
+    4. `ContributionsReview` : liste des envois étudiants filtrée par statut ; pour un doublon probable, le PDF envoyé et le PDF existant côte à côte (titres, liens d'ouverture, score) ; alertes « Droits d'auteur à vérifier » et « Données personnelles » ; « Publier (+10 coins) » (avec confirmation explicite qui envoie `force: true` si un drapeau est présent), « Refuser » (raison obligatoire), « Relancer l'analyse » pour `analyzing`.
+    5. États : chargement (squelettes), erreur (message et « Réessayer »), vide (« Aucune contribution en attente. »). Après publication, rafraîchir le catalogue (`refresh` existant).
+    6. Le bouton « Nouveau PDF » actuel ouvre l'onglet « Import en lot » (selon D27.7) au lieu de l'ancien flux.
+  - **Tests à écrire :** pas de harnais d'interface dans `recruiter-web` : la preuve est le parcours navigateur ci-dessous.
+  - **DoD :** `cd recruiter-web && npm run typecheck && npm run build` code 0. Dans le navigateur (`mobile-api` + `recruiter-web-preview`, session admin ouverte par l'utilisateur), sur `http://localhost:3001/admin/pdf` : import de 3 PDF dont un déjà au catalogue → la ligne du doublon affiche « Doublon » et le lien, les 2 autres ont une fiche ; « Publier tout ce qui est prêt » → les 2 PDF apparaissent dans l'onglet « Catalogue » ; onglet « Contributions étudiantes » : publication d'une contribution → le solde de l'étudiant augmente de 10 (requête `GET` du compte ou lecture en base) ; 11 fichiers déposés → message, aucun envoi (onglet réseau) ; vérifié aussi à 375 px.
+  - **Pièges :** ne plus passer par `uploadAnalyzedFile` pour un nouvel import, sinon l'anti-doublon est contourné. Le portail n'a pas de garde-fou de couleurs : utiliser les classes `stitch-*`, pas d'hexadécimal nouveau. Deux familles de style coexistent (`stitch-*` sur cette page, `admin-kit.tsx` non commité ailleurs) : rester sur `stitch-*` dans ces fichiers.
+  - **Dépendances :** 27.5 ; D27.7.
+
+- [~] **Tâche 27.7 : Écran étudiant « Partager des PDF » et « Mes contributions »** - code écrit, typecheck OK ; parcours expo-web non fait (migration 0023 non appliquée)
+  - **Pourquoi :** c'est la boucle qui fait revenir l'étudiant : partager, voir le statut, recevoir ses coins.
+  - **État actuel :** `src/ui/screens/LibraryScreen.tsx:8-20` (props `ownedDocuments`, `onOpenDocument`, `onExplore`, `hideHeader`), utilisé dans `src/AppShell.tsx:1381-1387` (section `library`) et dans `src/ui/screens/ResourcesScreen.tsx:175-180` avec `hideHeader`. Pas de router : navigation par état dans `AppShell.tsx` (`AppSection` l.179, `openSection` l.1092-1105, modales booléennes l.284-317). Sélecteur et envoi multipart : `src/features/documents/documentFilesApi.ts:94-100` (import dynamique d'`expo-document-picker` avec message « Mettez à jour l'application »), l.134-152 (`getDocumentAsync`), l.156-202 (XHR, `FormData`, `getAuthHeaders()`, `filesBaseUrl`, cas `webFile` l.165-169). Wallet : `syncStudentAccount` `AppShell.tsx:634-675`, libellé des transactions l.~655-660 (repli « Commission PDF »). Push : `openFromNotification` `AppShell.tsx:1108-1123`. Catalogue lu en REST Supabase avec `select=*` : `src/features/pdf/pdfApi.ts:232-249`.
+  - **Fichiers :** `src/features/pdf/contributionsApi.ts` (nouveau), `src/features/pdf/SharePdfsModal.tsx` (nouveau), `src/features/pdf/MyContributionsScreen.tsx` (nouveau, modale plein écran), `src/ui/screens/LibraryScreen.tsx`, `src/ui/screens/ResourcesScreen.tsx`, `src/AppShell.tsx`, `src/features/pdf/pdfApi.ts`
+  - **Étapes :**
+    1. `pdfApi.ts` : remplacer `select=*` du catalogue par la liste explicite des colonnes utilisées par l'app (ne pas exposer `minhash`, `embedding`, `contributor_id`, `file_sha256`).
+    2. `contributionsApi.ts` : `uploadContribution(file, batchId, onProgress)` (XHR sur le motif de `documentFilesApi.ts:156-202`, vers `filesBaseUrl` + `/api/mobile/contributions`, champs `file`, `batchId`, `rightsDeclared`) ; `listContributions()` et `updateContributionSheet(id, patch)` via `authFetch`. Un 404 de la route → message « Cette fonction arrive bientôt. Mettez à jour l'application. », jamais un faux succès.
+    3. `SharePdfsModal` : sélection (`getDocumentAsync({ type: 'application/pdf', multiple: true, copyToCacheDirectory: true })`), refus local au-delà de 10 fichiers ou de 20 Mo par fichier ; case « J'ai le droit de partager ces documents » obligatoire (bouton désactivé sinon) ; envoi un par un (même `batchId`) ; une ligne par fichier avec sa progression et son badge : « En analyse », « Déjà disponible » (avec « Ouvrir » vers le document existant), « En attente de validation », « Refusé » (motif) ; fiche IA dépliable et corrigible pour les envois en attente ; avertissement si des données personnelles sont détectées.
+    4. `MyContributionsScreen` : liste des envois avec statut (« En analyse », « En attente », « Publié · +10 coins », « Refusé » + motif), états chargement, erreur avec « Réessayer », vide (« Partagez vos premiers PDF et gagnez 10 coins par document publié. ») ; à l'ouverture, `syncStudentAccount`.
+    5. `LibraryScreen` : barre d'actions **hors** de l'en-tête (visible avec `hideHeader`) : « Partager des PDF » et « Mes contributions » ; props `onSharePdfs`, `onOpenContributions` transmises par `AppShell` et `ResourcesScreen`.
+    6. `AppShell` : états `shareVisible`, `contributionsVisible` ; libellé « Récompense contribution » pour `contribution_reward` ; branche `contribution_published` dans `openFromNotification` (ouvre « Mes contributions » et rafraîchit le solde) si D27.5 = push.
+    7. Couleurs uniquement depuis `src/theme/stitch.ts` : en analyse `siennaBg`/`sienna`, en attente `warningBg`/`warningDeep`, publié `emeraldBg`/`emeraldDeep`, refusé `errorBg`/`error`, déjà disponible `paperSoft`/`inkMuted`.
+  - **Tests à écrire :** pas de harnais d'interface : `npm run typecheck`, `npm run lint:colors` et le parcours.
+  - **DoD :** `npm run typecheck` code 0 ; `npm run lint:colors` sans hausse (base du fichier `scripts/hardcoded-colors-baseline.json`). Parcours `expo-web-local` à 375 px (`mobile-api` local, session étudiante ouverte par l'utilisateur) : Bibliothèque → « Partager des PDF » → 2 PDF dont un déjà au catalogue → une ligne « Déjà disponible » et une ligne « En attente de validation » ; requêtes réseau : deux `POST /api/mobile/contributions` avec le même `batchId` ; publication par l'admin (27.6) → « Mes contributions » affiche « Publié · +10 coins » et le solde a augmenté de 10.
+  - **Pièges :** `expo-web` vise la production : utiliser `expo-web-local`. Sur le web, le fichier est `asset.file` (`webFile`). Aucun hexadécimal nouveau dans `src/`, et ne jamais lancer `lint:colors --update`. Le push ne se teste pas sur le web. 🔒 OTA après le déploiement du serveur et de la migration.
+  - **Dépendances :** 27.4, 27.5 ; D27.5.
+
+### Lot D : Câblage et validation
+- [ ] **Tâche 27.8 : Vérification de bout en bout, sécurité et carte de code**
+  - **Pourquoi :** les règles anti-doublon et anti-triche ne valent que si elles tiennent dans le parcours réel.
+  - **État actuel :** suite `mobile-api` (`npm test`), typecheck ×3 (app, `mobile-api`, `recruiter-web`), build `recruiter-web` ; `contexte-code.md` ne connaît pas encore les routes et tables du module.
+  - **Fichiers :** `contexte-code.md` (via `/code-analyzer-context`), `journal.md`
+  - **Étapes :**
+    1. Commandes : `cd mobile-api && npm test` ; `npm run typecheck` (racine), `cd mobile-api && npm run typecheck`, `cd recruiter-web && npm run typecheck && npm run build` ; `npm run lint:colors`.
+    2. Parcours complet admin puis étudiant (DoD de 27.6 et 27.7), et cas d'abus : faux PDF renommé, fichier de 21 Mo, même fichier envoyé par deux étudiants (le premier seul en attente), publication cliquée deux fois (un seul crédit), envoi d'un autre étudiant inaccessible (404), route admin sans secret (401).
+    3. Contrôle sécurité : type réel vérifié, tailles, rôles, propriété, aucun double crédit, quota IA appliqué aux étudiants, aucune colonne d'empreinte exposée au catalogue étudiant, aucun secret dans le code.
+    4. `/code-analyzer-context` sur la zone : routes `/api/mobile/contributions*`, `/api/admin/pdf-intake*`, `/api/pdf/intake/*`, tables `pdf_uploads`, `contribution_rewards`, nouvelles colonnes de `documents`, type `contribution_reward`, préfixe du relais.
+  - **Tests à écrire :** aucun nouveau ; tous ceux du module doivent passer.
+  - **DoD :** `npm test` (mobile-api) 0 fail ; typecheck ×3 code 0 ; `recruiter-web` build code 0 ; `lint:colors` sans hausse ; `/test-and-verify` VERIFIED sur 27.6 et 27.7 (ou PARTIEL avec la raison exacte).
+  - **Pièges :** les tests sur base et HTTP se sautent sans environnement : les compter et les nommer dans le verdict, ne pas les présenter comme passés.
+  - **Dépendances :** 27.1 à 27.7 ; 🔒 migration, déploiement et OTA par l'utilisateur.
+
+---
+
+## 💰 MODULE 28 : Modèle économique v2 — candidatures à crédits, packs, Pass Révision, nouveaux prix
+
+> **Source :** `contexte.md` §19 (cadrage validé le 2026-10-30). **Objectif :** appliquer la nouvelle grille (candidature 300/500 F avec CV adapté inclus, packs Starter et Recherche active, rapport 2 000 F après plan gratuit, mémoire 4 000 F ou 1 000 F par chapitre, PDF gratuits en lecture, 3 actions IA gratuites par jour puis Pass Révision, bonus 1 000 coins au lancement puis 300, contribution 50 coins), prix appliqués dès le lancement. Aucun abonnement automatique.
+> **Zone de code :** `contexte-code.md` §3.2 (stages), §3.3 (documents et IA), §3.4 (monétisation), §5 (tables et migrations). Dernière migration : `0023_pdf_dedup_contributions.sql` → ce module prend **0024**.
+
+### Décisions déjà prises (contexte.md §19)
+- 1 crédit = 1 candidature à une offre non payée ; 2 crédits = offre payée ou emploi (règle `isPaidOffer` de `lib/stage-pricing.ts`). Crédits valables 30 jours, perdus ensuite.
+- Starter 1 000 F = 5 crédits ; Recherche active 2 000 F = 12 crédits + 1 jour de Pass Révision.
+- 1 action IA = 1 résumé, 1 fiche, 1 quiz, ou 1 conversation de 5 questions. Le quota de 60 requêtes / 24 h (`lib/ai-quota.ts`) reste en place, Pass ou non.
+- `FREE_LAUNCH_MODE` ne met plus aucun prix à 0 ; il ne règle plus que le bonus d'inscription (1 000 pendant `FREE_LAUNCH_UNTIL`, 300 ensuite).
+- Recharge minimale 500 F inchangée.
+
+### Décisions arbitrées le 2026-10-30
+- **D28.1 :** passerelle en place inchangée.
+- **D28.2 :** anciens achats retirés (routes `purchase/pack`, `purchase/document`, `ia-packs/purchase` → 410), tables gardées pour l'historique.
+- **D28.3 :** soldes existants inchangés.
+- **D28.4 :** candidature dont l'envoi échoue → crédit ou coins rendus.
+- **D28.5 :** landing et `CLAUDE.md` mis à jour dans ce module (Tâche 28.13).
+
+### À demander à l'utilisateur (archivé, voir ci-dessus)
+- **D28.1 Passerelle :** le cadrage cite Notch Pay ; la carte (§3.4) indique SasPay en principal avec replis Nyole et NotchPay. Le module suppose la passerelle en place, sans changement. À confirmer.
+- **D28.2 Anciens achats :** `purchase/pack`, `purchase/document`, `ia-packs/purchase`, tables `app_pack_purchases`, `app_document_purchases` et `aiCost` (`free-launch.ts`) relèvent de l'ancien modèle (PDF payants, crédits IA). Les retirer, ou les garder en lecture seule pour l'historique ?
+- **D28.3 Comptes existants :** les soldes déjà crédités (5 000 ou 3 000 coins de départ) restent-ils tels quels ?
+- **D28.4 Échec d'envoi :** si une candidature échoue à l'envoi (WhatsApp ou e-mail), le crédit ou les coins sont-ils rendus (comme `refundWorkshop`) ?
+- **D28.5 Textes publics :** la landing (`landing-site/`) et `CLAUDE.md` §3 décrivent l'ancien modèle ; les mettre à jour dans ce module ou plus tard ?
+- **À vérifier (avant 28.14) :** frais de la passerelle sur 500 à 1 000 F ; coût réel d'un appel IA, pour confirmer que le Pass 7 jours à 1 000 F reste rentable.
+
+### Lot A : Données
+- [X] **Tâche 28.1 : Migration packs, crédits et pass** - validée le 2026-10-30 (0024 appliquée sur la base par le chantier du Module 27, voir journal)
+  - **Fichiers :** `mobile-api/sql/0024_pricing_v2.sql` (nouveau), `mobile-api/tests/migration-0024.test.mjs` (nouveau)
+  - **Action :** tables `app_credit_grants` (utilisateur, code du pack, crédits accordés, crédits restants ≥ 0, expiration, référence de paiement unique), `app_revision_passes` (utilisateur, début, fin, origine : achat ou pack, référence unique), `app_ai_free_actions` (utilisateur, jour, compteur) et suivi des mémoires payés (`generation_id`, mode forfait ou chapitre, chapitres payés). Contrainte des types de transaction reconstruite avec les 9 types existants (0023) + les nouveaux (`pack_purchase`, `pass_purchase`). Idempotente, aucune suppression.
+  - **DoD :** `cd mobile-api && node --test tests/migration-0024.test.mjs` passe ; `node scripts/migrate.mjs --dry-run` liste 0024 sans erreur. 🔒 Application réelle sur accord.
+
+### Lot B : Services et API
+- [X] **Tâche 28.2 : Grille de prix unique et règles pures** - validée le 2026-10-30
+  - **Fichiers :** `mobile-api/lib/pricing.ts` (nouveau), `mobile-api/lib/stage-pricing.ts`, `src/features/stages/stagePricing.ts`, `mobile-api/lib/workshop.ts`, `mobile-api/tests/pricing.test.mjs` (nouveau)
+  - **Action :** un seul fichier porte tous les montants de §19 (candidatures, packs, pass, rapport, mémoire, CV hors app, bonus, contribution 50). `stageApplyPrice` rend 300 / 500 et le coût en crédits (1 / 2). La copie de l'app reste identique (test de parité existant). La récompense de contribution du Module 27 lit cette constante.
+  - **DoD :** `node --test tests/pricing.test.mjs` et le test de parité stagePricing passent ; `npm run typecheck` (mobile-api et racine) code 0.
+
+- [X] **Tâche 28.3 : Lancement = bonus, plus de prix à zéro** - validée le 2026-10-30
+  - **Fichiers :** `mobile-api/lib/free-launch.ts`, `recruiter-web/lib/free-launch.ts`, `mobile-api/lib/mobile-access.ts`, `src/config/launch.ts`, tests de `free-launch`
+  - **Action :** les fonctions de prix ignorent `FREE_LAUNCH_MODE`. `resolveStartingCoins` rend 1 000 avant `FREE_LAUNCH_UNTIL` et 300 après (surcharge `STARTING_COINS` conservée). Les jumeaux restent identiques.
+  - **DoD :** tests `free-launch` et de parité des jumeaux passent ; un compte créé en mode lancement reçoit 1 000 coins (test sur base, `skip` sans base, signalé).
+
+- [X] **Tâche 28.4 : Candidature payée par crédit ou wallet, CV inclus** - validée le 2026-10-30
+  - **Fichiers :** `mobile-api/lib/stage-charge.ts`, `mobile-api/app/api/mobile/stages/apply/route.ts`, `mobile-api/app/api/mobile/stages/external/` (CV hors app), `mobile-api/tests/stage-charge.test.mjs`
+  - **Action :** au moment de postuler, le serveur consomme d'abord les crédits valides qui expirent le plus tôt (1 ou 2), sinon débite 300 / 500 F ; solde insuffisant → 409 avec le montant manquant. Le CV adapté et la lettre ne sont plus facturés à part dans la candidature ; le CV pour une offre hors app coûte 300 F. Une seule écriture par candidature (pas de double débit), autorisation par session.
+  - **DoD :** tests : crédits consommés avant le wallet, 2 crédits pour une offre payée, crédits expirés ignorés, double clic = un seul débit, 409 sans solde ; `npm test` (mobile-api) 0 fail.
+  - **Dépendances :** 28.1, 28.2 ; D28.4.
+
+- [X] **Tâche 28.5 : Achat des packs et du Pass Révision** - validée le 2026-10-30 (+ anciens achats en 410, D28.2)
+  - **Fichiers :** `mobile-api/lib/offers.ts` (nouveau), `mobile-api/app/api/mobile/offers/route.ts` (nouveau, GET catalogue + crédits et pass actifs), `mobile-api/app/api/mobile/offers/purchase/route.ts` (nouveau), `mobile-api/tests/offers.test.mjs` (nouveau)
+  - **Action :** achat payé depuis le wallet, dans une transaction : débit, crédits ou pass créés avec expiration, Recherche active ajoute 1 jour de Pass. Entrée validée (Zod, code d'offre connu), rate limit `purchase-` fermé en cas d'échec, référence unique contre le double achat. GET rend crédits restants, date d'expiration, pass actif.
+  - **DoD :** tests : achat OK, solde insuffisant 409, double requête = un seul achat, pass prolongé si déjà actif ; `npm test` 0 fail.
+  - **Dépendances :** 28.1, 28.2 ; D28.2.
+
+- [X] **Tâche 28.6 : Rédaction — plan gratuit, rapport 2 000 F, mémoire au forfait ou par chapitre** - validée le 2026-10-30
+  - **Fichiers :** `mobile-api/lib/workshop.ts`, `mobile-api/app/api/mobile/documents/workshop/route.ts`, `mobile-api/app/api/mobile/documents/generate-full/route.ts`, `mobile-api/tests/workshop.test.mjs`
+  - **Action :** le plan du rapport et le plan + la problématique du mémoire sont générés sans débit. Rapport complet : 2 000 F. Mémoire : forfait 4 000 F (tous les chapitres) ou 1 000 F par chapitre, chapitre jamais payé deux fois ; remboursement conservé en cas d'échec IA.
+  - **DoD :** tests : plan à 0, rapport 2 000, forfait puis chapitre = 0, chapitre seul 1 000, chapitre déjà payé = 0, échec IA rendu ; `npm test` 0 fail.
+  - **Dépendances :** 28.1, 28.2.
+
+- [X] **Tâche 28.7 : IA sur les PDF — 3 actions gratuites par jour, puis Pass** - validée le 2026-10-30 (lecture des PDF gratuite côté serveur)
+  - **Fichiers :** `mobile-api/lib/ai-allowance.ts` (nouveau), `mobile-api/app/api/ai/pdf-chat/route.ts`, `mobile-api/app/api/mobile/documents/ai/route.ts`, `mobile-api/app/api/mobile/pdf/` (accès lecture), `mobile-api/tests/ai-allowance.test.mjs` (nouveau)
+  - **Action :** lecture de tout PDF sans débit. Chaque résumé, fiche ou quiz compte 1 action ; une conversation compte 1 action toutes les 5 questions. Avec un Pass actif : pas de décompte. Sans Pass et après 3 actions du jour : 402 avec les offres de Pass. Le quota de 60 / 24 h reste appliqué en premier.
+  - **DoD :** tests : 3 actions OK puis 402, 5 questions = 1 action, pass actif illimité dans le quota, PDF ouvert sans débit ; `npm test` 0 fail.
+  - **Dépendances :** 28.1, 28.5 ; D28.2.
+
+### Lot C : Interface (application)
+- [X] **Tâche 28.8 : Écran des offres (packs et pass)** - validée le 2026-10-30 (navigateur 375 px : achat Starter → 5 crédits, solde 5 000 → 4 000, persistant après rechargement)
+  - **Fichiers :** `src/features/wallet/offersApi.ts` (nouveau), `src/features/wallet/OffersScreen.tsx` (nouveau), `src/AppShell.tsx` (accès depuis le wallet)
+  - **Action :** les 2 packs et les 2 pass avec leur prix et ce qu'ils contiennent ; crédits restants et date d'expiration ; achat depuis le wallet, et solde insuffisant → recharge ouverte puis retour à l'achat. États chargement, erreur, vide. Couleurs du thème (`lint:colors` sans hausse).
+  - **DoD :** navigateur (expo-web-local, 375 px) : achat du Starter → solde −1 000 et 5 crédits affichés ; solde trop bas → recharge proposée.
+
+- [X] **Tâche 28.9 : Candidature — prix ou crédits affichés** - validée le 2026-10-30 (« 500 FCFA ou 2 crédits », « Utiliser 2 crédits et générer », POST stages/cv 200 creditsUsed 2, base credits_left 3)
+  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`, `src/features/stages/applyPrice.ts`, `src/ui/screens/StagesScreen.tsx`
+  - **Action :** le bouton indique « 1 crédit » / « 2 crédits » ou « 300 F » / « 500 F » ; la mention d'un CV payant disparaît ; solde insuffisant → choix entre recharge et pack, sans perdre la candidature en cours.
+  - **DoD :** navigateur : candidature avec crédits → compteur −1 ; sans crédit → débit du wallet affiché.
+
+- [!] **Tâche 28.10 : Atelier de rédaction — plan gratuit et choix forfait/chapitre** - idem 28.8
+  - **Fichiers :** `src/ui/screens/WritingWorkshopModal.tsx`, `src/features/documents/DocumentsScreen.tsx`
+  - **Action :** le plan s'affiche avant tout paiement ; rapport à 2 000 F ; pour le mémoire, choix forfait 4 000 F ou chapitre 1 000 F, chapitres payés marqués.
+  - **DoD :** navigateur : plan obtenu sans débit ; un chapitre payé n'est plus facturé.
+
+- [!] **Tâche 28.11 : Lecteur PDF — compteur d'actions et Pass** - idem 28.8
+  - **Fichiers :** `src/features/pdf/SimplePdfReaderModal.tsx`, `src/features/pdf/pdfAssistant.ts`, `src/features/pdf/pdfApi.ts`
+  - **Action :** plus aucun prix sur la lecture ; « X actions gratuites restantes aujourd'hui » ; à la 4e, proposition du Pass 24 h / 7 jours ; Pass actif → « Pass actif jusqu'au … ».
+  - **DoD :** navigateur : 3 actions puis proposition du Pass ; après achat, l'action passe.
+
+- [X] **Tâche 28.13 : Textes publics alignés sur la grille v2** - validée le 2026-10-30 (page Tarifs vérifiée dans le navigateur)
+  - **Fichiers :** pages de prix et de fonctionnalités de `landing-site/`, `CLAUDE.md` §3, `contexte.md` §5.1 (renvoi vers §19)
+  - **Action :** plus aucune mention d'abonnement, de PDF payants ni de l'ancien bonus ; les prix de §19 affichés à l'identique.
+  - **DoD :** `grep` des anciens montants (5 000 coins, 250 F, 500 F le CV) vide dans ces fichiers ; `cd landing-site && npx tsc --noEmit` code 0.
+
+### Lot D : Câblage et validation
+- [!] **Tâche 28.12 : Vérification de bout en bout, sécurité et carte** - tests, typecheck ×3, build OK ; /test-and-verify sur 28.8–28.11 en attente d'une session étudiante
+  - **Fichiers :** `contexte-code.md` (via `/code-analyzer-context`), `journal.md`
+  - **Action :** suite complète, typecheck ×3, build `recruiter-web`, `lint:colors` ; parcours inscription (bonus 1 000) → achat Starter → candidatures → rapport → PDF + Pass ; abus : double clic, crédits expirés, achat sans solde, appel IA sans session (401). Points « À vérifier » (frais passerelle, coût IA) reportés avec leur résultat.
+  - **DoD :** `npm test` (mobile-api) 0 fail ; typecheck ×3 code 0 ; build code 0 ; `/test-and-verify` VERIFIED sur 28.8 à 28.11 (ou PARTIEL avec la raison). 🔒 Migration, déploiement et OTA par l'utilisateur.
+
+---
+
+## 🔒 MODULE 29 : Correctifs de l'audit de sécurité du 2026-10-31 (`/cybersec all`)
+
+Audit sur le commit `1d2e483` plus le diff non commité. Les valeurs des secrets ne sont jamais recopiées : fichier, ligne, type.
+
+- [!] **Tâche 29.1 : 🔴 Critique — identifiants Cloudinary en dur dans des scripts suivis par git** - code corrigé le 2026-10-31 (`CLOUDINARY_*` lus dans l'environnement ou les `.env` locaux, arrêt si absents ; grep vide ; test `security-hardening` vert). 🔒 Bloquée sur la rotation : le littéral était identique au `CLOUDINARY_API_SECRET` local, c'est donc le secret réel, toujours dans l'historique.
+  - **Faille :** `scripts/upload_all_exams_to_cloudinary.mjs:11-12` et `scripts/run_full_authentic_exams_pipeline.mjs:14-15` contiennent une clé API (15 caractères) et un secret API (27 caractères) Cloudinary littéraux, présents dans l'historique depuis `1c60946`.
+  - **Scénario :** toute personne qui lit le dépôt (ou un clone, une fuite, un fork) peut téléverser, écraser ou supprimer les PDF du catalogue et générer des URL signées.
+  - **Action :** 🔒 l'utilisateur régénère le secret dans la console Cloudinary et met la nouvelle valeur dans les `.env` (local, VPS). Puis remplacer les littéraux par `process.env.CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` (sortie en erreur si absents). Réécrire l'historique est facultatif une fois le secret révoqué.
+  - **DoD :** `git grep -nE "const api(Key|Secret) = '" scripts/` vide ; l'ancien secret refusé par Cloudinary (vérifié par l'utilisateur).
+- [X] **Tâche 29.2 : 🟠 Moyen — secret de webhook littéral dans `scripts/test-payments-flow.mjs:48`** - validée le 2026-10-31 : valeur de test (égale à aucun secret des `.env` locaux), remplacée par un secret aléatoire généré à l'exécution ; le script passe.
+  - **Scénario :** si c'est le secret de production, n'importe qui peut forger un webhook signé et créditer un portefeuille.
+  - **Action :** lire la valeur depuis `process.env` ; si elle correspond au secret de production, 🔒 le faire régénérer chez la passerelle.
+  - **DoD :** plus de littéral à cette ligne ; statut « production ou test » noté dans le journal.
+- [X] **Tâche 29.3 : 🟠 Moyen — `mobile-api/app/api/auth/[...all]/route.ts:11-14` (et `:31-32`) renvoie toute origine avec `Access-Control-Allow-Credentials: true`**
+  - **Scénario :** une page d'une autre origine appelle `GET /api/auth/get-session` avec `credentials: 'include'` et lit la réponse. Aujourd'hui limité par `SameSite=Lax` (cookie non envoyé depuis un site tiers) ; exploitable depuis un sous-domaine du même site ou si le cookie passe un jour en `SameSite=None`.
+  - **Action :** n'ajouter `Allow-Origin` / `Allow-Credentials` que si `isTrustedOrigin(origin, process.env)` (`lib/origins.ts`), comme `withCors` ; sans `Origin`, ne rien poser.
+  - **DoD :** test : `Origin: https://evil.example` → pas d'en-tête `Access-Control-Allow-Origin` ; origine de confiance → reflétée ; `npm test` 0 fail.
+  - **Validée 2026-10-31 :** `setCorsHeaders` (isTrustedOrigin ou `AUTH_CONFIG.trustedOrigins`) ; curl local : evil → aucun en-tête CORS (OPTIONS et GET get-session), `http://localhost:8081` → reflété avec credentials.
+- [X] **Tâche 29.4 : 🟡 Faible — 17 pré-vols `OPTIONS` reflètent toute origine avec credentials** - validée le 2026-10-31 : `corsPreflight()` dans `lib/mobile-access.ts`, 17 routes basculées, grep vide, curl local evil → aucun en-tête.
+  - **Fichiers :** `mobile-api/app/api/ai/pdf-chat/route.ts:47-49`, `mobile/account/route.ts:21-23`, `mobile/account/photo`, `mobile/documents/*` (route, `[id]`, `[id]/images`, `[id]/sections`, `[id]/sections/[sectionId]`, `ai`, `ai/diagram`, `defense-coach`, `generate`, `generate-full`, `onboard-chat`), `mobile/events`, `mobile/wallet/topup` et `topup/[reference]`.
+  - **Scénario :** le pré-vol autorise une requête à effet de bord depuis n'importe quelle origine ; la réponse réelle reste illisible (`withCors` filtre) et le cookie Lax n'est pas envoyé, d'où la gravité faible.
+  - **Action :** un seul `corsPreflight(request)` dans `lib/mobile-access.ts` fondé sur `isTrustedOrigin`, utilisé par ces 17 routes.
+  - **DoD :** `git grep -n "headers\['Access-Control-Allow-Origin'\] = origin" mobile-api/app` vide ; tests verts.
+- [X] **Tâche 29.5 : 🟡 Faible — comparaison non constante du secret n8n** (validée le 2026-10-31 : `sameSecret` exporté de `lib/admin-service-check.ts`, test vert) `mobile-api/app/api/mobile/stages/ingest/route.ts:51` (`apiKey !== expectedKey`)
+  - **Scénario :** attaque temporelle théorique sur `N8N_INGESTION_SECRET` (bruit réseau élevé, difficile en pratique).
+  - **Action :** réutiliser la comparaison `timingSafeEqual` de `lib/admin-service-check.ts`.
+  - **DoD :** test 401 / 200 inchangé ; plus de `!==` sur le secret.
+- [ ] **Tâche 29.6 : 🟡 Faible — pas de CSP ni de HSTS côté applications** (à confirmer sur la configuration Nginx réelle du VPS)
+  - **Constat :** `mobile-api/middleware.ts:26-30` et `recruiter-web/middleware.ts:89-93` posent `nosniff`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, mais aucune `Content-Security-Policy` ; `landing-site` n'a ni middleware ni `headers()` ; HSTS seulement dans `docs/deploy/nginx-files.conf:38`.
+  - **Action :** relever les en-têtes réels (`curl -sI` sur les 3 domaines) ; ajouter HSTS dans Nginx pour les 3 hôtes et une CSP (d'abord `Content-Security-Policy-Report-Only`) pour `admin.` et le site public.
+  - **DoD :** `curl -sI https://campus360b.site` et `https://admin.campus360b.site` montrent HSTS et une CSP.
+- [ ] **Tâche 29.7 : Audit des dépendances non fait** — `npm audit --omit=dev` sur la racine, `mobile-api`, `recruiter-web`, `landing-site` (commande refusée pendant l'audit) ; reporter les vulnérabilités hautes et critiques.
+  - **DoD :** compte high/critical par service noté dans le journal, une tâche par paquet à corriger.
+
+---
+
+## ✨ MODULE 30 : Entourer une zone du PDF pour questionner l'IA
+
+Source : `contexte.md` §20 (cadrage validé le 2026-10-31, voie Bounded). Aujourd'hui `/api/ai/pdf-chat` ne reçoit que les métadonnées du PDF (titre, résumé, plan, quiz) : l'IA ne voit jamais la page. Ce module lui envoie l'image de la zone entourée.
+
+### Décisions déjà prises (contexte.md §20)
+- Geste : bouton ✨ IA dans `pdf-viewer.html`, mode « entourer » (défilement figé), lasso au doigt converti en rectangle englobant affiché pour confirmation ; simple toucher sans tracé = page entière.
+- Découpe dans le viewer (T1) : canvas, JPEG ≤ 300 Ko, envoyé à l'app par `postMessage`. Plan B (T2) si Cloudinary bloque la lecture des pixels : le viewer envoie `page + x,y,l,h`, le serveur retrouve le PDF par son id et fait recadrer la page par Cloudinary.
+- Serveur : champ optionnel `zone: {page, image}` (JPEG/PNG, ≤ 1,5 Mo) sur `/api/ai/pdf-chat` ; message multimodal ; avec une zone, seuls les modèles vision sont essayés (gpt-4o-mini, Gemini Flash ; Llama 3.3 écarté) ; aucune image stockée.
+- Feuille du bas dans l'app : miniature, 3 raccourcis (« Explique », « Résous pas à pas », « Donne un exemple similaire »), question libre, réponse dans la feuille, « Continuer dans l'Assistant ». L'image reste jointe tant que l'étudiant continue dans la même feuille ; une nouvelle zone la remplace.
+- Décompte : une question sur une zone = une question normale (`kind: 'question'`), plafond 60/jour inchangé, aucun nouveau prix.
+- Le mode « Lecteur externe » (navigateur) n'affiche pas le bouton IA.
+- Les deux copies `mobile-api/public/pdf-viewer.html` et `landing-site/public/pdf-viewer.html` restent identiques (`diff -q` vide).
+
+### À demander à l'utilisateur
+- **Miniature dans l'historique local :** `chatHistoryStorage.ts` écrit via `authStorage`, qui passe par `SecureStore` sur mobile (prévu pour de petites valeurs, environ 2 Ko). Y ranger des images est risqué. Proposition : garder seulement le numéro de page (« Zone, page 4 ») dans l'historique, la miniature n'existant que pendant la session. Le cadrage prévoyait de garder la miniature : à trancher avant 30.6.
+- **Appel payant de vérification (30.1) :** un appel réel à OpenRouter avec une image (coût de l'ordre de 0,001 $) pour confirmer que gpt-4o-mini lit bien l'image : accord à donner.
+
+### Lot A : Prérequis
+- [ ] **Tâche 30.1 : Vérifier que Cloudinary autorise la découpe côté viewer, puis trancher T1 ou T2**
+  - **Fichiers :** aucun fichier de code ; résultat dans `journal.md` et dans ce module (décision T1/T2).
+  - **Action :** sur l'URL d'une page de PDF du catalogue (`.../pg_1/...`), relever l'en-tête `Access-Control-Allow-Origin` renvoyé avec `Origin: http://localhost:8081` puis avec l'origine de production de l'API. Dans le navigateur, charger l'image avec `crossOrigin="anonymous"`, la dessiner dans un canvas et appeler `toDataURL` : réussite = T1 confirmé, erreur « tainted canvas » = plan B T2. 🔒 Avec l'accord de l'utilisateur, un appel OpenRouter `openai/gpt-4o-mini` avec un `image_url` en data URL confirme la lecture de l'image et donne le coût réel.
+  - **DoD :** `curl -sI -H "Origin: http://localhost:8081" "<url pg_1>"` montre (ou non) `Access-Control-Allow-Origin` ; essai canvas noté (réussite ou erreur exacte) ; décision T1/T2 écrite ici ; coût de l'appel test noté (ou « non fait, accord absent »).
+
+### Lot B : Serveur
+- [ ] **Tâche 30.2 : Validation de la zone et construction du message multimodal**
+  - **Fichiers :** `mobile-api/lib/pdf-zone.ts` (nouveau), `mobile-api/tests/pdf-zone.test.mjs` (nouveau)
+  - **Action :** `parsePdfZone(input)` accepte `{page, image}` avec `page` entier ≥ 1 et `image` en data URL `image/jpeg` ou `image/png`, décodée ≤ 1,5 Mo ; tout autre cas renvoie une erreur lisible (« Zone invalide »). `buildZoneUserContent(question, zone)` renvoie le contenu multimodal (`[{type:'text'}, {type:'image_url'}]`) avec la mention de la page. `VISION_MODELS` liste les modèles qui lisent les images. En plan B (T2), `parsePdfZone` accepte `{page, x, y, w, h}` relatifs (0 à 1) à la place de l'image.
+  - **DoD :** `cd mobile-api && node --test tests/pdf-zone.test.mjs` : cas valides, mauvais type MIME, image > 1,5 Mo, page 0, page non entière, data URL mal formée, tous passants.
+- [ ] **Tâche 30.3 : `/api/ai/pdf-chat` accepte une zone**
+  - **Fichiers :** `mobile-api/app/api/ai/pdf-chat/route.ts`, `mobile-api/lib/pdf-zone.ts`, `mobile-api/tests/pdf-zone.test.mjs`
+  - **Action :** `bodySchema` gagne `zone` optionnel ; zone invalide → 400 sans appel IA ni décompte. Avec une zone, la dernière question part en contenu multimodal et seuls les `VISION_MODELS` sont essayés ; le prompt système demande de dire clairement quand la zone est illisible au lieu d'inventer. Si aucun modèle vision ne répond → 503 avec un message clair. Le décompte reste `consumeAiAllowance(userId, 'question')` et `enforceAiQuota` reste avant tout. Aucune image écrite en base, sur disque ni dans les journaux (pas de `console.*` de l'image).
+  - **DoD :** `cd mobile-api && npm test` 0 fail ; `npm run typecheck` code 0 ; `curl` local sans session → 401, avec une zone invalide → 400 ; `git grep -n "image" mobile-api/app/api/ai/pdf-chat/route.ts` ne montre aucun journal de l'image.
+
+### Lot C : Viewer
+- [ ] **Tâche 30.4 : Bouton ✨ IA et mode « entourer » dans le viewer**
+  - **Fichiers :** `mobile-api/public/pdf-viewer.html`, `landing-site/public/pdf-viewer.html`
+  - **Action :** bouton flottant ✨ IA en bas à droite, visible seulement quand le viewer est intégré (WebView : `window.ReactNativeWebView` ; web : `window.parent !== window`), donc absent en « Lecteur externe ». L'appui fige le défilement, affiche « Entoure la partie qui te bloque » et un bouton Annuler. Le tracé au doigt (et à la souris) se dessine sur la page touchée ; au relâché, le rectangle englobant s'affiche avec « Valider » et « Recommencer ». Un toucher sans tracé sélectionne la page entière. Le double-tap zoom et l'indicateur de page restent intacts hors du mode.
+  - **DoD :** viewer ouvert en local dans un iframe : bouton visible, tracé dessiné, rectangle affiché, Annuler rend le défilement ; ouvert seul dans un onglet : bouton absent ; `diff -q mobile-api/public/pdf-viewer.html landing-site/public/pdf-viewer.html` vide.
+- [ ] **Tâche 30.5 : Découpe de la zone et envoi à l'app**
+  - **Fichiers :** `mobile-api/public/pdf-viewer.html`, `landing-site/public/pdf-viewer.html`
+  - **Action :** à « Valider », la zone est recadrée dans un canvas à partir de l'image Cloudinary (`crossOrigin="anonymous"`) ou du canvas pdf.js, côté long limité (1 024 px proposé), JPEG dont la qualité baisse jusqu'à ≤ 300 Ko. Le viewer envoie `{type:'zone', page, image}` via `window.ReactNativeWebView.postMessage(JSON.stringify(...))` ou `window.parent.postMessage(..., <origine de l'app>)` (jamais `'*'`). Échec de découpe → message « Impossible de lire cette zone » dans le viewer, rien n'est envoyé. En plan B (T2), le message contient `{type:'zone', page, x, y, w, h}` relatifs.
+  - **DoD :** dans le navigateur, une page parente de test qui écoute `message` reçoit `{type:'zone', page, image}` avec une image ≤ 300 Ko qui montre bien la zone entourée ; page entière : image de la page complète ; `diff -q` des deux copies vide.
+
+### Lot D : Interface (application)
+- [ ] **Tâche 30.6 : Client IA et historique avec zone**
+  - **Fichiers :** `src/features/pdf/pdfAssistant.ts`, `src/features/pdf/chatHistoryStorage.ts`
+  - **Action :** `askPdfAssistant` accepte `zone?: {page, image}` et l'ajoute au corps de la requête. `PdfAssistantMessage` gagne `zonePage?: number` (et la miniature selon la décision « Miniature dans l'historique »). L'historique local n'enregistre jamais l'image complète.
+  - **DoD :** `npm run typecheck` code 0 ; `git grep -n "image" src/features/pdf/chatHistoryStorage.ts` vide.
+- [ ] **Tâche 30.7 : Feuille du bas « Question sur la zone »**
+  - **Fichiers :** `src/features/pdf/ZoneQuestionSheet.tsx` (nouveau)
+  - **Action :** feuille à mi-hauteur qui laisse le lecteur visible : miniature de la zone (« Page N »), 3 raccourcis, champ de question, bouton d'envoi. États : chargement, réponse, erreur réseau (message et Réessayer), `PassRequiredError` (message Pass Révision et lien d'achat existant), 401. Les questions suivantes réutilisent la même image ; « Continuer dans l'Assistant » renvoie les messages à l'appelant. Couleurs tirées de `stitchColors` uniquement.
+  - **DoD :** `npm run typecheck` code 0 ; `npm run lint:colors` sans hausse de la référence.
+- [ ] **Tâche 30.8 : Câblage viewer → feuille → Assistant**
+  - **Fichiers :** `src/features/pdf/SimplePdfReaderModal.tsx`, `src/features/pdf/ZoneQuestionSheet.tsx`
+  - **Action :** `onMessage` sur la `WebView` et écouteur `message` sur `window` pour l'iframe web, qui n'accepte que l'origine de `authWebBaseUrl` et le type `zone` (JSON invalide ignoré). Une zone reçue ouvre la feuille ; une nouvelle zone remplace la précédente. « Continuer dans l'Assistant » ajoute l'échange à `assistantMessages`, enregistre l'historique et bascule l'onglet sur `assistant` ; la bulle montre « Zone, page N ». Le compteur `aiAllowance` est mis à jour comme pour les autres questions.
+  - **DoD :** `expo-web-local` à 375 px avec une session étudiante ouverte par l'utilisateur : entourer un exercice → feuille ouverte avec la miniature → « Explique » → réponse qui parle du contenu de la zone ; requête `POST /api/ai/pdf-chat` avec `zone` visible dans l'onglet réseau ; « Continuer dans l'Assistant » → échange présent dans l'onglet Assistant.
+
+### Lot E : Câblage et validation
+- [ ] **Tâche 30.9 : Vérification de bout en bout, sécurité et carte**
+  - **Fichiers :** `contexte-code.md` (via `/code-analyzer-context`), `journal.md`
+  - **Action :** suite `mobile-api`, typecheck racine et `mobile-api`, `lint:colors`. Parcours : zone sur une annale, page entière, scan flou (l'IA dit qu'elle ne lit pas), question de suite sur la même zone, nouvelle zone qui remplace, actions gratuites épuisées → message Pass, appel sans session → 401, zone de 3 Mo forgée → 400. Coût réel d'une question avec image relevé sur OpenRouter et comparé à l'estimation (0,3 à 1,2 FCFA).
+  - **DoD :** `npm test` (mobile-api) 0 fail ; typecheck ×2 code 0 ; `lint:colors` sans hausse ; `/test-and-verify` VERIFIED sur 30.4, 30.5 et 30.8 (ou PARTIEL avec la raison) ; coût noté. 🔒 Commit, déploiement VPS et mise à jour OTA par l'utilisateur.
 
 ---
 

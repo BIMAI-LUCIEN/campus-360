@@ -23,12 +23,12 @@ const APK_URL =
 export const metadata: Metadata = {
   title: "Télécharger Campus 360 APK — Gratuit pour Android",
   description:
-    "Télécharge l'app Campus 360 pour Android. Installation en 3 étapes. APK gratuit, sans pub, toutes les fonctions gratuites pendant le lancement.",
+    "Télécharge l'app Campus 360 pour Android. Installation en 3 étapes. APK gratuit, sans pub, 1 000 coins offerts pendant le lancement.",
   alternates: { canonical: "/telecharger" },
   openGraph: {
     title: "Télécharger Campus 360 APK pour Android",
     description:
-      "APK gratuit, sans publicité. Toutes les fonctions sont gratuites pendant le lancement.",
+      "APK gratuit, sans publicité. 1 000 coins offerts pendant le lancement.",
     url: "/telecharger",
   },
 };
@@ -50,7 +50,7 @@ const requirements = [
 export default function TelechargerPage() {
   return (
     <SiteShell>
-      <PageHero kicker="Téléchargement direct" title="Télécharge Campus 360, gratuit pour" accent="Android." subtitle="Application Android gratuite, sans publicité. Toutes les fonctions sont gratuites pendant le lancement.">
+      <PageHero kicker="Téléchargement direct" title="Télécharge Campus 360, gratuit pour" accent="Android." subtitle="Application Android gratuite, sans publicité. 1 000 coins offerts à l'inscription pendant le lancement.">
         <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
           <a href={APK_URL} download="campus-360.apk">
             <Button size="lg" variant="primary" className="gap-2 w-full sm:w-auto">

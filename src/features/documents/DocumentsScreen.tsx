@@ -29,7 +29,7 @@ import { loadCvLibrary, removeCvFromLibrary, saveCvToLibrary, savedCvTitle, type
 import { CV_TEMPLATES, missingCvFields, type CvTemplateId } from '../stages/cvHtml';
 import { deleteCvPhoto, fetchCvPhoto, pickCvPhoto, saveCvPhoto } from '../stages/cvPhoto';
 import type { OfficialCvData } from '../../types';
-import { freeLabel, isFreeLaunch } from '../../config/launch';
+import { isFreeLaunch } from '../../config/launch';
 import { AppAlert } from '../../ui/AppAlert';
 
 const getDocBadgeTheme = (type: string) => {
@@ -50,8 +50,8 @@ const getDocBadgeTheme = (type: string) => {
 const TYPE_TILES = [
   { key: 'cv', label: 'CV', Icon: FileText, color: '#60A5FA', tint: 'rgba(96,165,250,0.14)', hasAi: true, priceLabel: 'Inclus' },
   { key: 'lettre_motivation', label: 'Lettre IA', Icon: Mail, color: '#F472B6', tint: 'rgba(244,114,182,0.14)', hasAi: true, priceLabel: 'Inclus' },
-  { key: 'stage', label: 'Rapport de stage', Icon: Briefcase, color: '#FBBF24', tint: 'rgba(251,191,36,0.14)', hasAi: true, get priceLabel() { return isFreeLaunch() ? freeLabel() : '2 000 FCFA'; } },
-  { key: 'memoire', label: 'Mémoire Complet', Icon: GraduationCap, color: '#A855F7', tint: 'rgba(168,85,247,0.14)', hasAi: true, get priceLabel() { return isFreeLaunch() ? freeLabel() : '5 000 FCFA'; } },
+  { key: 'stage', label: 'Rapport de stage', Icon: Briefcase, color: '#FBBF24', tint: 'rgba(251,191,36,0.14)', hasAi: true, get priceLabel() { return 'Plan gratuit · 2 000 FCFA'; } },
+  { key: 'memoire', label: 'Mémoire Complet', Icon: GraduationCap, color: '#A855F7', tint: 'rgba(168,85,247,0.14)', hasAi: true, get priceLabel() { return 'Plan gratuit · dès 1 000 F/chapitre'; } },
 ] as const;
 
 const SERIF = Platform.select({ ios: 'Georgia', android: 'serif', web: 'Georgia, serif' }) as string;
@@ -111,7 +111,7 @@ const DOCUMENT_TYPES = [
     desc: 'Rédaction assistée, plan académique structuré, remerciements et annexes.',
     voice: 'mono' as const,
     voiceStyle: { fontFamily: MONO, fontWeight: '500' as const, letterSpacing: 0.5 },
-    get badge() { return isFreeLaunch() ? freeLabel() : '2 000 FCFA'; },
+    get badge() { return 'Plan gratuit · 2 000 FCFA'; },
     hasAi: true,
   },
   {
@@ -121,7 +121,7 @@ const DOCUMENT_TYPES = [
     desc: 'Problématique, cadre théorique, méthodologie et bibliographie aux normes.',
     voice: 'display' as const,
     voiceStyle: { fontFamily: SERIF, fontWeight: '900' as const, letterSpacing: -1.5 },
-    get badge() { return isFreeLaunch() ? freeLabel() : '5 000 FCFA'; },
+    get badge() { return 'Plan gratuit · dès 1 000 F/chapitre'; },
     hasAi: true,
   },
 ] as const;

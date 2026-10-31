@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { databasePool } from '@/lib/database';
 import { sendTopUpReceipt } from '@/lib/automations';
-import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
+import { corsPreflight, MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { isMockAllowed } from '@/lib/payment-rules';
 import { getSaspayBaseUrl } from '@/lib/payments';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
@@ -14,19 +14,7 @@ type RouteContext = { params: Promise<{ reference: string }> };
 const REFERENCE_REGEX = /^[A-Za-z0-9._\-]{4,200}$/;
 
 export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin');
-  const headers: Record<string, string> = {
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-    'Access-Control-Allow-Headers':
-      'Content-Type, Authorization, Expo-Origin, x-client-info, apikey, X-Requested-With',
-  };
-  if (origin) {
-    headers['Access-Control-Allow-Origin'] = origin;
-    headers['Access-Control-Allow-Credentials'] = 'true';
-  } else {
-    headers['Access-Control-Allow-Origin'] = '*';
-  }
-  return new NextResponse(null, { status: 204, headers });
+  return corsPreflight(request);
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {

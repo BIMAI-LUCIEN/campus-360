@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { alertMatchingStudents } from '@/lib/automations';
 import { ingestStageJob } from '@/lib/stages-db';
+import { sameSecret } from '@/lib/admin-service-check';
 import { mobileErrorResponse, withCors } from '@/lib/mobile-access';
 
 export const runtime = 'nodejs';
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
     // Fail closed: no hardcoded fallback secret.
     const expectedKey = process.env.N8N_INGESTION_SECRET?.trim();
 
-    if (!expectedKey || !apiKey || apiKey !== expectedKey) {
+    if (!expectedKey || !apiKey || !sameSecret(apiKey, expectedKey)) {
       return withCors(
         NextResponse.json(
           {
