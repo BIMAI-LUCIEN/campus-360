@@ -8,6 +8,14 @@ import { authFetchRawAt, filesBaseUrl, getAuthHeaders, mobileApiBaseUrl } from '
 
 export type DocumentFileKind = 'image' | 'source';
 export type DocumentFileStatus = 'pending' | 'ready' | 'failed';
+// « personal » : rapports journaliers, notes, livrables de l'étudiant (les faits).
+// « reference » : cours, articles, normes, consignes de l'encadreur (l'appui).
+export type SourceRole = 'personal' | 'reference';
+
+export const SOURCE_ROLE_LABEL: Record<SourceRole, string> = {
+  personal: 'Mes documents',
+  reference: 'Référence',
+};
 
 export type DocumentFile = {
   id: string;
@@ -19,6 +27,7 @@ export type DocumentFile = {
   mime: string;
   bytes: number;
   source_url: string | null;
+  source_role?: SourceRole;
   status: DocumentFileStatus;
   error: string | null;
   page_count: number;
@@ -159,6 +168,7 @@ export const uploadDocumentFile = async (
   file: PickedFile,
   kind: DocumentFileKind,
   onProgress?: (fraction: number) => void,
+  role?: SourceRole,
 ): Promise<DocumentFile> => {
   const headers = await getAuthHeaders();
   const form = new FormData();
@@ -169,6 +179,7 @@ export const uploadDocumentFile = async (
     form.append('file', { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
   }
   form.append('kind', kind);
+  if (kind === 'source' && role) form.append('role', role);
 
   return new Promise<DocumentFile>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -250,21 +261,38 @@ export const resolveFileUrls = async (fileIds: string[]): Promise<Record<string,
 export const listDocumentSources = async (documentId: string): Promise<DocumentFile[]> =>
   (await api<{ sources: DocumentFile[] }>(`/api/mobile/documents/${documentId}/sources`)).sources || [];
 
-export const addUrlSource = async (documentId: string, url: string): Promise<DocumentFile> =>
+export const addUrlSource = async (documentId: string, url: string, role?: SourceRole): Promise<DocumentFile> =>
   (
     await api<{ source: DocumentFile }>(
       `/api/mobile/documents/${documentId}/sources`,
-      { method: 'POST', body: JSON.stringify({ url: url.trim() }) },
+      { method: 'POST', body: JSON.stringify({ url: url.trim(), role }) },
       'Ajout de la page impossible.',
     )
   ).source;
 
-export const addTextSource = async (documentId: string, title: string, text: string): Promise<DocumentFile> =>
+export const addTextSource = async (
+  documentId: string,
+  title: string,
+  text: string,
+  role?: SourceRole,
+): Promise<DocumentFile> =>
   (
     await api<{ source: DocumentFile }>(
       `/api/mobile/documents/${documentId}/sources`,
-      { method: 'POST', body: JSON.stringify({ title: title.trim(), text }) },
+      { method: 'POST', body: JSON.stringify({ title: title.trim(), text, role }) },
       'Ajout du texte impossible.',
+    )
+  ).source;
+
+export const roleOf = (source: DocumentFile): SourceRole =>
+  source.source_role ?? (source.origin === 'url' ? 'reference' : 'personal');
+
+export const updateSourceRole = async (documentId: string, sourceId: string, role: SourceRole): Promise<DocumentFile> =>
+  (
+    await api<{ source: DocumentFile }>(
+      `/api/mobile/documents/${documentId}/sources/${sourceId}`,
+      { method: 'PATCH', body: JSON.stringify({ role }) },
+      'Changement impossible.',
     )
   ).source;
 

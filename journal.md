@@ -4,6 +4,16 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 
 ---
 
+**2026-10-31 · hors plan · (direct) · non commité · Rapport et mémoire : l'IA rédige à partir des documents de l'étudiant et de ses références**
+
+- **Rôle de source :** migration `0025_source_role.sql` (`app_document_files.source_role` : `personal` = rapports journaliers, notes, livrables ; `reference` = cours, articles, liens, consignes de l'encadreur ; pages web existantes passées en `reference`). Rôle accepté par `POST /documents/[id]/files` (champ `role`), `POST /documents/[id]/sources` (`role`), changeable par `PATCH /documents/[id]/sources/[sourceId]`.
+- **IA :** `lib/source-grounding.ts` (pur) construit deux blocs étiquetés, documents de l'étudiant puis références, numérotation « Source n » partagée ; `retrieveSourcesContext` cherche dans chaque groupe séparément (6 extraits par groupe). `generate-full` ne lisait aucune source : il les injecte maintenant section par section avec `SOURCES_GROUNDING_RULES`, et la bibliographie liste les références réellement jointes. Chat et « Rédiger avec moi » reçoivent la même distinction.
+- **App :** chat de génération (`DocGenChat`) : boutons « Mon fichier », « Fichier de référence », « Lien de référence » avant la rédaction ; `DocumentsScreen` les envoie juste après la création du document, puis lance la génération (alerte si un document n'a pas pu être lu). Onglet Sources : choix « Mes documents / Référence » à l'ajout, liste groupée, bouton pour reclasser.
+- **Commandes :** `npm test` (mobile-api) 367 tests, 353 pass, 0 échec ; `tsc --noEmit` mobile-api 0 ; `npm run typecheck` app 0 ; `lint:colors` signale +4 dans `DocumentsScreen.tsx`, venant de modifications non commitées antérieures (aucune couleur ajoutée ici).
+- **Points ouverts :** migration 0025 à appliquer (`npm run migrate`) avant le déploiement de l'API, sinon les insertions échouent ; parcours réel non testé (pas de base de test locale) ; recherche lexicale seulement (pas d'embeddings).
+
+---
+
 **2026-10-26 · hors plan · test-and-verify · 22ebc6a · Upload d'images de la rédaction (serveur de fichiers `files.campus360b.site`)**
 
 - **Cause du « Connexion impossible » :** `files.campus360b.site` n'avait aucun enregistrement DNS. Corrigé côté infra : enregistrement A posé par l'utilisateur, certificat certbot (expire le 2027-01-24, renouvellement auto), `nginx-files.conf` corrigé (regex `{36}` entre guillemets, sinon `nginx -t` échoue ; correctif présent dans `9137225`), `campus360-mobile-api` remis en ligne sur le VPS (`node_modules` et `.next` absents → `next: not found`, 26 redémarrages ; `npm ci`, `npm run build`, `pm2 restart`).

@@ -18,7 +18,8 @@ import { FileText, Mail, Briefcase, GraduationCap, Sparkles, Edit3, Download, Tr
 import { authBaseUrl, authFetch, authClient, type StudentProfile } from '../auth/betterAuth';
 import { stitchColors, stitchShadows, stitchRadius, fontFamilies } from '../../theme/stitch';
 import { GradientText } from '../../ui/GlassComponents';
-import { DocGenChat } from './DocGenChat';
+import { DocGenChat, type GenAttachment } from './DocGenChat';
+import { addUrlSource, uploadDocumentFile } from './documentFilesApi';
 import { TemplateGallery } from './TemplateGallery';
 import type { TemplateCard } from './templatesApi';
 import { CvTemplatePreview } from '../stages/CvTemplatePreview';
@@ -330,7 +331,10 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
     setGenChatVisible(true);
   };
 
-  const handleGenerateFull = async (messages: Array<{ role: 'user' | 'assistant'; content: string }>) => {
+  const handleGenerateFull = async (
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+    attachments: GenAttachment[] = [],
+  ) => {
     if (!selectedType) return;
     setGeneratingFull(true);
     let createdId: string | null = null;
@@ -352,6 +356,26 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
       }
       const { document: doc } = await createRes.json();
       createdId = doc.id;
+
+      // 2. Send the student's files and reference links: the generation reads them.
+      const unreadable: string[] = [];
+      for (const attachment of attachments) {
+        const name = attachment.type === 'url' ? attachment.url : attachment.picked.name;
+        try {
+          const source = attachment.type === 'url'
+            ? await addUrlSource(doc.id, attachment.url, attachment.role)
+            : await uploadDocumentFile(doc.id, attachment.picked, 'source', undefined, attachment.role);
+          if (source.status !== 'ready') unreadable.push(`${name} : ${source.error || 'lecture impossible'}`);
+        } catch (error) {
+          unreadable.push(`${name} : ${error instanceof Error ? error.message : 'envoi impossible'}`);
+        }
+      }
+      if (unreadable.length > 0) {
+        AppAlert.alert(
+          'Documents non pris en compte',
+          `${unreadable.join('\n')}\n\nLa rédaction continue sans eux. Tu pourras les rajouter dans l’onglet Sources du document.`,
+        );
+      }
 
       const isCareerDocument = selectedType === 'cv' || selectedType === 'lettre_motivation';
       const generationId = `${selectedType}-${doc.id}-${Date.now()}`;

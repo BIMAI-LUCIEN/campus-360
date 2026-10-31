@@ -11,13 +11,24 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Sparkles, X, Send, Wand2 } from 'lucide-react-native';
+import { BookOpen, FileText, Link2, Paperclip, Sparkles, X, Send, Wand2 } from 'lucide-react-native';
 import * as SecureStore from 'expo-secure-store';
 import { authFetch } from '../auth/betterAuth';
 import { stitchColors } from '../../theme/stitch';
+import { AppAlert } from '../../ui/AppAlert';
+import { pickSourceFromPhone, SOURCE_ROLE_LABEL, type PickedFile, type SourceRole } from './documentFilesApi';
 
 type ChatRole = 'user' | 'assistant';
 type ChatMsg = { role: ChatRole; content: string };
+
+// Files and links picked before the document exists. They are sent right after
+// it is created, then the full generation reads them (see DocumentsScreen).
+export type GenAttachment = { id: string; role: SourceRole } & (
+  | { type: 'file'; picked: PickedFile }
+  | { type: 'url'; url: string }
+);
+
+const MAX_ATTACHMENTS = 10;
 
 const storageKeyFor = (sessionKey: string) =>
   `campus360.docgen.${sessionKey.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120)}`;
@@ -70,13 +81,16 @@ export function DocGenChat({
   onClose: () => void;
   documentType: string;
   generating: boolean;
-  onGenerate: (messages: ChatMsg[]) => void;
+  onGenerate: (messages: ChatMsg[], attachments: GenAttachment[]) => void;
   profileContext?: Record<string, string>;
   sessionKey: string;
 }) {
   const [messages, setMessages] = React.useState<ChatMsg[]>([]);
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [attachments, setAttachments] = React.useState<GenAttachment[]>([]);
+  const [linkOpen, setLinkOpen] = React.useState(false);
+  const [linkValue, setLinkValue] = React.useState('');
   const scrollRef = React.useRef<ScrollView>(null);
   const activeSessionRef = React.useRef('');
   const hydratedSessionRef = React.useRef('');
@@ -87,6 +101,9 @@ export function DocGenChat({
     hydratedSessionRef.current = '';
     setMessages([]);
     setInput('');
+    setAttachments([]);
+    setLinkOpen(false);
+    setLinkValue('');
     void SecureStore.getItemAsync(storageKeyFor(sessionKey))
       .then((saved) => {
         if (activeSessionRef.current !== sessionKey) return;
@@ -114,6 +131,30 @@ export function DocGenChat({
       ? 3
       : 2;
   const canGenerate = userTurns >= requiredTurns && !loading && !generating;
+
+  const acceptsSources = documentType === 'stage' || documentType === 'memoire';
+  const attachmentsFull = attachments.length >= MAX_ATTACHMENTS;
+
+  const addFile = async (role: SourceRole) => {
+    if (attachmentsFull) return;
+    try {
+      const picked = await pickSourceFromPhone();
+      if (picked) setAttachments((prev) => [...prev, { id: `${Date.now()}-${prev.length}`, role, type: 'file', picked }]);
+    } catch (error) {
+      AppAlert.alert('Document', error instanceof Error ? error.message : 'Impossible d’ouvrir tes fichiers.');
+    }
+  };
+
+  const addLink = () => {
+    const url = linkValue.trim();
+    if (!/^https?:\/\//i.test(url)) {
+      AppAlert.alert('Lien', 'Colle une adresse complète qui commence par https://');
+      return;
+    }
+    setAttachments((prev) => [...prev, { id: `${Date.now()}-${prev.length}`, role: 'reference', type: 'url', url }]);
+    setLinkValue('');
+    setLinkOpen(false);
+  };
 
   const scrollToEnd = () =>
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
@@ -164,7 +205,9 @@ export function DocGenChat({
             <ActivityIndicator size="large" color={stitchColors.sienna} />
             <Text style={styles.genTitle}>Rédaction en cours…</Text>
             <Text style={styles.genBody}>
-              L&apos;IA rédige chaque section de ton {label}. Cela prend environ une minute.
+              {attachments.length > 0
+                ? `L'IA lit tes ${attachments.length} document${attachments.length > 1 ? 's' : ''}, puis rédige chaque section de ton ${label} à partir de leur contenu. Cela prend une à deux minutes.`
+                : `L'IA rédige chaque section de ton ${label}. Cela prend environ une minute.`}
             </Text>
             <Text style={styles.genHint}>
               Tu peux quitter l&apos;app : une notification te préviendra dès que c&apos;est prêt.
@@ -243,11 +286,87 @@ export function DocGenChat({
             ) : null}
           </ScrollView>
 
+          {acceptsSources ? (
+            <View style={styles.sourcesWrap}>
+              <Text style={styles.sourcesTitle}>Tes documents et références (facultatif)</Text>
+              <Text style={styles.sourcesHint}>
+                Joins tes rapports journaliers ou notes de stage, et les références à suivre : l&apos;IA rédige à partir de leur contenu.
+              </Text>
+              <View style={styles.sourcesRow}>
+                <Pressable
+                  style={[styles.sourceBtn, attachmentsFull && styles.ctaDisabled]}
+                  onPress={() => addFile('personal')}
+                  disabled={attachmentsFull}
+                >
+                  <Paperclip size={14} color={stitchColors.sienna} />
+                  <Text style={styles.sourceBtnText}>Mon fichier</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.sourceBtn, attachmentsFull && styles.ctaDisabled]}
+                  onPress={() => addFile('reference')}
+                  disabled={attachmentsFull}
+                >
+                  <BookOpen size={14} color={stitchColors.sienna} />
+                  <Text style={styles.sourceBtnText}>Fichier de référence</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.sourceBtn, (attachmentsFull || linkOpen) && styles.ctaDisabled]}
+                  onPress={() => setLinkOpen(true)}
+                  disabled={attachmentsFull || linkOpen}
+                >
+                  <Link2 size={14} color={stitchColors.sienna} />
+                  <Text style={styles.sourceBtnText}>Lien de référence</Text>
+                </Pressable>
+              </View>
+              {linkOpen ? (
+                <View style={styles.linkRow}>
+                  <TextInput
+                    style={[styles.input, styles.linkInput]}
+                    placeholder="https://…"
+                    placeholderTextColor={stitchColors.inkSubtle}
+                    value={linkValue}
+                    onChangeText={setLinkValue}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="url"
+                    onSubmitEditing={addLink}
+                  />
+                  <Pressable style={styles.linkAdd} onPress={addLink}>
+                    <Text style={styles.linkAddText}>Ajouter</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setLinkOpen(false)} hitSlop={8}>
+                    <X size={16} color={stitchColors.inkMuted} />
+                  </Pressable>
+                </View>
+              ) : null}
+              {attachments.map((a) => (
+                <View key={a.id} style={styles.chip}>
+                  {a.type === 'url' ? (
+                    <Link2 size={14} color={stitchColors.inkMuted} />
+                  ) : (
+                    <FileText size={14} color={stitchColors.inkMuted} />
+                  )}
+                  <Text style={styles.chipText} numberOfLines={1}>
+                    {a.type === 'url' ? a.url.replace(/^https?:\/\//i, '') : a.picked.name}
+                  </Text>
+                  <Text style={styles.chipRole}>{SOURCE_ROLE_LABEL[a.role]}</Text>
+                  <Pressable
+                    onPress={() => setAttachments((prev) => prev.filter((x) => x.id !== a.id))}
+                    hitSlop={8}
+                    accessibilityLabel="Retirer ce document"
+                  >
+                    <X size={14} color={stitchColors.inkMuted} />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
           {/* Generate CTA */}
           <View style={styles.ctaWrap}>
             <Pressable
               style={[styles.cta, !canGenerate && styles.ctaDisabled]}
-              onPress={() => onGenerate(messages)}
+              onPress={() => onGenerate(messages, acceptsSources ? attachments : [])}
               disabled={!canGenerate}
             >
               <Wand2 size={17} color={stitchColors.white} strokeWidth={2.2} />
@@ -354,6 +473,45 @@ const styles = StyleSheet.create({
   textAi: { color: stitchColors.inkSoft, fontSize: 14.5, lineHeight: 21 },
   typing: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   typingText: { color: stitchColors.inkMuted, fontSize: 13 },
+  sourcesWrap: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 7,
+    borderTopWidth: 1,
+    borderTopColor: stitchColors.inkFaint,
+  },
+  sourcesTitle: { color: stitchColors.ink, fontSize: 13, fontWeight: '800' },
+  sourcesHint: { color: stitchColors.inkMuted, fontSize: 12, lineHeight: 17 },
+  sourcesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  sourceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1,
+    borderColor: stitchColors.inkFaint,
+    backgroundColor: stitchColors.paperSoft,
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+  },
+  sourceBtnText: { color: stitchColors.sienna, fontSize: 12.5, fontWeight: '700' },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  linkInput: { minHeight: 38, paddingVertical: 8 },
+  linkAdd: { backgroundColor: stitchColors.siennaDeep, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 12 },
+  linkAddText: { color: stitchColors.white, fontSize: 12.5, fontWeight: '700' },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: stitchColors.paperSoft,
+    borderWidth: 1,
+    borderColor: stitchColors.inkFaint,
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 9,
+  },
+  chipText: { flex: 1, color: stitchColors.inkSoft, fontSize: 12.5 },
+  chipRole: { color: stitchColors.sienna, fontSize: 11, fontWeight: '700' },
   ctaWrap: {
     paddingHorizontal: 12,
     paddingTop: 10,

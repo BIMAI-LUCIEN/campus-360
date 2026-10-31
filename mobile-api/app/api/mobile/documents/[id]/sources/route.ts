@@ -40,14 +40,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 }
 
+const roleSchema = z.enum(['reference', 'personal']).optional();
+
 const addSourceSchema = z.union([
   z.object({
     url: z.string().trim().min(1).max(2048),
     title: z.string().trim().max(200).optional(),
+    role: roleSchema,
   }),
   z.object({
     text: z.string().trim().min(1).max(200_000),
     title: z.string().trim().min(1).max(200),
+    role: roleSchema,
   }),
 ]);
 
@@ -75,11 +79,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
         if (error instanceof SafeFetchError) return json(request, { error: error.message, code: error.code }, 400);
         throw error;
       }
-      const file = await ingestUrlSource({ documentId, userId, url: parsed.data.url, title: parsed.data.title });
+      const file = await ingestUrlSource({ documentId, userId, url: parsed.data.url, title: parsed.data.title, sourceRole: parsed.data.role });
       return json(request, { source: toPublicFile(file) });
     }
 
-    const file = await ingestTextSource({ documentId, userId, title: parsed.data.title, text: parsed.data.text });
+    const file = await ingestTextSource({ documentId, userId, title: parsed.data.title, text: parsed.data.text, sourceRole: parsed.data.role });
     return json(request, { source: toPublicFile(file) });
   } catch (error) {
     return mobileErrorResponse(error, request);

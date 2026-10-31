@@ -6,6 +6,7 @@ import {
   deleteDocumentFile,
   getUserStorageBytes,
   listDocumentFiles,
+  parseSourceRole,
   setFileReady,
   toPublicFile,
   type FileKind,
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         mime: detected.mime,
         bytes: data.length,
         sha256: crypto.createHash('sha256').update(data).digest('hex'),
+        sourceRole: parseSourceRole(form.get('role')) ?? 'personal',
       });
     } catch (error) {
       await deleteStoredFile(storageKey).catch(() => undefined);

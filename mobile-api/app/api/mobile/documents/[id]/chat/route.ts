@@ -18,7 +18,8 @@ const CANDIDATE_MODELS = [
   'google/gemini-2.0-flash-exp:free',
 ];
 
-const RETRIEVED_CHUNKS = 8;
+// Per group: the student's own documents and the references are searched separately.
+const RETRIEVED_CHUNKS = 6;
 
 export async function OPTIONS(request: NextRequest) {
   return withCors(new NextResponse(null, { status: 204 }), request);
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       ? `Règles sur les sources :
 - Appuie-toi en priorité sur les extraits fournis. N'invente aucun chiffre, nom ni fait absent des extraits.
 - Après chaque fait tiré d'un extrait, cite-le exactement avec son étiquette, par exemple [Source 2, p.3] ou [Source 1].
+- Les documents de l'étudiant (rapports journaliers, notes) donnent ses faits vécus ; les références donnent l'appui théorique et méthodologique, jamais ses faits.
 - Si les extraits ne permettent pas de répondre, dis-le clairement.`
       : '';
 

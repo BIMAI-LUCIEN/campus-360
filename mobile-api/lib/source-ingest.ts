@@ -6,6 +6,7 @@ import {
   setFileFailed,
   setFileReady,
   type DocumentFileRow,
+  type SourceRole,
 } from './document-files-db';
 import { htmlToText } from './html-text';
 import { safeFetch, SafeFetchError } from './safe-fetch';
@@ -43,6 +44,7 @@ export const ingestTextSource = async (input: {
   userId: string;
   title: string;
   text: string;
+  sourceRole?: SourceRole;
 }): Promise<DocumentFileRow> => {
   const text = input.text.slice(0, MAX_TEXT_SOURCE_CHARS);
   const file = await createDocumentFile({
@@ -54,6 +56,7 @@ export const ingestTextSource = async (input: {
     title: input.title,
     mime: 'text/plain',
     bytes: Buffer.byteLength(text),
+    sourceRole: input.sourceRole,
   });
   try {
     return await indexExtracted(file, extractPlainText(text));
@@ -67,6 +70,7 @@ export const ingestUrlSource = async (input: {
   userId: string;
   url: string;
   title?: string;
+  sourceRole?: SourceRole;
 }): Promise<DocumentFileRow> => {
   const fallbackTitle = (() => {
     try {
@@ -85,6 +89,7 @@ export const ingestUrlSource = async (input: {
     mime: 'text/html',
     bytes: 0,
     sourceUrl: input.url,
+    sourceRole: input.sourceRole,
   });
   try {
     const fetched = await safeFetch(input.url);

@@ -22,15 +22,21 @@ import {
   formatBytes,
   listDocumentSources,
   pickSourceFromPhone,
+  roleOf,
+  SOURCE_ROLE_LABEL,
+  updateSourceRole,
   uploadDocumentFile,
   type DocumentFile,
   type PickedFile,
+  type SourceRole,
 } from './documentFilesApi';
 import { AppAlert } from '../../ui/AppAlert';
 
 // Sources tab of the editor: files from the phone, web pages and pasted notes.
-// Ticked sources are the only ones the assistant reads; the choice is kept per
-// document on the device (new sources are ticked by default).
+// Each source is either one of the student's own documents (daily reports,
+// notes: the facts) or a reference (course, article, supervisor's guidelines:
+// the support). Ticked sources are the only ones the assistant reads; the
+// choice is kept per document on the device (new sources are ticked by default).
 
 const EXCLUDED_KEY = (documentId: string) => `campus360_doc_sources_excluded_v1_${documentId}`;
 
@@ -63,6 +69,13 @@ const SourceIcon = ({ source }: { source: DocumentFile }) => {
 };
 
 type PendingFile = { picked: PickedFile; progress: number; error: string | null };
+
+const ROLE_ORDER: SourceRole[] = ['personal', 'reference'];
+
+const ROLE_HINT: Record<SourceRole, string> = {
+  personal: 'Rapports journaliers, comptes rendus, notes, livrables : l’IA en tire les faits de ton stage ou projet.',
+  reference: 'Cours, articles, normes, modèle ou consignes de l’encadreur : l’IA s’en sert comme appui et les cite.',
+};
 type AddMode = 'none' | 'url' | 'text';
 
 export type DocumentSourcesPanelProps = {
@@ -78,6 +91,7 @@ export function DocumentSourcesPanel({ documentId, onSelectionChange }: Document
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingFile | null>(null);
   const [mode, setMode] = useState<AddMode>('none');
+  const [addRole, setAddRole] = useState<SourceRole>('personal');
   const [url, setUrl] = useState('');
   const [noteTitle, setNoteTitle] = useState('');
   const [noteText, setNoteText] = useState('');
@@ -102,9 +116,14 @@ export function DocumentSourcesPanel({ documentId, onSelectionChange }: Document
     load();
   }, [load]);
 
-  // Oldest first so labels stay stable as sources are added.
+  // The student's documents first, then references, oldest first in each group:
+  // the same order the server numbers « Source 1, 2… » in.
   const ordered = useMemo(
-    () => [...sources].sort((a, b) => a.created_at.localeCompare(b.created_at)),
+    () =>
+      [...sources].sort(
+        (a, b) =>
+          ROLE_ORDER.indexOf(roleOf(a)) - ROLE_ORDER.indexOf(roleOf(b)) || a.created_at.localeCompare(b.created_at),
+      ),
     [sources],
   );
   const selected = useMemo(
@@ -130,8 +149,12 @@ export function DocumentSourcesPanel({ documentId, onSelectionChange }: Document
   const upload = async (picked: PickedFile) => {
     setPending({ picked, progress: 0, error: null });
     try {
-      const file = await uploadDocumentFile(documentId, picked, 'source', (progress) =>
-        setPending((current) => (current ? { ...current, progress } : current)),
+      const file = await uploadDocumentFile(
+        documentId,
+        picked,
+        'source',
+        (progress) => setPending((current) => (current ? { ...current, progress } : current)),
+        addRole,
       );
       upsert(file);
       setPending(null);
@@ -158,7 +181,7 @@ export function DocumentSourcesPanel({ documentId, onSelectionChange }: Document
     setAdding(true);
     setAddError(null);
     try {
-      upsert(await addUrlSource(documentId, target));
+      upsert(await addUrlSource(documentId, target, addRole));
       setUrl('');
       setMode('none');
     } catch (error) {
@@ -176,7 +199,7 @@ export function DocumentSourcesPanel({ documentId, onSelectionChange }: Document
     setAdding(true);
     setAddError(null);
     try {
-      upsert(await addTextSource(documentId, noteTitle, noteText));
+      upsert(await addTextSource(documentId, noteTitle, noteText, addRole));
       setNoteTitle('');
       setNoteText('');
       setMode('none');
@@ -192,13 +215,22 @@ export function DocumentSourcesPanel({ documentId, onSelectionChange }: Document
     if (!source.source_url) return;
     setAdding(true);
     try {
-      const fresh = await addUrlSource(documentId, source.source_url);
+      const fresh = await addUrlSource(documentId, source.source_url, roleOf(source));
       await deleteSource(documentId, source).catch(() => undefined);
       setSources((prev) => [fresh, ...prev.filter((s) => s.id !== source.id && s.id !== fresh.id)]);
     } catch (error) {
       AppAlert.alert('Page web', error instanceof Error ? error.message : 'Nouvel essai impossible.');
     } finally {
       setAdding(false);
+    }
+  };
+
+  const switchRole = async (source: DocumentFile) => {
+    const next: SourceRole = roleOf(source) === 'reference' ? 'personal' : 'reference';
+    try {
+      upsert(await updateSourceRole(documentId, source.id, next));
+    } catch (error) {
+      AppAlert.alert('Source', error instanceof Error ? error.message : 'Changement impossible.');
     }
   };
 
@@ -225,9 +257,27 @@ export function DocumentSourcesPanel({ documentId, onSelectionChange }: Document
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.intro}>
-        Ajoutez vos documents de stage, pages web et notes. L’assistant répond à partir des sources cochées et cite la page
-        utilisée.
+        Ajoute tes propres documents (rapports journaliers, notes de stage) et tes références (cours, articles, liens,
+        consignes de l’encadreur). L’assistant rédige à partir des sources cochées et cite la page utilisée.
       </Text>
+
+      <Text style={styles.sectionLabel}>Ajouter dans</Text>
+      <View style={styles.roleSwitch} accessibilityRole="radiogroup">
+        {ROLE_ORDER.map((role) => (
+          <Pressable
+            key={role}
+            style={[styles.roleOption, addRole === role && styles.roleOptionActive]}
+            onPress={() => setAddRole(role)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: addRole === role }}
+          >
+            <Text style={[styles.roleOptionText, addRole === role && styles.roleOptionTextActive]}>
+              {SOURCE_ROLE_LABEL[role]}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      <Text style={styles.hint}>{ROLE_HINT[addRole]}</Text>
 
       <View style={styles.addRow}>
         <Pressable style={[styles.addBtn, uploading && styles.disabled]} onPress={handlePickFile} disabled={uploading}>
@@ -360,12 +410,16 @@ export function DocumentSourcesPanel({ documentId, onSelectionChange }: Document
           <Text style={styles.sectionLabel}>
             {selected.length} source{selected.length > 1 ? 's' : ''} utilisée{selected.length > 1 ? 's' : ''} par l’assistant
           </Text>
-          {ordered.map((source) => {
+          {ordered.map((source, index) => {
+            const role = roleOf(source);
+            const groupStart = index === 0 || roleOf(ordered[index - 1]) !== role;
             const ready = source.status === 'ready';
             const checked = ready && !excluded.includes(source.id);
             const label = ready ? selected.findIndex((s) => s.id === source.id) + 1 : 0;
             return (
-              <View key={source.id} style={[styles.card, source.status === 'failed' && styles.cardError]}>
+              <React.Fragment key={source.id}>
+              {groupStart ? <Text style={styles.groupLabel}>{SOURCE_ROLE_LABEL[role]}</Text> : null}
+              <View style={[styles.card, source.status === 'failed' && styles.cardError]}>
                 <Pressable
                   onPress={() => ready && toggle(source.id)}
                   disabled={!ready}
@@ -409,11 +463,17 @@ export function DocumentSourcesPanel({ documentId, onSelectionChange }: Document
                       ) : null}
                     </>
                   ) : null}
+                  <Pressable style={styles.linkBtn} onPress={() => switchRole(source)} hitSlop={6}>
+                    <Text style={styles.linkBtnText}>
+                      {role === 'reference' ? 'Classer dans Mes documents' : 'Classer en Référence'}
+                    </Text>
+                  </Pressable>
                 </View>
                 <Pressable onPress={() => handleDelete(source)} hitSlop={8} accessibilityLabel={`Retirer ${source.title}`}>
                   <Trash2 size={15} color={stitchColors.error} />
                 </Pressable>
               </View>
+              </React.Fragment>
             );
           })}
         </>
@@ -494,6 +554,20 @@ const styles = StyleSheet.create({
   emptyTitle: { color: stitchColors.ink, fontWeight: '700', fontSize: 15 },
   emptyText: { color: stitchColors.inkMuted, fontSize: 13, textAlign: 'center', lineHeight: 19 },
   sectionLabel: { color: stitchColors.inkMuted, fontSize: 12, fontWeight: '700', marginTop: 4 },
+  groupLabel: { color: stitchColors.ink, fontSize: 12.5, fontWeight: '800', marginTop: 6, textTransform: 'uppercase' },
+  roleSwitch: {
+    flexDirection: 'row',
+    gap: 4,
+    padding: 4,
+    borderRadius: 12,
+    backgroundColor: stitchColors.surface,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+  },
+  roleOption: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 9 },
+  roleOptionActive: { backgroundColor: stitchColors.primary },
+  roleOptionText: { color: stitchColors.inkSoft, fontWeight: '700', fontSize: 13 },
+  roleOptionTextActive: { color: stitchColors.white },
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',

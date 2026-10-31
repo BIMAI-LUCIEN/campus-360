@@ -1,70 +1,22 @@
-// Sources context shared by the section chat and the interview draft: the
-// prompt block built from retrieved chunks, and the citation list returned to
-// the app. Labels follow the order of the selected sources.
+// Sources context shared by the section chat, the interview draft and the full
+// document generation: retrieval split by source role, then the prompt blocks
+// and citations built in source-grounding.ts.
 
-import { listDocumentFiles, searchChunks, type RetrievedChunk } from './document-files-db';
+import { listDocumentFiles, searchChunks } from './document-files-db';
+import { buildGroundedContext, type Citation } from './source-grounding';
 
-export type Citation = {
-  label: number;
-  sourceId: string;
-  title: string;
-  page: number | null;
-  excerpt: string;
-  sourceUrl: string | null;
-  cited: boolean;
-};
-
-export const stripHtml = (html: string) =>
-  html
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-const citationTag = (label: number, chunk: RetrievedChunk) =>
-  chunk.mime === 'application/pdf' ? `[Source ${label}, p.${chunk.page}]` : `[Source ${label}]`;
-
-// Builds the prompt block and the citation list. Labels follow the order of the
-// selected sources, so "Source 2" means the same thing in the app and in the reply.
-export const buildSourcesContext = (orderedFileIds: string[], chunks: RetrievedChunk[]) => {
-  const labelOf = new Map(orderedFileIds.map((id, i) => [id.toLowerCase(), i + 1]));
-  const blocks: string[] = [];
-  const citations: Citation[] = [];
-  const seen = new Set<string>();
-  for (const chunk of chunks) {
-    const label = labelOf.get(chunk.file_id.toLowerCase());
-    if (!label) continue;
-    const paginated = chunk.mime === 'application/pdf';
-    blocks.push(`${citationTag(label, chunk)} « ${chunk.title} »\n${chunk.content}`);
-    const key = `${chunk.file_id}:${paginated ? chunk.page : 0}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    citations.push({
-      label,
-      sourceId: chunk.file_id,
-      title: chunk.title,
-      page: paginated ? chunk.page : null,
-      excerpt: chunk.content.slice(0, 400),
-      sourceUrl: chunk.source_url,
-      cited: false,
-    });
-  }
-  return { context: blocks.join('\n\n'), citations };
-};
-
-// Marks the citations the model actually used, cited ones first.
-export const markCited = (reply: string, citations: Citation[]): Citation[] => {
-  const marked = citations.map((c) => {
-    const pattern = c.page
-      ? new RegExp(`Source\\s+${c.label}\\s*,\\s*p\\.?\\s*${c.page}\\b`, 'i')
-      : new RegExp(`Source\\s+${c.label}\\b`, 'i');
-    return { ...c, cited: pattern.test(reply) };
-  });
-  return [...marked.filter((c) => c.cited), ...marked.filter((c) => !c.cited)];
-};
+export {
+  buildGroundedContext,
+  buildSourcesContext,
+  markCited,
+  SOURCES_GROUNDING_RULES,
+  stripHtml,
+  type Citation,
+} from './source-grounding';
 
 // Ready sources of the document, restricted to the ticked ones (all when absent),
-// then lexical retrieval for the question.
+// then lexical retrieval for the question, run separately for the student's own
+// documents and for the references so neither group crowds out the other.
 export const retrieveSourcesContext = async (input: {
   documentId: string;
   userId: string;
@@ -73,15 +25,21 @@ export const retrieveSourcesContext = async (input: {
   limit?: number;
 }): Promise<{ context: string; citations: Citation[] } | null> => {
   const ready = (await listDocumentFiles(input.documentId, input.userId, 'source')).filter((f) => f.status === 'ready');
-  const readyIds = new Set(ready.map((f) => f.id.toLowerCase()));
-  const selected = (input.sourceIds ?? ready.map((f) => f.id)).map((id) => id.toLowerCase()).filter((id) => readyIds.has(id));
+  // Labels follow the order the app sends (its display order), else oldest first.
+  const byId = new Map(ready.map((f) => [f.id.toLowerCase(), f]));
+  const selected = input.sourceIds
+    ? Array.from(new Set(input.sourceIds.map((id) => id.toLowerCase()))).map((id) => byId.get(id)).filter((f): f is NonNullable<typeof f> => Boolean(f))
+    : [...ready].reverse();
   if (selected.length === 0) return null;
-  const chunks = await searchChunks({
-    documentId: input.documentId,
-    userId: input.userId,
-    fileIds: selected,
-    question: input.question,
-    limit: input.limit ?? 8,
-  });
-  return buildSourcesContext(selected, chunks);
+
+  const personalIds = selected.filter((f) => f.source_role !== 'reference').map((f) => f.id);
+  const referenceIds = selected.filter((f) => f.source_role === 'reference').map((f) => f.id);
+  const perGroup = input.limit ?? 6;
+  const search = (fileIds: string[]) =>
+    fileIds.length === 0
+      ? Promise.resolve([])
+      : searchChunks({ documentId: input.documentId, userId: input.userId, fileIds, question: input.question, limit: perGroup });
+  const [personalChunks, referenceChunks] = await Promise.all([search(personalIds), search(referenceIds)]);
+
+  return buildGroundedContext({ personalIds, personalChunks, referenceIds, referenceChunks });
 };

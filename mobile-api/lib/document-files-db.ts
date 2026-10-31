@@ -7,6 +7,11 @@ import type { TextChunk } from './chunking';
 export type FileKind = 'image' | 'source';
 export type FileOrigin = 'upload' | 'url' | 'text';
 export type FileStatus = 'pending' | 'ready' | 'failed';
+// What a source is to the AI: supporting material, or the student's own record of the work.
+export type SourceRole = 'reference' | 'personal';
+
+export const parseSourceRole = (value: unknown): SourceRole | null =>
+  value === 'reference' || value === 'personal' ? value : null;
 
 export type DocumentFileRow = {
   id: string;
@@ -21,6 +26,7 @@ export type DocumentFileRow = {
   bytes: number;
   sha256: string | null;
   source_url: string | null;
+  source_role: SourceRole;
   status: FileStatus;
   error: string | null;
   page_count: number;
@@ -57,11 +63,12 @@ export async function createDocumentFile(input: {
   bytes: number;
   sha256?: string | null;
   sourceUrl?: string | null;
+  sourceRole?: SourceRole;
 }): Promise<DocumentFileRow> {
   const res = await databasePool.query(
     `insert into public.app_document_files
-       (document_id, user_id, kind, origin, storage_key, original_name, title, mime, bytes, sha256, source_url, status)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending')
+       (document_id, user_id, kind, origin, storage_key, original_name, title, mime, bytes, sha256, source_url, source_role, status)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'pending')
      returning *`,
     [
       input.documentId,
@@ -75,9 +82,27 @@ export async function createDocumentFile(input: {
       input.bytes,
       input.sha256 ?? null,
       input.sourceUrl ?? null,
+      input.sourceRole ?? (input.origin === 'url' ? 'reference' : 'personal'),
     ],
   );
   return mapRow(res.rows[0]);
+}
+
+export async function setSourceRole(
+  fileId: string,
+  documentId: string,
+  userId: string,
+  role: SourceRole,
+): Promise<DocumentFileRow | null> {
+  if (!isUuid(fileId) || !isUuid(documentId)) return null;
+  const res = await databasePool.query(
+    `update public.app_document_files
+     set source_role = $4, updated_at = now()
+     where id = $1 and document_id = $2 and user_id = $3 and kind = 'source'
+     returning *`,
+    [fileId, documentId, userId, role],
+  );
+  return res.rows[0] ? mapRow(res.rows[0]) : null;
 }
 
 export async function setFileReady(fileId: string, userId: string, pageCount = 0): Promise<DocumentFileRow | null> {

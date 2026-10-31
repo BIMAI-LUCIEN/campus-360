@@ -226,7 +226,8 @@ export const buildDraftMessages = (input: DraftPromptInput): { role: 'system' | 
     '',
     studentVoiceRules(input.kind === 'memoire' ? 'nous' : 'je'),
     input.sourcesContext
-      ? `- Tu peux aussi t'appuyer sur les extraits de ses sources ci-dessous ; cite chaque fait tiré d'un extrait avec son étiquette, par exemple [Source 2, p.3].`
+      ? `- Tu peux aussi t'appuyer sur les extraits de ses sources ci-dessous ; cite chaque fait tiré d'un extrait avec son étiquette, par exemple [Source 2, p.3].
+- Ses propres documents (rapports journaliers, notes) donnent les faits vécus ; les références donnent l'appui théorique et méthodologique, jamais ses faits.`
       : '',
     markGaps
       ? `- Pour chaque question sans réponse, et chaque fois que l'étudiant dit ne pas savoir, écris à l'endroit voulu un court repère entre crochets qui dit ce qu'il doit ajouter, par exemple [chiffre d'affaires 2025] ou [position de l'entreprise face à ses concurrents]. Ne comble jamais ces manques toi-même.`
