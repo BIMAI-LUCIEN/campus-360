@@ -646,7 +646,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                           <FormattedMarkdown
                             content={msg.content}
                             baseTextColor={stitchColors.ink}
-                            isDark={true}
+                            isDark={false}
                           />
                         )}
                       </View>

@@ -10,7 +10,7 @@ const LOOK: Record<ContributionStatus, { label: string; bg: string; ink: string 
   ready: { label: 'En attente de validation', bg: stitchColors.warningBg, ink: stitchColors.warningDeep },
   pending_review: { label: 'En attente de validation', bg: stitchColors.warningBg, ink: stitchColors.warningDeep },
   probable_duplicate: { label: 'En attente de validation', bg: stitchColors.warningBg, ink: stitchColors.warningDeep },
-  published: { label: 'Publié · +10 coins', bg: stitchColors.emeraldBg, ink: stitchColors.emeraldDeep },
+  published: { label: 'Publié · +50 coins', bg: stitchColors.emeraldBg, ink: stitchColors.emeraldDeep },
   rejected: { label: 'Refusé', bg: stitchColors.errorBg, ink: stitchColors.error },
   duplicate: { label: 'Déjà disponible', bg: stitchColors.paperSoft, ink: stitchColors.inkMuted },
 };

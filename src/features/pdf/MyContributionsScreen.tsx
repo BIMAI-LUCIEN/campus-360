@@ -44,7 +44,7 @@ export function MyContributionsScreen({ visible, onClose, onShare, onRefreshAcco
     setRefreshing(false);
   };
 
-  const earned = (items ?? []).filter((i) => i.status === 'published').length * 10;
+  const earned = (items ?? []).filter((i) => i.status === 'published').length * 50;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -74,7 +74,7 @@ export function MyContributionsScreen({ visible, onClose, onShare, onRefreshAcco
             <EmptyState
               icon={<Upload size={26} color={stitchColors.inkSubtle} strokeWidth={1.5} />}
               title="Aucune contribution"
-              body="Partagez vos premiers PDF et gagnez 10 coins par document publié."
+              body="Partage tes premiers PDF et gagne 50 coins par document publié."
               ctaLabel="Partager des PDF"
               onCta={onShare}
             />

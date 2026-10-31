@@ -21,7 +21,7 @@ Le monorepo comprend **4 services applicatifs** hébergés sur un VPS Linux de p
 2. **Backend API Mobile (`mobile-api/`)** :
    - Package : `campus-360-mobile-api` (Next.js 15, Node runtime, port local **3002**)
    - Production : `https://api.campus360b.site`
-   - Rôle : Business logic mobile (authentification Better Auth, stages & candidatures, WhatsApp via Evolution API, gestion de compte & suppression RGPD, documents & IA, wallet en coins, paiements Notch Pay)
+   - Rôle : Business logic mobile (authentification Better Auth, stages & candidatures, WhatsApp via Evolution API, gestion de compte & suppression RGPD, documents & IA, wallet en coins, paiements SasPay)
    - Typecheck : `cd mobile-api && npm run typecheck`
    - Migrations : `cd mobile-api && npm run migrate` (`scripts/migrate.mjs` vérifiant `public.schema_migrations`)
    - Tests : `cd mobile-api && npm test` (`node --test tests/*.test.mjs`, 188 tests automatisés)
@@ -64,10 +64,12 @@ Le monorepo comprend **4 services applicatifs** hébergés sur un VPS Linux de p
 
 - **Pas d'abonnement récurrent** : portefeuille prépayé en coins (1 coin = 1 FCFA). Packs et Pass s'achètent une seule fois.
 - **Candidature** (CV adapté et lettre compris) : 300 FCFA (offre non rémunérée), 500 FCFA (offre rémunérée ou emploi). Packs : Starter 1 000 FCFA = 5 crédits, Recherche active 2 000 FCFA = 12 crédits + 1 jour de Pass Révision ; crédits valables 30 jours, consommés avant les coins (1 ou 2 par candidature), rendus si l'envoi échoue.
+- **Contribution PDF** : 50 coins par PDF publié (`CONTRIBUTION_REWARD`).
+- **Crédits IA (`ia_credits`)** : conservés tels quels pour l'éditeur et la génération complète (décision du 2026-11-01), non convertis en coins ni en Pass.
 - **Rédaction** : plan gratuit ; rapport 2 000 FCFA ; mémoire 4 000 FCFA au forfait ou 1 000 FCFA par chapitre.
 - **PDF** : lecture gratuite. IA sur les PDF : 3 actions gratuites par jour (5 questions = 1 action), puis Pass Révision 200 FCFA / 24 h ou 1 000 FCFA / 7 jours.
 - **Lancement** : `FREE_LAUNCH_MODE` / `FREE_LAUNCH_UNTIL` ne rendent plus rien gratuit ; ils fixent le bonus d'inscription (1 000 coins pendant le lancement, 300 ensuite ; `STARTING_COINS` le remplace s'il est posé).
-- **Paiements réels** : recharge Mobile Money (MTN MoMo, Orange Money) dès 500 FCFA, validée par webhook signé.
+- **Paiements réels** : recharge Mobile Money (MTN MoMo, Orange Money) via **SasPay** dès 500 FCFA, validée par webhook signé (HMAC-SHA256).
 - **Plafond IA** : quota journalier anti-abus (60 requêtes IA par utilisateur et par 24 h) sur toutes les routes de génération et chat, Pass ou non.
 
 ---

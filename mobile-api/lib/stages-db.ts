@@ -734,6 +734,21 @@ export const dispatchStageApplicationRecord = async (
 /**
  * Updates an application's dispatch status (e.g. from N8N callback to DELIVERED or FAILED).
  */
+/** The account and offer behind an application, used to refund a failed delivery. */
+export const getApplicationOwner = async (
+  applicationId: string,
+): Promise<{ userId: string; jobId: string } | null> => {
+  const result = await databasePool.query<{ user_id: string; job_id: string }>(
+    `select s.app_user_id as user_id, a.job_id
+       from public.stage_applications a
+       join public.stage_students s on s.id = a.student_id
+      where a.id = $1 and s.app_user_id is not null`,
+    [applicationId],
+  );
+  const row = result.rows[0];
+  return row ? { userId: String(row.user_id), jobId: String(row.job_id) } : null;
+};
+
 export const updateApplicationDispatchStatus = async (
   applicationId: string,
   status: StageStatus,

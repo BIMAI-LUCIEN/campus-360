@@ -53,7 +53,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       if (result.credited && result.contributorId) {
         // D27.5 : best effort, never blocks the publication.
         void sendPushToUser(result.contributorId, {
-          title: 'Ton PDF est publié : +10 coins',
+          title: 'Ton PDF est publié : +50 coins',
           body: `« ${result.title} » est maintenant dans le catalogue. Merci pour ta contribution !`,
           data: { type: 'contribution_published', uploadId: id },
         });

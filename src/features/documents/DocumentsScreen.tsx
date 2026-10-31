@@ -610,7 +610,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                     ]);
                   }}
                 >
-                  <Trash2 size={14} color="#F87171" strokeWidth={1.8} />
+                  <Trash2 size={14} color={stitchColors.error} strokeWidth={1.8} />
                 </Pressable>
               </View>
             </View>
@@ -659,7 +659,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                     ]);
                   }}
                 >
-                  <Trash2 size={14} color="#F87171" strokeWidth={1.8} />
+                  <Trash2 size={14} color={stitchColors.error} strokeWidth={1.8} />
                 </Pressable>
               </View>
             </View>
@@ -729,7 +729,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                       },
                     ]);
                   }}>
-                    <Trash2 size={14} color="#F87171" strokeWidth={1.8} />
+                    <Trash2 size={14} color={stitchColors.error} strokeWidth={1.8} />
                   </Pressable>
                 </View>
               </View>
@@ -1384,7 +1384,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   pdfButtonText: {
-    color: '#0284C7',
+    color: stitchColors.tertiary,
     fontSize: 12,
     fontWeight: '700',
     fontFamily: MONO,
@@ -1396,7 +1396,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.2)',
   },
-  deleteButtonText: { color: '#DC2626', fontSize: 13, fontWeight: 'bold' },
+  deleteButtonText: { color: stitchColors.error, fontSize: 13, fontWeight: 'bold' },
 
   emptyBox: {
     paddingVertical: 36,

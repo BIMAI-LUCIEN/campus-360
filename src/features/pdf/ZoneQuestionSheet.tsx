@@ -92,7 +92,7 @@ export function ZoneQuestionSheet({ document, zone, onClose, onContinue, onAllow
             </View>
           ) : (
             <View key={msg.id} style={styles.answer}>
-              <FormattedMarkdown content={msg.content} baseTextColor={stitchColors.ink} isDark={true} />
+              <FormattedMarkdown content={msg.content} baseTextColor={stitchColors.ink} isDark={false} />
             </View>
           ),
         )}

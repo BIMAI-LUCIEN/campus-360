@@ -26,7 +26,7 @@ type Props = {
 };
 
 // "Partager des PDF" (Module 27): up to 10 PDF, analysed and checked for
-// duplicates one by one; each published PDF earns 10 coins.
+// duplicates one by one; each published PDF earns 50 coins.
 export function SharePdfsModal({ visible, onClose, onOpenContributions, onOpenDocument }: Props) {
   const [rights, setRights] = React.useState(false);
   const [rows, setRows] = React.useState<Row[]>([]);
@@ -80,7 +80,7 @@ export function SharePdfsModal({ visible, onClose, onOpenContributions, onOpenDo
         <View style={styles.sheet}>
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.kicker}>+10 coins par PDF publié</Text>
+              <Text style={styles.kicker}>+50 coins par PDF publié</Text>
               <Text style={styles.title}>Partager des PDF</Text>
             </View>
             <Pressable onPress={close} hitSlop={12} accessibilityLabel="Fermer">

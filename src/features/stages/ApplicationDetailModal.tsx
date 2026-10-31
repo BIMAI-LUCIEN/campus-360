@@ -168,6 +168,8 @@ export function ApplicationDetailModal({
 
   const [savingNotes, setSavingNotes] = useState(false);
 
+  const [withdrawing, setWithdrawing] = useState(false);
+
 
 
   React.useEffect(() => {
@@ -353,8 +355,6 @@ export function ApplicationDetailModal({
   };
 
 
-
-  const [withdrawing, setWithdrawing] = useState(false);
 
   const canWithdraw = ['PENDING', 'SENT_PENDING', 'DELIVERED', 'FAILED', 'REVIEWING'].includes(application.status);
 

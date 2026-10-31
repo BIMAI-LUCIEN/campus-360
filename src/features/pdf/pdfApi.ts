@@ -78,19 +78,6 @@ export type CreatePdfDocumentInput = {
   commissionRate: number;
 };
 
-export type PdfPurchaseResult = {
-  purchaseId: string;
-  documentId: string;
-  buyerId: string;
-};
-
-export type PackPurchaseResult = {
-  purchaseId: string;
-  packId: string;
-  buyerId: string;
-  documentIds: string[];
-};
-
 export type PdfAnalyticsEventType =
   | 'catalog_view'
   | 'search'
@@ -368,50 +355,6 @@ export const listPurchasedPdfIds = async (): Promise<string[]> =>
 
 export const listPurchasedPackIds = async (): Promise<string[]> =>
   (await getStudentAccount()).purchasedPackIds;
-
-export const purchasePdfDocument = async (
-  documentId: string,
-): Promise<PdfPurchaseResult> => {
-  const row = await handleResponse<{
-    id: string;
-    document_id: string;
-    buyer_id: string;
-  }>(
-    await authFetch('/api/mobile/purchase/document', {
-      method: 'POST',
-      body: JSON.stringify({ documentId }),
-    }),
-  );
-
-  return {
-    purchaseId: row.id,
-    documentId: row.document_id,
-    buyerId: row.buyer_id,
-  };
-};
-
-export const purchasePdfPack = async (
-  packId: string,
-): Promise<PackPurchaseResult> => {
-  const row = await handleResponse<{
-    id: string;
-    pack_id: string;
-    buyer_id: string;
-    document_ids?: string[] | null;
-  }>(
-    await authFetch('/api/mobile/purchase/pack', {
-      method: 'POST',
-      body: JSON.stringify({ packId }),
-    }),
-  );
-
-  return {
-    purchaseId: row.id,
-    packId: row.pack_id,
-    buyerId: row.buyer_id,
-    documentIds: row.document_ids ?? [],
-  };
-};
 
 export const createPdfDocument = async (
   input: CreatePdfDocumentInput,

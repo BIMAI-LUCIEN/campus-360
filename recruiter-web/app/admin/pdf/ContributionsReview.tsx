@@ -207,7 +207,7 @@ function ReviewCard({ upload, onDone }: { upload: IntakeUpload; onDone: (publish
               onClick={publish}
               className="rounded-lg bg-stitch-primary px-4 py-2 text-sm font-semibold text-stitch-on-primary hover:opacity-90 disabled:opacity-40"
             >
-              {upload.source === 'student' ? 'Publier (+10 coins)' : 'Publier'}
+              {upload.source === 'student' ? 'Publier (+50 coins)' : 'Publier'}
             </button>
             <button
               type="button"

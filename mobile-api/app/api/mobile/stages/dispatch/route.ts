@@ -3,10 +3,6 @@ import { timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import {
-  getInstanceName,
-  normalizePhoneNumber,
-} from '@/lib/evolution-api';
 import { notifyAdmin } from '@/lib/automations';
 import {
   mobileErrorResponse,
@@ -15,11 +11,13 @@ import {
 } from '@/lib/mobile-access';
 import { stageErrorStatus } from '@/lib/stages-errors';
 import { missingDispatchTarget } from '@/lib/dispatch-target';
+import { resolveWhatsAppTarget } from '@/lib/whatsapp-target';
 import { MobileApiError } from '@/lib/mobile-error';
-import { chargeStageApplication, isCharged, refundStageApplication } from '@/lib/stage-charge';
+import { chargeStageApplication, refundStageApplication } from '@/lib/stage-charge';
 import {
   dispatchStageApplicationRecord,
   ensureStageStudent,
+  getApplicationOwner,
   getStageJob,
   type StageStatus,
   updateApplicationDispatchStatus,
@@ -83,6 +81,17 @@ export async function POST(request: NextRequest) {
     if (access.response || !access.user) return withCors(access.response!, request);
     const user = access.user;
 
+    // The n8n webhook sends real WhatsApp messages and e-mails: it only accepts
+    // calls carrying this shared secret, so it fails closed when it is unset.
+    const n8nSecret = process.env.N8N_STAGE_WEBHOOK_SECRET?.trim() || '';
+    if (!n8nSecret) {
+      console.error('[dispatch route] N8N_STAGE_WEBHOOK_SECRET is not set');
+      return withCors(
+        NextResponse.json({ error: "L'envoi automatique est momentanément indisponible. Réessaie plus tard." }, { status: 503 }),
+        request,
+      );
+    }
+
     const rawBody = await request.json().catch(() => ({}));
     const parsed = dispatchSchema.safeParse(rawBody);
     if (!parsed.success) {
@@ -102,27 +111,31 @@ export async function POST(request: NextRequest) {
 
     const studentId = await ensureStageStudent(user);
     const studentName = input.studentName || user.name || 'Étudiant Campus 360';
-    const studentEmail = input.studentEmail || user.email || '';
+    // The sender identity comes from the session only: the e-mail is the account's
+    // and the WhatsApp instance is the one paired with the account's number, so a
+    // student cannot send from somebody else's WhatsApp or reply-to address.
+    const studentEmail = user.email || '';
     if (!studentEmail) {
       return withCors(
         NextResponse.json({ error: 'Ajoute ton adresse e-mail dans ton profil avant de postuler.' }, { status: 400 }),
         request,
       );
     }
-    const rawStudentPhone =
-      input.studentPhone ||
-      input.phoneNumber ||
-      user.whatsappPhone ||
-      user.phone ||
-      '';
-    const studentPhone = normalizePhoneNumber(rawStudentPhone);
-    if (input.channel === 'whatsapp' && !studentPhone) {
+    const whatsappTarget = resolveWhatsAppTarget(user);
+    const studentPhone = whatsappTarget?.phone || '';
+    if (input.channel === 'whatsapp' && !whatsappTarget) {
       return withCors(
-        NextResponse.json({ error: 'Numéro WhatsApp requis pour cet envoi.' }, { status: 400 }),
+        NextResponse.json({ error: 'Ajoute ton numéro WhatsApp dans ton profil et connecte WhatsApp avant cet envoi.' }, { status: 400 }),
         request,
       );
     }
-    const instanceName = getInstanceName(studentPhone);
+    const instanceName = whatsappTarget?.instanceName || '';
+    if (!input.cvPdfBase64 && !input.cvPdfUrl) {
+      return withCors(
+        NextResponse.json({ error: "Ton CV n'a pas pu être joint. Génère-le de nouveau avant d'envoyer." }, { status: 422 }),
+        request,
+      );
+    }
 
     // Resolve job and recruiter details
     const job = await getStageJob(input.jobId, user.id);
@@ -146,7 +159,9 @@ export async function POST(request: NextRequest) {
 
     // Pay-per-action: debited once per offer, given back below if delivery fails.
     const payment = await chargeStageApplication(user.id, job);
-    if (isCharged(payment)) refundIfFailed = () => refundStageApplication(user.id, input.jobId);
+    // Always armed: when the AI CV was generated first, the offer is already paid
+    // (payment shows 0 here) and a failed delivery must still give it back.
+    refundIfFailed = () => refundStageApplication(user.id, input.jobId);
 
     // Persist CV PDF to Supabase Storage if base64 provided
     let cvPdfUrl = input.cvPdfUrl;
@@ -221,6 +236,7 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-campus360-secret': n8nSecret,
         },
         body: JSON.stringify(n8nPayload),
         signal: controller.signal,
@@ -335,6 +351,12 @@ export async function PATCH(request: NextRequest) {
 
     // Automation 4: admin alert when the delivery pipeline reports a failure.
     if (parsed.data.status === 'FAILED') {
+      const owner = await getApplicationOwner(parsed.data.applicationId).catch(() => null);
+      if (owner) {
+        await refundStageApplication(owner.userId, owner.jobId).catch((refundErr) => {
+          console.error('[dispatch PATCH] Refund failed:', refundErr);
+        });
+      }
       await notifyAdmin('Candidature non délivrée (statut FAILED)', {
         Candidature: parsed.data.applicationId,
       });

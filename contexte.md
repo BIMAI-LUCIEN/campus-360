@@ -1070,7 +1070,7 @@ Décisions prises par l'agent à la demande de l'utilisateur (« fais les meille
 
 ## 19. Cadrage validé : Modèle économique v2 (2026-10-30, voie Bounded)
 
-> Remplace la grille du §5.1. Principe inchangé : wallet prépayé en coins (1 coin = 1 FCFA), recharge Mobile Money via Notch Pay, **aucun abonnement automatique**. Packs et pass s'achètent une seule fois.
+> Remplace la grille du §5.1. Principe inchangé : wallet prépayé en coins (1 coin = 1 FCFA), recharge Mobile Money via SasPay, **aucun abonnement automatique**. Packs et pass s'achètent une seule fois.
 
 ### 1. Problème et cible
 - Seuls les étudiants paient, et ils ont peu d'argent : le paiement à chaque clic freine l'usage et le bonus de 5 000 coins retardait la première recharge.
@@ -1103,7 +1103,7 @@ Décisions prises par l'agent à la demande de l'utilisateur (« fais les meille
 **Paiement** : recharge minimale 500 F (MTN MoMo, Orange Money) ; solde insuffisant → recharge ouverte sans perdre le travail en cours.
 
 ### 5. Outils
-- Notch Pay conservé. **À vérifier** : frais sur les petits montants (500 à 1 000 F) et coût réel d'un appel IA, pour confirmer la rentabilité du Pass 7 jours.
+- SasPay est la passerelle retenue (décision du 2026-11-01, le code n'utilise plus Notch Pay). **À vérifier** : frais sur les petits montants (500 à 1 000 F) et coût réel d'un appel IA, pour confirmer la rentabilité du Pass 7 jours.
 
 ### Impact code (à planifier)
 - Prix : `mobile-api/lib/stage-pricing.ts` et sa copie `src/features/stages/stagePricing.ts`, `mobile-api/lib/workshop.ts` (CV inclus dans la candidature, mémoire par chapitre), `STARTING_COINS` / `free-launch.ts`.

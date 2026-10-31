@@ -3,6 +3,7 @@ import React from 'react';
 import {
   StatusBar,
   Image,
+  KeyboardAvoidingView,
   Linking,
   Modal,
   Platform,
@@ -66,7 +67,6 @@ import {
 import { OnboardingScreen as IntroSliderScreen } from './features/onboarding/OnboardingScreen';
 import { OnboardingScreen } from './ui/screens/OnboardingScreen';
 import type { ApplicationProfilePatch } from './features/stages/AiApplyModal';
-import { FreePdfSelector } from './features/onboarding/FreePdfSelector';
 import { DeleteAccountModal } from './features/account/DeleteAccountModal';
 import { Toast, type ToastMessage, type ToastVariant } from './ui/Toast';
 import { PdfStudentSection } from './features/pdf/PdfStudentSection';
@@ -74,8 +74,6 @@ import {
   buildSuggestedPacks,
   listPublishedPdfDocuments,
   listPublishedPdfPacks,
-  purchasePdfPack,
-  purchasePdfDocument,
   recordPdfAnalyticsEvent,
 } from './features/pdf/pdfApi';
 import type { CampusDocument, CampusPdfPack, Transaction } from './types';
@@ -197,11 +195,17 @@ Notifications.setNotificationHandler({
   }),
 });
 
+// Bottom sheet that scrolls on short screens and stays above the keyboard
+// (the recharge sheet is taller than a 640 px phone with its phone field focused).
 function ModalCard({ children }: { children: React.ReactNode }) {
   return (
-    <View style={styles.modalBackdrop}>
-      <View style={[styles.modalCard, glassCard.light]}>{children}</View>
-    </View>
+    <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={[styles.modalCard, glassCard.light, styles.modalCardBounded]}>
+        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
+          {children}
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -359,7 +363,6 @@ export function AppShell() {
     }
     return false;
   });
-  const [freePdfSelectorVisible, setFreePdfSelectorVisible] = React.useState(false);
   const [onboardingIndex, setOnboardingIndex] = React.useState(0);
   const [studentSession, setStudentSession] = React.useState<StudentSession | null>(null);
   const [studentProfile, setStudentProfile] = React.useState<StudentProfile | null>(null);
@@ -816,8 +819,7 @@ export function AppShell() {
     setAuthNotice('');
     setAuthVisible(false);
     setActiveSection('home');
-    if (isNewAccount) { setFreePdfSelectorVisible(true); }
-    else { AppAlert.alert('Connecté', 'Tes achats PDF et ton wallet sont synchronisés.'); }
+    if (!isNewAccount) AppAlert.alert('Connecté', 'Ton wallet est synchronisé.');
   };
 
   const resendAuthOtp = async () => {
@@ -892,113 +894,17 @@ export function AppShell() {
     finally { setRefreshing(false); }
   };
 
+  // Model v2 (contexte.md §19): every PDF is free to read, there is nothing to buy.
   const buyDocument = (document: CampusDocument) => {
-    const isOwned = effectivePurchasedDocuments.includes(document.id) || document.price === 0;
-    if (isOwned) {
-      setReadingDocument(document);
-      return;
-    }
-    if (!studentSession) { setAuthMode('sign-in'); setAuthNotice('Connecte-toi pour lire ce PDF.'); setAuthVisible(true); return; }
-    setPurchasingDocumentId(document.id);
-    recordPdfAnalyticsEvent({ eventType: 'purchase_start', documentId: document.id, accessToken: 'better-auth', metadata: { price: document.price, subject: document.subject, level: document.level } });
-    purchasePdfDocument(document.id)
-      .then(async () => {
-        setPurchasedDocuments((current) => [document.id, ...current.filter((id) => id !== document.id)]);
-        await syncStudentAccount(studentSession);
-        recordPdfAnalyticsEvent({ eventType: 'purchase_success', documentId: document.id, accessToken: 'better-auth', metadata: { price: document.price, subject: document.subject, level: document.level } });
-        showToast(`${document.title} est débloqué !`, 'success', 'PDF Débloqué 🎉');
-        setReadingDocument(document);
-      })
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : '';
-        recordPdfAnalyticsEvent({ eventType: 'purchase_failed', documentId: document.id, accessToken: 'better-auth', metadata: { price: document.price, reason: message || 'unknown' } });
-        if (message.toLowerCase().includes('insufficient')) { setInsufficientVisible(true); return; }
-        showToast(message || 'Réessaie dans un instant.', 'error', 'Achat impossible');
-      })
-      .finally(() => { setPurchasingDocumentId(null); });
+    setPurchasedDocuments((current) => (current.includes(document.id) ? current : [document.id, ...current]));
+    setReadingDocument(document);
   };
 
-  // Suggested packs (built client-side from the catalogue) have no server-side
-  // row — their id looks like `local-pack-…`, not a UUID. They can't be bought
-  // through the pack endpoint, so we unlock their PDFs individually instead.
-  const isSuggestedPack = (pack: CampusPdfPack) => pack.id.startsWith('local-pack-');
-
-  const unlockSuggestedPack = async (pack: CampusPdfPack, pendingIds: string[]) => {
-    setPurchasingPackId(pack.id);
-    const unlocked: string[] = [];
-    try {
-      for (const id of pendingIds) {
-        try {
-          await purchasePdfDocument(id);
-          unlocked.push(id);
-        } catch (error) {
-          const message = (error instanceof Error ? error.message : '').toLowerCase();
-          if (message.includes('insufficient') || message.includes('solde')) break;
-          // Skip per-document errors (e.g. already owned) and continue.
-        }
-      }
-      if (unlocked.length) {
-        setPurchasedDocuments((current) => Array.from(new Set([...unlocked, ...current])));
-        await syncStudentAccount(studentSession ?? undefined);
-      }
-      if (unlocked.length === pendingIds.length) {
-        setPurchasedPacks((current) => [pack.id, ...current.filter((id) => id !== pack.id)]);
-        showToast(`${pack.title} est maintenant dans ta bibliothèque.`, 'success', 'Pack débloqué 🎉');
-      } else if (unlocked.length > 0) {
-        showToast(
-          `${unlocked.length}/${pendingIds.length} PDF débloqués. Solde insuffisant pour le reste.`,
-          'warning',
-          'Pack partiellement débloqué',
-        );
-      } else {
-        setInsufficientVisible(true);
-      }
-    } finally {
-      setPurchasingPackId(null);
-    }
-  };
-
+  // A pack is a selection of free PDFs: opening it adds them all to the library.
   const buyPack = (pack: CampusPdfPack) => {
-    if (purchasedPacks.includes(pack.id)) { showToast('Ce pack est déjà dans ta bibliothèque.', 'info', 'Pack déjà acheté'); return; }
-    if (!studentSession) { setAuthMode('sign-in'); setAuthNotice('Connecte-toi pour acheter ce pack avec ton wallet.'); setAuthVisible(true); return; }
-
-    if (isSuggestedPack(pack)) {
-      const pendingIds = pack.documentIds.filter((id) => !purchasedDocuments.includes(id));
-      if (!pendingIds.length) {
-        setPurchasedPacks((current) => [pack.id, ...current.filter((id) => id !== pack.id)]);
-        showToast('Tu possèdes déjà tous les PDF de ce pack.', 'info', 'Déjà débloqué');
-        return;
-      }
-      const total = pendingIds.reduce(
-        (sum, id) => sum + (pdfDocuments.find((doc) => doc.id === id)?.price ?? 0),
-        0,
-      );
-      AppAlert.alert(
-        'Débloquer ce pack',
-        `Cette sélection regroupe ${pack.documentCount} PDF. Débloque les ${pendingIds.length} PDF restants pour ${formatCoins(total)} C ?`,
-        [
-          { text: 'Annuler', style: 'cancel' },
-          { text: 'Débloquer', onPress: () => { void unlockSuggestedPack(pack, pendingIds); } },
-        ],
-      );
-      return;
-    }
-
-    setPurchasingPackId(pack.id);
-    purchasePdfPack(pack.id)
-      .then(async (result) => {
-        const unlockedIds = result.documentIds.length ? result.documentIds : pack.documentIds;
-        setPurchasedPacks((current) => [pack.id, ...current.filter((id) => id !== pack.id)]);
-        setPurchasedDocuments((current) => Array.from(new Set([...unlockedIds, ...current])));
-        await syncStudentAccount(studentSession);
-        showToast(`${pack.title} est maintenant dans ta bibliothèque.`, 'success', 'Pack acheté 🎉');
-      })
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : '';
-        if (message.toLowerCase().includes('insufficient')) { setInsufficientVisible(true); return; }
-        showToast(message || 'Réessaie dans un instant.', 'error', 'Achat impossible');
-      })
-      .finally(() => { setPurchasingPackId(null); });
+    setPurchasedPacks((current) => (current.includes(pack.id) ? current : [pack.id, ...current]));
+    setPurchasedDocuments((current) => Array.from(new Set([...pack.documentIds, ...current])));
+    showToast(`Les ${pack.documentCount} PDF de « ${pack.title} » sont gratuits et dans ta bibliothèque.`, 'success', 'Pack ajouté');
   };
 
   const rechargeWallet = async () => {
@@ -1051,9 +957,9 @@ export function AppShell() {
             AppAlert.alert(
               'Paiement non validé',
               statusRes.failureMessage ||
-                provider === 'Orange Money'
+                (provider === 'Orange Money'
                   ? `La transaction a été rejetée ou a expiré. Avec Orange Money, compose ${ORANGE_MONEY_APPROVAL_USSD} pour valider, ou rouvre la page de paiement SasPay.`
-                  : 'La transaction a été rejetée ou a expiré. Vérifie ton solde MTN MoMo, ou rouvre la page de paiement SasPay.',
+                  : 'La transaction a été rejetée ou a expiré. Vérifie ton solde MTN MoMo, ou rouvre la page de paiement SasPay.'),
             );
           } else if (attempts >= maxAttempts) {
             clearInterval(pollInterval);
@@ -1819,18 +1725,6 @@ export function AppShell() {
           onAccountDeleted={signOutStudent}
         />
 
-        {/* Free Pdf Selector */}
-        <FreePdfSelector
-          visible={freePdfSelectorVisible}
-          documents={pdfDocuments}
-          onComplete={() => {
-            setFreePdfSelectorVisible(false);
-            AppAlert.alert('Bienvenue ! 🎉', 'Tu as réclamé tes PDFs gratuits. Bonne révision !');
-            syncStudentAccount(studentSession ?? undefined);
-          }}
-          onClose={() => setFreePdfSelectorVisible(false)}
-          studentSession={studentSession}
-        />
 
         {/* Auth Modal when triggered from within the application */}
         <Modal
@@ -1877,6 +1771,7 @@ const styles = StyleSheet.create({
   // Same white + logo as the native splash, so the opening looks like a single screen.
   loadingScreen: { flex: 1, backgroundColor: stitchColors.paper, justifyContent: 'center', alignItems: 'center' },
   loadingLogo: { width: 96, height: 96, borderRadius: 24 },
+  modalCardBounded: { maxHeight: '92%' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(19, 27, 46, 0.32)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: stitchColors.surfaceContainerLowest, borderTopLeftRadius: stitchRadius.xl, borderTopRightRadius: stitchRadius.xl, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, shadowColor: stitchColors.ink, shadowOffset: { width: 0, height: -8 }, shadowOpacity: 0.12, shadowRadius: 24, elevation: 16 },
   modalTitle: { ...stitchTypography.headlineMd, color: stitchColors.onSurface, marginBottom: 16, textAlign: 'center' },

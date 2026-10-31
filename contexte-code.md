@@ -82,7 +82,7 @@
 
 
 
-| **Backend API mobile** | `mobile-api/` | Next.js 15 App Router : Better Auth, Postgres direct, IA OpenRouter, paiements SasPay (replis Nyole/NotchPay), WhatsApp Evolution API | 3002 | `https://api.campus360b.site` (VPS) |
+| **Backend API mobile** | `mobile-api/` | Next.js 15 App Router : Better Auth, Postgres direct, IA OpenRouter, paiements SasPay, WhatsApp Evolution API | 3002 | `https://api.campus360b.site` (VPS) |
 
 
 
@@ -434,7 +434,7 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-- **But :** portefeuille en coins (1 coin = 1 FCFA), achats PDF et packs, crédits IA, recharge Mobile Money (**SasPay** en passerelle principale, replis Nyole et NotchPay), mode gratuit de lancement.
+- **But :** portefeuille en coins (1 coin = 1 FCFA), achats PDF et packs, crédits IA, recharge Mobile Money (**SasPay**, seule passerelle dans le code), mode gratuit de lancement.
 
 
 
@@ -450,9 +450,9 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-  - `mobile-api/lib/payment-rules.ts` — règles pures de paiement : `verifySaspaySignature` (validation HMAC-SHA256 sur `${timestamp}.${rawBody}` via `X-Webhook-Signature` + `X-Webhook-Timestamp` ou `X-Afriflow-Signature`, fenêtre anti-rejeu 300s, `timingSafeEqual`), `verifyNyoleSignature` (alias rétrocompatible), `verifyNotchSignature` (repli legacy), `decideWebhookCredit` et `isMockAllowed`.
+  - `mobile-api/lib/payment-rules.ts` — règles pures de paiement : `verifySaspaySignature` (validation HMAC-SHA256 sur `${timestamp}.${rawBody}` via `X-Webhook-Signature` + `X-Webhook-Timestamp` ou `X-Afriflow-Signature`, fenêtre anti-rejeu 300s, `timingSafeEqual`), `decideWebhookCredit` et `isMockAllowed`.
 
-  - `mobile-api/lib/payments.ts` — initiation SasPay Checkout Sessions (`POST /checkout-sessions/` vers `https://api.saspay.me/api/v1` et ouverture hébergée sécurisée in-app via `WebBrowser.openBrowserAsync`), traitement transactionnel atomique du webhook (`processSaspayWebhook` / `processNyoleWebhook` / `processNotchWebhook`) avec gestion de `failure_message` et séparation stricte des états de paiement.
+  - `mobile-api/lib/payments.ts` — initiation SasPay Checkout Sessions (`POST /checkout-sessions/` vers `https://api.saspay.me/api/v1` et ouverture hébergée sécurisée in-app via `WebBrowser.openBrowserAsync`), traitement transactionnel atomique du webhook (`processSaspayWebhook`, appelé par `verifyAndProcessMobilePaymentWebhook`) avec gestion de `failure_message` et séparation stricte des états de paiement.
 
 
 
@@ -1326,7 +1326,8 @@ Méthodes relevées dans le code. Toutes les routes `mobile/*` exigent une sessi
 
 
 
-| `NOTCHPAY_PRIVATE_KEY`, `NOTCHPAY_WEBHOOK_SECRET` | Paiement Mobile Money | Oui si paiements actifs | Paiements refusés |
+| `SASPAY_API_KEY`, `SASPAY_WEBHOOK_SECRET`, `SASPAY_API_URL` | Paiement Mobile Money (SasPay) | Oui si paiements actifs | Paiements refusés |
+| `N8N_STAGE_WEBHOOK_SECRET` | Secret partagé API → n8n pour l'envoi 1-clic (en-tête `x-campus360-secret`) | Oui | Envoi 1-clic en 503 |
 
 
 
@@ -1382,7 +1383,7 @@ Méthodes relevées dans le code. Toutes les routes `mobile/*` exigent une sessi
 
 
 
-Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, `TRUSTED_EXTRA_ORIGINS`, `CORS_ALLOWED_ORIGINS`, `TRUST_PROXY`, `DATABASE_SSL_CA_FILE`, `DATABASE_SSL_REJECT_UNAUTHORIZED`, `FREE_LAUNCH_MODE`, `FREE_LAUNCH_UNTIL`, `STARTING_COINS`, `AI_COST_*`, `RESEND_API_KEY`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `NOTCHPAY_PRIVATE_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CLOUDINARY_*`, `GOOGLE_CLIENT_*`, `ADMIN_*`, `MAIL_FROM`, `PUPPETEER_EXECUTABLE_PATH`, `CHROME_BIN`, `AUTH_FORCE_POSTGRES`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_APK_*`.
+Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, `TRUSTED_EXTRA_ORIGINS`, `CORS_ALLOWED_ORIGINS`, `TRUST_PROXY`, `DATABASE_SSL_CA_FILE`, `DATABASE_SSL_REJECT_UNAUTHORIZED`, `FREE_LAUNCH_MODE`, `FREE_LAUNCH_UNTIL`, `STARTING_COINS`, `AI_COST_*`, `RESEND_API_KEY`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `SASPAY_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CLOUDINARY_*`, `GOOGLE_CLIENT_*`, `ADMIN_*`, `MAIL_FROM`, `PUPPETEER_EXECUTABLE_PATH`, `CHROME_BIN`, `AUTH_FORCE_POSTGRES`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_APK_*`.
 
 
 
