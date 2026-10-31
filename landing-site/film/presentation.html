@@ -9,6 +9,9 @@
   so film/render.cjs can step through it frame by frame. Open this file in a browser
   and add ?play to preview it in real time.
   Scenes are timed on the music (118 BPM): drop at 6.4 s, breakdown 32-40 s, last drop 48.5 s.
+  Motion language: captions arrive word by word (blur to sharp, key word in violet), phones turn
+  or rise in 3D, the camera zooms on the part of the screen being talked about with a spotlight,
+  a cursor taps the real buttons, feature pills stack up, coins spin around the wallet.
 -->
 <style>
   @font-face { font-family: Sora; src: url(../app/fonts/sora-latin-400-normal.woff2); font-weight: 400; }
@@ -28,46 +31,50 @@
   body { font-family: Inter, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
   #stage { position: absolute; inset: 0; overflow: hidden; background: #fff; }
   .abs { position: absolute; }
-  .layer { position: absolute; inset: 0; will-change: transform, opacity; }
+  .layer { position: absolute; inset: 0; }
 
   /* Background */
-  .grid { position: absolute; inset: -200px; opacity: .55;
+  .grid { position: absolute; inset: -200px; opacity: .5;
     background-image: linear-gradient(var(--faint) 1px, transparent 1px), linear-gradient(90deg, var(--faint) 1px, transparent 1px);
     background-size: 64px 64px;
     -webkit-mask-image: radial-gradient(ellipse at center, #000 20%, transparent 70%); mask-image: radial-gradient(ellipse at center, #000 20%, transparent 70%); }
   .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .55; }
+  .haze { position: absolute; left: -10%; right: -10%; height: 260px; filter: blur(60px); background: #C4B5FD; opacity: .5; border-radius: 50%; }
 
   /* Phone */
+  .cam { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
   .phone { position: absolute; width: 410px; height: 888px; border-radius: 64px; background: #0F172A; padding: 14px;
     box-shadow: 0 60px 120px -40px rgba(91,33,182,.55), 0 30px 60px -30px rgba(15,23,42,.45), inset 0 0 0 2px #1E293B; }
-  .phone .notch { position: absolute; left: 50%; top: 26px; width: 118px; height: 32px; margin-left: -59px; border-radius: 20px; background: #0F172A; z-index: 5; }
+  .phone .notch { position: absolute; left: 50%; top: 26px; width: 118px; height: 32px; margin-left: -59px; border-radius: 20px; background: #0F172A; z-index: 6; }
   .phone .screen { position: relative; width: 100%; height: 100%; border-radius: 51px; overflow: hidden; background: #fff; }
   .phone .screen img { position: absolute; left: 0; top: 0; width: 100%; height: auto; transform-origin: 50% 0; }
-  .phone .glare { position: absolute; inset: 0; border-radius: 51px; pointer-events: none; z-index: 4;
+  .phone .glare { position: absolute; inset: 0; border-radius: 51px; pointer-events: none; z-index: 5;
     background: linear-gradient(115deg, rgba(255,255,255,.22) 0%, rgba(255,255,255,0) 28%); }
+  .spot { position: absolute; border-radius: 16px; z-index: 3; box-shadow: 0 0 0 2000px rgba(15,23,42,0); outline: 3px solid rgba(124,58,237,0); outline-offset: 2px; }
+  .cursor { position: absolute; z-index: 4; width: 0; height: 0; }
+  .cursor svg { position: absolute; left: -6px; top: -4px; filter: drop-shadow(0 6px 10px rgba(15,23,42,.35)); }
+  .cursor .ripple { position: absolute; left: -40px; top: -40px; width: 80px; height: 80px; border-radius: 50%; border: 4px solid var(--violet); opacity: 0; }
 
-  /* Type */
+  /* Captions */
   .kicker { font-family: Sora; font-weight: 600; font-size: 22px; letter-spacing: .22em; color: var(--violet); display: flex; align-items: center; gap: 14px; }
   .kicker i { display: inline-block; width: 44px; height: 3px; background: var(--violet); border-radius: 2px; }
-  .title { font-family: Sora; font-weight: 700; font-size: 84px; line-height: 1.04; letter-spacing: -.035em; }
-  .title em { font-family: Serif; font-style: italic; font-weight: 400; color: var(--violet); letter-spacing: -.01em; font-size: 1.08em; }
-  .sub { font-size: 33px; line-height: 1.45; color: var(--muted); max-width: 760px; }
-  .line { display: block; overflow: hidden; padding-bottom: .08em; }
-  .line > span { display: inline-block; will-change: transform; }
+  .cap { position: absolute; font-family: Sora; font-weight: 700; font-size: 82px; line-height: 1.08; letter-spacing: -.035em; }
+  .cap .row { display: block; white-space: nowrap; }
+  .cap .w { display: inline-block; margin-right: .24em; will-change: transform, filter, opacity; }
+  .cap .w.acc { color: var(--violet); }
+  .cap .w.ser { font-family: Serif; font-style: italic; font-weight: 400; letter-spacing: -.01em; font-size: 1.1em; }
 
-  .chip { position: absolute; display: flex; align-items: center; gap: 14px; padding: 18px 26px; border-radius: 22px; background: #fff;
-    border: 1px solid var(--faint); box-shadow: 0 24px 50px -24px rgba(15,23,42,.35); font-family: Sora; font-weight: 600; font-size: 25px; white-space: nowrap; }
-  .chip .ic { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--violet-soft); color: var(--violet); font-size: 24px; }
-  .chip small { display: block; font-family: Inter; font-weight: 500; font-size: 18px; color: var(--muted); margin-top: 2px; }
+  .pill { position: absolute; left: 0; display: flex; align-items: center; gap: 20px; padding: 20px 34px 20px 20px; border-radius: 22px; font-family: Sora; font-weight: 600; font-size: 46px; white-space: nowrap; }
+  .pill .ic { width: 62px; height: 62px; border-radius: 16px; display: grid; place-items: center; background: rgba(255,255,255,.7); font-size: 32px; }
 
-  .steps { display: flex; gap: 14px; }
-  .step { display: flex; align-items: center; gap: 12px; padding: 14px 22px 14px 14px; border-radius: 999px; border: 2px solid var(--faint); background: #fff; font-family: Sora; font-weight: 600; font-size: 24px; color: var(--muted); }
-  .step b { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--faint); color: var(--muted); font-size: 20px; }
-  .step.on { border-color: var(--violet); color: var(--ink); }
-  .step.on b { background: var(--violet); color: #fff; }
+  .coin { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; }
+  .coin .face { position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center; font-family: Sora; font-weight: 700; font-size: 54px; color: #7A5600;
+    background: radial-gradient(circle at 35% 30%, #FFF3B0, #FFD43B 45%, #E0A800 100%); box-shadow: inset 0 0 0 7px rgba(255,255,255,.45), 0 20px 40px -18px rgba(122,86,0,.6); }
 
-  .price { display: inline-flex; align-items: baseline; gap: 10px; padding: 14px 24px; border-radius: 18px; background: var(--violet-soft); border: 1px solid var(--violet-line); font-family: Sora; font-weight: 600; font-size: 24px; color: var(--violet-deep); }
-  .price strong { font-size: 34px; color: var(--violet); }
+  .search { position: absolute; left: 50%; top: 50%; width: 1080px; height: 128px; margin: -64px 0 0 -540px; border-radius: 999px; background: #fff;
+    display: flex; align-items: center; gap: 26px; padding: 0 40px; box-shadow: 0 40px 80px -30px rgba(15,23,42,.55); font-family: Sora; font-weight: 600; font-size: 50px; color: var(--ink); }
+  .search .caret { display: inline-block; width: 4px; height: 58px; background: var(--violet); margin-left: 4px; vertical-align: middle; }
+  .search .go { margin-left: auto; width: 84px; height: 84px; border-radius: 50%; background: var(--violet); display: grid; place-items: center; }
 
   .hud { position: absolute; left: 80px; right: 80px; bottom: 54px; display: flex; justify-content: space-between; align-items: center; font-family: Sora; font-weight: 600; font-size: 20px; color: var(--muted); }
   .hud .brand { display: flex; align-items: center; gap: 12px; color: var(--ink); }
@@ -75,7 +82,7 @@
   .hud .dots span { height: 8px; border-radius: 4px; background: var(--faint); }
 
   .hook { position: absolute; inset: 0; background: var(--violet); color: #fff; overflow: hidden; }
-  .hook .word { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-family: Sora; font-weight: 700; font-size: 150px; letter-spacing: -.045em; line-height: 1; margin-top: -80px; }
+  .hook .word { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-family: Sora; font-weight: 700; font-size: 170px; letter-spacing: -.045em; line-height: 1; margin-top: -90px; }
   .hook .ring { position: absolute; left: 50%; top: 50%; border: 2px solid rgba(255,255,255,.18); border-radius: 50%; }
   .hook .tag { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-family: Sora; font-weight: 700; font-size: 172px; letter-spacing: -.05em; margin-top: -100px; }
   .hook .tag em { font-family: Serif; font-weight: 400; color: var(--sun); font-size: 1.1em; letter-spacing: -.01em; }
@@ -86,12 +93,13 @@
 </head>
 <body>
 <div id="stage">
-  <!-- background -->
   <div class="layer" id="bg">
     <div class="grid" id="grid"></div>
     <div class="blob" id="blob1" style="width:900px;height:900px;background:#C4B5FD"></div>
     <div class="blob" id="blob2" style="width:700px;height:700px;background:#FDE68A"></div>
     <div class="blob" id="blob3" style="width:600px;height:600px;background:#A7F3D0"></div>
+    <div class="haze" id="hazeTop" style="top:-200px"></div>
+    <div class="haze" id="hazeBottom" style="bottom:-210px"></div>
   </div>
 
   <!-- S1 intro -->
@@ -103,32 +111,32 @@
       <g id="arrow" style="transform-origin:88px 80px"><path d="M99.2 69.3 L99.1 92.7 L76.1 73.5 Z" fill="#7C3AED" stroke="#7C3AED" stroke-width="4" stroke-linejoin="round"/></g>
       <circle id="dot" cx="60" cy="60" r="9" fill="#0F172A" style="transform-origin:60px 60px"/>
     </svg>
-    <div id="wordmark" class="abs" style="left:0;right:0;top:600px;text-align:center;font-family:Sora;font-weight:700;font-size:118px;letter-spacing:-.045em"></div>
-    <div id="tagline" class="abs" style="left:0;right:0;top:760px;text-align:center;font-size:38px;color:var(--muted)">Ton parcours étudiant, à <span style="font-family:Serif;font-style:italic;color:var(--violet);font-size:1.25em">360°</span></div>
+    <div id="wordmark" class="abs" style="left:0;right:0;top:490px;text-align:center;font-family:Sora;font-weight:700;font-size:118px;letter-spacing:-.045em"></div>
+    <div id="introCap" class="cap" style="left:0;right:0;top:650px;text-align:center;font-size:44px;font-weight:600;color:var(--muted)"></div>
     <div id="wipe" class="abs" style="left:960px;top:540px;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:var(--violet)"></div>
   </div>
 
   <!-- S2 hook -->
   <div class="hook" id="hook">
     <div class="ring" id="ring1"></div><div class="ring" id="ring2"></div><div class="ring" id="ring3"></div>
-    <div class="word" id="w0">Trouver un stage.</div>
-    <div class="word" id="w1">Écrire ton CV.</div>
-    <div class="word" id="w2">Réviser tes examens.</div>
-    <div class="word" id="w3">Rédiger ton rapport.</div>
+    <div class="search" id="search">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span><span id="typed"></span><span class="caret" id="caret"></span></span>
+      <span class="go" id="go"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span>
+    </div>
+    <div class="word" id="w0">Postuler.</div>
+    <div class="word" id="w1">Rédiger.</div>
+    <div class="word" id="w2">Réviser.</div>
     <div class="tag" id="tag"><span id="tagA">Une seule app.</span><br><span id="tagB" style="font-size:.62em;display:inline-block;margin-top:18px">Campus <em>360</em></span></div>
   </div>
 
-  <!-- feature scenes are built by JS -->
-  <div class="layer" id="features"></div>
+  <div class="layer" id="scenes"></div>
 
   <!-- S8 outro -->
   <div class="layer" id="outro">
-    <div id="outroTitle" class="abs title" style="left:0;right:0;top:92px;text-align:center;font-size:92px">
-      <span class="line"><span id="ot1">Ton <em>premier</em> stage</span></span>
-      <span class="line"><span id="ot2">commence ici.</span></span>
-    </div>
-    <div id="fan" class="abs" style="left:0;right:0;top:0;bottom:0;perspective:2400px"></div>
-    <div id="ctaBox" class="abs" style="left:0;right:0;top:250px;text-align:center">
+    <div id="outroCap" class="cap" style="left:0;right:0;top:92px;text-align:center;font-size:92px"></div>
+    <div id="fan" class="abs" style="left:0;right:0;top:0;bottom:0"></div>
+    <div id="ctaBox" class="abs" style="left:0;right:0;top:210px;text-align:center">
       <svg id="ctaMono" viewBox="14 14 92 92" width="150" height="150" style="overflow:visible">
         <path d="M83.1 32.4 A36 36 0 0 0 36.9 32.4" fill="none" stroke="#7C3AED" stroke-width="15" opacity="0.4"/>
         <path d="M30.5 39.3 A36 36 0 0 0 34.5 85.5" fill="none" stroke="#7C3AED" stroke-width="15" opacity="0.7"/>
@@ -137,9 +145,13 @@
         <circle cx="60" cy="60" r="9" fill="#0F172A"/>
       </svg>
       <div id="ctaName" style="font-family:Sora;font-weight:700;font-size:96px;letter-spacing:-.045em;margin-top:18px">Campus 360</div>
-      <div id="ctaBtnWrap" style="margin-top:44px"><span class="cta"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Télécharge l'APK gratuit</span></div>
-      <div id="ctaUrl" style="margin-top:36px;font-family:Sora;font-weight:600;font-size:40px;color:var(--violet)">campus360b.site</div>
-      <div id="ctaBadges" style="margin-top:40px;display:flex;justify-content:center;gap:16px">
+      <div id="ctaTag" class="cap" style="position:relative;font-size:40px;font-weight:600;color:var(--muted);margin-top:14px;height:56px"></div>
+      <div id="ctaBtnWrap" style="margin-top:40px;position:relative;display:inline-block">
+        <span class="cta"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Télécharge l'APK gratuit</span>
+        <div class="cursor" id="ctaCursor" style="left:78%;top:74%"><div class="ripple"></div><svg width="44" height="52" viewBox="0 0 22 26"><path d="M2 2 L2 21 L7 16.5 L10.5 24 L14 22.5 L10.6 15.2 L17.5 15 Z" fill="#0F172A" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div id="ctaUrl" style="margin-top:34px;font-family:Sora;font-weight:600;font-size:40px;color:var(--violet)">campus360b.site</div>
+      <div id="ctaBadges" style="margin-top:36px;display:flex;justify-content:center;gap:16px">
         <span class="badge" style="background:#FFF8DB;color:#7A5600">🎁 1 000 coins offerts au lancement</span>
         <span class="badge" style="background:#E7F8F1;color:#047857">📱 MTN MoMo &amp; Orange Money</span>
         <span class="badge" style="background:var(--violet-soft);color:var(--violet-deep)">✓ Sans abonnement</span>
@@ -160,6 +172,7 @@
 const SCREENS = '../public/images/screens/';
 const DURATION = 60;
 const FPS = 30;
+const BEAT = 60 / 118;
 
 // ─── math ───────────────────────────────────────────────────────────────
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -174,60 +187,54 @@ const $ = (id) => document.getElementById(id);
 const css = (el, o) => { for (const k in o) el.style[k] = o[k]; };
 const show = (el, on) => { el.style.display = on ? '' : 'none'; };
 
-// ─── feature scenes ─────────────────────────────────────────────────────
-// side: where the phone sits. screens: [file, from-second-in-scene]. chips pop at their own time.
-const FEATURES = [
-  { start: 11.5, end: 17, side: 'right', kicker: '01 · ACCUEIL',
-    title: ['Des offres choisies', 'pour <em>ta</em> filière.'],
-    sub: 'Ton université, ta filière, tes compétences : l’app s’en sert pour te proposer les bons stages.',
-    screens: [['accueil.webp', 0]],
-    chips: [
-      { at: 1.3, x: -150, y: 610, ic: '⚡', text: '74 % de correspondance', small: 'Classées selon ta filière' },
-      { at: 1.8, x: 300, y: 120, ic: '📍', text: 'IUT de Douala', small: 'Réseaux & Télécoms' },
-    ] },
-  { start: 17, end: 23.5, side: 'left', kicker: '02 · STAGES & EMPLOIS',
-    title: ['Des offres qui te', '<em>correspondent.</em>'],
-    sub: 'Stages académiques, professionnels et premiers emplois. Chaque offre affiche ton score de correspondance.',
-    screens: [['stages.webp', 0], ['offre.webp', 3.1]],
-    chips: [
-      { at: 1.2, x: 200, y: 150, ic: '★', text: '65 % Match', small: 'Tes points forts, un conseil' },
-      { at: 3.6, x: -170, y: 690, ic: '⚡', text: 'Postuler en 1 clic', small: 'Depuis la fiche de l’offre' },
-    ] },
-  { start: 23.5, end: 32, side: 'right', kicker: '03 · CANDIDATURE',
-    title: ['Ton CV adapté', 'et ta <em>lettre</em>, prêts.'],
-    sub: 'Choisis ton modèle : l’IA adapte ton CV et ta lettre à l’offre, à partir de ton vrai parcours.',
-    screens: [['candidature.webp', 0]],
-    steps: true,
-    price: '<span>Candidature dès</span> <strong>300 FCFA</strong> <span>CV + lettre compris</span>',
-    chips: [
-      { at: 1.4, x: -180, y: 470, ic: '📄', text: 'CV officiel RH', small: '5 modèles au choix' },
-      { at: 2.0, x: 290, y: 700, ic: '✉', text: 'Lettre incluse', small: 'Rendue si l’envoi échoue' },
-    ] },
-  { start: 32, end: 36, side: 'left', kicker: '04 · RÉVISIONS',
-    title: ['Révise avec', 'les <em>annales.</em>'],
-    sub: 'Épreuves et cours PDF en lecture gratuite, et 3 actions IA offertes chaque jour pour réviser.',
-    screens: [['ressources.webp', 0]],
-    chips: [{ at: 1.0, x: 210, y: 300, ic: '📚', text: 'PDF gratuits', small: 'Annales par université' }] },
-  { start: 36, end: 40, side: 'right', kicker: '05 · RÉDACTION',
-    title: ['Rapport, mémoire :', 'rédige avec l’<em>IA.</em>'],
-    sub: 'Le plan est gratuit. Rapport de stage 2 000 FCFA, mémoire 4 000 FCFA. Tu gardes la main sur le texte.',
-    screens: [['creer.webp', 0], ['atelier.webp', 2.0]],
-    chips: [{ at: 1.0, x: -170, y: 300, ic: '✍', text: 'Plan offert', small: 'Avant de payer quoi que ce soit' }] },
-  { start: 40, end: 48.5, side: 'left', kicker: '06 · WALLET',
-    title: ['Tu paies seulement', 'ce que tu <em>utilises.</em>'],
-    sub: 'Recharge par MTN MoMo ou Orange Money dès 500 FCFA. Pas d’abonnement, des packs si tu postules beaucoup.',
-    screens: [['profil.webp', 0], ['packs.webp', 3.6]],
-    chips: [
-      { at: 1.2, x: 210, y: 240, ic: '📱', text: 'MTN MoMo', small: 'Orange Money' },
-      { at: 1.8, x: -170, y: 620, ic: '🎁', text: '1 000 coins offerts', small: 'À l’inscription, au lancement' },
-    ] },
-];
+// ─── captions: word by word ─────────────────────────────────────────────
+// Lines use *word* for violet and _word_ for the italic serif accent.
+function makeCaption(host, lines, cls = '') {
+  const el = document.createElement('div');
+  el.className = 'cap ' + cls;
+  const words = [];
+  lines.forEach((line) => {
+    const row = document.createElement('span');
+    row.className = 'row';
+    line.split(' ').forEach((tok) => {
+      const w = document.createElement('span');
+      w.className = 'w';
+      let text = tok;
+      if (/^\*.*\*[.,!:]?$/.test(tok)) { w.classList.add('acc'); text = tok.replace(/\*/g, ''); }
+      if (/^_.*_[.,!:]?$/.test(tok)) { w.classList.add('acc', 'ser'); text = tok.replace(/_/g, ''); }
+      w.textContent = text.replace(/~/g, ' ');
+      row.appendChild(w);
+      words.push(w);
+    });
+    el.appendChild(row);
+  });
+  host.appendChild(el);
+  return { el, words };
+}
+// Words rise from a blur one after another, then leave upward the same way.
+function renderCaption(cap, t, a, b, step = 0.075) {
+  const on = t >= a - 0.05 && t <= b + 0.6;
+  show(cap.el, on);
+  if (!on) return;
+  cap.words.forEach((w, i) => {
+    const pin = ein(t, a + i * step, a + i * step + 0.55);
+    const pout = ein(t, b + i * 0.03, b + i * 0.03 + 0.35, inExpo);
+    css(w, {
+      opacity: clamp(raw(t, a + i * step, a + i * step + 0.3)) * (1 - pout),
+      transform: `translateY(${(1 - pin) * 46 - pout * 40}px) scale(${lerp(0.92, 1, pin)})`,
+      filter: `blur(${(1 - pin) * 14 + pout * 14}px)`,
+    });
+  });
+}
 
-const featureEls = [];
-function phoneEl(files) {
+// ─── phone with camera, spotlight and cursor ────────────────────────────
+function makePhone(host, files, left, top) {
+  const cam = document.createElement('div');
+  cam.className = 'cam';
   const phone = document.createElement('div');
   phone.className = 'phone';
   phone.innerHTML = '<div class="notch"></div><div class="screen"></div><div class="glare"></div>';
+  css(phone, { left: left + 'px', top: top + 'px' });
   const screen = phone.querySelector('.screen');
   const imgs = files.map((f) => {
     const img = document.createElement('img');
@@ -235,151 +242,305 @@ function phoneEl(files) {
     screen.appendChild(img);
     return img;
   });
-  return { phone, imgs };
+  const spot = document.createElement('div');
+  spot.className = 'spot';
+  screen.appendChild(spot);
+  const cursor = document.createElement('div');
+  cursor.className = 'cursor';
+  cursor.innerHTML = '<div class="ripple"></div><svg width="40" height="48" viewBox="0 0 22 26"><path d="M2 2 L2 21 L7 16.5 L10.5 24 L14 22.5 L10.6 15.2 L17.5 15 Z" fill="#0F172A" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  screen.appendChild(cursor);
+  cam.appendChild(phone);
+  host.appendChild(cam);
+  return { cam, phone, imgs, spot, cursor, left, top };
 }
+const SW = 382, SH = 860; // screen size inside the frame
 
-function buildFeatures() {
-  const host = $('features');
-  FEATURES.forEach((f, i) => {
-    const root = document.createElement('div');
-    root.className = 'layer';
-    const phoneX = f.side === 'right' ? 1250 : 260;
-    const textX = f.side === 'right' ? 150 : 930;
-    const { phone, imgs } = phoneEl(f.screens.map((s) => s[0]));
-    css(phone, { left: phoneX + 'px', top: '96px' });
-    root.appendChild(phone);
-
-    const text = document.createElement('div');
-    text.className = 'abs';
-    css(text, { left: textX + 'px', top: f.steps ? '210px' : '270px', width: '900px' });
-    text.innerHTML = `<div class="kicker"><i></i><span>${f.kicker}</span></div>
-      <h2 class="title" style="margin-top:34px">${f.title.map((l) => `<span class="line"><span>${l}</span></span>`).join('')}</h2>
-      <p class="sub" style="margin-top:34px">${f.sub}</p>
-      ${f.steps ? `<div class="steps" style="margin-top:44px"><div class="step"><b>1</b>Préparer</div><div class="step"><b>2</b>Vérifier</div><div class="step"><b>3</b>Envoyer</div></div>` : ''}
-      ${f.price ? `<div style="margin-top:30px"><span class="price">${f.price}</span></div>` : ''}`;
-    root.appendChild(text);
-
-    const chips = (f.chips || []).map((c) => {
-      const el = document.createElement('div');
-      el.className = 'chip';
-      el.innerHTML = `<span class="ic">${c.ic}</span><span>${c.text}<small>${c.small}</small></span>`;
-      css(el, { left: phoneX + c.x + 'px', top: 96 + c.y + 'px' });
-      root.appendChild(el);
-      return el;
-    });
-    host.appendChild(root);
-    featureEls.push({
-      f, root, phone, imgs, chips,
-      kicker: text.querySelector('.kicker'),
-      lines: [...text.querySelectorAll('.line > span')],
-      sub: text.querySelector('.sub'),
-      steps: [...text.querySelectorAll('.step')],
-      stepsRow: text.querySelector('.steps'),
-      price: text.querySelector('.price'),
-    });
-  });
-  const dots = $('dots');
-  FEATURES.forEach(() => dots.appendChild(document.createElement('span')));
-}
-
-function renderFeature(fe, t) {
-  const { f } = fe;
-  const lt = t - f.start;
-  const len = f.end - f.start;
-  const active = t >= f.start - 0.01 && t < f.end + 0.45;
-  show(fe.root, active);
-  if (!active) return;
-  const dir = f.side === 'right' ? 1 : -1;
-
-  // Enter / exit
-  const pin = ein(lt, 0, 0.9);
-  const pout = ein(lt, len - 0.35, len + 0.4, inExpo);
-  // Phone: rises with a 3D turn, drifts while on screen, flies out sideways.
-  const drift = Math.sin(lt * 0.9) * 6;
-  const rotY = lerp(-38 * dir, -12 * dir, pin) + lerp(0, 4 * dir, raw(lt, 0.9, len)) + pout * 30 * dir;
-  const tx = lerp(260 * dir, 0, pin) + pout * 900 * dir;
-  const ty = lerp(260, 0, pin) + drift;
-  css(fe.phone, {
-    transform: `perspective(2200px) translate(${tx}px, ${ty}px) rotateY(${rotY}deg) rotateX(${lerp(14, 4, pin)}deg) rotateZ(${lerp(6 * dir, 0, pin)}deg)`,
-    opacity: Math.min(pin * 1.6, 1 - pout),
-    filter: `blur(${(1 - pin) * 6 + pout * 10}px)`,
-  });
-
-  // Screens: crossfade with a slight push.
-  fe.imgs.forEach((img, i) => {
-    const from = f.screens[i][1];
-    const next = f.screens[i + 1] ? f.screens[i + 1][1] : Infinity;
-    const pIn = i === 0 ? 1 : ein(lt, from, from + 0.6);
-    const pOut = ein(lt, next, next + 0.6);
-    const zoom = 1 + 0.05 * raw(lt, from, Math.min(next, len));
-    css(img, {
-      opacity: pIn * (1 - pOut),
-      transform: `translateY(${(1 - pIn) * 60 - pOut * 40}px) scale(${zoom})`,
-    });
-  });
-
-  // Text: kicker, then each line from under its mask, then the sub line.
-  const tOut = ein(lt, len - 0.45, len + 0.1, inExpo);
-  css(fe.kicker, { opacity: ein(lt, 0.15, 0.6) * (1 - tOut), transform: `translateX(${(1 - ein(lt, 0.15, 0.8)) * -40}px)` });
-  fe.lines.forEach((l, i) => {
-    const p = ein(lt, 0.25 + i * 0.12, 1.05 + i * 0.12);
-    css(l, { transform: `translateY(${(1 - p) * 110 - tOut * 110}%)` });
-  });
-  const ps = ein(lt, 0.6, 1.3);
-  css(fe.sub, { opacity: ps * (1 - tOut), transform: `translateY(${(1 - ps) * 30 - tOut * 20}px)` });
-
-  if (fe.stepsRow) {
-    const pr = ein(lt, 1.0, 1.6);
-    css(fe.stepsRow, { opacity: pr * (1 - tOut), transform: `translateY(${(1 - pr) * 24}px)` });
-    // Steps light up one after the other, on the beat.
-    fe.steps.forEach((s, i) => s.classList.toggle('on', lt >= 2.2 + i * 1.02));
-    fe.steps.forEach((s, i) => {
-      const pop = ein(lt, 2.2 + i * 1.02, 2.6 + i * 1.02, outBack);
-      s.style.transform = `scale(${lt >= 2.2 + i * 1.02 ? lerp(0.9, 1, pop) : 1})`;
-    });
+// Keyframed value: [[time, value], ...] eased between keys.
+function keys(t, list, f = inOut) {
+  if (t <= list[0][0]) return list[0][1];
+  for (let i = 1; i < list.length; i++) {
+    if (t <= list[i][0]) {
+      const [t0, v0] = list[i - 1], [t1, v1] = list[i];
+      const p = f(raw(t, t0, t1));
+      return Array.isArray(v0) ? v0.map((v, k) => lerp(v, v1[k], p)) : lerp(v0, v1, p);
+    }
   }
-  if (fe.price) {
-    const pp = ein(lt, 5.4, 6.0, outBack);
-    css(fe.price, { opacity: clamp(pp) * (1 - tOut), transform: `scale(${lerp(0.8, 1, pp)})`, display: 'inline-flex' });
-  }
-
-  fe.chips.forEach((el, i) => {
-    const c = f.chips[i];
-    const p = ein(lt, c.at, c.at + 0.55, outBack);
-    const out = ein(lt, len - 0.5 - i * 0.05, len, inExpo);
-    const bob = Math.sin((lt + i) * 2.1) * 8;
-    css(el, {
-      opacity: clamp(raw(lt, c.at, c.at + 0.25)) * (1 - out),
-      transform: `translate(${pout * 900 * dir}px, ${bob + out * -30}px) scale(${lerp(0.6, 1, p)}) rotate(${(i % 2 ? 2 : -2) * (1 - p)}deg)`,
-    });
-  });
+  return list[list.length - 1][1];
 }
 
 // ─── scenes ─────────────────────────────────────────────────────────────
+// Each scene: phone side + entrance, screens with switch times, captions, zoom keys
+// (scale and focus point in screen fractions), spotlight boxes, cursor path with taps.
+const SCENES = [
+  { start: 11.5, end: 17, side: 'right', enter: 'turn', kicker: '01 · ACCUEIL',
+    screens: [['accueil.webp', 0]],
+    captions: [
+      { a: 0.45, b: 2.55, lines: ['Ton accueil,', 'pensé pour', '_ta~filière._'] },
+      { a: 2.85, b: 5.0, lines: ['Les offres', 'classées par', '*correspondance.*'] },
+    ],
+    zoom: [[0, [1, 0.5, 0.5]], [2.7, [1, 0.5, 0.5]], [3.4, [1.85, 0.36, 0.86]], [5.0, [1.92, 0.36, 0.86]]],
+    spots: [{ a: 3.3, b: 5.3, box: [0.04, 0.775, 0.66, 0.135] }],
+    cursor: null },
+  { start: 17, end: 23.5, side: 'left', enter: 'rise', kicker: '02 · STAGES & EMPLOIS',
+    screens: [['stages.webp', 0], ['offre.webp', 2.45]],
+    captions: [
+      { a: 0.4, b: 2.45, lines: ['Des stages', 'qui te', '*correspondent.*'] },
+      { a: 2.75, b: 4.6, lines: ['*65~%* de match,', 'tes points forts,', 'un conseil.'] },
+      { a: 4.85, b: 6.1, lines: ['Postule', 'en *1~clic.*'] },
+    ],
+    zoom: [[0, [1, 0.5, 0.5]], [3.0, [1, 0.5, 0.5]], [3.7, [1.9, 0.72, 0.56]], [4.6, [1.95, 0.7, 0.58]], [5.2, [1.6, 0.68, 0.93]], [6.2, [1.66, 0.68, 0.93]]],
+    spots: [{ a: 3.6, b: 4.7, box: [0.6, 0.495, 0.36, 0.055] }, { a: 5.2, b: 6.3, box: [0.45, 0.905, 0.52, 0.07] }],
+    cursor: [[1.1, [0.95, 1.1]], [2.0, [0.42, 0.87]], [2.25, 'tap'], [4.9, [0.42, 0.87]], [5.45, [0.72, 0.94]], [5.7, 'tap']] },
+  { start: 23.5, end: 32, side: 'right', enter: 'turnBack', kicker: '03 · CANDIDATURE',
+    screens: [['candidature.webp', 0]],
+    captions: [
+      { a: 0.45, b: 2.7, lines: ['*Préparer,*', 'vérifier,', 'envoyer.'] },
+      { a: 3.0, b: 5.4, lines: ['Choisis', 'ton *modèle*', 'de CV.'] },
+      { a: 5.7, b: 8.0, lines: ['CV adapté', '+ lettre, dès', '*300~FCFA.*'] },
+    ],
+    zoom: [[0, [1, 0.5, 0.5]], [0.9, [1.55, 0.5, 0.2]], [2.6, [1.6, 0.5, 0.2]], [3.3, [1.45, 0.5, 0.62]], [5.4, [1.5, 0.5, 0.64]], [6.0, [1.55, 0.5, 0.9]], [8.0, [1.6, 0.5, 0.9]]],
+    spots: [{ a: 1.0, b: 2.7, box: [0.03, 0.18, 0.94, 0.06] }, { a: 3.4, b: 5.4, box: [0.03, 0.46, 0.94, 0.33] }, { a: 6.0, b: 8.1, box: [0.04, 0.925, 0.92, 0.055] }],
+    cursor: [[3.6, [1.1, 0.7]], [4.3, [0.27, 0.62]], [4.5, 'tap'], [6.4, [0.27, 0.62]], [7.0, [0.6, 0.95]], [7.25, 'tap']] },
+  { start: 40, end: 48.5, side: 'right', enter: 'turn', kicker: '06 · WALLET', coins: true,
+    screens: [['profil.webp', 0], ['packs.webp', 3.15]],
+    captions: [
+      { a: 0.45, b: 2.8, lines: ['Paie avec', '*MTN~MoMo*', 'ou *Orange~Money.*'] },
+      { a: 3.1, b: 5.5, lines: ['Des *packs*', 'si tu postules', 'beaucoup.'] },
+      { a: 5.8, b: 8.0, lines: ['*1~000~coins*', 'offerts', 'à l’inscription.'] },
+    ],
+    zoom: [[0, [1, 0.5, 0.5]], [0.9, [1.7, 0.5, 0.41]], [2.9, [1.75, 0.5, 0.42]], [3.6, [1.55, 0.5, 0.66]], [5.5, [1.6, 0.5, 0.66]], [6.2, [1, 0.5, 0.5]]],
+    spots: [{ a: 1.0, b: 3.0, box: [0.03, 0.31, 0.94, 0.2] }, { a: 3.7, b: 5.6, box: [0.03, 0.45, 0.94, 0.43] }],
+    cursor: [[1.6, [1.1, 0.6]], [2.4, [0.8, 0.48]], [2.65, 'tap']] },
+];
+// The breakdown (32-40 s): feature pills stacking up next to a floating phone.
+const PILLS = {
+  start: 32, end: 40,
+  items: [
+    { at: 0.35, ic: '📚', text: 'Annales PDF gratuites', bg: '#E7F8F1', fg: '#047857' },
+    { at: 1.35, ic: '💬', text: 'Chat IA pour réviser', bg: '#F5F3FF', fg: '#6D28D9' },
+    { at: 2.35, ic: '⚡', text: '3 actions IA offertes / jour', bg: '#FFF8DB', fg: '#7A5600' },
+    { at: 3.95, ic: '📝', text: 'Rapport de stage', bg: '#FFF0EB', fg: '#B4401F' },
+    { at: 4.95, ic: '🎓', text: 'Mémoire complet', bg: '#EFF6FF', fg: '#1D4ED8' },
+    { at: 5.95, ic: '✨', text: 'Le plan est gratuit', bg: '#E7F8F1', fg: '#047857' },
+  ],
+};
+const CHAPTERS = [11.5, 17, 23.5, 32, 36, 40, 48.5];
+
+const built = [];
+let pillsBuilt = null;
+let coins = [];
+
+function buildScenes() {
+  const host = $('scenes');
+  SCENES.forEach((s) => {
+    const root = document.createElement('div');
+    root.className = 'layer';
+    const phoneX = s.side === 'right' ? 1250 : 260;
+    const textX = s.side === 'right' ? 160 : 900;
+    const ph = makePhone(root, s.screens.map((x) => x[0]), phoneX, 96);
+    const kicker = document.createElement('div');
+    kicker.className = 'kicker abs';
+    kicker.innerHTML = `<i></i><span>${s.kicker}</span>`;
+    css(kicker, { left: textX + 'px', top: '250px' });
+    root.appendChild(kicker);
+    const caps = s.captions.map((c) => {
+      const cap = makeCaption(root, c.lines);
+      css(cap.el, { left: textX + 'px', top: '320px' });
+      return cap;
+    });
+    let sceneCoins = [];
+    if (s.coins) {
+      sceneCoins = [[-150, 210, 0.9, 0], [330, 140, 0.7, 1.3], [-210, 650, 0.75, 2.1], [360, 560, 1.05, 0.6], [100, -20, 0.55, 1.7], [260, 830, 0.6, 2.6]].map(([x, y, sc, ph0]) => {
+        const c = document.createElement('div');
+        c.className = 'coin';
+        c.innerHTML = '<div class="face">C</div>';
+        css(c, { left: phoneX + 205 + x + 'px', top: 96 + y + 'px' });
+        root.appendChild(c);
+        return { el: c, sc, ph0 };
+      });
+    }
+    host.appendChild(root);
+    built.push({ s, root, ph, kicker, caps, coins: sceneCoins });
+  });
+
+  // Pills scene
+  const root = document.createElement('div');
+  root.className = 'layer';
+  const ph = makePhone(root, ['ressources.webp', 'creer.webp'], 300, 96);
+  const kicker = document.createElement('div');
+  kicker.className = 'kicker abs';
+  kicker.innerHTML = '<i></i><span>04 · RÉVISIONS &amp; RÉDACTION</span>';
+  css(kicker, { left: '900px', top: '200px' });
+  root.appendChild(kicker);
+  const list = document.createElement('div');
+  list.className = 'abs';
+  css(list, { left: '900px', top: '0', width: '900px', height: '1080px' });
+  const pills = PILLS.items.map((p) => {
+    const el = document.createElement('div');
+    el.className = 'pill';
+    el.innerHTML = `<span class="ic">${p.ic}</span>${p.text}`;
+    css(el, { background: p.bg, color: p.fg });
+    list.appendChild(el);
+    return el;
+  });
+  root.appendChild(list);
+  host.appendChild(root);
+  pillsBuilt = { root, ph, kicker, pills };
+
+  CHAPTERS.slice(0, -1).forEach(() => $('dots').appendChild(document.createElement('span')));
+}
+
+function renderPhone(ph, s, lt, len, pin, pout) {
+  const dir = s.side === 'right' ? 1 : -1;
+  // Entrance styles borrowed from the reference films: edge-on turn, or a tilted rise.
+  let rx = 0, ry = 0, rz = 0, tx = 0, ty = 0;
+  if (s.enter === 'turn' || s.enter === 'turnBack') {
+    const sgn = s.enter === 'turn' ? 1 : -1;
+    ry = lerp(88 * sgn, -10 * dir, pin);
+    tx = lerp(120 * dir, 0, pin);
+    rx = lerp(8, 3, pin);
+  } else {
+    rx = lerp(58, 4, pin);
+    ty = lerp(520, 0, pin);
+    rz = lerp(-8 * dir, 0, pin);
+    ry = lerp(0, -10 * dir, pin);
+  }
+  ry += Math.sin(lt * 0.8) * 3;
+  ty += Math.sin(lt * 1.1) * 6;
+  // Exit: slides away with blur.
+  tx += pout * 1000 * dir;
+  ry += pout * 35 * dir;
+  css(ph.phone, {
+    transform: `perspective(2200px) translate(${tx}px, ${ty}px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg)`,
+    opacity: Math.min(clamp(pin * 2.2), 1 - pout),
+    filter: `blur(${pout * 12}px)`,
+  });
+
+  // Camera: scale around a focus point so that point lands near the phone centre.
+  const [sc, fx, fy] = s.zoom ? keys(lt, s.zoom) : [1, 0.5, 0.5];
+  const px = ph.left + 14 + fx * SW, py = ph.top + 14 + fy * SH;
+  const cx = ph.left + 205, cy = 540;
+  const k = raw(sc, 1, 1.2); // blend the focus target in as the zoom starts
+  const targetX = lerp(px, cx, k), targetY = lerp(py, cy, k);
+  css(ph.cam, { transform: `translate(${targetX - sc * px}px, ${targetY - sc * py}px) scale(${sc})` });
+
+  // Screens crossfade with a push.
+  ph.imgs.forEach((img, i) => {
+    const from = s.screens[i][1];
+    const next = s.screens[i + 1] ? s.screens[i + 1][1] : Infinity;
+    const a = i === 0 ? 1 : ein(lt, from, from + 0.45);
+    const b = ein(lt, next, next + 0.45);
+    css(img, { opacity: a * (1 - b), transform: `translateX(${(1 - a) * 80 - b * 80}px)` });
+  });
+
+  // Spotlight on the part being talked about.
+  let spotOn = 0, box = [0, 0, 0, 0];
+  (s.spots || []).forEach((sp) => {
+    const p = Math.min(ein(lt, sp.a, sp.a + 0.4), 1 - ein(lt, sp.b - 0.3, sp.b));
+    if (p > spotOn) { spotOn = p; box = sp.box; }
+  });
+  css(ph.spot, {
+    left: box[0] * SW + 'px', top: box[1] * SH + 'px', width: box[2] * SW + 'px', height: box[3] * SH + 'px',
+    boxShadow: `0 0 0 2000px rgba(15,23,42,${0.42 * spotOn})`,
+    outlineColor: `rgba(124,58,237,${spotOn})`,
+    transform: `scale(${lerp(1.15, 1, spotOn)})`,
+  });
+
+  // Cursor path with taps.
+  const path = s.cursor;
+  if (!path) { css(ph.cursor, { opacity: 0 }); return; }
+  const moves = path.filter((p) => p[1] !== 'tap');
+  const taps = path.filter((p) => p[1] === 'tap').map((p) => p[0]);
+  const [nx, ny] = keys(lt, moves);
+  const vis = Math.min(ein(lt, moves[0][0], moves[0][0] + 0.3), 1 - ein(lt, moves[moves.length - 1][0] + 0.6, moves[moves.length - 1][0] + 0.9));
+  let press = 1, ripple = 0, rippleS = 0;
+  taps.forEach((tp) => {
+    const d = lt - tp;
+    if (d > -0.1 && d < 0.2) press = Math.min(press, 0.82);
+    if (d >= 0 && d < 0.6) { ripple = 1 - d / 0.6; rippleS = lerp(0.3, 1.6, d / 0.6); }
+  });
+  css(ph.cursor, { left: nx * SW + 'px', top: ny * SH + 'px', opacity: vis });
+  ph.cursor.querySelector('svg').style.transform = `scale(${press})`;
+  css(ph.cursor.querySelector('.ripple'), { opacity: ripple, transform: `scale(${rippleS})` });
+}
+
+function renderScene(b, t) {
+  const { s } = b;
+  const lt = t - s.start, len = s.end - s.start;
+  const active = t >= s.start - 0.01 && t < s.end + 0.5;
+  show(b.root, active);
+  if (!active) return;
+  const pin = ein(lt, 0, 1.0);
+  const pout = ein(lt, len - 0.35, len + 0.45, inExpo);
+  renderPhone(b.ph, s, lt, len, pin, pout);
+  const ko = ein(lt, len - 0.4, len, inExpo);
+  css(b.kicker, { opacity: ein(lt, 0.1, 0.5) * (1 - ko), transform: `translateX(${(1 - ein(lt, 0.1, 0.7)) * -40}px)` });
+  b.caps.forEach((cap, i) => renderCaption(cap, lt, s.captions[i].a, s.captions[i].b));
+  b.coins.forEach((c, i) => {
+    const appear = ein(lt, 5.6 + i * 0.12, 6.2 + i * 0.12, outBack);
+    const early = ein(lt, 0.8 + i * 0.1, 1.4 + i * 0.1);
+    const p = Math.max(early * 0.55, appear);
+    const spin = (lt * 2.4 + c.ph0) * Math.PI;
+    css(c.el, {
+      opacity: clamp(p) * (1 - pout),
+      transform: `translate(${pout * 900}px, ${Math.sin(lt * 1.6 + c.ph0) * 18}px) scale(${c.sc * p})`,
+    });
+    c.el.firstChild.style.transform = `scaleX(${Math.max(0.12, Math.abs(Math.cos(spin)))})`;
+  });
+}
+
+function renderPills(t) {
+  const P = pillsBuilt;
+  const lt = t - PILLS.start, len = PILLS.end - PILLS.start;
+  const active = t >= PILLS.start - 0.01 && t < PILLS.end + 0.5;
+  show(P.root, active);
+  if (!active) return;
+  const pin = ein(lt, 0, 1.0), pout = ein(lt, len - 0.35, len + 0.45, inExpo);
+  renderPhone(P.ph, { side: 'left', enter: 'rise', screens: [['ressources.webp', 0], ['creer.webp', 3.8]],
+    zoom: [[0, [1, 0.5, 0.5]], [0.8, [1.08, 0.5, 0.5]], [3.6, [1.12, 0.5, 0.55]], [4.4, [1.05, 0.5, 0.4]], [7.6, [1.1, 0.5, 0.42]]] }, lt, len, pin, pout);
+  css(P.kicker, { opacity: ein(lt, 0.1, 0.5) * (1 - ein(lt, len - 0.4, len, inExpo)) });
+  // The list scrolls so the newest pill sits at the centre; older ones fade and blur.
+  const shown = PILLS.items.filter((p) => lt >= p.at).length;
+  const scroll = PILLS.items.reduce((acc, p, i) => acc + ein(lt, p.at, p.at + 0.55) * (i > 0 ? 1 : 0), 0);
+  P.pills.forEach((el, i) => {
+    const it = PILLS.items[i];
+    const pin2 = ein(lt, it.at, it.at + 0.6, outBack);
+    const dist = scroll - i; // 0 = newest
+    const y = 500 - dist * 118;
+    const fade = clamp(1 - Math.max(0, dist - 0.2) * 0.32);
+    const exit = ein(lt, len - 0.6 + i * 0.03, len - 0.1 + i * 0.03, inExpo);
+    css(el, {
+      top: y + 'px',
+      opacity: clamp(raw(lt, it.at, it.at + 0.25)) * fade * clamp((y - 240) / 120) * (1 - exit),
+      transform: `translateX(${(1 - pin2) * 120 + exit * 200}px) scale(${lerp(0.85, 1, pin2) * (1 - Math.max(0, dist) * 0.04)})`,
+      filter: `blur(${Math.max(0, dist - 0.5) * 2.2 + exit * 10}px)`,
+    });
+  });
+}
+
+// ─── fixed scenes ───────────────────────────────────────────────────────
 function renderBackground(t) {
   css($('blob1'), { left: 1100 + Math.sin(t * 0.35) * 160 + 'px', top: -260 + Math.cos(t * 0.3) * 120 + 'px' });
   css($('blob2'), { left: -200 + Math.cos(t * 0.28) * 140 + 'px', top: 520 + Math.sin(t * 0.33) * 90 + 'px', opacity: 0.35 });
   css($('blob3'), { left: 700 + Math.sin(t * 0.22) * 200 + 'px', top: 760 + Math.cos(t * 0.27) * 80 + 'px', opacity: 0.25 });
   css($('grid'), { transform: `translate(${(t * 12) % 64}px, ${(t * 8) % 64}px)` });
+  css($('hazeTop'), { transform: `translateX(${Math.sin(t * 0.4) * 80}px)` });
+  css($('hazeBottom'), { transform: `translateX(${Math.cos(t * 0.37) * 90}px)` });
 }
 
+let introCap, outroCap, ctaTag;
 function renderIntro(t) {
   const on = t < 6.6;
   show($('intro'), on);
   if (!on) return;
-  // Arcs draw one after another, then the arrow and the dot pop.
   ['arc1', 'arc2', 'arc3'].forEach((id, i) => {
     $(id).style.strokeDashoffset = 100 - 100 * ein(t, 0.3 + i * 0.4, 1.2 + i * 0.4, inOut);
   });
-  const pa = ein(t, 1.7, 2.2, outBack);
-  $('arrow').style.transform = `scale(${pa})`;
+  $('arrow').style.transform = `scale(${ein(t, 1.7, 2.2, outBack)})`;
   $('dot').style.transform = `scale(${ein(t, 2.0, 2.5, outBack)})`;
-  // The mark spins once into place, then lifts to make room for the name.
   const lift = ein(t, 2.6, 3.4, inOut);
   const spin = lerp(-120, 0, ein(t, 0.2, 2.4, inOut));
   css($('mono'), { transform: `translateY(${-110 * lift}px) rotate(${spin}deg) scale(${lerp(1, 0.84, lift)})` });
-
-  // Wordmark: letters rise in.
   const wm = $('wordmark');
   if (!wm.childElementCount) {
     'Campus 360'.split('').forEach((ch) => {
@@ -392,18 +553,15 @@ function renderIntro(t) {
   }
   [...wm.children].forEach((s, i) => {
     const p = ein(t, 2.9 + i * 0.05, 3.6 + i * 0.05);
-    css(s, { transform: `translateY(${(1 - p) * 60}px)`, opacity: p });
+    css(s, { transform: `translateY(${(1 - p) * 60}px)`, opacity: p, filter: `blur(${(1 - p) * 10}px)` });
   });
-  css(wm, { transform: `translateY(${-110}px)` });
-  const pt = ein(t, 3.7, 4.5);
-  css($('tagline'), { opacity: pt, transform: `translateY(${-110 + (1 - pt) * 24}px)` });
-
-  // Circle wipe into the violet hook on the drop.
+  renderCaption(introCap, t, 3.7, 9, 0.11);
   const pw = ein(t, 5.75, 6.4, inExpo);
   css($('wipe'), { transform: `scale(${pw * 460})` });
   const exit = ein(t, 5.4, 6.4, inExpo);
   css($('mono'), { opacity: 1 - exit });
   css(wm, { opacity: 1 - exit });
+  css(introCap.el, { opacity: 1 - exit });
 }
 
 function renderHook(t) {
@@ -411,115 +569,122 @@ function renderHook(t) {
   show($('hook'), on);
   if (!on) return;
   const lt = t - 6.4;
-  const beat = 60 / 118;
-  // Pulsing rings on every beat.
   ['ring1', 'ring2', 'ring3'].forEach((id, i) => {
-    const phase = ((lt + i * beat * 0.66) % (beat * 2)) / (beat * 2);
+    const phase = ((lt + i * BEAT * 0.66) % (BEAT * 2)) / (BEAT * 2);
     const size = 300 + phase * 1500;
     css($(id), { width: size + 'px', height: size + 'px', marginLeft: -size / 2 + 'px', marginTop: -size / 2 + 'px', opacity: (1 - phase) * 0.9 });
   });
-  // Four words, two beats each, pushed up by the next.
-  for (let i = 0; i < 4; i++) {
-    const a = i * beat * 2;
-    const pin = ein(lt, a, a + 0.35);
-    const pout = ein(lt, a + beat * 2 - 0.12, a + beat * 2 + 0.25, inExpo);
+  // A search bar types the student's question, then the button is hit.
+  const query = 'stage informatique à Douala';
+  const pBar = ein(lt, 0, 0.45, outBack);
+  const n = Math.floor(clamp(raw(lt, 0.3, 1.25)) * query.length);
+  $('typed').textContent = query.slice(0, n);
+  $('caret').style.opacity = Math.floor(lt * 4) % 2 ? 0.2 : 1;
+  const hit = ein(lt, 1.3, 1.45) * (1 - ein(lt, 1.45, 1.6));
+  $('go').style.transform = `scale(${1 - hit * 0.18})`;
+  const barOut = ein(lt, 1.55, 1.9, inExpo);
+  css($('search'), { opacity: clamp(raw(lt, 0, 0.15)) * (1 - barOut), transform: `scale(${lerp(0.6, 1, pBar) * (1 + barOut * 0.4)})`, filter: `blur(${barOut * 16}px)` });
+  // Then three verbs on the beat, and the promise.
+  const starts = [1.7, 1.7 + BEAT * 1.5, 1.7 + BEAT * 3];
+  starts.forEach((a, i) => {
+    const pin = ein(lt, a, a + 0.32);
+    const end = a + BEAT * 1.5;
+    const pout = ein(lt, end - 0.1, end + 0.2, inExpo);
     css($('w' + i), {
-      opacity: lt >= a - 0.01 ? 1 - pout : 0,
-      transform: `translateY(${(1 - pin) * 160 - pout * 160}px) scale(${lerp(1.18, 1, pin)})`,
-      filter: `blur(${(1 - pin) * 12 + pout * 12}px)`,
+      opacity: lt >= a - 0.01 ? clamp(raw(lt, a, a + 0.12)) * (1 - pout) : 0,
+      transform: `translateY(${(1 - pin) * 120 - pout * 120}px) scale(${lerp(1.25, 1, pin)})`,
+      filter: `blur(${(1 - pin) * 16 + pout * 16}px)`,
     });
-  }
-  const ta = 8 * beat; // after the four words
+  });
+  const ta = 1.7 + BEAT * 4.5;
   const pA = ein(lt, ta, ta + 0.45, outBack);
   const pB = ein(lt, ta + 0.5, ta + 1.0, outBack);
-  css($('tagA'), { display: 'inline-block', opacity: clamp(raw(lt, ta, ta + 0.15)), transform: `scale(${lerp(0.6, 1, pA)})` });
+  css($('tagA'), { display: 'inline-block', opacity: clamp(raw(lt, ta, ta + 0.15)), transform: `scale(${lerp(0.6, 1, pA)})`, filter: `blur(${(1 - clamp(pA)) * 12}px)` });
   css($('tagB'), { opacity: clamp(raw(lt, ta + 0.5, ta + 0.65)), transform: `translateY(${(1 - pB) * 40}px) scale(${lerp(0.7, 1, pB)})` });
-  // Panel slides up to reveal the white feature world.
   const up = ein(lt, 4.75, 5.4, inOut);
   css($('hook'), { transform: `translateY(${-up * 100}%)`, borderRadius: `0 0 ${up * 400}px ${up * 400}px` });
 }
 
+let fanPhones = [];
 function renderOutro(t) {
   const on = t >= 48.3;
   show($('outro'), on);
   if (!on) return;
   const lt = t - 48.5;
-  const fan = $('fan');
-  if (!fan.childElementCount) {
-    ['candidature.webp', 'stages.webp', 'accueil.webp', 'ressources.webp', 'profil.webp'].forEach((f) => {
-      const { phone } = phoneEl([f]);
-      phone.querySelector('img').style.opacity = 1;
-      fan.appendChild(phone);
-    });
-  }
   const gone = ein(lt, 4.2, 5.0, inExpo);
-  [...fan.children].forEach((p, i) => {
+  fanPhones.forEach((ph, i) => {
     const k = i - 2;
     const pin = ein(lt, 0.1 + Math.abs(k) * 0.12, 1.1 + Math.abs(k) * 0.12);
     const sway = Math.sin(lt * 0.8 + i) * 6;
-    const x = 960 - 205 + k * 330;
-    const y = 300 + Math.abs(k) * 60;
-    const scale = (k === 0 ? 0.92 : 0.8) * lerp(0.7, 1, pin);
-    css(p, {
-      left: x + 'px', top: y + 'px', zIndex: 10 - Math.abs(k),
-      transform: `translateY(${(1 - pin) * 700 + gone * (900 + Math.abs(k) * 100) + sway}px) rotateZ(${k * 7 * pin}deg) rotateY(${-k * 8}deg) scale(${scale})`,
+    css(ph.phone, {
+      left: 960 - 205 + k * 330 + 'px', top: 300 + Math.abs(k) * 60 + 'px', zIndex: 10 - Math.abs(k),
+      transform: `perspective(2400px) translateY(${(1 - pin) * 700 + gone * (900 + Math.abs(k) * 100) + sway}px) rotateZ(${k * 7 * pin}deg) rotateY(${-k * 8 + (1 - pin) * 60 * Math.sign(k || 1)}deg) scale(${(k === 0 ? 0.92 : 0.8) * lerp(0.7, 1, pin)})`,
       opacity: Math.min(1, pin * 2),
       filter: `blur(${gone * 8}px)`,
     });
   });
-  const p1 = ein(lt, 0.4, 1.2), p2 = ein(lt, 0.55, 1.35);
-  const titleOut = ein(lt, 4.0, 4.8, inExpo);
-  css($('ot1'), { transform: `translateY(${(1 - p1) * 110 - titleOut * 110}%)` });
-  css($('ot2'), { transform: `translateY(${(1 - p2) * 110 - titleOut * 110}%)` });
+  renderCaption(outroCap, lt, 0.35, 4.0, 0.09);
 
-  // Call to action.
   const c0 = lt - 4.9;
+  show($('ctaBox'), c0 > -0.05);
   const pm = ein(c0, 0, 0.7, outBack);
   css($('ctaMono'), { transform: `scale(${pm}) rotate(${lerp(-90, 0, ein(c0, 0, 0.9))}deg)`, opacity: clamp(raw(c0, 0, 0.2)) });
   const pn = ein(c0, 0.25, 0.9);
-  css($('ctaName'), { opacity: pn, transform: `translateY(${(1 - pn) * 40}px)` });
-  const pb = ein(c0, 0.6, 1.2, outBack);
-  const pulse = c0 > 1.6 ? 1 + Math.sin((c0 - 1.6) * Math.PI * 2 / (60 / 118 * 2)) * 0.02 : 1;
-  css($('ctaBtnWrap'), { opacity: clamp(raw(c0, 0.6, 0.8)), transform: `scale(${lerp(0.7, 1, pb) * pulse})` });
-  const pu = ein(c0, 0.9, 1.5);
+  css($('ctaName'), { opacity: pn, transform: `translateY(${(1 - pn) * 40}px)`, filter: `blur(${(1 - pn) * 10}px)` });
+  renderCaption(ctaTag, c0, 0.7, 99, 0.1);
+  const pb = ein(c0, 1.2, 1.8, outBack);
+  const tap = c0 - 2.9;
+  const press = tap > -0.1 && tap < 0.2 ? 0.94 : 1;
+  css($('ctaBtnWrap'), { opacity: clamp(raw(c0, 1.2, 1.4)), transform: `scale(${lerp(0.7, 1, pb) * press})` });
+  // Cursor glides in and taps the download button.
+  const cur = $('ctaCursor');
+  const cp = ein(c0, 2.0, 2.8, inOut);
+  css(cur, { opacity: clamp(raw(c0, 2.0, 2.2)) * (1 - ein(c0, 4.2, 4.6)), transform: `translate(${(1 - cp) * 260}px, ${(1 - cp) * 180}px)` });
+  const rp = tap >= 0 && tap < 0.6 ? tap / 0.6 : -1;
+  css(cur.querySelector('.ripple'), { opacity: rp >= 0 ? 1 - rp : 0, transform: `scale(${rp >= 0 ? lerp(0.3, 1.8, rp) : 0})` });
+  const pu = ein(c0, 1.6, 2.2);
   css($('ctaUrl'), { opacity: pu, transform: `translateY(${(1 - pu) * 20}px)` });
   [...$('ctaBadges').children].forEach((b, i) => {
-    const p = ein(c0, 1.2 + i * 0.15, 1.7 + i * 0.15, outBack);
-    css(b, { opacity: clamp(raw(c0, 1.2 + i * 0.15, 1.35 + i * 0.15)), transform: `translateY(${(1 - p) * 30}px) scale(${lerp(0.8, 1, p)})` });
+    const p = ein(c0, 3.3 + i * 0.15, 3.8 + i * 0.15, outBack);
+    css(b, { opacity: clamp(raw(c0, 3.3 + i * 0.15, 3.45 + i * 0.15)), transform: `translateY(${(1 - p) * 30}px) scale(${lerp(0.8, 1, p)})` });
   });
-  show($('ctaBox'), c0 > -0.05);
 }
 
 function renderHud(t) {
   const on = t > 11.6 && t < 48.5;
   const p = Math.min(ein(t, 11.6, 12.4), 1 - ein(t, 48.0, 48.5));
   css($('hud'), { opacity: on ? p : 0 });
-  const idx = FEATURES.findIndex((f) => t >= f.start && t < f.end);
+  let idx = -1;
+  for (let i = 0; i < CHAPTERS.length - 1; i++) if (t >= CHAPTERS[i] && t < CHAPTERS[i + 1]) idx = i;
   [...$('dots').children].forEach((d, i) => {
-    const w = i === idx ? 40 : 8;
-    css(d, { width: w + 'px', background: i === idx ? 'var(--violet)' : i < idx ? 'var(--violet-line)' : 'var(--faint)' });
+    css(d, { width: (i === idx ? 40 : 8) + 'px', background: i === idx ? 'var(--violet)' : i < idx ? 'var(--violet-line)' : 'var(--faint)' });
   });
-  $('hudLabel').textContent = idx >= 0 ? `0${idx + 1} / 0${FEATURES.length}` : 'campus360b.site';
+  $('hudLabel').textContent = idx >= 0 ? `0${idx + 1} / 0${CHAPTERS.length - 1}` : 'campus360b.site';
 }
 
 function render(t) {
   renderBackground(t);
   renderIntro(t);
   renderHook(t);
-  FEATURE_ELS_RENDER(t);
+  built.forEach((b) => renderScene(b, t));
+  renderPills(t);
   renderOutro(t);
   renderHud(t);
-  // Short white flash on the two big drops, and a fade to white at the very end.
-  const flash = Math.max(1 - ein(t, 48.5, 48.9), 0) * (t >= 48.5 ? 0.55 : 0) + ein(t, 59.3, 60, inOut);
+  const flash = (t >= 48.5 ? Math.max(1 - ein(t, 48.5, 48.9), 0) * 0.55 : 0) + ein(t, 59.3, 60, inOut);
   css($('flash'), { opacity: flash });
 }
-function FEATURE_ELS_RENDER(t) { featureEls.forEach((fe) => renderFeature(fe, t)); }
 
 async function ready() {
-  buildFeatures();
+  buildScenes();
+  introCap = makeCaption($('intro'), ['Ton parcours étudiant, à _360°_'], '');
+  css(introCap.el, { left: '0', right: '0', top: '660px', textAlign: 'center', fontSize: '46px', fontWeight: '600', color: 'var(--muted)' });
+  outroCap = makeCaption($('outro'), ['Ton _premier_ stage', 'commence ici.']);
+  css(outroCap.el, { left: '0', right: '0', top: '80px', textAlign: 'center', fontSize: '92px' });
+  ctaTag = makeCaption($('ctaTag'), ['Ton parcours étudiant, à *360°*']);
+  css(ctaTag.el, { position: 'relative', fontSize: '40px', fontWeight: '600', color: 'var(--muted)', textAlign: 'center' });
+  fanPhones = ['candidature.webp', 'stages.webp', 'accueil.webp', 'ressources.webp', 'profil.webp'].map((f) => makePhone($('fan'), [f], 0, 0));
+  fanPhones.forEach((ph) => { ph.imgs[0].style.opacity = 1; ph.cursor.style.opacity = 0; });
   render(0);
-  // Make sure the outro phones exist before waiting on images.
-  render(48.6);
   await document.fonts.ready;
   await Promise.all([...document.images].map((img) => img.decode().catch(() => undefined)));
   render(0);
