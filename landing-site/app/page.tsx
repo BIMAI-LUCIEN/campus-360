@@ -87,7 +87,7 @@ export default function HomePage() {
                 <a href="#demo">
                   <Button size="lg" variant="secondary" className="w-full gap-2 sm:w-auto">
                     <Play className="h-4 w-4" />
-                    Voir la démo
+                    Voir la présentation · 1 min
                   </Button>
                 </a>
               </div>
@@ -133,10 +133,13 @@ export default function HomePage() {
         {/* ─── DEMO FILM ────────────────────────────────────────── */}
         <section id="demo" className="scroll-mt-20 px-4 py-24 sm:px-6 lg:py-32">
           <div className="reveal mx-auto mb-12 max-w-2xl text-center">
-            <p className="kicker mb-4 flex justify-center">La démo en 19 secondes</p>
+            <p className="kicker mb-4 flex justify-center">La présentation en 1 minute</p>
             <h2 className="font-display text-3xl tracking-[-0.03em] sm:text-5xl">
-              Du profil à la <span className="text-gradient-brand">soutenance</span>, sans détour.
+              Du premier stage au <span className="text-gradient-brand">mémoire</span>, une seule app.
             </h2>
+            <p className="mx-auto mt-4 max-w-lg text-[var(--color-ink-muted)]">
+              Les vrais écrans de l&apos;app, avec le son. Choisis un chapitre pour aller droit à ce qui t&apos;intéresse.
+            </p>
           </div>
           <Scroll3D>
             <DemoFilm />
@@ -148,7 +151,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-6xl">
             <div className="reveal mb-8 max-w-2xl">
               <p className="kicker mb-4">Comment ça marche</p>
-              <h2 className="font-display text-3xl tracking-[-0.03em] sm:text-5xl">Cinq étapes, un seul écran.</h2>
+              <h2 className="font-display text-3xl tracking-[-0.03em] sm:text-5xl">Six étapes, une seule app.</h2>
             </div>
             <ScrollStory />
           </div>

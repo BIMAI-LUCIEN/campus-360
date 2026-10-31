@@ -2,13 +2,13 @@
 
 import Image from "next/image";
 import { useEffect, useRef, type CSSProperties } from "react";
-import { Bell, FileText, GraduationCap, Sparkles } from "lucide-react";
+import { FileText, GraduationCap, Sparkles, Wallet } from "lucide-react";
 
 const chips = [
-  { icon: Sparkles, label: "65% Match", sub: "Score calculé pour chaque offre", style: "-left-16 top-24 -rotate-3", z: "120px", tone: "text-[var(--color-sienna)]", float: "float-y" },
-  { icon: FileText, label: "CV officiel RH prêt", sub: "Format deux colonnes", style: "-right-20 top-56", z: "90px", tone: "text-[var(--color-sienna)]", float: "float-y-slow" },
-  { icon: Bell, label: "Relance à J+7", sub: "Candidature envoyée", style: "-left-12 bottom-40", z: "140px", tone: "text-[var(--color-sienna)]", float: "float-y-slow" },
-  { icon: GraduationCap, label: "Coach soutenance", sub: "Question piège #1", style: "-right-14 bottom-16 rotate-3", z: "70px", tone: "text-[var(--color-sienna)]", float: "float-y" },
+  { icon: Sparkles, label: "74 % de correspondance", sub: "Offres classées selon ta filière", style: "-left-16 top-24 -rotate-3", z: "120px", tone: "text-[var(--color-sienna)]", float: "float-y" },
+  { icon: FileText, label: "CV adapté à l'offre", sub: "Lettre comprise, dès 300 FCFA", style: "-right-20 top-56", z: "90px", tone: "text-[var(--color-sienna)]", float: "float-y-slow" },
+  { icon: Wallet, label: "1 000 coins offerts", sub: "À l'inscription, au lancement", style: "-left-12 bottom-40", z: "140px", tone: "text-[var(--color-sienna)]", float: "float-y-slow" },
+  { icon: GraduationCap, label: "Coach soutenance", sub: "Questions pièges du jury", style: "-right-14 bottom-16 rotate-3", z: "70px", tone: "text-[var(--color-sienna)]", float: "float-y" },
 ];
 
 export function HeroPhone() {
@@ -54,11 +54,12 @@ export function HeroPhone() {
           <div className="absolute left-1/2 top-4 z-10 h-6 w-24 -translate-x-1/2 rounded-full bg-[#0F172A]" />
           <div className="relative aspect-[9/19.5] overflow-hidden rounded-[2.1rem] bg-white">
             <Image
-              src="/images/screens/accueil.png"
+              src="/images/screens/accueil.webp"
               alt="Écran d'accueil de l'application Campus 360"
               fill
               priority
               sizes="(max-width: 640px) 260px, 320px"
+              quality={90}
               className="object-cover object-top"
             />
           </div>
