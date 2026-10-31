@@ -35,9 +35,15 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# Record previous commit SHA before modifying working tree
+# Base of the diff and of the rollback: the last commit that deployed successfully, not HEAD.
+# A run killed mid-build (SSH timeout on 2026-10-31) leaves HEAD on the new commit; diffing
+# from HEAD then made the next run skip mobile-api and recruiter-web.
+LAST_GOOD_FILE=/var/lib/campus360/last-good-sha
 PREV_SHA=$(git rev-parse HEAD)
-echo "Previous commit SHA: $PREV_SHA"
+if [ -s "$LAST_GOOD_FILE" ] && git cat-file -e "$(cat "$LAST_GOOD_FILE")^{commit}" 2>/dev/null; then
+  PREV_SHA=$(cat "$LAST_GOOD_FILE")
+fi
+echo "Previous commit SHA (last good deployment): $PREV_SHA"
 
 if [ -n "$TARGET_REF" ]; then
   echo "Targeting specific ref/tag: $TARGET_REF"
