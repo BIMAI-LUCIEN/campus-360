@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
-  <title>Lecteur PDF — Campus 360</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>Lecteur PDF Haute Définition — Campus 360</title>
   <style>
     * {
       box-sizing: border-box;
@@ -12,36 +12,71 @@
     }
     body, html {
       width: 100%;
-      height: 100%;
-      background-color: #0E131F;
+      min-height: 100%;
+      background-color: #0B0F19;
       color: #E2E8F0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      overflow-x: hidden;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
       -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
     }
-    #viewer-container {
+    #viewer-wrapper {
+      width: 100%;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 12px 0 32px 0;
-      width: 100%;
-      min-height: 100%;
+      padding: 16px 0 90px 0;
+      transition: transform 0.15s ease-out;
+      transform-origin: top center;
     }
     .page-container {
-      margin-bottom: 16px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      position: relative;
+      margin-bottom: 20px;
       background-color: #FFFFFF;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 0, 0.25);
+      border-radius: 6px;
+      overflow: hidden;
+      max-width: 96%;
+      min-height: 200px;
       display: flex;
       justify-content: center;
       align-items: center;
-      max-width: 96%;
-      border-radius: 4px;
-      overflow: hidden;
+      transition: box-shadow 0.2s ease;
+    }
+    .page-container:hover {
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    }
+    .page-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      color: #CBD5E1;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 12px;
+      z-index: 5;
+      pointer-events: none;
+      opacity: 0.85;
     }
     canvas, img.pdf-page-img {
       display: block;
+      width: 100%;
       max-width: 100%;
       height: auto !important;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+      transition: filter 0.25s ease;
+    }
+    /* Mode Amélioration Net (Scan Enhancer) pour scans réels */
+    .scan-enhanced {
+      filter: contrast(1.10) brightness(1.02);
     }
     #status-overlay {
       position: fixed;
@@ -52,16 +87,22 @@
       color: #94A3B8;
       font-weight: 500;
       text-align: center;
-      padding: 20px;
+      padding: 24px;
       max-width: 85%;
       z-index: 100;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
     }
     .spinner {
       border: 3px solid rgba(255, 255, 255, 0.1);
       border-top: 3px solid #D97706;
       border-radius: 50%;
-      width: 38px;
-      height: 38px;
+      width: 40px;
+      height: 40px;
       animation: spin 0.8s linear infinite;
       margin: 0 auto 16px auto;
     }
@@ -80,16 +121,209 @@
       font-weight: 600;
       font-size: 13px;
     }
+    /* Floating Bottom Control Bar */
+    #floating-bar {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 30px;
+      padding: 6px 14px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+      z-index: 200;
+      max-width: 92%;
+    }
+    #page-counter {
+      font-size: 12px;
+      font-weight: 600;
+      color: #CBD5E1;
+      white-space: nowrap;
+      padding-right: 6px;
+      border-right: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .control-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      color: #F8FAFC;
+      font-size: 14px;
+      font-weight: 600;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .control-btn:active {
+      transform: scale(0.92);
+      background: rgba(255, 255, 255, 0.2);
+    }
+    #btn-zoom-reset {
+      width: auto;
+      padding: 0 10px;
+      border-radius: 17px;
+      font-size: 12px;
+    }
+    #btn-enhance {
+      background: rgba(217, 119, 6, 0.2);
+      color: #FBBF24;
+      border: 1px solid rgba(217, 119, 6, 0.4);
+      width: auto;
+      padding: 0 10px;
+      border-radius: 17px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    #btn-enhance.active {
+      background: #D97706;
+      color: #FFFFFF;
+      border-color: #F59E0B;
+      box-shadow: 0 0 10px rgba(217, 119, 6, 0.4);
+    }
+    /* Zone IA (Module 30) : entourer une partie de la page pour questionner l'IA */
+    #btn-ai {
+      position: fixed;
+      right: 16px;
+      bottom: 84px;
+      z-index: 210;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      height: 46px;
+      padding: 0 18px;
+      border: none;
+      border-radius: 23px;
+      background: #7C3AED;
+      color: #FFFFFF;
+      font-size: 15px;
+      font-weight: 700;
+      box-shadow: 0 8px 24px rgba(124, 58, 237, 0.45);
+      cursor: pointer;
+    }
+    #btn-ai:active { transform: scale(0.95); }
+    #zone-banner {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 220;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      width: max-content;
+      max-width: 94%;
+      padding: 8px 8px 8px 14px;
+      border-radius: 22px;
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid rgba(124, 58, 237, 0.6);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+      font-size: 13px;
+      font-weight: 600;
+      color: #F8FAFC;
+    }
+    #zone-banner-text { flex: 1; }
+    .zone-btn {
+      border: none;
+      border-radius: 16px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      background: rgba(255, 255, 255, 0.12);
+      color: #F8FAFC;
+    }
+    .zone-btn.primary { background: #7C3AED; color: #FFFFFF; }
+    body.zone-mode { overflow: hidden; touch-action: none; }
+    body.zone-mode .page-container { touch-action: none; cursor: crosshair; }
+    .zone-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 6;
+      pointer-events: none;
+    }
+    .zone-layer polyline {
+      fill: rgba(124, 58, 237, 0.12);
+      stroke: #7C3AED;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+    }
+    .zone-rect {
+      position: absolute;
+      z-index: 7;
+      border: 2px dashed #7C3AED;
+      background: rgba(124, 58, 237, 0.10);
+      border-radius: 4px;
+      pointer-events: none;
+    }
+    #zone-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 140px;
+      transform: translateX(-50%);
+      z-index: 230;
+      display: none;
+      max-width: 88%;
+      padding: 10px 16px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.94);
+      color: #F8FAFC;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
   <div id="status-overlay">
     <div class="spinner" id="spinner"></div>
-    <div id="status-text">Chargement du cours en haute définition...</div>
+    <div id="status-text">Optimisation et affichage haute définition...</div>
   </div>
   
-  <div id="viewer-container"></div>
+  <div id="viewer-wrapper">
+    <div id="viewer-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
+  </div>
+
+  <!-- Floating Mobile Controls -->
+  <div id="floating-bar" style="display: none;">
+    <div id="page-counter">Page <span id="current-page">1</span> / <span id="total-pages">1</span></div>
+    <div class="btn-group">
+      <button class="control-btn" id="btn-zoom-out" title="Réduire" aria-label="Réduire">−</button>
+      <button class="control-btn" id="btn-zoom-reset" title="Ajuster">100%</button>
+      <button class="control-btn" id="btn-zoom-in" title="Agrandir" aria-label="Agrandir">+</button>
+    </div>
+    <button class="control-btn active" id="btn-enhance" title="Basculer le mode scan net HD">✨ HD Net</button>
+  </div>
+
+  <!-- Zone IA (Module 30) -->
+  <button id="btn-ai" type="button" aria-label="Demander à l'IA sur une partie de la page">✨ IA</button>
+  <div id="zone-banner" role="status">
+    <span id="zone-banner-text">Entoure la partie qui te bloque</span>
+    <button class="zone-btn" id="zone-retry" type="button" style="display: none;">Recommencer</button>
+    <button class="zone-btn primary" id="zone-send" type="button" style="display: none;">Valider</button>
+    <button class="zone-btn" id="zone-cancel" type="button">Annuler</button>
+  </div>
+  <div id="zone-toast" role="alert"></div>
 
   <script>
     if (typeof pdfjsLib !== 'undefined') {
@@ -98,47 +332,328 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     let pdfUrl = urlParams.get('url');
-    const documentId = urlParams.get('id');
+    const knownPageCount = parseInt(urlParams.get('pages'), 10) || 0;
+
+    const wrapper = document.getElementById('viewer-wrapper');
     const container = document.getElementById('viewer-container');
     const statusOverlay = document.getElementById('status-overlay');
     const statusText = document.getElementById('status-text');
     const spinner = document.getElementById('spinner');
+    const floatingBar = document.getElementById('floating-bar');
+    const currentPageSpan = document.getElementById('current-page');
+    const totalPagesSpan = document.getElementById('total-pages');
+    const btnZoomIn = document.getElementById('btn-zoom-in');
+    const btnZoomOut = document.getElementById('btn-zoom-out');
+    const btnZoomReset = document.getElementById('btn-zoom-reset');
+    const btnEnhance = document.getElementById('btn-enhance');
+
+    let currentZoom = 1.0;
+    let isEnhanced = true;
+    let detectedTotalPages = knownPageCount || 1;
+
+    totalPagesSpan.textContent = detectedTotalPages;
+
+    function applyZoom(newZoom) {
+      currentZoom = Math.max(0.7, Math.min(newZoom, 3.0));
+      if (currentZoom === 1.0) {
+        wrapper.style.transform = 'none';
+        btnZoomReset.textContent = '100%';
+      } else {
+        wrapper.style.transform = 'scale(' + currentZoom + ')';
+        btnZoomReset.textContent = Math.round(currentZoom * 100) + '%';
+      }
+    }
+
+    btnZoomIn.addEventListener('click', () => applyZoom(currentZoom + 0.25));
+    btnZoomOut.addEventListener('click', () => applyZoom(currentZoom - 0.25));
+    btnZoomReset.addEventListener('click', () => applyZoom(1.0));
+
+    btnEnhance.addEventListener('click', () => {
+      isEnhanced = !isEnhanced;
+      btnEnhance.classList.toggle('active', isEnhanced);
+      btnEnhance.textContent = isEnhanced ? '✨ HD Net' : 'Original';
+      document.querySelectorAll('.pdf-page-img, canvas').forEach(el => {
+        el.classList.toggle('scan-enhanced', isEnhanced);
+      });
+    });
+
+    // IntersectionObserver to update active page number indicator
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const pageNum = entry.target.getAttribute('data-page');
+          if (pageNum) currentPageSpan.textContent = pageNum;
+        }
+      });
+    }, { threshold: 0.4 });
+
+    function initDoubleTapZoom(element) {
+      let lastTap = 0;
+      element.addEventListener('touchend', (e) => {
+        if (zoneMode) return;
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (tapLength < 300 && tapLength > 0) {
+          e.preventDefault();
+          if (currentZoom > 1.1) {
+            applyZoom(1.0);
+          } else {
+            applyZoom(1.8);
+          }
+        }
+        lastTap = currentTime;
+      });
+    }
 
     function renderCloudinaryImages(baseUrl) {
       statusOverlay.style.display = 'none';
+      floatingBar.style.display = 'flex';
       container.innerHTML = '';
       
-      // Normalize base URL: remove any pg_X/ if already present
-      let cleanUrl = baseUrl.replace(/\/image\/upload\/(pg_\d+\/)?/, '/image/upload/');
+      // Normalize base URL: strip out old pg_X tags and replace .pdf with .jpg
+      let cleanUrl = baseUrl.replace(/\/image\/upload\/(pg_\d+[^/]*\/)?/, '/image/upload/');
       cleanUrl = cleanUrl.replace(/\.pdf(\?.*)?$/i, '.jpg');
-      
-      for (let p = 1; p <= 30; p++) {
+
+      const maxPages = knownPageCount > 0 ? knownPageCount : 30;
+      let loadedPages = 0;
+
+      for (let p = 1; p <= maxPages; p++) {
         const pageContainer = document.createElement('div');
         pageContainer.className = 'page-container';
-        
+        pageContainer.setAttribute('data-page', p);
+        pageContainer.id = 'page-' + p;
+
+        const badge = document.createElement('div');
+        badge.className = 'page-badge';
+        badge.textContent = p + ' / ' + (knownPageCount > 0 ? knownPageCount : maxPages);
+        pageContainer.appendChild(badge);
+
         const img = document.createElement('img');
-        img.className = 'pdf-page-img';
-        img.loading = p === 1 ? 'eager' : 'lazy';
-        
-        const pageUrl = cleanUrl.replace('/image/upload/', '/image/upload/pg_' + p + '/');
+        img.className = 'pdf-page-img scan-enhanced';
+        img.loading = p <= 2 ? 'eager' : 'lazy';
+        if (p === 1) img.setAttribute('fetchpriority', 'high');
+
+        // Cloudinary Ultra Retina Transformation:
+        // dn_250: 250+ DPI for razor sharp small math formulas, superscripts and diagrams
+        // q_auto:best: crystal clear lossless-equivalent rendering
+        // f_auto: best format delivery (WebP/AVIF/JPEG)
+        const hdTransform = 'pg_' + p + ',dn_250,q_auto:best,f_auto/';
+        const pageUrl = cleanUrl.replace('/image/upload/', '/image/upload/' + hdTransform);
+        // Set before src: lets the AI zone crop read the pixels (Cloudinary sends ACAO *).
+        img.crossOrigin = 'anonymous';
         img.src = pageUrl;
-        
+
+        img.onload = function() {
+          loadedPages++;
+          if (loadedPages > detectedTotalPages) {
+            detectedTotalPages = loadedPages;
+            totalPagesSpan.textContent = detectedTotalPages;
+          }
+        };
+
         img.onerror = function() {
           if (p > 1) {
             pageContainer.remove();
+            if (!knownPageCount && loadedPages > 0) {
+              detectedTotalPages = loadedPages;
+              totalPagesSpan.textContent = detectedTotalPages;
+            }
           } else {
             statusOverlay.style.display = 'flex';
             if (spinner) spinner.style.display = 'none';
             if (statusText) {
-              statusText.innerHTML = "Chargement alternatif en cours...<br><br><a class='fallback-btn' href='" + baseUrl + "' target='_blank'>Ouvrir le document</a>";
+              statusText.innerHTML = "Document en cours de traitement.<br><br><a class='fallback-btn' href='" + baseUrl + "' target='_blank'>Ouvrir le document</a>";
             }
           }
         };
-        
+
+        initDoubleTapZoom(pageContainer);
+        observer.observe(pageContainer);
         pageContainer.appendChild(img);
         container.appendChild(pageContainer);
       }
     }
+
+    // ---- Zone IA (Module 30) ----
+    // The student circles part of a page; the zone is cropped into a JPEG and handed
+    // to the app (React Native WebView or the parent window on the web), which asks the AI.
+    const ZONE_MAX_SIDE = 1024;
+    const ZONE_MAX_BYTES = 300 * 1024;
+    const btnAi = document.getElementById('btn-ai');
+    const zoneBanner = document.getElementById('zone-banner');
+    const zoneBannerText = document.getElementById('zone-banner-text');
+    const zoneRetry = document.getElementById('zone-retry');
+    const zoneSend = document.getElementById('zone-send');
+    const zoneCancel = document.getElementById('zone-cancel');
+    const zoneToast = document.getElementById('zone-toast');
+
+    const hasNativeBridge = () => !!(window.ReactNativeWebView && window.ReactNativeWebView.postMessage);
+    // Web: the app passes its origin (?parent=), never '*' as postMessage target.
+    const parentOrigin = (() => {
+      if (window.parent === window) return null;
+      const candidate = urlParams.get('parent') || document.referrer;
+      try { return candidate ? new URL(candidate).origin : null; } catch (e) { return null; }
+    })();
+    const isEmbedded = hasNativeBridge() || !!parentOrigin;
+
+    let zoneMode = false;
+    let zoneDrawing = null; // { page, container, svg, polyline, start, points: [[fx, fy]], moved }
+    let zoneSelection = null; // { page, container, box: { x, y, w, h } } as fractions of the page
+
+    function showZoneToast(message) {
+      zoneToast.textContent = message;
+      zoneToast.style.display = 'block';
+      clearTimeout(showZoneToast.timer);
+      showZoneToast.timer = setTimeout(() => { zoneToast.style.display = 'none'; }, 3500);
+    }
+
+    function clearZoneMarks() {
+      document.querySelectorAll('.zone-layer, .zone-rect').forEach(el => el.remove());
+      zoneDrawing = null;
+      zoneSelection = null;
+      zoneRetry.style.display = 'none';
+      zoneSend.style.display = 'none';
+      zoneBannerText.textContent = 'Entoure la partie qui te bloque';
+    }
+
+    function setZoneMode(active) {
+      zoneMode = active;
+      document.body.classList.toggle('zone-mode', active);
+      zoneBanner.style.display = active ? 'flex' : 'none';
+      btnAi.style.display = active || !isEmbedded ? 'none' : 'flex';
+      if (!active) clearZoneMarks();
+    }
+
+    function pageFraction(page, clientX, clientY) {
+      const rect = page.getBoundingClientRect();
+      return [
+        Math.min(1, Math.max(0, (clientX - rect.left) / rect.width)),
+        Math.min(1, Math.max(0, (clientY - rect.top) / rect.height)),
+      ];
+    }
+
+    function showZoneRect(page, box) {
+      const rect = document.createElement('div');
+      rect.className = 'zone-rect';
+      rect.style.left = (box.x * 100) + '%';
+      rect.style.top = (box.y * 100) + '%';
+      rect.style.width = (box.w * 100) + '%';
+      rect.style.height = (box.h * 100) + '%';
+      page.appendChild(rect);
+    }
+
+    function onZonePointerDown(e) {
+      if (!zoneMode || zoneSelection) return;
+      const page = e.target.closest && e.target.closest('.page-container');
+      if (!page) return;
+      e.preventDefault();
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'zone-layer');
+      svg.setAttribute('viewBox', '0 0 1000 1000');
+      svg.setAttribute('preserveAspectRatio', 'none');
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      svg.appendChild(polyline);
+      page.appendChild(svg);
+      zoneDrawing = {
+        page: parseInt(page.getAttribute('data-page'), 10),
+        container: page, svg, polyline,
+        start: [e.clientX, e.clientY],
+        points: [pageFraction(page, e.clientX, e.clientY)],
+        moved: false,
+      };
+    }
+
+    function onZonePointerMove(e) {
+      if (!zoneDrawing) return;
+      e.preventDefault();
+      if (Math.hypot(e.clientX - zoneDrawing.start[0], e.clientY - zoneDrawing.start[1]) > 12) zoneDrawing.moved = true;
+      zoneDrawing.points.push(pageFraction(zoneDrawing.container, e.clientX, e.clientY));
+      zoneDrawing.polyline.setAttribute('points', zoneDrawing.points.map(p => (p[0] * 1000) + ',' + (p[1] * 1000)).join(' '));
+    }
+
+    function onZonePointerUp() {
+      if (!zoneDrawing) return;
+      const { page, container: pageEl, svg, points, moved } = zoneDrawing;
+      zoneDrawing = null;
+      // A tap without a stroke selects the whole page.
+      let box = { x: 0, y: 0, w: 1, h: 1 };
+      if (moved) {
+        const xs = points.map(p => p[0]);
+        const ys = points.map(p => p[1]);
+        const pad = 0.02;
+        const x = Math.max(0, Math.min(...xs) - pad);
+        const y = Math.max(0, Math.min(...ys) - pad);
+        box = { x, y, w: Math.min(1, Math.max(...xs) + pad) - x, h: Math.min(1, Math.max(...ys) + pad) - y };
+      } else {
+        svg.remove();
+      }
+      zoneSelection = { page, container: pageEl, box };
+      showZoneRect(pageEl, box);
+      zoneBannerText.textContent = moved ? 'Zone prête, page ' + page : 'Page ' + page + ' entière';
+      zoneRetry.style.display = 'inline-block';
+      zoneSend.style.display = 'inline-block';
+    }
+
+    // Crops the selection from the page image or canvas into a JPEG within ZONE_MAX_BYTES.
+    function cropZone(selection) {
+      const source = selection.container.querySelector('img.pdf-page-img, canvas');
+      if (!source) throw new Error('page not rendered');
+      const naturalW = source.naturalWidth || source.width;
+      const naturalH = source.naturalHeight || source.height;
+      if (!naturalW || !naturalH) throw new Error('page not loaded');
+      const sx = selection.box.x * naturalW;
+      const sy = selection.box.y * naturalH;
+      const sw = Math.max(1, selection.box.w * naturalW);
+      const sh = Math.max(1, selection.box.h * naturalH);
+      let scale = Math.min(1, ZONE_MAX_SIDE / Math.max(sw, sh));
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(sw * scale));
+        canvas.height = Math.max(1, Math.round(sh * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+        for (const quality of [0.85, 0.7, 0.55, 0.4]) {
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          if ((dataUrl.length - 23) * 0.75 <= ZONE_MAX_BYTES) return dataUrl;
+        }
+        scale *= 0.7;
+      }
+      throw new Error('zone too heavy');
+    }
+
+    function sendZone() {
+      if (!zoneSelection) return;
+      let image;
+      try {
+        image = cropZone(zoneSelection);
+      } catch (err) {
+        showZoneToast('Impossible de lire cette zone. Attends que la page soit chargée puis réessaie.');
+        return;
+      }
+      const payload = { type: 'zone', page: zoneSelection.page, image };
+      if (hasNativeBridge()) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+      } else if (parentOrigin) {
+        window.parent.postMessage(payload, parentOrigin);
+      } else {
+        showZoneToast("Ouvre le document dans l'application pour poser ta question.");
+        return;
+      }
+      setZoneMode(false);
+    }
+
+    btnAi.addEventListener('click', () => setZoneMode(true));
+    zoneCancel.addEventListener('click', () => setZoneMode(false));
+    zoneRetry.addEventListener('click', clearZoneMarks);
+    zoneSend.addEventListener('click', sendZone);
+    container.addEventListener('pointerdown', onZonePointerDown);
+    window.addEventListener('pointermove', onZonePointerMove, { passive: false });
+    window.addEventListener('pointerup', onZonePointerUp);
+    window.addEventListener('pointercancel', onZonePointerUp);
+    document.addEventListener('touchmove', (e) => { if (zoneMode) e.preventDefault(); }, { passive: false });
+    setZoneMode(false);
 
     if (!pdfUrl) {
       spinner.style.display = 'none';
@@ -147,16 +662,11 @@
       if (pdfUrl.includes('cloudinary.com') && pdfUrl.includes('/image/upload/')) {
         renderCloudinaryImages(pdfUrl);
       } else {
-        const apiBase = urlParams.get('api') || 'https://api.campus360b.site';
-        const streamUrl = documentId
-          ? apiBase.replace(/\/$/, '') + '/api/mobile/pdf/stream?id=' + encodeURIComponent(documentId)
-          : null;
+        const streamUrl = 'https://api.campus360b.site/api/mobile/pdf/stream?url=' + encodeURIComponent(pdfUrl);
 
         const fallbackTimer = setTimeout(() => {
           if (container.children.length === 0) {
-            statusText.innerHTML = streamUrl
-              ? "Chargement alternatif en cours...<br><br><a class='fallback-btn' href='" + streamUrl + "' target='_blank'>Ouvrir le document directement</a>"
-              : "Le lecteur alternatif n'est pas disponible pour ce document.";
+            statusText.innerHTML = "Chargement alternatif en cours...<br><br><a class='fallback-btn' href='" + streamUrl + "' target='_blank'>Ouvrir le document directement</a>";
           }
         }, 8000);
 
@@ -169,39 +679,54 @@
         };
 
         tryPdfJs(pdfUrl)
-          .catch((error) => streamUrl ? tryPdfJs(streamUrl) : Promise.reject(error))
+          .catch(() => tryPdfJs(streamUrl))
           .then(pdf => {
             clearTimeout(fallbackTimer);
             statusOverlay.style.display = 'none';
+            floatingBar.style.display = 'flex';
             
+            detectedTotalPages = pdf.numPages;
+            totalPagesSpan.textContent = detectedTotalPages;
+
             let renderQueue = Promise.resolve();
 
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
               const pageContainer = document.createElement('div');
               pageContainer.className = 'page-container';
+              pageContainer.setAttribute('data-page', pageNum);
               pageContainer.id = 'page-' + pageNum;
+
+              const badge = document.createElement('div');
+              badge.className = 'page-badge';
+              badge.textContent = pageNum + ' / ' + pdf.numPages;
+              pageContainer.appendChild(badge);
+
               container.appendChild(pageContainer);
 
               const canvas = document.createElement('canvas');
+              canvas.className = 'scan-enhanced';
               pageContainer.appendChild(canvas);
+              initDoubleTapZoom(pageContainer);
+              observer.observe(pageContainer);
 
               renderQueue = renderQueue.then(() => {
                 return pdf.getPage(pageNum).then(page => {
-                  const dpr = window.devicePixelRatio || 1;
-                  const screenWidth = Math.min(window.innerWidth * 0.96, 850);
+                  // High-DPI Canvas Rendering (at least 2.5x density for Retina screens)
+                  const dpr = Math.max(window.devicePixelRatio || 1, 2.5);
+                  const screenWidth = Math.min(window.innerWidth * 0.96, 920);
                   const unscaledViewport = page.getViewport({ scale: 1 });
-                  const scale = screenWidth / unscaledViewport.width;
-                  const viewport = page.getViewport({ scale: scale * Math.min(dpr, 2) });
+                  const displayScale = screenWidth / unscaledViewport.width;
+                  const renderViewport = page.getViewport({ scale: displayScale * dpr });
 
                   const context = canvas.getContext('2d');
-                  canvas.width = viewport.width;
-                  canvas.height = viewport.height;
-                  canvas.style.width = (viewport.width / Math.min(dpr, 2)) + 'px';
-                  canvas.style.height = (viewport.height / Math.min(dpr, 2)) + 'px';
+                  canvas.width = renderViewport.width;
+                  canvas.height = renderViewport.height;
+                  canvas.style.width = (renderViewport.width / dpr) + 'px';
+                  canvas.style.height = (renderViewport.height / dpr) + 'px';
 
                   return page.render({
                     canvasContext: context,
-                    viewport: viewport
+                    viewport: renderViewport
                   }).promise;
                 });
               });
@@ -213,8 +738,7 @@
             if (pdfUrl.includes('cloudinary.com')) {
               renderCloudinaryImages(pdfUrl);
             } else {
-              if (streamUrl) window.location.replace(streamUrl);
-              else statusText.innerHTML = "Impossible de charger ce document.";
+              window.location.replace(streamUrl);
             }
           });
       }

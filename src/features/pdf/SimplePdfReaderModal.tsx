@@ -30,7 +30,8 @@ import {
 import { WebView } from 'react-native-webview';
 import { authWebBaseUrl, mobileApiBaseUrl } from '../auth/betterAuth';
 import { createSignedPdfUrl, recordPdfAnalyticsEvent } from './pdfApi';
-import { askPdfAssistant, PassRequiredError, type PdfAssistantMessage } from './pdfAssistant';
+import { askPdfAssistant, PassRequiredError, type PdfAssistantMessage, type PdfZone } from './pdfAssistant';
+import { ZoneQuestionSheet } from './ZoneQuestionSheet';
 import { OffersModal } from '../wallet/OffersModal';
 import { loadPdfChatHistory, savePdfChatHistory, clearPdfChatHistory } from './chatHistoryStorage';
 import { FormattedMarkdown } from '../../components/FormattedMarkdown';
@@ -39,6 +40,32 @@ import { stitchColors } from '../../theme/stitch';
 import { AppAlert } from '../../ui/AppAlert';
 
 type ReaderTool = 'pdf' | 'summary' | 'plan' | 'quiz' | 'assistant';
+
+// Origin of pdf-viewer.html: only its messages are trusted on the web.
+const viewerOrigin = (() => {
+  try {
+    return new URL(authWebBaseUrl).origin;
+  } catch {
+    return '';
+  }
+})();
+
+// Zone message posted by the viewer (Module 30); anything else is ignored.
+const readZoneMessage = (data: unknown): PdfZone | null => {
+  let value = data;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== 'object') return null;
+  const { type, page, image } = value as { type?: unknown; page?: unknown; image?: unknown };
+  if (type !== 'zone' || typeof page !== 'number' || !Number.isInteger(page) || page < 1) return null;
+  if (typeof image !== 'string' || !/^data:image\/(jpeg|png);base64,/.test(image)) return null;
+  return { page, image };
+};
 
 interface SimplePdfReaderModalProps {
   document: CampusDocument | null;
@@ -55,6 +82,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
   // AI Chat state
   const [assistantMessages, setAssistantMessages] = useState<PdfAssistantMessage[]>([]);
   const [assistantInput, setAssistantInput] = useState('');
+  const [zone, setZone] = useState<PdfZone | null>(null);
   const [assistantLoading, setAssistantLoading] = useState(false);
 
   // Quiz state
@@ -77,6 +105,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
       setActiveTool('pdf');
       setAssistantMessages([]);
       setRevealedQuiz({});
+      setZone(null);
       return;
     }
     let cancelled = false;
@@ -85,6 +114,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
     setUrl(document.filePath?.startsWith('http') ? document.filePath : '');
     setActiveTool('pdf');
     setRevealedQuiz({});
+    setZone(null);
 
     // Load persistent chat history for this document
     loadPdfChatHistory(document.id).then((history) => {
@@ -129,6 +159,18 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
       cancelled = true;
     };
   }, [document, accessToken]);
+
+  // Web: the viewer iframe posts the circled zone to this window.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || !document) return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== viewerOrigin) return;
+      const next = readZoneMessage(event.data);
+      openZone(next);
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [document]);
 
   const toggleQuizAnswer = (index: number) => {
     setRevealedQuiz((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -213,6 +255,26 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
     } finally {
       setAssistantLoading(false);
     }
+  };
+
+  const openZone = (next: PdfZone | null) => {
+    if (!next || !document) return;
+    setZone(next);
+    recordPdfAnalyticsEvent({
+      eventType: 'assistant_question',
+      documentId: document.id,
+      accessToken,
+      metadata: { zone: true, page: next.page },
+    });
+  };
+
+  const handleZoneContinue = (zoneMessages: PdfAssistantMessage[]) => {
+    if (!document) return;
+    const updated = [...assistantMessages, ...zoneMessages];
+    setAssistantMessages(updated);
+    void savePdfChatHistory(document.id, updated);
+    setZone(null);
+    setActiveTool('assistant');
   };
 
   if (!document) return null;
@@ -350,7 +412,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                   </View>
                   {Platform.OS === 'web' ? (
                     createElement('iframe', {
-                      src: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}&id=${encodeURIComponent(document.id)}&pages=${document.pageCount || ""}&title=${encodeURIComponent(document.title || "")}&api=${encodeURIComponent(mobileApiBaseUrl)}`,
+                      src: `${authWebBaseUrl}/pdf-viewer.html?url=${encodeURIComponent(url)}&id=${encodeURIComponent(document.id)}&pages=${document.pageCount || ""}&title=${encodeURIComponent(document.title || "")}&api=${encodeURIComponent(mobileApiBaseUrl)}&parent=${encodeURIComponent(window.location.origin)}`,
                       title: document.title,
                       style: { width: '100%', height: '100%', border: '0', backgroundColor: stitchColors.paper },
                     })
@@ -365,6 +427,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                           <Text style={styles.bodyText}>Affichage du cours...</Text>
                         </View>
                       )}
+                      onMessage={(event) => openZone(readZoneMessage(event.nativeEvent.data))}
                       javaScriptEnabled
                       domStorageEnabled
                       sharedCookiesEnabled
@@ -566,14 +629,19 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                         ]}
                       >
                         {msg.role === 'user' ? (
-                          <Text
-                            style={[
-                              styles.messageText,
-                              styles.messageTextUser,
-                            ]}
-                          >
-                            {msg.content}
-                          </Text>
+                          <>
+                            {msg.zonePage ? (
+                              <Text style={styles.zoneLabel}>Zone, page {msg.zonePage}</Text>
+                            ) : null}
+                            <Text
+                              style={[
+                                styles.messageText,
+                                styles.messageTextUser,
+                              ]}
+                            >
+                              {msg.content}
+                            </Text>
+                          </>
                         ) : (
                           <FormattedMarkdown
                             content={msg.content}
@@ -635,6 +703,16 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
             </KeyboardAvoidingView>
           ) : null}
         </View>
+        {activeTool === 'pdf' ? (
+          <ZoneQuestionSheet
+            document={document}
+            zone={zone}
+            onClose={() => setZone(null)}
+            onContinue={handleZoneContinue}
+            onAllowance={setAiAllowance}
+            onPassRequired={setPassOffer}
+          />
+        ) : null}
       </View>
       <OffersModal
         visible={Boolean(passOffer)}
@@ -1029,6 +1107,7 @@ const styles = StyleSheet.create({
   },
   messageText: { fontSize: 13, lineHeight: 19 },
   messageTextUser: { color: stitchColors.white },
+  zoneLabel: { fontSize: 11, fontWeight: '700', color: stitchColors.white, opacity: 0.8, marginBottom: 4 },
   messageTextAssistant: { color: stitchColors.ink },
 
   aiLoadingRow: {

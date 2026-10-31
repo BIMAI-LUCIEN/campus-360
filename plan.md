@@ -9,7 +9,7 @@
 - **Tâche en cours :** 27.6 et 27.7 `[~]` (code écrit, parcours navigateur à faire) ; 27.1 à 27.5 validées le 2026-10-30.
 - **Prochaine (Module 27) :** migration 0023 appliquée le 2026-10-30 (avec 0024_pricing_v2, venue d'un autre chantier : ne plus modifier ce fichier). Poser `ADMIN_SERVICE_SECRET` et `MOBILE_API_INTERNAL_URL` dans les `.env.local` locaux, puis parcours navigateur 27.6 (admin) et 27.7 (`expo-web-local`, 375 px) avec des sessions ouvertes par l'utilisateur, puis 27.8. `lint:colors` échoue sur `DocumentsScreen.tsx` (+4, commit `65679ce`, hors Module 27).
 - **Module 28 (modèle économique v2) :** exécuté le 2026-10-30 : 28.1 à 28.7 et 28.13 `[X]` ; 28.8 à 28.12 `[!]` (interface écrite et typée, parcours navigateur à faire avec une session étudiante ; 0024 déjà appliquée). Suite : `/test-and-verify` 28.8–28.11. Points ouverts : `documents/generate` et `generate-full` encore sur les crédits IA (`aiCost`, gratuit pendant le lancement) ; frais passerelle et coût IA à vérifier ; `lint:colors` en échec sur `DocumentsScreen.tsx` (15 > 11, déjà dans HEAD) ; rien n'est commité.
-- **Module 30 (zone du PDF pour l'IA) :** planifié le 2026-10-31 (contexte.md §20), 9 tâches `[ ]` (30.1 à 30.9). Suite : `/plan-detail Module 30`, puis `/plan-check` et `/execute`. Deux décisions à prendre avant 30.1 et 30.6 (appel test payant, miniature dans l'historique).
+- **Module 30 (zone du PDF pour l'IA) :** 30.1 à 30.8 `[X]` le 2026-10-31 (parcours réel dans `expo-web-local` avec le compte de test, vraie réponse IA sur image). 30.9 `[!]` : coût OpenRouter, cas Pass/scan flou, test sur téléphone, carte. 30.10 `[ ]` : PDF du catalogue dont le contenu ne correspond pas au titre. Rien n'est commité. Décision en attente : miniature dans l'historique (aujourd'hui : numéro de page seul). En production, il faut déployer `recruiter-web` (viewer chargé par l'app) et `mobile-api` (route).
 - **Reste :** Module 24 : 24.6, 24.10, 24.11, 24.12 `[!]`, 24.13 `[ ]` ; Module 25 : 25.18, 25.2, 25.10, 25.15, 25.16 `[!]` ; modules 23 et 19 : voir `Progression globale`
 - **Points ouverts :**
   - 🔴 **Sécurité (audit 2026-10-31, tâche 29.1) :** le secret Cloudinary réel reste dans l'historique git (le code ne le contient plus) : 🔒 le régénérer chez Cloudinary et mettre à jour les `.env` (local, VPS). Module 29 : 29.2 à 29.5 validées, non commitées ; restent 29.6 (CSP/HSTS) et 29.7 (npm audit).
@@ -26,7 +26,7 @@
   - 🔒 **Module 25 :** 25.18 (choix A/B et feu vert VPS), 25.2, 25.10, 25.15, 25.16 (inchangés).
   - **Migrations :** toutes appliquées (0000, 0004 à 0015) ; 0013 le 2026-10-23.
 - **Commit de référence :** commit « feat(documents): modèle IUT de Douala fidèle au rapport de référence », parent af05514.
-- **Dernière entrée journal :** 2026-10-31 · Module 30 planifié · plan-task
+- **Dernière entrée journal :** 2026-10-31 · Module 30 : parcours 30.8 validé · execute
 ---
 
 ## 🏛️ HISTORIQUE DES MODULES DÉJÀ VALIDÉS (1 à 8)
@@ -3182,47 +3182,51 @@ Source : `contexte.md` §20 (cadrage validé le 2026-10-31, voie Bounded). Aujou
 - **Appel payant de vérification (30.1) :** un appel réel à OpenRouter avec une image (coût de l'ordre de 0,001 $) pour confirmer que gpt-4o-mini lit bien l'image : accord à donner.
 
 ### Lot A : Prérequis
-- [ ] **Tâche 30.1 : Vérifier que Cloudinary autorise la découpe côté viewer, puis trancher T1 ou T2**
+- [X] **Tâche 30.1 : Vérifier que Cloudinary autorise la découpe côté viewer, puis trancher T1 ou T2** - validée le 2026-10-31 : Cloudinary répond `Access-Control-Allow-Origin: *` (pg_1, origines localhost:8081 et api.campus360b.site) ; canvas non bloqué dans le navigateur (`toDataURL` OK) → **T1 retenu**. Appel OpenRouter test non fait (accord absent).
   - **Fichiers :** aucun fichier de code ; résultat dans `journal.md` et dans ce module (décision T1/T2).
   - **Action :** sur l'URL d'une page de PDF du catalogue (`.../pg_1/...`), relever l'en-tête `Access-Control-Allow-Origin` renvoyé avec `Origin: http://localhost:8081` puis avec l'origine de production de l'API. Dans le navigateur, charger l'image avec `crossOrigin="anonymous"`, la dessiner dans un canvas et appeler `toDataURL` : réussite = T1 confirmé, erreur « tainted canvas » = plan B T2. 🔒 Avec l'accord de l'utilisateur, un appel OpenRouter `openai/gpt-4o-mini` avec un `image_url` en data URL confirme la lecture de l'image et donne le coût réel.
   - **DoD :** `curl -sI -H "Origin: http://localhost:8081" "<url pg_1>"` montre (ou non) `Access-Control-Allow-Origin` ; essai canvas noté (réussite ou erreur exacte) ; décision T1/T2 écrite ici ; coût de l'appel test noté (ou « non fait, accord absent »).
 
 ### Lot B : Serveur
-- [ ] **Tâche 30.2 : Validation de la zone et construction du message multimodal**
+- [X] **Tâche 30.2 : Validation de la zone et construction du message multimodal** - validée le 2026-10-31 : `node --test tests/pdf-zone.test.mjs` 8/8.
   - **Fichiers :** `mobile-api/lib/pdf-zone.ts` (nouveau), `mobile-api/tests/pdf-zone.test.mjs` (nouveau)
   - **Action :** `parsePdfZone(input)` accepte `{page, image}` avec `page` entier ≥ 1 et `image` en data URL `image/jpeg` ou `image/png`, décodée ≤ 1,5 Mo ; tout autre cas renvoie une erreur lisible (« Zone invalide »). `buildZoneUserContent(question, zone)` renvoie le contenu multimodal (`[{type:'text'}, {type:'image_url'}]`) avec la mention de la page. `VISION_MODELS` liste les modèles qui lisent les images. En plan B (T2), `parsePdfZone` accepte `{page, x, y, w, h}` relatifs (0 à 1) à la place de l'image.
   - **DoD :** `cd mobile-api && node --test tests/pdf-zone.test.mjs` : cas valides, mauvais type MIME, image > 1,5 Mo, page 0, page non entière, data URL mal formée, tous passants.
-- [ ] **Tâche 30.3 : `/api/ai/pdf-chat` accepte une zone**
+- [X] **Tâche 30.3 : `/api/ai/pdf-chat` accepte une zone** - validée le 2026-10-31 : `npm test` 361 pass / 0 fail, typecheck 0 ; sans session → 401 ; avec la session du compte de test, zone GIF / page 0 / 2 Mo → 400 avec message clair ; vraie question avec image → 200, `openai/gpt-4o-mini` décrit le contenu réel de la zone.
   - **Fichiers :** `mobile-api/app/api/ai/pdf-chat/route.ts`, `mobile-api/lib/pdf-zone.ts`, `mobile-api/tests/pdf-zone.test.mjs`
   - **Action :** `bodySchema` gagne `zone` optionnel ; zone invalide → 400 sans appel IA ni décompte. Avec une zone, la dernière question part en contenu multimodal et seuls les `VISION_MODELS` sont essayés ; le prompt système demande de dire clairement quand la zone est illisible au lieu d'inventer. Si aucun modèle vision ne répond → 503 avec un message clair. Le décompte reste `consumeAiAllowance(userId, 'question')` et `enforceAiQuota` reste avant tout. Aucune image écrite en base, sur disque ni dans les journaux (pas de `console.*` de l'image).
   - **DoD :** `cd mobile-api && npm test` 0 fail ; `npm run typecheck` code 0 ; `curl` local sans session → 401, avec une zone invalide → 400 ; `git grep -n "image" mobile-api/app/api/ai/pdf-chat/route.ts` ne montre aucun journal de l'image.
 
 ### Lot C : Viewer
-- [ ] **Tâche 30.4 : Bouton ✨ IA et mode « entourer » dans le viewer**
+- [X] **Tâche 30.4 : Bouton ✨ IA et mode « entourer » dans le viewer** - validée le 2026-10-31 dans le navigateur (page de test qui intègre le viewer) : bouton visible en iframe, absent ouvert seul ; tracé, rectangle, Recommencer, Annuler. **4 copies** alignées (md5 identiques) : `public/`, `mobile-api/public/`, `landing-site/public/` et `recruiter-web/public/` (celle que l'app charge réellement via `authWebBaseUrl` = admin.campus360b.site).
   - **Fichiers :** `mobile-api/public/pdf-viewer.html`, `landing-site/public/pdf-viewer.html`
   - **Action :** bouton flottant ✨ IA en bas à droite, visible seulement quand le viewer est intégré (WebView : `window.ReactNativeWebView` ; web : `window.parent !== window`), donc absent en « Lecteur externe ». L'appui fige le défilement, affiche « Entoure la partie qui te bloque » et un bouton Annuler. Le tracé au doigt (et à la souris) se dessine sur la page touchée ; au relâché, le rectangle englobant s'affiche avec « Valider » et « Recommencer ». Un toucher sans tracé sélectionne la page entière. Le double-tap zoom et l'indicateur de page restent intacts hors du mode.
   - **DoD :** viewer ouvert en local dans un iframe : bouton visible, tracé dessiné, rectangle affiché, Annuler rend le défilement ; ouvert seul dans un onglet : bouton absent ; `diff -q mobile-api/public/pdf-viewer.html landing-site/public/pdf-viewer.html` vide.
-- [ ] **Tâche 30.5 : Découpe de la zone et envoi à l'app**
+- [X] **Tâche 30.5 : Découpe de la zone et envoi à l'app** - validée le 2026-10-31 (web) : zone entourée → JPEG 1024×192, 37 Ko, origine contrôlée ; page entière → 46 Ko. Pont React Native (`ReactNativeWebView.postMessage`) non testé sur téléphone.
   - **Fichiers :** `mobile-api/public/pdf-viewer.html`, `landing-site/public/pdf-viewer.html`
   - **Action :** à « Valider », la zone est recadrée dans un canvas à partir de l'image Cloudinary (`crossOrigin="anonymous"`) ou du canvas pdf.js, côté long limité (1 024 px proposé), JPEG dont la qualité baisse jusqu'à ≤ 300 Ko. Le viewer envoie `{type:'zone', page, image}` via `window.ReactNativeWebView.postMessage(JSON.stringify(...))` ou `window.parent.postMessage(..., <origine de l'app>)` (jamais `'*'`). Échec de découpe → message « Impossible de lire cette zone » dans le viewer, rien n'est envoyé. En plan B (T2), le message contient `{type:'zone', page, x, y, w, h}` relatifs.
   - **DoD :** dans le navigateur, une page parente de test qui écoute `message` reçoit `{type:'zone', page, image}` avec une image ≤ 300 Ko qui montre bien la zone entourée ; page entière : image de la page complète ; `diff -q` des deux copies vide.
 
 ### Lot D : Interface (application)
-- [ ] **Tâche 30.6 : Client IA et historique avec zone**
+- [X] **Tâche 30.6 : Client IA et historique avec zone** - validée le 2026-10-31 : typecheck 0 ; l'historique ne garde que `zonePage` (décision « miniature » en attente, choix réversible).
   - **Fichiers :** `src/features/pdf/pdfAssistant.ts`, `src/features/pdf/chatHistoryStorage.ts`
   - **Action :** `askPdfAssistant` accepte `zone?: {page, image}` et l'ajoute au corps de la requête. `PdfAssistantMessage` gagne `zonePage?: number` (et la miniature selon la décision « Miniature dans l'historique »). L'historique local n'enregistre jamais l'image complète.
   - **DoD :** `npm run typecheck` code 0 ; `git grep -n "image" src/features/pdf/chatHistoryStorage.ts` vide.
-- [ ] **Tâche 30.7 : Feuille du bas « Question sur la zone »**
+- [X] **Tâche 30.7 : Feuille du bas « Question sur la zone »** - validée le 2026-10-31 : typecheck 0 ; aucune couleur brute ajoutée (`lint:colors` échoue seulement sur `DocumentsScreen.tsx`, déjà dans HEAD).
   - **Fichiers :** `src/features/pdf/ZoneQuestionSheet.tsx` (nouveau)
   - **Action :** feuille à mi-hauteur qui laisse le lecteur visible : miniature de la zone (« Page N »), 3 raccourcis, champ de question, bouton d'envoi. États : chargement, réponse, erreur réseau (message et Réessayer), `PassRequiredError` (message Pass Révision et lien d'achat existant), 401. Les questions suivantes réutilisent la même image ; « Continuer dans l'Assistant » renvoie les messages à l'appelant. Couleurs tirées de `stitchColors` uniquement.
   - **DoD :** `npm run typecheck` code 0 ; `npm run lint:colors` sans hausse de la référence.
-- [ ] **Tâche 30.8 : Câblage viewer → feuille → Assistant**
+- [X] **Tâche 30.8 : Câblage viewer → feuille → Assistant** - validée le 2026-10-31 dans `expo-web-local` (compte de test `.env.e2e.local`) : ✨ IA → tracé → Valider → feuille « Question sur ta zone », miniature JPEG 55 Ko « Page 1 » → « Explique » → POST `/api/ai/pdf-chat` 200 → « Continuer dans l'Assistant » → bulle « Zone, page 1 » + réponse dans l'onglet, compteur « 2 actions IA gratuites restantes » ; historique local sans image (`zonePage` seul).
   - **Fichiers :** `src/features/pdf/SimplePdfReaderModal.tsx`, `src/features/pdf/ZoneQuestionSheet.tsx`
   - **Action :** `onMessage` sur la `WebView` et écouteur `message` sur `window` pour l'iframe web, qui n'accepte que l'origine de `authWebBaseUrl` et le type `zone` (JSON invalide ignoré). Une zone reçue ouvre la feuille ; une nouvelle zone remplace la précédente. « Continuer dans l'Assistant » ajoute l'échange à `assistantMessages`, enregistre l'historique et bascule l'onglet sur `assistant` ; la bulle montre « Zone, page N ». Le compteur `aiAllowance` est mis à jour comme pour les autres questions.
   - **DoD :** `expo-web-local` à 375 px avec une session étudiante ouverte par l'utilisateur : entourer un exercice → feuille ouverte avec la miniature → « Explique » → réponse qui parle du contenu de la zone ; requête `POST /api/ai/pdf-chat` avec `zone` visible dans l'onglet réseau ; « Continuer dans l'Assistant » → échange présent dans l'onglet Assistant.
 
 ### Lot E : Câblage et validation
-- [ ] **Tâche 30.9 : Vérification de bout en bout, sécurité et carte**
+- [ ] **Tâche 30.10 : Contenu du PDF `concours-iut-douala-2023` différent de son titre** - relevé le 2026-10-31 pendant le parcours 30.8 : la page 1 du fichier est un sujet ENAM 2010 (culture générale, magistrature), alors que la fiche annonce « Concours IUT de Douala 2023 — Mathématiques & Logique ».
+  - **Fichiers :** fiche `public.documents` (id `concours-iut-douala-2023`), admin catalogue PDF
+  - **Action :** vérifier le fichier Cloudinary rattaché ; remplacer le PDF ou corriger titre, matière et métadonnées IA (résumé, plan, quiz) depuis l'admin.
+  - **DoD :** la page 1 lue dans l'app correspond au titre de la fiche.
+- [!] **Tâche 30.9 : Vérification de bout en bout, sécurité et carte** - faits le 2026-10-31 : tests, typecheck ×2, parcours zone + Assistant, 401, 400. Restent : coût réel d'une question avec image sur le tableau de bord OpenRouter, cas « Pass requis » et scan flou, pont WebView sur téléphone, `contexte-code.md` (`/code-analyzer-context`). 🔒 Commit, déploiement (`recruiter-web` pour le viewer, `mobile-api` pour la route) et OTA par l'utilisateur.
   - **Fichiers :** `contexte-code.md` (via `/code-analyzer-context`), `journal.md`
   - **Action :** suite `mobile-api`, typecheck racine et `mobile-api`, `lint:colors`. Parcours : zone sur une annale, page entière, scan flou (l'IA dit qu'elle ne lit pas), question de suite sur la même zone, nouvelle zone qui remplace, actions gratuites épuisées → message Pass, appel sans session → 401, zone de 3 Mo forgée → 400. Coût réel d'une question avec image relevé sur OpenRouter et comparé à l'estimation (0,3 à 1,2 FCFA).
   - **DoD :** `npm test` (mobile-api) 0 fail ; typecheck ×2 code 0 ; `lint:colors` sans hausse ; `/test-and-verify` VERIFIED sur 30.4, 30.5 et 30.8 (ou PARTIEL avec la raison) ; coût noté. 🔒 Commit, déploiement VPS et mise à jour OTA par l'utilisateur.

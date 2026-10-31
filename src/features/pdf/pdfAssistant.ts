@@ -5,7 +5,12 @@ export type PdfAssistantMessage = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  // Page of the circled zone the question was about (the image itself is never stored).
+  zonePage?: number;
 };
+
+// Zone circled in the PDF viewer (Module 30): JPEG data URL cropped from the page.
+export type PdfZone = { page: number; image: string };
 
 export const buildPdfStudyContext = (document: CampusDocument) =>
   [
@@ -33,10 +38,12 @@ export const askPdfAssistant = async ({
   document,
   question,
   messages,
+  zone,
 }: {
   document: CampusDocument;
   question: string;
   messages: PdfAssistantMessage[];
+  zone?: PdfZone;
 }): Promise<PdfAssistantAnswer> => {
   const UNAVAILABLE = "L'assistant est indisponible pour le moment. Réessaie plus tard.";
   let response: Response;
@@ -49,6 +56,7 @@ export const askPdfAssistant = async ({
         action: 'question',
         pdfContext: buildPdfStudyContext(document),
         messages: messages.slice(-8).map(({ role, content }) => ({ role, content })),
+        ...(zone ? { zone } : {}),
       }),
     });
   } catch {
@@ -63,9 +71,10 @@ export const askPdfAssistant = async ({
     passActive?: boolean;
   } | null;
   if (response.status === 402) throw new PassRequiredError(payload?.error || payload?.message || UNAVAILABLE);
+  if (response.status === 401) throw new Error('Ta session a expiré. Reconnecte-toi pour poser ta question.');
   if (!response.ok) {
-    // Out of credits, rate-limited: the server message is actionable.
-    if ((response.status === 403 || response.status === 429) && (payload?.message || payload?.error)) {
+    // Out of credits, rate-limited, invalid or unreadable zone: the server message is actionable.
+    if ([400, 403, 429, 503].includes(response.status) && (payload?.message || payload?.error)) {
       throw new Error(payload.message || payload.error);
     }
     throw new Error(UNAVAILABLE);
