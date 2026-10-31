@@ -162,7 +162,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  from: 'Campus 360 <onboarding@resend.dev>',\n  to: [$json.job.recruiterEmail],\n  reply_to: $json.student.email,\n  subject: $json.emailSubject,\n  html: $json.emailHtml\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  from: $env.CAMPUS360_MAIL_FROM || 'Campus 360 <onboarding@resend.dev>',\n  to: [$json.job.recruiterEmail],\n  reply_to: $json.student.email,\n  subject: $json.emailSubject,\n  html: $json.emailHtml\n}) }}",
         "options": {
           "response": {
             "response": {
