@@ -400,11 +400,11 @@ export function HomeScreen({
                   <View style={styles.metaRow}>
                     <View style={styles.metaItem}>
                       <MapPin size={12} color={stitchColors.inkMuted} />
-                      <Text style={styles.metaText}>{job.location || 'Douala / Yaoundé'}</Text>
+                      <Text style={styles.metaText}>{job.location || 'Lieu à préciser'}</Text>
                     </View>
                     <View style={styles.metaItem}>
                       <Clock size={12} color={stitchColors.inkMuted} />
-                      <Text style={styles.metaText}>{job.duration || '3 à 6 mois'}</Text>
+                      <Text style={styles.metaText}>{job.duration || 'Durée à préciser'}</Text>
                     </View>
                   </View>
 

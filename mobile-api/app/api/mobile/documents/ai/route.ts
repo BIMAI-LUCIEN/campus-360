@@ -5,9 +5,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { databasePool } from '@/lib/database';
-import { corsPreflight, requireMobileUser, mobileErrorResponse, MobileApiError, withCors } from '@/lib/mobile-access';
-import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
-import { escapeHtml, normalizeHeadings } from '@/lib/document-render';
+import { corsPreflight, requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
+import { normalizeHeadings } from '@/lib/document-render';
 import { llmRewrite } from '@/lib/llm';
 import { HTML_FORMAT_RULE, polishAiTics, stripRepeatedTitle, studentVoiceRules } from '@/lib/writing-rules';
 
@@ -58,7 +57,18 @@ export async function POST(request: NextRequest) {
 
     let remainingCredits = 50;
 
-    // Connect to database to check or seed credits
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      console.error('[AI Editor] OPENROUTER_API_KEY is not set');
+      return withCors(
+        NextResponse.json({ error: "L'assistant IA est momentanément indisponible. Réessaie plus tard." }, { status: 503 }),
+        request,
+      );
+    }
+
+    // One credit per request, given back below when the AI produces nothing.
+    // A database failure refuses the request (fail closed) instead of answering for free.
+    let charged = false;
     if (user.id) {
       try {
         const client = await databasePool.connect();
@@ -93,6 +103,7 @@ export async function POST(request: NextRequest) {
               [user.id],
             );
             remainingCredits = Math.max(0, wallet.ia_credits - 1);
+            charged = true;
           } else {
             remainingCredits = Number(wallet.ia_credits ?? 0);
           }
@@ -106,16 +117,18 @@ export async function POST(request: NextRequest) {
           await client.query('commit');
         } catch (dbErr) {
           await client.query('rollback').catch(() => {});
-          console.warn('[AI Editor] Wallet update skipped:', dbErr);
+          throw dbErr;
         } finally {
           client.release();
         }
-      } catch (poolErr) {
-        console.warn('[AI Editor] Pool error:', poolErr);
+      } catch (dbErr) {
+        console.error('[AI Editor] Wallet update failed:', dbErr);
+        return withCors(
+          NextResponse.json({ error: 'Service momentanément indisponible. Réessaie dans un instant.' }, { status: 503 }),
+          request,
+        );
       }
     }
-
-    const apiKey = process.env.OPENROUTER_API_KEY;
 
     const systemPrompt = [
       `Tu aides un étudiant à écrire la section « ${sectionTitle.replace(/["«»]/g, '')} » de son document.`,
@@ -131,17 +144,6 @@ export async function POST(request: NextRequest) {
       action === 'improve' && text
         ? `Consigne de réécriture / amélioration :\n${prompt}\n\nTexte de l'étudiant à améliorer (garde ses faits et ses chiffres, corrige la langue, clarifie, n'ajoute rien d'inventé) :\n${text}`
         : `Consigne de rédaction :\n${prompt}`;
-
-    if (!apiKey) {
-      const fallbackHtml = `<p>${escapeHtml(prompt)}</p>`;
-      return withCors(
-        NextResponse.json({
-          html: fallbackHtml,
-          remainingCredits,
-        }),
-        request,
-      );
-    }
 
     const preferredModel = process.env.OPENROUTER_MODEL || CANDIDATE_MODELS[0];
     const modelsToTry = Array.from(new Set([preferredModel, ...CANDIDATE_MODELS]));
@@ -166,6 +168,7 @@ export async function POST(request: NextRequest) {
             temperature: 0.5,
             max_tokens: 2000,
           }),
+          signal: AbortSignal.timeout(60_000),
         });
 
         if (!openrouterRes.ok) {
@@ -188,7 +191,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (!safeHtml) {
-      safeHtml = `<p>${escapeHtml(prompt)}</p>`;
+      if (charged) {
+        await databasePool
+          .query('update public.app_wallets set ia_credits = ia_credits + 1, updated_at = now() where user_id = $1', [user.id])
+          .catch((refundErr) => console.error('[AI Editor] Credit refund failed:', refundErr));
+      }
+      return withCors(
+        NextResponse.json({ error: "L'IA n'a pas pu répondre. Ton crédit t'a été rendu, réessaie." }, { status: 503 }),
+        request,
+      );
     } else {
       safeHtml = sanitizeHtml(stripCodeFence(normalizeHeadings(stripRepeatedTitle((await polishAiTics(safeHtml, llmRewrite)).html, sectionTitle)))) || safeHtml;
     }

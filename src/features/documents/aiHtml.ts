@@ -19,8 +19,8 @@ export const cleanModelHtml = (html: string): string =>
     .replace(/^```(?:html)?\s*|```\s*$/g, '')
     .replace(/<\s*(script|style|iframe|object|embed|link|meta|base|form)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
     .replace(/<\s*(script|style|iframe|object|embed|link|meta|base|form|input|button)[^>]*\/?>/gi, '')
-    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/(href|src)\s*=\s*("|')\s*(javascript|vbscript|data):[^"']*\2/gi, '')
+    .replace(/[\s/"']on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, ' ')
+    .replace(/(href|src|xlink:href|formaction)\s*=\s*("|')?\s*(javascript|vbscript|data):[^"'\s>]*\2?/gi, '')
     .trim();
 
 // Ready to insert: cleaned, headings at the editor's levels, no typed numbers.

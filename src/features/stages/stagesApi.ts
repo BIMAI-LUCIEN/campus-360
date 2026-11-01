@@ -578,22 +578,27 @@ export async function fetchStudentApplications(): Promise<StageApplication[]> {
   return payload.applications;
 }
 
-export async function updateApplicationStatus(applicationId: string, status: AppStatus): Promise<boolean> {
+/** The student reports what happened next (reply, interview, acceptance, refusal). */
+export async function updateApplicationStatus(
+  applicationId: string,
+  status: AppStatus,
+): Promise<{ success: boolean; error?: string }> {
   try {
     const response = await authFetchRaw('/api/mobile/stages/applications', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ applicationId, status }),
     });
-    if (!response.ok) return false;
+    const data = await response.json().catch(() => null);
+    if (!response.ok) return { success: false, error: data?.error || 'Statut non enregistré. Réessaie.' };
   } catch {
-    return false;
+    return { success: false, error: 'Pas de connexion au serveur. Réessaie.' };
   }
   localApplications = localApplications.map((a) =>
-    a.id === applicationId ? { ...a, status } : a
+    a.id === applicationId ? { ...a, status, statusUpdatedAt: new Date().toISOString() } : a
   );
   persistApplicationsLocally(localApplications);
-  return true;
+  return { success: true };
 }
 
 export async function withdrawStageApplication(applicationId: string): Promise<{ success: boolean; error?: string }> {
@@ -617,7 +622,18 @@ export async function withdrawStageApplication(applicationId: string): Promise<{
   }
 }
 
+/** Saves the student's private notes on the server (never sent to the company). */
 export async function updateApplicationNotes(applicationId: string, notes: string): Promise<boolean> {
+  try {
+    const response = await authFetchRaw('/api/mobile/stages/applications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applicationId, notes }),
+    });
+    if (!response.ok) return false;
+  } catch {
+    return false;
+  }
   localApplications = localApplications.map((a) =>
     a.id === applicationId ? { ...a, notes } : a
   );
@@ -632,30 +648,43 @@ export function getDaysSinceApplication(appliedAt: string): number {
   return Math.floor(diffMs / (24 * 3600 * 1000));
 }
 
+/** J+7: 7 days after sending, then 7 days after the last follow-up (same rule as the server). */
 export function isEligibleForFollowup(app: StageApplication): boolean {
   if (app.status !== 'PENDING' && app.status !== 'SENT_PENDING' && app.status !== 'DELIVERED') return false;
-  return getDaysSinceApplication(app.appliedAt) >= 7;
+  return getDaysSinceApplication(app.lastRemindedAt || app.appliedAt) >= 7;
 }
 
 export function generateFollowupReminderMessage(app: StageApplication, studentName: string): string {
-  const company = app.job?.company?.name || "l'Entreprise";
-  const jobTitle = app.job?.title || 'le stage';
+  const company = app.job?.company?.name?.trim();
+  const jobTitle = app.job?.title?.trim();
   const appliedDateStr = new Date(app.appliedAt).toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   });
-  return `Bonjour ${company}, je me permets de faire suite à ma candidature du ${appliedDateStr} pour le poste de "${jobTitle}". Toujours très motivé pour rejoindre vos équipes, je me tiens à votre disposition pour échanger. Bien cordialement, ${studentName}.`;
+  const greeting = company ? `Bonjour ${company},` : 'Bonjour,';
+  const position = jobTitle ? ` pour le poste « ${jobTitle} »` : '';
+  return `${greeting} je me permets de faire suite à ma candidature du ${appliedDateStr}${position}. Toujours très motivé pour rejoindre vos équipes, je me tiens à votre disposition pour échanger. Bien cordialement, ${studentName}.`;
 }
 
+/** Records on the server a J+7 follow-up the student has just sent. */
 export async function recordApplicationReminder(applicationId: string): Promise<boolean> {
-  const app = localApplications.find((a) => a.id === applicationId);
-  if (app) {
-    app.lastRemindedAt = new Date().toISOString();
-    persistApplicationsLocally(localApplications);
-    return true;
+  let lastRemindedAt = new Date().toISOString();
+  try {
+    const response = await authFetchRaw('/api/mobile/stages/applications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applicationId, reminded: true }),
+    });
+    if (!response.ok) return false;
+    const data = (await response.json().catch(() => null)) as { lastRemindedAt?: string } | null;
+    if (data?.lastRemindedAt) lastRemindedAt = data.lastRemindedAt;
+  } catch {
+    return false;
   }
-  return false;
+  localApplications = localApplications.map((a) => (a.id === applicationId ? { ...a, lastRemindedAt } : a));
+  persistApplicationsLocally(localApplications);
+  return true;
 }
 
 export async function directReachRecruiter(jobId: string, customNotes?: string) {

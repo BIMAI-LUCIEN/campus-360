@@ -35,17 +35,24 @@ export const fetchOffers = async (): Promise<OffersState> => {
   return (await response.json()) as OffersState;
 };
 
-const newPurchaseId = () =>
+export const newPurchaseId = () =>
   'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
     const random = (Math.random() * 16) | 0;
     return (char === 'x' ? random : (random & 0x3) | 0x8).toString(16);
   });
 
-/** Buys an offer; throws InsufficientBalanceError (409) so the caller can open the top-up. */
-export const purchaseOffer = async (code: OfferCode): Promise<OffersState & { balance: number }> => {
+/**
+ * Buys an offer; throws InsufficientBalanceError (409) so the caller can open the top-up.
+ * `purchaseId` identifies one intention to buy: the caller reuses it when it retries after
+ * a network error, and the server never charges the same id twice.
+ */
+export const purchaseOffer = async (
+  code: OfferCode,
+  purchaseId: string = newPurchaseId(),
+): Promise<OffersState & { balance: number }> => {
   const response = await authFetch('/api/mobile/offers/purchase', {
     method: 'POST',
-    body: JSON.stringify({ code, purchaseId: newPurchaseId() }),
+    body: JSON.stringify({ code, purchaseId }),
   });
   if (response.status === 409) throw new InsufficientBalanceError(await readError(response, 'Solde insuffisant.'));
   if (!response.ok) throw new Error(await readError(response, "L'achat n'a pas abouti."));

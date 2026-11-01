@@ -59,6 +59,38 @@ export const notifyAdmin = async (subject: string, details: Record<string, strin
   }
 };
 
+const APPLICATION_STATUS_PUSH: Record<string, { title: string; body: (company: string) => string }> = {
+  DELIVERED: { title: 'Candidature envoyée', body: (c) => `Ta candidature est bien arrivée chez ${c}.` },
+  FAILED: { title: 'Envoi échoué', body: (c) => `Ta candidature à ${c} n'a pas pu partir. Ton paiement t'a été rendu, réessaie.` },
+  REVIEWING: { title: 'Réponse reçue', body: (c) => `${c} t'a répondu sur WhatsApp. Ouvre la conversation.` },
+};
+
+/** Push to the student when the status of one of their applications changes on its own. */
+export const notifyApplicationStatus = async (applicationId: string, status: string) => {
+  const copy = APPLICATION_STATUS_PUSH[status];
+  if (!copy) return;
+  try {
+    const { rows } = await databasePool.query<{ user_id: string | null; company: string | null }>(
+      `select s.app_user_id as user_id, c.name as company
+         from public.stage_applications a
+         join public.stage_students s on s.id = a.student_id
+         join public.stage_jobs j on j.id = a.job_id
+         join public.stage_companies c on c.id = j.company_id
+        where a.id = $1`,
+      [applicationId],
+    );
+    const row = rows[0];
+    if (!row?.user_id) return;
+    await sendPushToUser(String(row.user_id), {
+      title: copy.title,
+      body: copy.body(row.company || "l'entreprise"),
+      data: { type: 'application_status', applicationId, status },
+    });
+  } catch (error) {
+    console.error('[automations] notifyApplicationStatus failed:', error);
+  }
+};
+
 /** 3. Wallet top-up receipt. */
 export const sendTopUpReceipt = async (userId: string, amountCoins: number, reference: string) => {
   try {

@@ -6,6 +6,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -130,7 +131,11 @@ export function AppAlertHost() {
             <Icon size={26} color={tone.accent} strokeWidth={2.2} />
           </View>
           <Text style={styles.title}>{current.title}</Text>
-          {current.message ? <Text style={styles.message}>{current.message}</Text> : null}
+          {current.message ? (
+            <ScrollView style={styles.messageScroll} contentContainerStyle={styles.messageScrollContent} bounces={false}>
+              <Text style={styles.message}>{current.message}</Text>
+            </ScrollView>
+          ) : null}
           <View style={[styles.actions, stacked && styles.actionsStacked]}>
             {current.buttons.map((button, index) => {
               const isCancel = button.style === 'cancel';
@@ -167,9 +172,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
+  messageScroll: { maxHeight: 320, alignSelf: 'stretch' },
+  messageScrollContent: { alignItems: 'center' },
   card: {
     width: '100%',
     maxWidth: 380,
+    maxHeight: '88%',
     backgroundColor: stitchColors.paper,
     borderRadius: 24,
     paddingTop: 24,

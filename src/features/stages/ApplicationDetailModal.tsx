@@ -11,6 +11,9 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
+
+  Share,
+
 } from 'react-native';
 
 import {
@@ -64,6 +67,7 @@ import {
   generateFollowupReminderMessage,
 
   updateApplicationNotes,
+  recordApplicationReminder,
 
   updateApplicationStatus,
 
@@ -106,21 +110,21 @@ const STATUS_CONFIG: Record<
 
 > = {
 
-  PENDING: { label: 'En attente', bg: 'rgba(245, 158, 11, 0.12)', text: '#FBBF24', border: 'rgba(245, 158, 11, 0.25)', icon: Clock },
+  PENDING: { label: 'En attente', bg: 'rgba(245, 158, 11, 0.12)', text: stitchColors.warningDeep, border: 'rgba(245, 158, 11, 0.25)', icon: Clock },
 
-  SENT_PENDING: { label: 'En cours d’envoi', bg: 'rgba(59, 130, 246, 0.12)', text: '#60A5FA', border: 'rgba(59, 130, 246, 0.25)', icon: Send },
+  SENT_PENDING: { label: 'En cours d’envoi', bg: 'rgba(59, 130, 246, 0.12)', text: stitchColors.tertiary, border: 'rgba(59, 130, 246, 0.25)', icon: Send },
 
-  DELIVERED: { label: 'Délivrée', bg: 'rgba(16, 185, 129, 0.12)', text: '#34D399', border: 'rgba(16, 185, 129, 0.25)', icon: CheckCircle2 },
+  DELIVERED: { label: 'Délivrée', bg: 'rgba(16, 185, 129, 0.12)', text: stitchColors.mentheInk, border: 'rgba(16, 185, 129, 0.25)', icon: CheckCircle2 },
 
-  FAILED: { label: 'Échec d’envoi', bg: 'rgba(239, 68, 68, 0.12)', text: '#F87171', border: 'rgba(239, 68, 68, 0.25)', icon: XCircle },
+  FAILED: { label: 'Échec d’envoi', bg: 'rgba(239, 68, 68, 0.12)', text: stitchColors.corailInk, border: 'rgba(239, 68, 68, 0.25)', icon: XCircle },
 
-  REVIEWING: { label: 'En examen', bg: 'rgba(59, 130, 246, 0.12)', text: '#60A5FA', border: 'rgba(59, 130, 246, 0.25)', icon: Clock },
+  REVIEWING: { label: 'Réponse reçue', bg: 'rgba(59, 130, 246, 0.12)', text: stitchColors.tertiary, border: 'rgba(59, 130, 246, 0.25)', icon: Clock },
 
-  INTERVIEW: { label: 'Entretien', bg: 'rgba(124, 58, 237, 0.15)', text: '#A78BFA', border: 'rgba(124, 58, 237, 0.3)', icon: MessageSquare },
+  INTERVIEW: { label: 'Entretien', bg: 'rgba(124, 58, 237, 0.15)', text: stitchColors.siennaDeep, border: 'rgba(124, 58, 237, 0.3)', icon: MessageSquare },
 
-  ACCEPTED: { label: 'Accepté', bg: 'rgba(16, 185, 129, 0.12)', text: '#34D399', border: 'rgba(16, 185, 129, 0.25)', icon: CheckCircle2 },
+  ACCEPTED: { label: 'Acceptée', bg: 'rgba(16, 185, 129, 0.12)', text: stitchColors.mentheInk, border: 'rgba(16, 185, 129, 0.25)', icon: CheckCircle2 },
 
-  REJECTED: { label: 'Non retenu', bg: 'rgba(239, 68, 68, 0.12)', text: '#F87171', border: 'rgba(239, 68, 68, 0.25)', icon: XCircle },
+  REJECTED: { label: 'Non retenue', bg: 'rgba(239, 68, 68, 0.12)', text: stitchColors.corailInk, border: 'rgba(239, 68, 68, 0.25)', icon: XCircle },
 
   WITHDRAWN: { label: 'Retirée', bg: stitchColors.paperSoft, text: stitchColors.inkMuted, border: stitchColors.glassBorder, icon: XCircle },
 
@@ -129,15 +133,32 @@ const STATUS_CONFIG: Record<
 
 
 const PIPELINE_STEPS: { key: AppStatus; label: string; desc: string }[] = [
+  { key: 'DELIVERED', label: '1. Envoi', desc: 'Dossier transmis' },
+  { key: 'REVIEWING', label: '2. Réponse', desc: "Réponse de l'entreprise" },
+  { key: 'INTERVIEW', label: '3. Entretien', desc: 'Échange avec le recruteur' },
+  { key: 'ACCEPTED', label: '4. Décision', desc: 'Réponse finale' },
+];
 
-  { key: 'PENDING', label: '1. Dépôt', desc: 'Dossier transmis' },
+// Step reached by each status (-1: the application did not reach the company).
+const PIPELINE_RANK: Record<AppStatus, number> = {
+  PENDING: 0,
+  SENT_PENDING: 0,
+  DELIVERED: 0,
+  FAILED: -1,
+  REVIEWING: 1,
+  INTERVIEW: 2,
+  ACCEPTED: 3,
+  REJECTED: 3,
+  WITHDRAWN: -1,
+};
 
-  { key: 'REVIEWING', label: '2. Examen RH', desc: 'Évaluation du profil' },
-
-  { key: 'INTERVIEW', label: '3. Entretien', desc: 'Échange technique/RH' },
-
-  { key: 'ACCEPTED', label: '4. Décision', desc: 'Proposition finale' },
-
+// What the student can report (same rule as mobile-api/lib/application-rules.ts).
+const REACHED_STATUSES: AppStatus[] = ['PENDING', 'SENT_PENDING', 'DELIVERED', 'REVIEWING', 'INTERVIEW', 'ACCEPTED', 'REJECTED'];
+const REPORTABLE: { status: AppStatus; label: string }[] = [
+  { status: 'REVIEWING', label: "J'ai eu une réponse" },
+  { status: 'INTERVIEW', label: "J'ai un entretien" },
+  { status: 'ACCEPTED', label: 'Je suis pris(e)' },
+  { status: 'REJECTED', label: 'Pas retenu(e)' },
 ];
 
 
@@ -169,6 +190,8 @@ export function ApplicationDetailModal({
   const [savingNotes, setSavingNotes] = useState(false);
 
   const [withdrawing, setWithdrawing] = useState(false);
+
+  const [reportingStatus, setReportingStatus] = useState<AppStatus | null>(null);
 
 
 
@@ -262,11 +285,9 @@ export function ApplicationDetailModal({
 
     } else {
 
-      setCopied(true);
+      // No clipboard module in this build: the share sheet lets the student copy or send it.
 
-      AppAlert.alert('Copié !', 'Le texte a été copié dans le presse-papiers.');
-
-      setTimeout(() => setCopied(false), 2500);
+      void Share.share({ message: text });
 
     }
 
@@ -278,7 +299,17 @@ export function ApplicationDetailModal({
 
     setSavingNotes(true);
 
-    await updateApplicationNotes(application.id, notes);
+    const saved = await updateApplicationNotes(application.id, notes);
+
+    if (!saved) {
+
+      setSavingNotes(false);
+
+      AppAlert.alert('Notes non enregistrées', 'Vérifie ta connexion et réessaie.');
+
+      return;
+
+    }
 
     if (onNotesUpdated) {
 
@@ -288,7 +319,7 @@ export function ApplicationDetailModal({
 
     setSavingNotes(false);
 
-    AppAlert.alert('Succès', 'Vos notes personnelles ont été enregistrées.');
+    AppAlert.alert('Notes enregistrées', 'Tes notes personnelles sont enregistrées.');
 
   };
 
@@ -309,6 +340,8 @@ export function ApplicationDetailModal({
     }
 
     const waUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(msg)}`;
+
+    void recordApplicationReminder(application.id);
 
     if (Platform.OS === 'web') {
 
@@ -359,6 +392,18 @@ export function ApplicationDetailModal({
   const canWithdraw = ['PENDING', 'SENT_PENDING', 'DELIVERED', 'FAILED', 'REVIEWING'].includes(application.status);
 
 
+
+  const handleReportStatus = async (status: AppStatus, label: string) => {
+    setReportingStatus(status);
+    const res = await updateApplicationStatus(application.id, status);
+    setReportingStatus(null);
+    if (!res.success) {
+      AppAlert.alert('Statut non enregistré', res.error || 'Réessaie dans un instant.');
+      return;
+    }
+    onStatusUpdated?.(application.id, status);
+    AppAlert.alert('Suivi mis à jour', `« ${label} » est enregistré.`);
+  };
 
   const handleWithdraw = () => {
 
@@ -740,7 +785,7 @@ export function ApplicationDetailModal({
 
                       <Text style={styles.urgentBannerSub}>
 
-                        Confirmez votre motivation par un message courtois direct sur WhatsApp.
+                        Confirme ta motivation par un message courtois sur WhatsApp.
 
                       </Text>
 
@@ -774,11 +819,9 @@ export function ApplicationDetailModal({
 
                     {PIPELINE_STEPS.map((step, idx) => {
 
-                      const isCurrent = application.status === step.key;
+                      const isCurrent = (PIPELINE_RANK[application.status] ?? -1) === idx;
 
-                      const isPassed =
-
-                        PIPELINE_STEPS.findIndex((s) => s.key === application.status) >= idx;
+                      const isPassed = (PIPELINE_RANK[application.status] ?? -1) >= idx;
 
 
 
@@ -839,6 +882,28 @@ export function ApplicationDetailModal({
                   </View>
 
 
+
+                  {REACHED_STATUSES.includes(application.status) && (
+                    <View style={styles.reportBlock}>
+                      <Text style={styles.reportTitle}>Du nouveau ? Indique la suite :</Text>
+                      <View style={styles.reportRow}>
+                        {REPORTABLE.filter((option) => option.status !== application.status).map((option) => (
+                          <Pressable
+                            key={option.status}
+                            style={({ pressed }) => [styles.reportChip, pressed && { opacity: 0.8 }]}
+                            onPress={() => void handleReportStatus(option.status, option.label)}
+                            disabled={reportingStatus !== null}
+                            accessibilityRole="button"
+                            accessibilityLabel={option.label}
+                          >
+                            <Text style={styles.reportChipText} numberOfLines={1}>
+                              {reportingStatus === option.status ? 'Enregistrement…' : option.label}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                  )}
 
                   {canWithdraw && (
 
@@ -1531,6 +1596,21 @@ const styles = StyleSheet.create({
     marginBottom: 14,
 
   },
+
+  reportBlock: { marginBottom: 12 },
+  reportTitle: { fontSize: 12, fontWeight: '700', color: stitchColors.inkMuted, marginBottom: 8 },
+  reportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  reportChip: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: stitchColors.siennaSoft,
+    backgroundColor: stitchColors.siennaBg,
+    maxWidth: '100%',
+  },
+  reportChipText: { fontSize: 13, fontWeight: '700', color: stitchColors.siennaDeep },
 
   cardBoxTitle: {
 

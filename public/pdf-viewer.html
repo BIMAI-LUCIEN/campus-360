@@ -462,7 +462,19 @@
             statusOverlay.style.display = 'flex';
             if (spinner) spinner.style.display = 'none';
             if (statusText) {
-              statusText.innerHTML = "Document en cours de traitement.<br><br><a class='fallback-btn' href='" + baseUrl + "' target='_blank'>Ouvrir le document</a>";
+              // Built node by node: the URL comes from the query string and is never parsed as HTML.
+              statusText.textContent = 'Document en cours de traitement.';
+              if (/^https:\/\//i.test(baseUrl)) {
+                const link = document.createElement('a');
+                link.className = 'fallback-btn';
+                link.href = baseUrl;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.textContent = 'Ouvrir le document';
+                statusText.appendChild(document.createElement('br'));
+                statusText.appendChild(document.createElement('br'));
+                statusText.appendChild(link);
+              }
             }
           }
         };
@@ -666,7 +678,16 @@
 
         const fallbackTimer = setTimeout(() => {
           if (container.children.length === 0) {
-            statusText.innerHTML = "Chargement alternatif en cours...<br><br><a class='fallback-btn' href='" + streamUrl + "' target='_blank'>Ouvrir le document directement</a>";
+            statusText.textContent = 'Chargement alternatif en cours...';
+            const directLink = document.createElement('a');
+            directLink.className = 'fallback-btn';
+            directLink.href = streamUrl;
+            directLink.target = '_blank';
+            directLink.rel = 'noopener noreferrer';
+            directLink.textContent = 'Ouvrir le document directement';
+            statusText.appendChild(document.createElement('br'));
+            statusText.appendChild(document.createElement('br'));
+            statusText.appendChild(directLink);
           }
         }, 8000);
 

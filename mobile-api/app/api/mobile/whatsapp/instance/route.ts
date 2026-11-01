@@ -339,7 +339,13 @@ export async function DELETE(request: NextRequest) {
     const studentId = await ensureStageStudent(access.user);
     const { instanceName } = target;
 
-    await logoutInstance(instanceName);
+    const loggedOut = await logoutInstance(instanceName);
+    if (!loggedOut) {
+      return withCors(
+        NextResponse.json({ error: "WhatsApp n'a pas pu être déconnecté. Réessaie dans un instant." }, { status: 502 }),
+        request,
+      );
+    }
     await setStageStudentWhatsAppStatusById(studentId, instanceName, false);
 
     return withCors(

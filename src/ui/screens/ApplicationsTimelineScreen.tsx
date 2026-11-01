@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Linking,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 
 import {
@@ -63,6 +64,7 @@ import {
   isEligibleForFollowup,
 
   recordApplicationReminder,
+  getStoredApplicationsAsync,
 
 } from '../../features/stages/stagesApi';
 
@@ -93,21 +95,21 @@ const STATUS_CONFIG: Record<
 
 > = {
 
-  PENDING: { label: 'En attente', bg: 'rgba(245, 158, 11, 0.12)', text: '#FBBF24', border: 'rgba(245, 158, 11, 0.25)', icon: Clock },
+  PENDING: { label: 'En attente', bg: 'rgba(245, 158, 11, 0.12)', text: stitchColors.warningDeep, border: 'rgba(245, 158, 11, 0.25)', icon: Clock },
 
-  SENT_PENDING: { label: 'En cours d’envoi', bg: 'rgba(59, 130, 246, 0.12)', text: '#60A5FA', border: 'rgba(59, 130, 246, 0.25)', icon: Send },
+  SENT_PENDING: { label: 'En cours d’envoi', bg: 'rgba(59, 130, 246, 0.12)', text: stitchColors.tertiary, border: 'rgba(59, 130, 246, 0.25)', icon: Send },
 
-  DELIVERED: { label: 'Délivrée', bg: 'rgba(16, 185, 129, 0.12)', text: '#34D399', border: 'rgba(16, 185, 129, 0.25)', icon: CheckCircle2 },
+  DELIVERED: { label: 'Délivrée', bg: 'rgba(16, 185, 129, 0.12)', text: stitchColors.mentheInk, border: 'rgba(16, 185, 129, 0.25)', icon: CheckCircle2 },
 
-  FAILED: { label: 'Échec d’envoi', bg: 'rgba(239, 68, 68, 0.12)', text: '#F87171', border: 'rgba(239, 68, 68, 0.25)', icon: XCircle },
+  FAILED: { label: 'Échec d’envoi', bg: 'rgba(239, 68, 68, 0.12)', text: stitchColors.corailInk, border: 'rgba(239, 68, 68, 0.25)', icon: XCircle },
 
-  REVIEWING: { label: 'En examen', bg: 'rgba(59, 130, 246, 0.12)', text: '#60A5FA', border: 'rgba(59, 130, 246, 0.25)', icon: FileCheck },
+  REVIEWING: { label: 'Réponse reçue', bg: 'rgba(59, 130, 246, 0.12)', text: stitchColors.tertiary, border: 'rgba(59, 130, 246, 0.25)', icon: FileCheck },
 
-  INTERVIEW: { label: 'Entretien', bg: 'rgba(124, 58, 237, 0.12)', text: '#A78BFA', border: 'rgba(124, 58, 237, 0.25)', icon: MessageSquare },
+  INTERVIEW: { label: 'Entretien', bg: 'rgba(124, 58, 237, 0.12)', text: stitchColors.siennaDeep, border: 'rgba(124, 58, 237, 0.25)', icon: MessageSquare },
 
-  ACCEPTED: { label: 'Accepté', bg: 'rgba(16, 185, 129, 0.12)', text: '#34D399', border: 'rgba(16, 185, 129, 0.25)', icon: CheckCircle2 },
+  ACCEPTED: { label: 'Acceptée', bg: 'rgba(16, 185, 129, 0.12)', text: stitchColors.mentheInk, border: 'rgba(16, 185, 129, 0.25)', icon: CheckCircle2 },
 
-  REJECTED: { label: 'Non retenu', bg: 'rgba(239, 68, 68, 0.12)', text: '#F87171', border: 'rgba(239, 68, 68, 0.25)', icon: XCircle },
+  REJECTED: { label: 'Non retenue', bg: 'rgba(239, 68, 68, 0.12)', text: stitchColors.corailInk, border: 'rgba(239, 68, 68, 0.25)', icon: XCircle },
 
   WITHDRAWN: { label: 'Retirée', bg: stitchColors.paperSoft, text: stitchColors.inkMuted, border: stitchColors.glassBorder, icon: XCircle },
 
@@ -124,6 +126,8 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
   const [selectedApp, setSelectedApp] = useState<StageApplication | null>(null);
 
   const [loadError, setLoadError] = useState<string | null>(null);
+  // True until the server answered once: the empty state is only shown after that.
+  const [loading, setLoading] = useState(() => peekStudentApplications() === null);
 
 
 
@@ -142,19 +146,21 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
       setLoadError(error instanceof Error ? error.message : 'Candidatures indisponibles pour le moment.');
 
     } finally {
-
       setRefreshing(false);
-
+      setLoading(false);
     }
-
   };
 
 
 
   useEffect(() => {
-
+    // Last known list from the disk cache while the server answers (offline too).
+    if (peekStudentApplications() === null) {
+      void getStoredApplicationsAsync().then((stored) => {
+        setApplications((current) => (current.length === 0 && stored.length > 0 ? stored : current));
+      });
+    }
     loadData();
-
   }, []);
 
 
@@ -231,24 +237,18 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
 
 
-    await recordApplicationReminder(app.id);
-
-    setApplications((prev) =>
-
-      prev.map((a) =>
-
-        a.id === app.id ? { ...a, lastRemindedAt: new Date().toISOString() } : a
-
-      )
-
-    );
+    const markReminded = () => {
+      void recordApplicationReminder(app.id);
+      setApplications((prev) =>
+        prev.map((a) => (a.id === app.id ? { ...a, lastRemindedAt: new Date().toISOString() } : a)),
+      );
+    };
 
 
 
     if (Platform.OS === 'web') {
-
+      markReminded();
       window.open(waUrl, '_blank');
-
     } else {
 
       AppAlert.alert(
@@ -259,7 +259,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
         [
 
-          { text: 'Envoyer sur WhatsApp', onPress: () => Linking.openURL(waUrl) },
+          { text: 'Envoyer sur WhatsApp', onPress: () => { markReminded(); void Linking.openURL(waUrl); } },
 
           { text: 'Annuler', style: 'cancel' },
 
@@ -341,7 +341,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
           <Text style={styles.duoMessage}>
 
-            « Relancer un recruteur à J+7 permet de confirmer votre motivation et d'accélérer le traitement de votre dossier. »
+            « Relancer un recruteur à J+7 permet de confirmer ta motivation et d'accélérer le traitement de ton dossier. »
 
           </Text>
 
@@ -349,8 +349,18 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
 
 
-        {loadError ? (
+        {loadError && applications.length > 0 ? (
+          <Pressable style={styles.staleBanner} onPress={onRefresh} accessibilityRole="button">
+            <Text style={styles.staleBannerText}>Liste pas à jour : {loadError} Touche pour réessayer.</Text>
+          </Pressable>
+        ) : null}
 
+        {loading && applications.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <ActivityIndicator color={stitchColors.sienna} />
+            <Text style={styles.emptySubtitle}>Chargement de tes candidatures…</Text>
+          </View>
+        ) : loadError && applications.length === 0 ? (
           <View style={styles.emptyBox}>
 
             <Text style={styles.emptyTitle}>Impossible de charger tes candidatures</Text>
@@ -379,7 +389,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
             <Text style={styles.emptySubtitle}>
 
-              Utilisez le bouton "Postuler" depuis les offres de stage pour enregistrer votre premier dossier.
+              Utilise le bouton « Postuler » depuis les offres de stage pour envoyer ton premier dossier.
 
             </Text>
 
@@ -553,7 +563,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
                     <QrCode size={28} color={stitchColors.outline} />
 
-                    <Text style={styles.qrLabel}>Vérifié</Text>
+                    <Text style={styles.qrLabel}>Réf.</Text>
 
                   </View>
 
@@ -720,6 +730,16 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
 
 const styles = StyleSheet.create({
+  staleBanner: {
+    backgroundColor: stitchColors.warningBg,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  staleBannerText: { color: stitchColors.warningDeep, fontSize: 13, fontWeight: '600' },
 
   container: {
 

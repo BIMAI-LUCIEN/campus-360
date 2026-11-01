@@ -1,5 +1,7 @@
 import { databasePool } from './database';
 import { isPaidOffer, stageApplyCredits, stageApplyPrice } from './stage-pricing';
+import { BLOCKS_RESEND, canDispatchSetStatus } from './application-rules';
+import { MobileApiError } from './mobile-error';
 
 export type StageStatus =
   | 'PENDING'
@@ -247,7 +249,7 @@ export const listStudentApplications = async (studentId: string) => {
     const result = await databasePool.query<StageJobRow & Record<string, unknown>>(
       `select a.id as application_id, a.student_id, a.job_id, a.status as application_status,
               a.applied_at, a.cv_file_url, a.letter_file_url, a.generated_cv_text,
-              a.generated_letter_text, a.last_reminded_at, a.notes,
+              a.generated_letter_text, a.last_reminded_at, a.student_notes, a.status_updated_at,
               j.*, c.name as company_name, c.industry as company_industry,
               c.address as company_address, c.contact_email as company_contact_email,
               c.contact_whatsapp as company_contact_whatsapp, c.kyb_score as company_kyb_score,
@@ -271,7 +273,8 @@ export const listStudentApplications = async (studentId: string) => {
       generatedCvText: row.generated_cv_text ? String(row.generated_cv_text) : undefined,
       generatedLetterText: row.generated_letter_text ? String(row.generated_letter_text) : undefined,
       lastRemindedAt: row.last_reminded_at ? new Date(String(row.last_reminded_at)).toISOString() : undefined,
-      notes: row.notes ? String(row.notes) : undefined,
+      notes: row.student_notes ? String(row.student_notes) : undefined,
+      statusUpdatedAt: row.status_updated_at ? new Date(String(row.status_updated_at)).toISOString() : undefined,
       job: mapJob(row),
     }));
   } catch (err) {
@@ -315,12 +318,44 @@ export const updateStudentApplicationStatus = async (
   status: StageStatus,
 ) => {
   const result = await databasePool.query(
-    `update public.stage_applications set status = $1
+    `update public.stage_applications set status = $1, status_updated_at = now()
       where id = $2 and student_id = $3
-      returning id, student_id, job_id, status, applied_at`,
+      returning id, student_id, job_id, status, applied_at, status_updated_at`,
     [status, applicationId, studentId],
   );
   return result.rows[0] ?? null;
+};
+
+/** Private notes of the student on one of their applications (never sent to the company). */
+export const updateStudentApplicationNotes = async (studentId: string, applicationId: string, notes: string) => {
+  const result = await databasePool.query(
+    `update public.stage_applications set student_notes = nullif($1, '')
+      where id = $2 and student_id = $3
+      returning id`,
+    [notes, applicationId, studentId],
+  );
+  return Boolean(result.rows[0]);
+};
+
+/** Records a J+7 follow-up the student has just sent; returns its date. */
+export const recordStudentApplicationReminder = async (studentId: string, applicationId: string) => {
+  const result = await databasePool.query<{ last_reminded_at: string }>(
+    `update public.stage_applications set last_reminded_at = now()
+      where id = $1 and student_id = $2
+      returning last_reminded_at`,
+    [applicationId, studentId],
+  );
+  const row = result.rows[0];
+  return row ? new Date(String(row.last_reminded_at)).toISOString() : null;
+};
+
+/** Current status of the student's application to an offer, or null when there is none. */
+export const getStudentApplicationStatus = async (studentId: string, jobId: string): Promise<StageStatus | null> => {
+  const result = await databasePool.query<{ status: string }>(
+    'select status from public.stage_applications where student_id = $1 and job_id = $2',
+    [studentId, jobId],
+  );
+  return result.rows[0] ? (String(result.rows[0].status) as StageStatus) : null;
 };
 
 export interface IngestJobInput {
@@ -608,7 +643,7 @@ export interface DispatchStageApplicationResult {
 
 /**
  * Inserts or updates a stage application record in PostgreSQL with status tracking.
- * Handles schema migration / fallback gracefully if enum type has not yet been altered.
+ * The statuses are declared by migration 0027 (no DDL at runtime).
  */
 export const dispatchStageApplicationRecord = async (
   input: DispatchStageApplicationInput,
@@ -622,16 +657,8 @@ export const dispatchStageApplicationRecord = async (
     .filter(Boolean)
     .join(' | ');
 
-  // 1. Proactively ensure PostgreSQL enum has new values if permissions allow
-  try {
-    await databasePool.query(`ALTER TYPE public.stage_app_status ADD VALUE IF NOT EXISTS 'SENT_PENDING'`);
-    await databasePool.query(`ALTER TYPE public.stage_app_status ADD VALUE IF NOT EXISTS 'DELIVERED'`);
-    await databasePool.query(`ALTER TYPE public.stage_app_status ADD VALUE IF NOT EXISTS 'FAILED'`);
-  } catch {
-    // Non-fatal if ALTER TYPE cannot run inside transaction or lacks DDL rights
-  }
-
-  // 2. Insert or update stage application record with desiredStatus
+  // A new automatic send never overwrites an application already sent or answered
+  // (BLOCKS_RESEND): the conflict update is skipped and the caller gets a 409.
   try {
     const result = await databasePool.query<{
       id: string;
@@ -643,15 +670,17 @@ export const dispatchStageApplicationRecord = async (
     }>(
       `insert into public.stage_applications (
          student_id, job_id, status, cv_file_url, letter_file_url,
-         generated_letter_text, notes, applied_at
-       ) values ($1, $2, $3, $4, $5, $6, $7, now())
+         generated_letter_text, notes, applied_at, status_updated_at
+       ) values ($1, $2, $3, $4, $5, $6, $7, now(), now())
        on conflict (student_id, job_id) do update set
          status = excluded.status,
          cv_file_url = coalesce(excluded.cv_file_url, public.stage_applications.cv_file_url),
          letter_file_url = coalesce(excluded.letter_file_url, public.stage_applications.letter_file_url),
          generated_letter_text = coalesce(excluded.generated_letter_text, public.stage_applications.generated_letter_text),
          notes = coalesce(excluded.notes, public.stage_applications.notes),
-         applied_at = now()
+         applied_at = now(),
+         status_updated_at = now()
+       where public.stage_applications.status::text <> all($8::text[])
        returning id, student_id, job_id, status, applied_at, cv_file_url`,
       [
         input.studentId,
@@ -661,10 +690,12 @@ export const dispatchStageApplicationRecord = async (
         input.letterFileUrl || null,
         input.letterText || '',
         notesContent || null,
+        BLOCKS_RESEND,
       ],
     );
 
     const row = result.rows[0];
+    if (!row) throw new MobileApiError('Ta candidature à cette offre est déjà envoyée.', 409);
     return {
       id: String(row.id),
       studentId: String(row.student_id),
@@ -674,58 +705,7 @@ export const dispatchStageApplicationRecord = async (
       cvFileUrl: row.cv_file_url || undefined,
     };
   } catch (err: any) {
-    const errMessage = String(err?.message || '').toLowerCase();
-    const isEnumError = errMessage.includes('enum') || errMessage.includes('stage_app_status');
-
-    // 3. Fallback: if enum rejected 'SENT_PENDING', fall back to 'PENDING'
-    if (isEnumError && desiredStatus !== 'PENDING') {
-      try {
-        const fallbackNotes = `[Status: ${desiredStatus}] ${notesContent}`.trim();
-        const fallbackRes = await databasePool.query<{
-          id: string;
-          student_id: string;
-          job_id: string;
-          status: string;
-          applied_at: string;
-          cv_file_url: string | null;
-        }>(
-          `insert into public.stage_applications (
-             student_id, job_id, status, cv_file_url, letter_file_url,
-             generated_letter_text, notes, applied_at
-           ) values ($1, $2, 'PENDING', $3, $4, $5, $6, now())
-           on conflict (student_id, job_id) do update set
-             status = 'PENDING',
-             cv_file_url = coalesce(excluded.cv_file_url, public.stage_applications.cv_file_url),
-             letter_file_url = coalesce(excluded.letter_file_url, public.stage_applications.letter_file_url),
-             generated_letter_text = coalesce(excluded.generated_letter_text, public.stage_applications.generated_letter_text),
-             notes = coalesce(excluded.notes, public.stage_applications.notes),
-             applied_at = now()
-           returning id, student_id, job_id, status, applied_at, cv_file_url`,
-          [
-            input.studentId,
-            input.jobId,
-            input.cvFileUrl || null,
-            input.letterFileUrl || null,
-            input.letterText || '',
-            fallbackNotes || null,
-          ],
-        );
-
-        const row = fallbackRes.rows[0];
-        return {
-          id: String(row.id),
-          studentId: String(row.student_id),
-          jobId: String(row.job_id),
-          status: (row.status as StageStatus) || 'PENDING',
-          appliedAt: new Date(String(row.applied_at)).toISOString(),
-          cvFileUrl: row.cv_file_url || undefined,
-        };
-      } catch (innerErr) {
-        console.warn('[stages-db] Enum fallback query failed:', innerErr);
-        throw innerErr;
-      }
-    }
-
+    if (err instanceof MobileApiError) throw err;
     console.warn('[stages-db] dispatchStageApplicationRecord failed:', err);
     throw err;
   }
@@ -752,41 +732,58 @@ export const getApplicationOwner = async (
 export const updateApplicationDispatchStatus = async (
   applicationId: string,
   status: StageStatus,
-): Promise<{ id: string; status: StageStatus } | null> => {
-  try {
-    const result = await databasePool.query<{ id: string; status: string }>(
-      `update public.stage_applications set status = $1
-        where id = $2
-        returning id, status`,
-      [status, applicationId],
-    );
-    if (result.rows[0]) {
-      return { id: result.rows[0].id, status: result.rows[0].status as StageStatus };
-    }
-  } catch (err: any) {
-    const errMessage = String(err?.message || '').toLowerCase();
-    if (errMessage.includes('enum') || errMessage.includes('stage_app_status')) {
-      try {
-        const fallbackRes = await databasePool.query<{ id: string; status: string }>(
-          `update public.stage_applications
-              set status = 'PENDING',
-                  notes = concat('[Status: ', $1::text, '] ', coalesce(notes, ''))
-            where id = $2
-            returning id, status`,
-          [status, applicationId],
-        );
-        return fallbackRes.rows[0]
-          ? { id: fallbackRes.rows[0].id, status: fallbackRes.rows[0].status as StageStatus }
-          : null;
-      } catch (innerErr) {
-        console.warn('[stages-db] Dispatch status enum fallback failed:', innerErr);
-        throw innerErr;
-      }
-    }
-    console.warn('[stages-db] Error updating application dispatch status:', err);
-    throw err;
+): Promise<{ id: string; status: StageStatus; changed: boolean } | null> => {
+  const current = await databasePool.query<{ status: string }>(
+    'select status from public.stage_applications where id = $1',
+    [applicationId],
+  );
+  if (!current.rows[0]) return null;
+  const currentStatus = String(current.rows[0].status);
+  // A late delivery callback never overwrites what the student reported since.
+  if (!canDispatchSetStatus(currentStatus, status)) {
+    return { id: applicationId, status: currentStatus as StageStatus, changed: false };
   }
-  return null;
+  const result = await databasePool.query<{ id: string; status: string }>(
+    `update public.stage_applications set status = $1, status_updated_at = now()
+      where id = $2 and status::text = $3
+      returning id, status`,
+    [status, applicationId, currentStatus],
+  );
+  const row = result.rows[0];
+  return row
+    ? { id: String(row.id), status: row.status as StageStatus, changed: true }
+    : { id: applicationId, status: currentStatus as StageStatus, changed: false };
+};
+
+/**
+ * Applications of the student owning `instanceName` to companies whose WhatsApp is
+ * `fromPhoneKey` (last 9 digits), still waiting for an answer.
+ */
+export const findApplicationsAwaitingReply = async (instanceName: string, fromPhoneKey: string): Promise<string[]> => {
+  const result = await databasePool.query<{ id: string }>(
+    `select a.id
+       from public.stage_applications a
+       join public.stage_students s on s.id = a.student_id
+       join public.stage_jobs j on j.id = a.job_id
+       join public.stage_companies c on c.id = j.company_id
+      where (s.whatsapp_instance = $1
+             or 'student-' || regexp_replace(coalesce(s.phone_whatsapp, ''), '[^0-9]', '', 'g') = $1)
+        and right(regexp_replace(coalesce(c.contact_whatsapp, ''), '[^0-9]', '', 'g'), 9) = $2
+        and a.status::text in ('PENDING', 'SENT_PENDING', 'DELIVERED')`,
+    [instanceName, fromPhoneKey],
+  );
+  return result.rows.map((row) => String(row.id));
+};
+
+/** Connection state pushed by Evolution for one student instance. */
+export const setWhatsAppConnectedByInstance = async (instanceName: string, connected: boolean): Promise<void> => {
+  await databasePool.query(
+    `update public.stage_students
+        set whatsapp_connected = $2,
+            whatsapp_linked_at = (case when $2 then now() else whatsapp_linked_at end)
+      where whatsapp_instance = $1`,
+    [instanceName, connected],
+  );
 };
 
 /**

@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   ScrollView,
   Linking,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {
   X,
@@ -40,7 +42,13 @@ interface PaymentModalProps {
   onPaymentSuccess?: () => void;
   defaultPhone?: string;
   reasonMessage?: string;
+  /** Amount the user is topping up for: the smallest pack that covers it is preselected. */
+  minimumAmount?: number;
 }
+
+const packFor = (minimumAmount?: number): PaymentPack =>
+  (minimumAmount ? PAYMENT_PACKS.find((pack) => pack.priceFcfa >= minimumAmount) : undefined) ??
+  (minimumAmount ? PAYMENT_PACKS[PAYMENT_PACKS.length - 1] : PAYMENT_PACKS[0]);
 
 export function PaymentModal({
   visible,
@@ -48,8 +56,9 @@ export function PaymentModal({
   onPaymentSuccess,
   defaultPhone = '',
   reasonMessage,
+  minimumAmount,
 }: PaymentModalProps) {
-  const [selectedPack, setSelectedPack] = useState<PaymentPack>(PAYMENT_PACKS[0]);
+  const [selectedPack, setSelectedPack] = useState<PaymentPack>(() => packFor(minimumAmount));
   const [operator, setOperator] = useState<MobileMoneyOperator>('mtn');
   const [phone, setPhone] = useState(defaultPhone);
   const [loading, setLoading] = useState(false);
@@ -87,6 +96,9 @@ export function PaymentModal({
       } catch {}
     };
   }, []);
+  useEffect(() => {
+    if (visible) setSelectedPack(packFor(minimumAmount));
+  }, [visible, minimumAmount]);
   useEffect(() => {
     if (!visible) {
       stopPolling();
@@ -219,7 +231,7 @@ export function PaymentModal({
       transparent
       onRequestClose={handleResetAndClose}
     >
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.headerRow}>
@@ -406,7 +418,7 @@ export function PaymentModal({
             </ScrollView>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

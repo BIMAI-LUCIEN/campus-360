@@ -33,7 +33,10 @@ const updateDocumentSchema = z.object({
   line_spacing: z.number().min(0.5).max(4.0).optional(),
   margins: z.enum(['normal', 'narrow', 'wide']).optional(),
   cover_template: z.enum(['classic', 'minimalist', 'tech']).optional(),
-  cover_data: z.record(z.string(), z.any()).optional(),
+  cover_data: z
+    .record(z.string(), z.any())
+    .refine((value) => JSON.stringify(value).length <= 2_000_000, { message: "Page de garde trop volumineuse." })
+    .optional(),
   document_metadata: z.record(z.string(), z.any()).optional(),
   primary_color: hexColorSchema.optional(),
   secondary_color: hexColorSchema.optional(),

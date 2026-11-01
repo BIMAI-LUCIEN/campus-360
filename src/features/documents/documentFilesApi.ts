@@ -84,7 +84,7 @@ const api = async <T>(path: string, init: RequestInit = {}, fallback = 'Erreur s
   try {
     res = await authFetchRawAt(mobileApiBaseUrl, path, init);
   } catch {
-    throw new Error('Connexion impossible. Vérifiez votre réseau et réessayez.');
+    throw new Error('Connexion impossible. Vérifie ton réseau et réessaie.');
   }
   if (!res.ok) throw new Error(await readError(res, `${fallback} (${res.status})`));
   return (await res.json()) as T;
@@ -206,7 +206,7 @@ export const uploadDocumentFile = async (
         reject(new Error(payload?.error || `Envoi impossible (${xhr.status}). Réessayez.`));
       }
     };
-    xhr.onerror = () => reject(new Error('Connexion impossible. Vérifiez votre réseau et réessayez.'));
+    xhr.onerror = () => reject(new Error('Connexion impossible. Vérifie ton réseau et réessaie.'));
     xhr.ontimeout = () => reject(new Error('L’envoi a pris trop de temps. Réessayez avec une meilleure connexion.'));
     xhr.send(form);
   });
@@ -220,7 +220,7 @@ export const deleteDocumentFile = async (documentId: string, fileId: string): Pr
       method: 'DELETE',
     });
   } catch {
-    throw new Error('Connexion impossible. Vérifiez votre réseau et réessayez.');
+    throw new Error('Connexion impossible. Vérifie ton réseau et réessaie.');
   }
   if (!res.ok && res.status !== 404) throw new Error(await readError(res, 'Suppression impossible.'));
 };

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CheckCircle2, Info, AlertTriangle, XCircle, type LucideIcon } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { stitchColors } from '../theme/stitch';
 
 export type ToastVariant = 'success' | 'info' | 'warning' | 'error';
@@ -36,6 +37,7 @@ export function Toast({
   onDismiss: () => void;
   topInset?: number;
 }) {
+  const insets = useSafeAreaInsets();
   const progress = React.useRef(new Animated.Value(0)).current;
   const hideTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -76,7 +78,7 @@ export function Toast({
   return (
     <Animated.View
       pointerEvents="box-none"
-      style={[styles.wrap, { top: topInset + 8, opacity: progress, transform: [{ translateY }] }]}
+      style={[styles.wrap, { top: Math.max(topInset, insets.top) + 8, opacity: progress, transform: [{ translateY }] }]}
     >
       <Pressable
         onPress={runHide}

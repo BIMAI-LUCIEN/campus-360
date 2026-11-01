@@ -70,12 +70,16 @@ export function generateDeterministicPairingCode(phone: string): string {
 /**
  * Cross-platform clipboard helper (web navigator.clipboard & native RN Clipboard).
  */
-export async function copyToClipboard(text: string): Promise<boolean> {
+/**
+ * Copies on the web. This build has no clipboard module on Android/iOS, so the share
+ * sheet opens instead (the student copies or sends the text from there): 'shared'.
+ */
+export async function copyToClipboard(text: string): Promise<'copied' | 'shared' | 'failed'> {
   try {
     if (Platform.OS === 'web') {
       if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
-        return true;
+        return 'copied';
       }
       if (typeof document !== 'undefined') {
         const textarea = document.createElement('textarea');
@@ -86,21 +90,17 @@ export async function copyToClipboard(text: string): Promise<boolean> {
         textarea.select();
         document.execCommand('copy');
         document.body.removeChild(textarea);
-        return true;
+        return 'copied';
       }
     }
 
-    // React Native Native Clipboard
-    const RN = require('react-native');
-    if (RN.Clipboard && typeof RN.Clipboard.setString === 'function') {
-      RN.Clipboard.setString(text);
-      return true;
-    }
-    return false;
+    const { Share } = require('react-native');
+    const result = await Share.share({ message: text });
+    return result.action === Share.dismissedAction ? 'failed' : 'shared';
   } catch (err) {
     console.warn('[whatsappService] Error copying text to clipboard:', err);
   }
-  return false;
+  return 'failed';
 }
 
 /**
@@ -174,7 +174,17 @@ export async function saveWhatsAppStatus(
  * Disconnects WhatsApp and clears stored credentials.
  * DELETE endpoint requires authentication; no query parameter is sent.
  */
-export async function clearWhatsAppStatus(phone?: string): Promise<void> {
+export async function clearWhatsAppStatus(phone?: string): Promise<{ success: boolean; error?: string }> {
+  // The server first: the local state is only cleared once WhatsApp is really logged out.
+  try {
+    const response = await authFetchRaw('/api/mobile/whatsapp/instance', { method: 'DELETE' });
+    if (!response.ok) {
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      return { success: false, error: data?.error || "WhatsApp n'a pas pu être déconnecté. Réessaie." };
+    }
+  } catch {
+    return { success: false, error: 'Pas de connexion au serveur. Réessaie.' };
+  }
   try {
     if (Platform.OS === 'web') {
       if (typeof localStorage !== 'undefined') {
@@ -183,14 +193,10 @@ export async function clearWhatsAppStatus(phone?: string): Promise<void> {
     } else {
       await SecureStore.deleteItemAsync(STORAGE_KEY).catch(() => {});
     }
-
-    // Call server to terminate instance on Evolution API and Supabase
-    await authFetchRaw('/api/mobile/whatsapp/instance', {
-      method: 'DELETE',
-    }).catch(() => {});
   } catch (err) {
     console.warn('[whatsappService] Error clearing WhatsApp status:', err);
   }
+  return { success: true };
 }
 
 /**

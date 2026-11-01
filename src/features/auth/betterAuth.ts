@@ -366,7 +366,19 @@ const loadSession = async (): Promise<StudentSession | null> => {
       return { user: result.data.user as StudentSession['user'] };
     }
   } catch (err) {
+    // Network failure: the cached session keeps the app usable offline.
     console.warn('[auth] getSession fetch failed, checking local storage cache:', err);
+  }
+
+  // The API (Bearer token) says whether the stored session is still valid: a 401
+  // (expired, revoked, account deleted) drops the cached identity and the student
+  // signs in again. A network failure keeps the cached session for offline use.
+  const probe = await authFetchRaw('/api/mobile/account').catch(() => null);
+  if (probe && probe.status === 401) {
+    await authStorage.deleteItemAsync('campus-bordes_session_token').catch(() => {});
+    await authStorage.deleteItemAsync('campus-bordes_user').catch(() => {});
+    await authStorage.deleteItemAsync('campus-bordes_better-auth.session_token').catch(() => {});
+    return null;
   }
 
   // Fallback to persisted session in storage
@@ -615,12 +627,12 @@ export const getStudentAccount = async (): Promise<StudentAccount> => {
 };
 
 export const updateStudentProfile = async (input: StudentProfileUpdateInput): Promise<StudentProfile> => {
+  let res: Response;
   try {
-    const res = await authFetch('/api/mobile/account', {
+    res = await authFetchRaw('/api/mobile/account', {
       method: 'PATCH',
       body: JSON.stringify(input),
     });
-    return (await res.json()) as StudentProfile;
   } catch (err) {
     console.warn('[auth] updateStudentProfile fallback to local cache:', err);
     // Offline: merge the provided fields into the cached profile. Never invent an identity.
@@ -639,6 +651,13 @@ export const updateStudentProfile = async (input: StudentProfileUpdateInput): Pr
     await authStorage.setItemAsync('campus-bordes_user', JSON.stringify(updated));
     return updated;
   }
+  // The server answered: a refusal (invalid field, expired session…) is an error, not a
+  // local save the student would believe was sent.
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error || `Erreur serveur (${res.status}).`);
+  }
+  return (await res.json()) as StudentProfile;
 };
 
 /** Ends the onboarding server-side: stores skills for job alerts and triggers the welcome message. */
@@ -667,6 +686,14 @@ export const purchaseIaPack = async (packId: 'micro' | 'standard' | 'boost') =>
     method: 'POST',
     body: JSON.stringify({ packId }),
   })).json() as Promise<{ ok: boolean; balanceCoins: number; iaCredits: number }>;
+
+/** Sign-out: this device stops receiving the account's notifications (best effort). */
+export const unregisterPushToken = async (pushToken: string) => {
+  await authFetchRaw('/api/mobile/notifications/register', {
+    method: 'DELETE',
+    body: JSON.stringify({ pushToken }),
+  }).catch(() => undefined);
+};
 
 export const registerPushToken = async (
   pushToken: string,

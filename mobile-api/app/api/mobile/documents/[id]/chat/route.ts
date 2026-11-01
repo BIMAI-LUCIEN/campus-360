@@ -7,6 +7,7 @@ import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-a
 import { llmRewrite } from '@/lib/llm';
 import { enforceRateLimit } from '@/lib/route-rate-limit';
 import { markCited, retrieveSourcesContext, stripHtml, type Citation } from '@/lib/source-context';
+import { sanitizeHtml, stripCodeFence } from '@/lib/sanitize-html';
 import { HTML_FORMAT_RULE, polishAiTics, stripRepeatedTitle, studentVoiceRules } from '@/lib/writing-rules';
 
 export const runtime = 'nodejs';
@@ -171,7 +172,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         if (!reply) continue;
         if (action !== 'draft_section') return respond(reply);
         const polished = await polishAiTics(reply, llmRewrite);
-        return respond(stripRepeatedTitle(polished.html, currentSectionTitle || ''));
+        // Inserted as HTML in the editor: sanitized here, not only when the section is saved.
+        const draft = sanitizeHtml(stripCodeFence(stripRepeatedTitle(polished.html, currentSectionTitle || '')));
+        if (!draft) continue;
+        return respond(draft);
       } catch {
         // try next model
       }

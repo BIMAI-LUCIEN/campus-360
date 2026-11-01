@@ -10,6 +10,7 @@ import {
   PaymentPackType,
   decideWebhookCredit,
   isMockAllowed,
+  isTestKeyInProduction,
   verifySaspaySignature,
 } from './payment-rules';
 
@@ -159,7 +160,8 @@ export async function initiateMobileMoneyPayment(
   const hasProviderKey = Boolean(saspayApiKey);
   const mockAllowed = isMockAllowed(process.env);
 
-  if (!hasProviderKey && !mockAllowed) {
+  if ((!hasProviderKey && !mockAllowed) || isTestKeyInProduction(process.env)) {
+    if (isTestKeyInProduction(process.env)) console.error('[payments] SASPAY_API_KEY is a test key in production.');
     throw new MobileApiError('Paiement indisponible pour le moment.', 503);
   }
 

@@ -57,3 +57,21 @@ export async function POST(request: NextRequest) {
     return mobileErrorResponse(error);
   }
 }
+
+/** Sign-out: removes this device's token from the signed-in account only. */
+export async function DELETE(request: NextRequest) {
+  try {
+    const access = await requireMobileUser(request);
+    if (access.response) return access.response;
+    const body = await request.json().catch(() => null);
+    const parsed = z.object({ pushToken: z.string().trim().min(8).max(400) }).safeParse(body);
+    if (!parsed.success) throw new MobileApiError('Token de notification invalide.', 400);
+    await databasePool.query(
+      'delete from public.app_user_push_tokens where user_id = $1 and push_token = $2',
+      [access.user.id, parsed.data.pushToken],
+    );
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return mobileErrorResponse(error);
+  }
+}

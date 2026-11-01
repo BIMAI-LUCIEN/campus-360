@@ -271,7 +271,12 @@ export function EditorialInput({
           onBlur={() => setFocused(false)}
         />
         {showPasswordToggle && (
-          <Pressable onPress={onTogglePassword} hitSlop={8}>
+          <Pressable
+            onPress={onTogglePassword}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+          >
             {showPassword ? (
               <EyeOff size={18} color={stitchColors.inkSubtle} />
             ) : (
@@ -635,13 +640,15 @@ export function TopBar({
               style={({ pressed }) => [styles.topBarCreditsPill, pressed && { opacity: 0.85 }]}
             >
               <Coins size={13} color="#FDE047" />
-              <Text style={styles.topBarCreditsText}>{iaCredits} cr</Text>
+              <Text style={styles.topBarCreditsText}>{iaCredits} crédits IA</Text>
             </Pressable>
           )}
 
           <Pressable
             onPress={onBellPress}
-            hitSlop={6}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={hasUnread ? 'Notifications non lues' : 'Notifications'}
             style={({ pressed }) => [styles.topBarIconCircle, pressed && { opacity: 0.8 }]}
           >
             <Bell size={18} color={stitchColors.white} strokeWidth={2} />
@@ -692,6 +699,9 @@ export function TopBar({
           )}
           <Pressable
             onPress={onFilterPress}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={hasActiveFilters ? 'Filtres (actifs)' : 'Filtres'}
             style={({ pressed }) => [
               styles.topBarFilterBtn,
               hasActiveFilters && styles.topBarFilterBtnActive,
@@ -733,7 +743,7 @@ export function WalletCard({
           style={styles.walletIAPill}
         >
           <Sparkles size={11} color={stitchColors.white} strokeWidth={2} />
-          <Text style={styles.walletIAPillText}>{iaCredits} crédits</Text>
+          <Text style={styles.walletIAPillText}>{iaCredits} crédits IA</Text>
         </LinearGradient>
       </View>
 
@@ -860,10 +870,6 @@ export function DocumentGridCard({
       {/* Book cover (Image 1 style) */}
       <View style={[styles.docCover, { backgroundColor: accent.tint }]}>
         {/* Floating rating badge */}
-        <View style={styles.docRatingBadge}>
-          <Text style={styles.docRatingStar}>★</Text>
-          <Text style={styles.docRatingText}>4.8</Text>
-        </View>
 
         <FileText size={28} color={accent.icon} strokeWidth={1.7} />
         <Text style={[styles.docCoverInitials, { color: accent.icon }]}>{initialsOf(subtitle || title)}</Text>

@@ -5,7 +5,7 @@ import test from 'node:test';
 
 import { loadTs } from './helpers/load-ts.mjs';
 
-const { consumeAllowanceOn, allowanceDay } = await loadTs('lib/ai-allowance-core.ts');
+const { consumeAllowanceOn, refundAllowanceOn, allowanceDay } = await loadTs('lib/ai-allowance-core.ts');
 
 const fakeDb = ({ pass = false } = {}) => {
   const rows = new Map();
@@ -72,4 +72,14 @@ test('pdf-chat : quota journalier puis actions gratuites, 402 au-delà', () => {
   assert.ok(route.indexOf('enforceAiQuota(') < route.indexOf('consumeAiAllowance('));
   const lib = fs.readFileSync(path.resolve('lib/ai-allowance.ts'), 'utf8');
   assert.match(lib, /, 402\)/);
+});
+
+test('échec de l’IA : l’action et la question sont rendues', async () => {
+  const db = fakeDb();
+  const first = await consumeAllowanceOn(db, 'u', 'question', now);
+  assert.deepEqual(db.rows.get(`u|${allowanceDay(now)}`), { actions: 1, questions: 1 });
+  await refundAllowanceOn(db, 'u', first);
+  assert.deepEqual(db.rows.get(`u|${allowanceDay(now)}`), { actions: 0, questions: 0 });
+  const pass = await consumeAllowanceOn(fakeDb({ pass: true }), 'u', 'summary', now);
+  assert.equal(pass.counted, undefined);
 });

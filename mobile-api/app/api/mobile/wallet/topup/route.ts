@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { databasePool } from '@/lib/database';
 import { corsPreflight, MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
-import { isMockAllowed } from '@/lib/payment-rules';
+import { isMockAllowed, isTestKeyInProduction } from '@/lib/payment-rules';
 import {
   getSaspayBaseUrl,
   readSaspayError,
@@ -70,7 +70,8 @@ export async function POST(request: NextRequest) {
     const isRealPayment = Boolean(saspayApiKey);
     const mockAllowed = isMockAllowed(process.env);
 
-    if (!isRealPayment && !mockAllowed) {
+    if ((!isRealPayment && !mockAllowed) || isTestKeyInProduction(process.env)) {
+      if (isTestKeyInProduction(process.env)) console.error('[topup] SASPAY_API_KEY is a test key in production.');
       throw new MobileApiError('Paiement indisponible pour le moment.', 503);
     }
 

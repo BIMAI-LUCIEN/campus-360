@@ -112,7 +112,9 @@ export const deleteAccount = async (
     counts.accounts = accRes.rowCount ?? 0;
 
     const verifRes = await client.query(
-      'delete from public."verification" where identifier ilike \'%\' || $1 || \'%\'',
+      `delete from public."verification"
+        where lower(identifier) = lower($1)
+           or right(lower(identifier), length($1) + 1) = '-' || lower($1)`,
       [input.email],
     );
     counts.verifications = verifRes.rowCount ?? 0;

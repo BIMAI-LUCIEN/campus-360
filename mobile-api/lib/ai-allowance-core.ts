@@ -10,7 +10,13 @@ export type AiActionKind = 'summary' | 'sheet' | 'quiz' | 'question';
 export const FREE_ACTIONS = 3;
 export const QUESTIONS_PER_ACTION = 5;
 
-export type Allowance = { allowed: boolean; pass: boolean; remaining: number };
+export type Allowance = {
+  allowed: boolean;
+  pass: boolean;
+  remaining: number;
+  /** What was counted, so a failed AI call can give it back (absent under a Pass). */
+  counted?: { day: string; action: boolean; question: boolean };
+};
 
 // Africa/Douala is UTC+1 all year: the free actions come back at local midnight.
 export const allowanceDay = (now: Date): string => new Date(now.getTime() + 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -47,5 +53,31 @@ export const consumeAllowanceOn = async (
     'update public.app_ai_free_actions set actions = $3, questions = $4 where user_id = $1 and day = $2',
     [userId, day, nextActions, questions + (kind === 'question' ? 1 : 0)],
   );
-  return { allowed: true, pass: false, remaining: FREE_ACTIONS - nextActions };
+  return {
+    allowed: true,
+    pass: false,
+    remaining: FREE_ACTIONS - nextActions,
+    counted: { day, action: opensAction, question: kind === 'question' },
+  };
+};
+
+/** Gives back what `consumeAllowanceOn` counted when the AI could not answer. */
+export const refundAllowanceOn = async (
+  client: AllowanceClient,
+  userId: string,
+  allowance: Allowance,
+): Promise<void> => {
+  const counted = allowance.counted;
+  if (!counted || (!counted.action && !counted.question)) return;
+  const row = await client.query(
+    'select actions, questions from public.app_ai_free_actions where user_id = $1 and day = $2 for update',
+    [userId, counted.day],
+  );
+  if (!row.rows[0]) return;
+  const actions = Number(row.rows[0].actions ?? 0);
+  const questions = Number(row.rows[0].questions ?? 0);
+  await client.query(
+    'update public.app_ai_free_actions set actions = $3, questions = $4 where user_id = $1 and day = $2',
+    [userId, counted.day, Math.max(0, actions - (counted.action ? 1 : 0)), Math.max(0, questions - (counted.question ? 1 : 0))],
+  );
 };

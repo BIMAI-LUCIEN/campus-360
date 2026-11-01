@@ -7,6 +7,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Trash2, X } from 'lucide-react-native';
 
@@ -59,7 +61,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <View style={styles.backdrop}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.backdrop}>
         <View style={styles.card}>
           {/* Header */}
           <View style={styles.header}>
@@ -189,7 +191,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
             </View>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };

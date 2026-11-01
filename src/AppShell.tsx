@@ -58,6 +58,7 @@ import {
   checkTopUpStatus,
   completeStudentOnboarding,
   registerPushToken,
+  unregisterPushToken,
   type AuthCapabilities,
   type StudentProfile,
   type StudentSession,
@@ -343,6 +344,9 @@ export function AppShell() {
   const [authLoading, setAuthLoading] = React.useState(false);
   const [authNotice, setAuthNotice] = React.useState('');
   const [authCapabilities, setAuthCapabilities] = React.useState<AuthCapabilities>({ passwordReset: false, emailOtp: false, google: false });
+  // Sign-up waits for the real capabilities: without them it would skip the e-mail code.
+  const authCapabilitiesLoaded = React.useRef(false);
+  const pushTokenRef = React.useRef<string | null>(null);
   const [authOtp, setAuthOtp] = React.useState('');
   const [otpCooldown, setOtpCooldown] = React.useState(0);
   const [otpContext, setOtpContext] = React.useState<'sign-up' | 'sign-in'>('sign-up');
@@ -411,6 +415,7 @@ export function AppShell() {
         Constants.easConfig?.projectId;
       if (!projectId) return;
       const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
+      pushTokenRef.current = tokenResult.data;
       await registerPushToken(
         tokenResult.data,
         Platform.OS === 'android' ? 'Android Device' : Platform.OS === 'ios' ? 'iOS Device' : 'Web Device',
@@ -543,7 +548,9 @@ export function AppShell() {
 
     restoreSession();
     refreshDocuments(mounted);
-    getAuthCapabilities().then(setAuthCapabilities).catch(() => undefined);
+    getAuthCapabilities()
+      .then((caps) => { authCapabilitiesLoaded.current = true; setAuthCapabilities(caps); })
+      .catch(() => undefined);
 
     return () => { mounted = false; };
   }, []);
@@ -764,6 +771,14 @@ export function AppShell() {
         setAuthNotice(`Si un compte existe pour ${email}, un code à 6 chiffres vient de partir par email.`);
         return;
       }
+      let capabilities = authCapabilities;
+      if (authMode === 'sign-up' && !authCapabilitiesLoaded.current) {
+        capabilities = await getAuthCapabilities().catch(() => {
+          throw new Error('Inscription momentanément indisponible. Vérifie ta connexion et réessaie.');
+        });
+        authCapabilitiesLoaded.current = true;
+        setAuthCapabilities(capabilities);
+      }
       const session =
         authMode === 'sign-in'
           ? await signInStudent(email, password)
@@ -772,7 +787,7 @@ export function AppShell() {
               password,
               name,
               undefined,
-              { requireEmailVerification: Boolean(authCapabilities.emailOtp) },
+              { requireEmailVerification: Boolean(capabilities.emailOtp) },
             );
       if (!session) {
         openOtpStep(email, authMode === 'sign-up' ? 'sign-up' : 'sign-in');
@@ -846,7 +861,7 @@ export function AppShell() {
       await syncStudentAccount(session);
       setAuthVisible(false);
       setActiveSection('home');
-      AppAlert.alert('Connecte', 'Connexion via Google réussie.');
+      AppAlert.alert('Connecté', 'Connexion via Google réussie.');
     } catch (error) {
       AppAlert.alert('Connexion impossible', error instanceof Error ? error.message : 'Réessaie dans un instant.');
     } finally { setAuthLoading(false); }
@@ -859,6 +874,9 @@ export function AppShell() {
   };
 
   const signOutStudent = async () => {
+    // Before the session is cleared: the server only removes the token of this account.
+    if (pushTokenRef.current) await unregisterPushToken(pushTokenRef.current);
+    pushTokenRef.current = null;
     setStudentSession(null);
     await clearStudentSession().catch(() => undefined);
     setStudentProfile(null);
@@ -948,7 +966,7 @@ export function AppShell() {
             } catch {}
             if (statusRes.balanceCoins !== undefined) setBalance(statusRes.balanceCoins);
             await syncStudentAccount(studentSession);
-            AppAlert.alert('Recharge réussie', `${formatCoins(amount)} Coins ajoutés via ${provider}.`);
+            AppAlert.alert('Recharge réussie', `${formatCoins(amount)} FCFA ajoutés via ${provider}.`);
           } else if (statusRes.status === 'failed') {
             clearInterval(pollInterval);
             rechargePollRef.current = null;
@@ -1000,7 +1018,7 @@ export function AppShell() {
     try {
       await Updates.fetchUpdateAsync();
       await Updates.reloadAsync();
-    } catch { AppAlert.alert('Erreur', 'Impossible de télécharger la mise a jour.'); setUpdateLoading(false); }
+    } catch { AppAlert.alert('Erreur', 'Impossible de télécharger la mise à jour.'); setUpdateLoading(false); }
   };
 
   // ── Derived state ────────────────────────────────────────────────────────
@@ -1433,7 +1451,7 @@ export function AppShell() {
                 </Pressable>
               </View>
               <Text style={styles.walletAmount}>{formatCoins(balance)} FCFA</Text>
-              <Text style={styles.walletHint}>Portefeuille prépayé • {iaCredits} crédit{iaCredits > 1 ? 's' : ''} de candidature</Text>
+              <Text style={styles.walletHint}>Portefeuille prépayé • {iaCredits} crédit{iaCredits > 1 ? 's' : ''} IA</Text>
             </View>
             <View style={styles.accountQuickRow}>
               <Pressable style={styles.accountQuickAction} onPress={() => { setAccountVisible(false); openSection('library'); }}>
@@ -1480,7 +1498,7 @@ export function AppShell() {
             </View>
             <View style={styles.walletPanel}>
               <Text style={styles.kicker}>Solde actuel</Text>
-              <Text style={styles.walletAmount}>{formatCoins(balance)} C</Text>
+              <Text style={styles.walletAmount}>{formatCoins(balance)} FCFA</Text>
             </View>
             <View style={{ backgroundColor: stitchColors.emeraldBg, borderRadius: 12, padding: 10, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text style={{ fontSize: 16 }}>💡</Text>
@@ -1498,7 +1516,7 @@ export function AppShell() {
                 const isMin = amount === 500;
                 return (
                   <Pressable key={amount} style={[styles.rechargePreset, active && styles.rechargePresetActive, isMin && { backgroundColor: stitchColors.emeraldBg, borderColor: stitchColors.emeraldTone, borderWidth: 2 }]} onPress={() => setRechargeAmount(String(amount))}>
-                    <Text style={[styles.rechargePresetText, active && styles.rechargePresetTextActive, isMin && { color: stitchColors.emeraldTone, fontWeight: '800' }]}>{isMin ? '✨ ' : ''}{formatCoins(amount)} C{isMin ? ' min' : ''}</Text>
+                    <Text style={[styles.rechargePresetText, active && styles.rechargePresetTextActive, isMin && { color: stitchColors.emeraldTone, fontWeight: '800' }]}>{isMin ? '✨ ' : ''}{formatCoins(amount)} FCFA{isMin ? ' min' : ''}</Text>
                   </Pressable>
                 );
               })}
@@ -1582,7 +1600,7 @@ export function AppShell() {
                     <Text style={{ fontSize: 13, fontWeight: '700', color: stitchColors.sienna }}>Tout effacer</Text>
                   </Pressable>
                 )}
-                <Pressable onPress={() => setNotificationsVisible(false)}>
+                <Pressable onPress={() => setNotificationsVisible(false)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Fermer">
                   <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: `${stitchColors.ink}0D`, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 14, color: stitchColors.inkMuted }}>✕</Text>
                   </View>
@@ -1628,7 +1646,7 @@ export function AppShell() {
             <Pressable style={[styles.dropdownModalCard, { height: '55%', padding: 0 }]} onPress={() => {}}>
               <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: stitchColors.inkFaint, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ fontSize: 20, fontWeight: '800', color: stitchColors.inkSoft }}>Gérer les notifications</Text>
-                <Pressable onPress={() => setNotificationsSettingsVisible(false)}>
+                <Pressable onPress={() => setNotificationsSettingsVisible(false)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Fermer">
                   <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: `${stitchColors.ink}0D`, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 14, color: stitchColors.inkMuted }}>✕</Text>
                   </View>
@@ -1664,7 +1682,7 @@ export function AppShell() {
             <Pressable style={[styles.dropdownModalCard, { height: '85%', padding: 0 }]} onPress={() => {}}>
               <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: stitchColors.inkFaint, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ fontSize: 20, fontWeight: '800', color: stitchColors.inkSoft }}>Sécurité</Text>
-                <Pressable onPress={() => setSecuritySettingsVisible(false)}>
+                <Pressable onPress={() => setSecuritySettingsVisible(false)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Fermer">
                   <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: `${stitchColors.ink}0D`, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 14, color: stitchColors.inkMuted }}>✕</Text>
                   </View>
@@ -1693,7 +1711,7 @@ export function AppShell() {
             <Pressable style={[styles.dropdownModalCard, { padding: 0 }]} onPress={() => {}}>
               <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: stitchColors.inkFaint, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ fontSize: 20, fontWeight: '800', color: stitchColors.inkSoft }}>Support Client</Text>
-                <Pressable onPress={() => setSupportModalVisible(false)}>
+                <Pressable onPress={() => setSupportModalVisible(false)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Fermer">
                   <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: `${stitchColors.ink}0D`, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 14, color: stitchColors.inkMuted }}>✕</Text>
                   </View>

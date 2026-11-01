@@ -10,6 +10,7 @@ const {
   verifySaspaySignature,
   decideWebhookCredit,
   isMockAllowed,
+  isTestKeyInProduction,
 } = rules;
 
 const BASE_URL = (process.env.BASE_URL || 'http://localhost:3002').replace(/\/$/, '');
@@ -86,6 +87,13 @@ test('decideWebhookCredit : règles strictes de crédit, rejeu et rejet de monta
     decideWebhookCredit({ status: 'pending', amount_coins: 1000 }, { amount: 1000, success: false, failed: false }),
     'ignore-already-processed',
   );
+});
+
+test('isTestKeyInProduction : clé sk_test_ refusée en production seulement', () => {
+  assert.equal(isTestKeyInProduction({ NODE_ENV: 'production', SASPAY_API_KEY: 'sk_test_abc' }), true);
+  assert.equal(isTestKeyInProduction({ NODE_ENV: 'production', SASPAY_API_KEY: 'sk_live_abc' }), false);
+  assert.equal(isTestKeyInProduction({ NODE_ENV: 'development', SASPAY_API_KEY: 'sk_test_abc' }), false);
+  assert.equal(isTestKeyInProduction({ NODE_ENV: 'production' }), false);
 });
 
 test('isMockAllowed : interdiction formelle en production et si clé SasPay configurée', () => {

@@ -1,4 +1,4 @@
-import { consumeAllowanceOn, type AiActionKind, type Allowance } from './ai-allowance-core';
+import { consumeAllowanceOn, refundAllowanceOn, type AiActionKind, type Allowance } from './ai-allowance-core';
 import { databasePool } from './database';
 import { MobileApiError } from './mobile-access';
 
@@ -17,6 +17,21 @@ export const consumeAiAllowance = async (userId: string, kind: AiActionKind): Pr
   } catch (error) {
     await client.query('rollback').catch(() => undefined);
     throw error;
+  } finally {
+    client.release();
+  }
+};
+
+/** Gives the action back when the AI failed: the student only pays for an answer. */
+export const refundAiAllowance = async (userId: string, allowance: Allowance): Promise<void> => {
+  const client = await databasePool.connect();
+  try {
+    await client.query('begin');
+    await refundAllowanceOn(client, userId, allowance);
+    await client.query('commit');
+  } catch (error) {
+    await client.query('rollback').catch(() => undefined);
+    console.error('[ai-allowance] refund failed:', error);
   } finally {
     client.release();
   }

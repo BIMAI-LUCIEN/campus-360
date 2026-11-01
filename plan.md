@@ -6,6 +6,7 @@
 
 ---
 ## Reprise
+- **Module 31 (audit app mobile, lots 2 à 5) :** 31.1 à 31.23 `[X]` le 2026-11-01 (typecheck app, mobile-api, recruiter-web 0 ; mobile-api 369 pass / 0 fail / 20 skip ; lint:colors 147, baseline abaissée ; expo-web : suivi en chargement puis erreur, profil en initiales). Non vérifié sur téléphone. Migration 0027 à appliquer au déploiement.
 - **Tâche en cours :** 27.6 et 27.7 `[~]` (code écrit, parcours navigateur à faire) ; 27.1 à 27.5 validées le 2026-10-30.
 - **Prochaine (Module 27) :** migration 0023 appliquée le 2026-10-30 (avec 0024_pricing_v2, venue d'un autre chantier : ne plus modifier ce fichier). Poser `ADMIN_SERVICE_SECRET` et `MOBILE_API_INTERNAL_URL` dans les `.env.local` locaux, puis parcours navigateur 27.6 (admin) et 27.7 (`expo-web-local`, 375 px) avec des sessions ouvertes par l'utilisateur, puis 27.8. `lint:colors` échoue sur `DocumentsScreen.tsx` (+4, commit `65679ce`, hors Module 27).
 - **Module 28 (modèle économique v2) :** exécuté le 2026-10-30 : 28.1 à 28.7 et 28.13 `[X]` ; 28.8 à 28.12 `[!]` (interface écrite et typée, parcours navigateur à faire avec une session étudiante ; 0024 déjà appliquée). Suite : `/test-and-verify` 28.8–28.11. Points ouverts : `documents/generate` et `generate-full` encore sur les crédits IA (`aiCost`, gratuit pendant le lancement) ; frais passerelle et coût IA à vérifier ; `lint:colors` en échec sur `DocumentsScreen.tsx` (15 > 11, déjà dans HEAD) ; rien n'est commité.
@@ -3233,6 +3234,41 @@ Source : `contexte.md` §20 (cadrage validé le 2026-10-31, voie Bounded). Aujou
   - **DoD :** `npm test` (mobile-api) 0 fail ; typecheck ×2 code 0 ; `lint:colors` sans hausse ; `/test-and-verify` VERIFIED sur 30.4, 30.5 et 30.8 (ou PARTIEL avec la raison) ; coût noté. 🔒 Commit, déploiement VPS et mise à jour OTA par l'utilisateur.
 
 ---
+
+## 🧭 MODULE 31 : Correctifs de l'audit de l'app mobile du 2026-11-01 (lots 2 à 5)
+
+Source : `docs/audit-mobile-2026-11-01.md` (lot 1 livré, commits `63c5887` et `43df95c`). Décisions du 2026-11-01 : SasPay gardé ; PDF gratuits ; crédits IA (`ia_credits`) conservés tels quels ; récompense de contribution 50 coins ; statut d'une candidature mis à jour par les réponses (WhatsApp détecté automatiquement, sinon déclaré par l'étudiant, puisque les réponses e-mail arrivent dans sa boîte).
+
+### Lot 2 : argent
+- [X] **Tâche 31.1 : Recharge créditée sur le montant réel** — `wallet/topup/[reference]` ne crédite par polling que si le fournisseur renvoie un montant égal ; sinon on attend le webhook signé.
+- [X] **Tâche 31.2 : Identifiants d'achat stables** — `purchaseId` (offres) et `generationId` (atelier) gardés pour une même intention, réutilisés sur les nouvelles tentatives ; garde anti double tap par ref.
+- [X] **Tâche 31.3 : Recharge présélectionnée sur le prix de l'offre** — `PaymentModal` présélectionne le plus petit pack ≥ montant demandé.
+- [X] **Tâche 31.4 : Clé SasPay de test refusée en production.**
+- [X] **Tâche 31.5 : IA de l'éditeur fail-closed et remboursée** — `documents/ai` : erreur de base → 503 ; échec IA → crédit rendu et erreur 503, plus de prompt renvoyé comme résultat.
+- [X] **Tâche 31.6 : Quota IA PDF consommé après succès** — `ai/pdf-chat` rembourse l'action si l'IA échoue.
+- [X] **Tâche 31.7 : Une seule unité affichée** — « coins » pour le wallet ; plus de « C », « cr », « F ».
+
+### Lot 3 : suivi des candidatures
+- [X] **Tâche 31.8 : Statuts de candidature en base sans DDL au runtime** — migration 0027 (SENT_PENDING, DELIVERED, FAILED, WITHDRAWN), suppression des `ALTER TYPE` et du repli `[Status: X]`.
+- [X] **Tâche 31.9 : Envoi idempotent** — refus 409 si la candidature est déjà SENT_PENDING ou DELIVERED ; un renvoi ne réécrase pas un dossier clos.
+- [X] **Tâche 31.10 : L'étudiant déclare la suite** (réponse reçue, entretien, acceptée, refusée) — route PATCH sur ses candidatures, boutons dans le détail.
+- [X] **Tâche 31.11 : Réponse WhatsApp du recruteur détectée** — webhook Evolution (`MESSAGES_UPSERT`, secret) → statut « réponse reçue » + notification. Actif dès que `EVOLUTION_WEBHOOK_SECRET` est posé et le webhook reposé sur les instances existantes (fait au déploiement du 2026-11-01, voir journal).
+- [X] **Tâche 31.12 : Notifications de statut** — push `application_status` sur DELIVERED, FAILED, réponse reçue.
+- [X] **Tâche 31.13 : Notes et relances enregistrées côté serveur** — notes et `last_reminded_at` persistés ; relance enregistrée après l'envoi ; éligibilité J+7 tenant compte de la dernière relance.
+- [X] **Tâche 31.14 : Écran de suivi fiable** — chargement distinct du vide, liste gardée si un rafraîchissement échoue, progression correcte pour SENT_PENDING/DELIVERED/FAILED, copier qui copie vraiment, déconnexion WhatsApp honnête.
+
+### Lot 4 : sécurité
+- [X] **Tâche 31.15 : Éditeur et aperçus isolés** — `draft_section` assaini côté serveur, nettoyage client par le même sanitizer, `iframe sandbox`.
+- [X] **Tâche 31.16 : PDF non publiés inaccessibles** — filtre de statut dans `signed-url` et `stream` ; `pdf-viewer.html` sans `innerHTML` d'URL.
+- [X] **Tâche 31.17 : Données et entrées** — e-mail retiré du lien de partage, destinataire d'une offre importée affiché avant l'envoi, corps IA bornés.
+- [X] **Tâche 31.18 : Session et inscription** — session expirée purgée (401), faux succès de profil supprimé, inscription bloquée tant que les capacités d'auth ne sont pas chargées.
+- [X] **Tâche 31.19 : Compte** — suppression : égalité exacte sur l'e-mail, cookie `__Secure-` effacé ; jeton push non réattribuable et retiré à la déconnexion.
+
+### Lot 5 : design et textes
+- [X] **Tâche 31.20 : Modales lisibles sur petit écran** — clavier et défilement (`PaymentModal`, `DeleteAccountModal`, `AppAlert`, `SelectWithOther`, `ZoneQuestionSheet`, offre externe, profil express) ; Toast sous la barre d'état.
+- [X] **Tâche 31.21 : Plus de données inventées** — note ★ 4.8, « partenaire vérifié », score 98 %, photos de locaux, « Douala / 3 à 6 mois », « Lucien Miguel », badge « Vérifié », écoles fictives des filtres.
+- [X] **Tâche 31.22 : Accessibilité** — cibles ≥ 44 px (boutons ✕, envoi), libellés d'accessibilité, contrastes des badges de statut.
+- [X] **Tâche 31.23 : Textes** — accents, tutoiement partout, restes d'anglais.
 
 ## Journal d'exécution
 **[2026-10-23] Tâche 26.5 validée (execute / test-and-verify)** — Intégration Checkout Nyole durcie et fiabilisée : ouverture in-app du checkout officiel (`WebBrowser.openBrowserAsync`), polling en arrière-plan avec fermeture automatique dès confirmation (`WebBrowser.dismissBrowser()`), support multi-formats de signature Nyole (hex direct et `v1=`), persistance du `failure_message` et indication explicite du code USSD de validation `#150*50#` pour Orange Money Cameroun. 9/9 tests `payments.test.mjs` passés, `tsc --noEmit` 0 erreur.

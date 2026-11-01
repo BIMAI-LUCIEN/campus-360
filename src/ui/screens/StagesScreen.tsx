@@ -395,10 +395,10 @@ export function StagesScreen({
   };
 
   const handleShareReferral = (job: StageJob) => {
-    AppAlert.alert(
-      'Lien de Partage Copié ! 🎁',
-      `Partage cette offre avec tes contacts :\nhttps://campus360.app/stages/${job.id}?ref=${studentProfile.email || 'etudiant'}\n\nDès l'inscription d'un ami, vous gagnez chacun 1 jeton IA gratuit !`
-    );
+    const company = job.company?.name ? ` chez ${job.company.name}` : '';
+    void Share.share({
+      message: `Offre de stage « ${job.title} »${company}, à retrouver dans l'app Campus 360 : https://campus360b.site`,
+    }).catch(() => undefined);
   };
 
   const enrichedJobs = useMemo(() => {
@@ -612,7 +612,7 @@ export function StagesScreen({
           </View>
         ) : (
           displayedJobs.map((job, index) => {
-            const matchScore = job.matchScore || 75;
+            const matchScore = job.matchScore || 0;
             const companyInitials = job.company?.name
               ? job.company.name.slice(0, 2).toUpperCase()
               : 'CP';
@@ -684,7 +684,7 @@ export function StagesScreen({
                   <View style={styles.metaRow}>
                     <MapPin size={12} color={stitchColors.inkMuted} style={{ marginRight: 4 }} />
                     <Text style={styles.metaText}>
-                      {job.location || 'Douala'} · {job.duration || '3 à 6 mois'}
+                      {[job.location, job.duration].filter(Boolean).join(' · ') || 'Lieu et durée à préciser'}
                     </Text>
                   </View>
                   {addedLabel ? (
@@ -818,45 +818,6 @@ export function StagesScreen({
 
               {/* Detail Content Container */}
               <View style={styles.detailContent}>
-                {/* Feature 2: Horizontal Workspace Photo Strip */}
-                <View style={styles.workspaceSection}>
-                  <Text style={styles.workspaceTitle}>Espaces de travail &amp; Locaux</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.workspaceRow}
-                  >
-                    {getWorkspacePhotos(selectedDetailJob).slice(0, 3).map((photoUri, pIdx) => (
-                      <Pressable
-                        key={pIdx}
-                        testID={`workspace-photo-${pIdx}`}
-                        style={styles.workspaceThumbBox}
-                        onPress={() => setSelectedPreviewPhoto(photoUri)}
-                      >
-                        <Image source={{ uri: photoUri }} style={styles.workspaceThumbImg} resizeMode="cover" />
-                      </Pressable>
-                    ))}
-                    {getWorkspacePhotos(selectedDetailJob).length >= 4 && (
-                      <Pressable
-                        testID="workspace-photo-more"
-                        style={styles.workspaceThumbBox}
-                        onPress={() => setSelectedPreviewPhoto(getWorkspacePhotos(selectedDetailJob)[3])}
-                      >
-                        <Image
-                          source={{ uri: getWorkspacePhotos(selectedDetailJob)[3] }}
-                          style={styles.workspaceThumbImg}
-                          resizeMode="cover"
-                        />
-                        <View style={styles.workspaceOverlay}>
-                          <Text style={styles.workspaceOverlayText}>
-                            +{Math.max(1, getWorkspacePhotos(selectedDetailJob).length - 3)} photos
-                          </Text>
-                        </View>
-                      </Pressable>
-                    )}
-                  </ScrollView>
-                </View>
-
                 {/* Feature 3: Domain Pill Badge & AI Match Rating Badge */}
                 <View style={styles.detailBadgesRow}>
                   <View style={styles.domainPill}>
@@ -869,7 +830,7 @@ export function StagesScreen({
                   <View style={styles.aiMatchPill}>
                     <Star size={12} color={stitchColors.emeraldTone} fill={stitchColors.emeraldTone} style={{ marginRight: 4 }} />
                     <Text style={styles.aiMatchPillText}>
-                      ★ {selectedDetailJob.matchScore || detailMatch?.score || 95}% Match
+                      ★ {selectedDetailJob.matchScore || detailMatch?.score || 0}% Match
                     </Text>
                   </View>
                 </View>
@@ -902,7 +863,7 @@ export function StagesScreen({
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
                         <MapPin size={12} color={stitchColors.inkMuted} />
                         <Text style={styles.detailCompanyLocation} numberOfLines={1}>
-                          {selectedDetailJob.location || selectedDetailJob.company?.address || 'Douala, Cameroun'}
+                          {selectedDetailJob.location || selectedDetailJob.company?.address || 'Lieu à préciser'}
                         </Text>
                       </View>
                     </View>
@@ -981,21 +942,14 @@ export function StagesScreen({
                     <Clock size={16} color={stitchColors.sienna} />
                     <Text style={styles.metadataCardLabel}>Durée</Text>
                     <Text style={styles.metadataCardValue} numberOfLines={1}>
-                      🏃 {selectedDetailJob.duration || '3 à 6 mois'}
+                      🏃 {selectedDetailJob.duration || 'À préciser'}
                     </Text>
                   </View>
                   <View style={styles.metadataCard}>
                     <MapPin size={16} color={stitchColors.sienna} />
-                    <Text style={styles.metadataCardLabel}>Mode</Text>
+                    <Text style={styles.metadataCardLabel}>Lieu</Text>
                     <Text style={styles.metadataCardValue} numberOfLines={1}>
-                      📍 {selectedDetailJob.location ? 'Présentiel' : 'Présentiel'}
-                    </Text>
-                  </View>
-                  <View style={styles.metadataCard}>
-                    <CheckCircle2 size={16} color={stitchColors.emeraldTone} />
-                    <Text style={styles.metadataCardLabel}>Statut</Text>
-                    <Text style={[styles.metadataCardValue, { color: stitchColors.emeraldTone }]} numberOfLines={1}>
-                      🕒 Ouvert
+                      📍 {selectedDetailJob.location || 'À préciser'}
                     </Text>
                   </View>
                 </View>
@@ -1076,8 +1030,8 @@ export function StagesScreen({
                     <View style={styles.detailSection}>
                       <Text style={styles.detailSectionTitle}>À propos de l'entreprise</Text>
                       <Text style={styles.detailDescriptionText}>
-                        {selectedDetailJob.company?.name || 'Entreprise'} est un employeur partenaire vérifié sur la plateforme Campus 360.
-                        {selectedDetailJob.company?.industry ? ` Évoluant dans le secteur "${selectedDetailJob.company.industry}", cette organisation offre un environnement d'apprentissage dynamique et formateur.` : ''}
+                        {selectedDetailJob.company?.name || "L'entreprise"} publie cette offre sur Campus 360.
+                        {selectedDetailJob.company?.industry ? ` Secteur : ${selectedDetailJob.company.industry}.` : ''}
                       </Text>
                     </View>
 
@@ -1089,7 +1043,9 @@ export function StagesScreen({
                         <View style={{ flex: 1 }}>
                           <Text style={styles.kybTitle}>Audit &amp; Fiabilité KYB</Text>
                           <Text style={styles.kybSubtitle}>
-                            Score de conformité : {selectedDetailJob.company?.kybScore ?? 98}% · Entreprise validée
+                            {typeof selectedDetailJob.company?.kybScore === 'number'
+                              ? `Score de conformité : ${selectedDetailJob.company.kybScore} %`
+                              : 'Vérification de l’entreprise non encore faite'}
                           </Text>
                         </View>
                       </View>
@@ -1100,7 +1056,7 @@ export function StagesScreen({
                       <View style={styles.companyAddressRow}>
                         <MapPin size={15} color={stitchColors.inkMuted} />
                         <Text style={styles.companyAddressText}>
-                          {selectedDetailJob.company?.address || selectedDetailJob.location || 'Douala, Cameroun'}
+                          {selectedDetailJob.company?.address || selectedDetailJob.location || 'Adresse non communiquée'}
                         </Text>
                       </View>
                     </View>
@@ -1117,7 +1073,7 @@ export function StagesScreen({
                           <Text style={styles.aiAdviceBannerTitle}>Analyse d'Affinité IA</Text>
                         </View>
                         <Text style={styles.aiAdviceScoreBadge}>
-                          {detailMatch?.score || 95}% de compatibilité
+                          {detailMatch?.score ?? 0}% de compatibilité
                         </Text>
                       </View>
                       <Text style={styles.aiAdviceHeadline}>

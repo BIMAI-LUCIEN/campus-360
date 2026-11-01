@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View, KeyboardAvoidingView, Platform } from 'react-native';
 import { Check, ChevronDown, PenLine, Search, X } from 'lucide-react-native';
 
 import { fontFamilies, stitchColors } from '../theme/stitch';
@@ -86,6 +86,7 @@ export function SelectWithOther({
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <Pressable style={styles.backdrop} onPress={close}>
           <View style={styles.sheet} onStartShouldSetResponder={() => true}>
             <View style={styles.sheetHeader}>
@@ -162,6 +163,7 @@ export function SelectWithOther({
             )}
           </View>
         </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

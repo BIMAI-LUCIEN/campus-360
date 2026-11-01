@@ -3,7 +3,8 @@ import { timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { notifyAdmin } from '@/lib/automations';
+import { notifyAdmin, notifyApplicationStatus } from '@/lib/automations';
+import { BLOCKS_RESEND } from '@/lib/application-rules';
 import {
   mobileErrorResponse,
   requireMobileUser,
@@ -18,6 +19,7 @@ import {
   dispatchStageApplicationRecord,
   ensureStageStudent,
   getApplicationOwner,
+  getStudentApplicationStatus,
   getStageJob,
   type StageStatus,
   updateApplicationDispatchStatus,
@@ -40,7 +42,7 @@ const dispatchSchema = z.object({
   channel: z.enum(['whatsapp', 'email']),
   whatsappPitch: z.string().trim().max(10_000).optional(),
   letterText: z.string().trim().max(50_000).optional(),
-  cvPdfBase64: z.string().trim().optional(),
+  cvPdfBase64: z.string().trim().max(8_000_000, 'CV trop volumineux.').optional(),
   cvPdfUrl: z.preprocess((val) => (typeof val === 'string' && val.trim() === '' ? undefined : val), z.string().trim().url().optional()),
   studentNotes: z.string().trim().max(5_000).optional(),
   studentName: z.string().trim().max(200).optional(),
@@ -155,6 +157,16 @@ export async function POST(request: NextRequest) {
     const missingTarget = missingDispatchTarget(input.channel, { phone: targetPhone, email: targetEmail });
     if (missingTarget) {
       return withCors(NextResponse.json({ error: missingTarget }, { status: 422 }), request);
+    }
+
+    // One automatic send per offer: an application already sent or answered is not
+    // sent (nor paid) a second time.
+    const existingStatus = await getStudentApplicationStatus(studentId, input.jobId);
+    if (existingStatus && BLOCKS_RESEND.includes(existingStatus)) {
+      return withCors(
+        NextResponse.json({ error: 'Ta candidature à cette offre est déjà envoyée. Retrouve-la dans ton suivi.' }, { status: 409 }),
+        request,
+      );
     }
 
     // Pay-per-action: debited once per offer, given back below if delivery fails.
@@ -348,9 +360,10 @@ export async function PATCH(request: NextRequest) {
     if (!updated) {
       return withCors(NextResponse.json({ error: 'Candidature introuvable.' }, { status: 404 }), request);
     }
+    if (updated.changed) await notifyApplicationStatus(updated.id, updated.status);
 
     // Automation 4: admin alert when the delivery pipeline reports a failure.
-    if (parsed.data.status === 'FAILED') {
+    if (parsed.data.status === 'FAILED' && updated.changed) {
       const owner = await getApplicationOwner(parsed.data.applicationId).catch(() => null);
       if (owner) {
         await refundStageApplication(owner.userId, owner.jobId).catch((refundErr) => {

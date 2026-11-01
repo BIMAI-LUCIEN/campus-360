@@ -131,6 +131,14 @@ export const decideWebhookCredit = (
 };
 
 /**
+ * A SasPay test key (`sk_test_…`) credits coins without real money: refused in production.
+ */
+export const isTestKeyInProduction = (env: Record<string, string | undefined>): boolean => {
+  const isProd = env.NODE_ENV === 'production' || env.VERCEL_ENV === 'production';
+  return isProd && Boolean(env.SASPAY_API_KEY?.trim().startsWith('sk_test_'));
+};
+
+/**
  * Mock payments are strictly forbidden in production or when SasPay credentials are set.
  */
 export const isMockAllowed = (env: Record<string, string | undefined>): boolean => {

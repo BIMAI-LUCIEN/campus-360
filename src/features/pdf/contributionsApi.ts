@@ -118,7 +118,7 @@ export const uploadContribution = async (
       else if (xhr.status === 404) reject(new Error(UPDATE_REQUIRED));
       else reject(new Error(payload?.error || `Envoi impossible (${xhr.status}). Réessayez.`));
     };
-    xhr.onerror = () => reject(new Error('Connexion impossible. Vérifiez votre réseau et réessayez.'));
+    xhr.onerror = () => reject(new Error('Connexion impossible. Vérifie ton réseau et réessaie.'));
     xhr.ontimeout = () => reject(new Error('L’envoi a pris trop de temps. Réessayez avec une meilleure connexion.'));
     xhr.send(form);
   });
@@ -129,7 +129,7 @@ export const listContributions = async (): Promise<Contribution[]> => {
   try {
     res = await authFetchRawAt(mobileApiBaseUrl, '/api/mobile/contributions');
   } catch {
-    throw new Error('Connexion impossible. Vérifiez votre réseau et réessayez.');
+    throw new Error('Connexion impossible. Vérifie ton réseau et réessaie.');
   }
   if (!res.ok) throw new Error(await readError(res, `Chargement impossible (${res.status}).`));
   return ((await res.json()) as { uploads: Contribution[] }).uploads;

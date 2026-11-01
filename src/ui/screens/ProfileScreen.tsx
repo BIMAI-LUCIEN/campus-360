@@ -50,8 +50,13 @@ import { publicEnv } from '../../config/env';
 const formatCoins = (value: number) =>
   new Intl.NumberFormat('fr-CM', { maximumFractionDigits: 0 }).format(value);
 
-const DEFAULT_AVATAR =
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80';
+const initialsOf = (name?: string | null) =>
+  (name || '')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || '?';
 
 interface ProfileScreenProps {
   studentProfile: StudentProfile | null;
@@ -336,15 +341,21 @@ export function ProfileScreen({
         {/* ── 2. Carte d'Identité Étudiant Clean White ─────────────────── */}
         <View style={styles.profileCard}>
           <View style={styles.profileHeaderRow}>
-            <Image
-              source={{ uri: (studentProfile as any)?.avatarUrl || DEFAULT_AVATAR }}
-              style={styles.avatarImage}
-              resizeMode="cover"
-            />
+            {(studentProfile as any)?.avatarUrl ? (
+              <Image
+                source={{ uri: (studentProfile as any).avatarUrl }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={[styles.avatarImage, styles.avatarInitials]} accessibilityLabel="Photo de profil">
+                <Text style={styles.avatarInitialsText}>{initialsOf(studentProfile?.name)}</Text>
+              </View>
+            )}
             <View style={{ flex: 1, paddingLeft: 14 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Text style={styles.studentName} numberOfLines={1}>
-                  {studentProfile?.name || 'Lucien Miguel'}
+                  {studentProfile?.name || 'Ton nom [à compléter]'}
                 </Text>
                 <View style={styles.premiumBadge}>
                   <Shield size={11} color={stitchColors.primary} />
@@ -514,6 +525,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  avatarInitials: { alignItems: 'center', justifyContent: 'center', backgroundColor: stitchColors.siennaBg },
+  avatarInitialsText: { fontSize: 22, fontWeight: '800', color: stitchColors.siennaDeep },
   avatarImage: {
     width: 56,
     height: 56,

@@ -593,8 +593,8 @@ export function AiApplyModal({
         appliedAt: new Date().toISOString(),
         message:
           mailResult === 'sent'
-            ? 'Candidature envoyée depuis votre messagerie, CV et lettre joints.'
-            : 'Candidature ouverte dans votre messagerie (joignez votre CV).',
+            ? 'Candidature envoyée depuis ta messagerie, CV et lettre joints.'
+            : 'Candidature ouverte dans ta messagerie (joins ton CV).',
         companyName: job.company?.name || 'Entreprise Partenaire',
         jobTitle: job.title,
       });
@@ -613,7 +613,7 @@ export function AiApplyModal({
         channel: 'inapp',
         status: 'PENDING',
         appliedAt: new Date().toISOString(),
-        message: 'Candidature enregistrée dans votre suivi.',
+        message: 'Candidature enregistrée dans ton suivi.',
         companyName: job?.company?.name || 'Entreprise Partenaire',
         jobTitle: job?.title || 'Offre de stage',
       });
@@ -778,7 +778,7 @@ export function AiApplyModal({
                 <View style={styles.loadingOrb}>
                   <ActivityIndicator size="large" color={stitchColors.primary} />
                 </View>
-                <Text style={styles.loadingTitle}>Préparation de votre dossier</Text>
+                <Text style={styles.loadingTitle}>Préparation de ton dossier</Text>
                 <Text style={styles.loadingSubtitle}>{progressMsg}</Text>
 
                 {matchAnalysis && (
@@ -1091,7 +1091,13 @@ export function AiApplyModal({
                     <Text style={styles.subHintText}>
                       {CONTACT_UNAVAILABLE} pour ce canal : {selectedChannel === 'whatsapp' ? 'pas de numéro WhatsApp' : "pas d'adresse e-mail"}. Tu peux enregistrer la candidature dans ton suivi.
                     </Text>
-                  ) : null}
+                  ) : (
+                    // The recipient is always shown before sending: for an imported offer it was
+                    // read from a poster or a text and must be checked by the student.
+                    <Text style={styles.recipientText} numberOfLines={2}>
+                      Destinataire : {selectedChannel === 'whatsapp' ? `+${companyWhatsapp(job?.company)}` : companyEmail(job?.company)}
+                    </Text>
+                  )}
                   {selectedChannel === 'whatsapp' ? (
                     <View style={styles.oneClickBox}>
                       {/* TEMPORAIREMENT AJUSTÉ en attendant l'API officielle WhatsApp Cloud :
@@ -1127,7 +1133,7 @@ export function AiApplyModal({
                         </Pressable>
                       </View>
                       <Text style={styles.subHintText}>
-                        Votre candidature et votre pitch sont pré-remplis pour un envoi sécurisé via votre application WhatsApp officielle.
+                        Ta candidature et ton message sont pré-remplis : l'envoi se fait depuis ton application WhatsApp.
                       </Text>
                     </View>
                   ) : (
@@ -1317,6 +1323,7 @@ export function AiApplyModal({
       <PaymentModal
         visible={showPaymentModal}
         defaultPhone={currentProfile.phoneWhatsapp || ''}
+        minimumAmount={Math.max(0, applyPrice - (balanceCoins ?? 0))}
         reasonMessage={`Candidature (${job ? applyPriceLabel(job) : ''}). Recharge ton portefeuille Mobile Money pour continuer.`}
         onClose={() => setShowPaymentModal(false)}
         onPaymentSuccess={async () => {
@@ -2113,6 +2120,7 @@ const styles = StyleSheet.create({
     color: stitchColors.sienna,
     marginBottom: 8,
   },
+  recipientText: { fontSize: 13, fontWeight: '700', color: stitchColors.ink, marginBottom: 10 },
   subHintText: {
     fontFamily: fontFamilies.inter,
     fontSize: 10.5,

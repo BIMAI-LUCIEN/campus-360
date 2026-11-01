@@ -34,6 +34,7 @@ import {
   copyToClipboard,
   cleanPhoneNumber,
 } from './whatsappService';
+import { AppAlert } from '../../ui/AppAlert';
 
 export interface WhatsAppPairingModalProps {
   visible: boolean;
@@ -173,8 +174,8 @@ export function WhatsAppPairingModal({
   const handleCopyCode = async () => {
     if (!rawCode) return;
     const cleanCode = rawCode.replace(/[^a-zA-Z0-9]/g, '');
-    const success = await copyToClipboard(cleanCode);
-    if (success) {
+    const result = await copyToClipboard(cleanCode);
+    if (result === 'copied') {
       setCopied(true);
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
       copyTimeoutRef.current = setTimeout(() => {
@@ -189,7 +190,7 @@ export function WhatsAppPairingModal({
     try {
       const connected = await verifyConnection(phone);
       if (!connected) {
-        setErrorMessage("Le jumelage n'est pas encore finalisé sur votre téléphone WhatsApp.");
+        setErrorMessage("Le jumelage n'est pas encore finalisé sur ton téléphone.");
       }
     } finally {
       setIsCheckingManual(false);
@@ -197,10 +198,21 @@ export function WhatsAppPairingModal({
   };
 
   // Disconnect handler
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
+    AppAlert.alert('Déconnecter WhatsApp ?', "Les envois 1-clic par WhatsApp ne marcheront plus jusqu'au prochain jumelage.", [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Déconnecter', style: 'destructive', onPress: () => void disconnect() },
+    ]);
+  };
+
+  const disconnect = async () => {
     stopPolling();
     const clean = cleanPhoneNumber(phone);
-    await clearWhatsAppStatus(clean);
+    const result = await clearWhatsAppStatus(clean);
+    if (!result.success) {
+      setErrorMessage(result.error || "WhatsApp n'a pas pu être déconnecté.");
+      return;
+    }
     setStep('idle');
     setRawCode('');
     setLinkedAt(null);
@@ -262,7 +274,7 @@ export function WhatsAppPairingModal({
 
                 <Text style={styles.connectedCardTitle}>Compte WhatsApp prêt pour l'envoi</Text>
                 <Text style={styles.connectedCardDesc}>
-                  Vos candidatures aux offres de stage et votre CV seront envoyés
+                  Tes candidatures aux offres de stage et ton CV seront envoyés
                   directement en arrière-plan via ce compte sans ouvrir d'application externe.
                 </Text>
 
@@ -308,8 +320,8 @@ export function WhatsAppPairingModal({
                 <View style={styles.explanationBox}>
                   <ShieldCheck size={18} color={stitchColors.sienna} strokeWidth={2} />
                   <Text style={styles.explanationText}>
-                    Associez votre compte WhatsApp en 30 secondes pour expédier vos CV officiels et
-                    pitchs personnalisés directement aux recruteurs en 1 clic.
+                    Associe ton compte WhatsApp en 30 secondes pour envoyer tes CV et
+                    messages personnalisés aux recruteurs en 1 clic.
                   </Text>
                 </View>
 
@@ -411,7 +423,7 @@ export function WhatsAppPairingModal({
                     </View>
                     <View style={styles.stepContent}>
                       <Text style={styles.stepHeading}>Ouvrez WhatsApp</Text>
-                      <Text style={styles.stepDesc}>Sur votre smartphone avec le numéro +{cleanPhoneNumber(phone)}</Text>
+                      <Text style={styles.stepDesc}>Sur ton téléphone avec le numéro +{cleanPhoneNumber(phone)}</Text>
                     </View>
                   </View>
 
@@ -446,7 +458,7 @@ export function WhatsAppPairingModal({
                   <View style={styles.pollingTextBox}>
                     <Text style={styles.pollingTitle}>Détection automatique en cours…</Text>
                     <Text style={styles.pollingSub}>
-                      L'application détecte la connexion dès que vous saisissez le code sur WhatsApp.
+                      L'application détecte la connexion dès que tu saisis le code sur WhatsApp.
                     </Text>
                   </View>
                 </View>

@@ -86,6 +86,7 @@ export type StageApplication = {
   generatedCvText?: string;
   generatedLetterText?: string;
   lastRemindedAt?: string;
+  statusUpdatedAt?: string;
   job?: StageJob;
   notes?: string;
   officialCv?: OfficialCvData;

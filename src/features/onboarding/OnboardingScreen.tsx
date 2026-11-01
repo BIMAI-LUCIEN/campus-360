@@ -101,8 +101,8 @@ const SLIDES: Slide[] = [
   {
     folio: '— 02',
     eyebrow: 'CHAPITRE 02',
-    title: 'Preview puis achat',
-    body: "Feuilletez un extrait gratuit avant d'acheter. Pas de surprise — vous voyez exactement ce que vous payez.",
+    title: 'Lecture gratuite',
+    body: "Tous les PDF se lisent gratuitement. Tu ne paies que ce que tu choisis : candidatures, rédaction, Pass Révision.",
     visual: (
       <View style={vs.previewVisual}>
         <View style={vs.previewLeft}>
@@ -130,7 +130,7 @@ const SLIDES: Slide[] = [
     folio: '— 03',
     eyebrow: 'CHAPITRE 03',
     title: 'Lis et révise',
-    body: 'Accédez à vos achats dans votre bibliothèque personnelle. Téléchargez pour le mode hors-ligne et révisez à votre rythme.',
+    body: 'Retrouve tes PDF dans ta bibliothèque personnelle, télécharge-les pour le mode hors ligne et révise à ton rythme.',
     visual: (
       <View style={vs.readVisual}>
         <View style={vs.bookLeft}>

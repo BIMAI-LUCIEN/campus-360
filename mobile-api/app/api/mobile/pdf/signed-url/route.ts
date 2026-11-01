@@ -33,7 +33,8 @@ const requireEnv = (name: string) => {
   return value;
 };
 
-// Reading every PDF is free (contexte.md §19); only the AI on a PDF is limited.
+// Reading every PDF of the catalogue is free (contexte.md §19); only the AI on a PDF is limited.
+// An archived PDF (withdrawn from the catalogue) is not served, as in the catalogue listing.
 const canReadFullDocument = async (_document: CatalogDocument, _user: MobileUser) => true;
 
 const normalizeStoragePath = (storedPath: string, bucket: string, supabaseUrl: URL) => {
@@ -85,7 +86,8 @@ export async function POST(request: NextRequest) {
     const result = await databasePool.query<CatalogDocument>(
       `select id, price_coins, always_free, file_path, preview_path
        from public.documents
-       where id = $1 or file_path = $1 or preview_path = $1
+       where (id::text = $1 or file_path = $1 or preview_path = $1)
+         and coalesce(status, 'published') <> 'archived'
        limit 1`,
       [lookupValue],
     );

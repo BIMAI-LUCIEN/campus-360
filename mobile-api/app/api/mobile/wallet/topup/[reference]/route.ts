@@ -175,15 +175,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
         const statusData = (await statusRes.json()) as {
           status?: string;
-          data?: { status?: string };
+          amount?: number | string;
+          data?: { status?: string; amount?: number | string };
         };
         const rawStatus = String(statusData.data?.status || statusData.status || '').toUpperCase();
 
         if (rawStatus === 'SUCCESS') {
           providerStatus = 'success';
           providerPaid = true;
-          // verify ne renvoie pas le montant : on compare au montant de la transaction locale.
-          providerAmount = Number(transaction.amount_coins);
+          // Le montant payé, quand verify le renvoie, doit être celui de la transaction :
+          // un écart la passe en échec ci-dessous. Sans montant, la session de paiement
+          // a été créée côté serveur avec le prix du pack (le client ne le choisit pas).
+          const paidAmount = Number(statusData.data?.amount ?? statusData.amount);
+          providerAmount = Number.isFinite(paidAmount) && paidAmount > 0 ? paidAmount : Number(transaction.amount_coins);
         } else if (rawStatus === 'FAILED' || rawStatus === 'CANCELLED') {
           providerStatus = 'failed';
           providerPaid = false;

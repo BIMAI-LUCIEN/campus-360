@@ -1,4 +1,4 @@
-import { consumeAiAllowance } from '@/lib/ai-allowance';
+import { consumeAiAllowance, refundAiAllowance } from '@/lib/ai-allowance';
 import { enforceAiQuota } from '@/lib/ai-quota';
 import { buildZoneUserContent, parsePdfZone, PdfZoneError, visionModelsToTry, ZONE_SYSTEM_RULE, type PdfZone } from '@/lib/pdf-zone';
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,10 +10,17 @@ import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limi
 
 const bodySchema = z
   .object({
-    question: z.string().optional().default('Explique ce cours'),
+    question: z.string().max(4_000).optional().default('Explique ce cours'),
     // What the student asked for: counted against the 3 free AI actions of the day.
     action: z.enum(['summary', 'sheet', 'quiz', 'question']).optional().default('question'),
-    pdfContext: z.any().optional(),
+    // Extracted text of the PDF, cut to what the model is given anyway.
+    pdfContext: z
+      .any()
+      .optional()
+      .transform((value) => (typeof value === 'string' ? value.slice(0, 60_000) : value))
+      .refine((value) => value === undefined || typeof value === 'string' || JSON.stringify(value).length <= 60_000, {
+        message: 'Contexte trop long.',
+      }),
     // Zone circled on a page (Module 30), checked by parsePdfZone.
     zone: z.unknown().optional(),
     messages: z
@@ -21,10 +28,11 @@ const bodySchema = z
         z
           .object({
             role: z.string().optional().default('user'),
-            content: z.string().optional().default(''),
+            content: z.string().max(8_000).optional().default(''),
           })
           .passthrough(),
       )
+      .max(40)
       .optional()
       .default([]),
   })
@@ -55,10 +63,10 @@ export async function POST(request: NextRequest) {
 
     const raw = (await request.json().catch(() => ({}))) as unknown;
     const parsed = bodySchema.safeParse(raw);
-    const { question, pdfContext, messages, action } = parsed.success
-      ? parsed.data
-      : { question: 'Explique ce cours', pdfContext: '', messages: [], action: 'question' as const };
-    const rawZone = parsed.success ? parsed.data.zone : undefined;
+    // An invalid or oversized request is refused, never answered as another question.
+    if (!parsed.success) throw new MobileApiError('Question trop longue ou invalide.', 400);
+    const { question, pdfContext, messages, action } = parsed.data;
+    const rawZone = parsed.data.zone;
     let zone: PdfZone | null = null;
     if (rawZone !== undefined && rawZone !== null) {
       try {
@@ -68,9 +76,14 @@ export async function POST(request: NextRequest) {
         throw error;
       }
     }
-    const allowance = await consumeAiAllowance(userId, action);
-
     const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      return withCors(
+        NextResponse.json({ error: "L'assistant est indisponible pour le moment." }, { status: 503 }),
+        request,
+      );
+    }
+    const allowance = await consumeAiAllowance(userId, action);
 
     let contextStr = '';
     if (typeof pdfContext === 'string') {
@@ -125,13 +138,6 @@ export async function POST(request: NextRequest) {
       },
     ];
 
-    if (!apiKey) {
-      return withCors(
-        NextResponse.json({ error: "L'assistant est indisponible pour le moment." }, { status: 503 }),
-        request,
-      );
-    }
-
     const preferredModel = process.env.OPENROUTER_MODEL || CANDIDATE_MODELS[0];
     const modelsToTry = zone
       ? visionModelsToTry(process.env.OPENROUTER_MODEL)
@@ -154,6 +160,7 @@ export async function POST(request: NextRequest) {
             temperature: 0.4,
             max_tokens: 1500,
           }),
+          signal: AbortSignal.timeout(60_000),
         });
 
         if (!response.ok) {
@@ -184,6 +191,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.warn('[ai/pdf-chat] All AI models failed:', lastError);
+    await refundAiAllowance(userId, allowance);
     const unavailable = zone
       ? "L'IA ne peut pas lire cette zone pour le moment. Réessaie dans un instant."
       : "L'assistant est indisponible pour le moment.";

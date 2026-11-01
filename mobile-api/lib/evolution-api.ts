@@ -105,6 +105,33 @@ export function formatPairingCode(code: string): string {
 }
 
 /**
+ * Webhook of a student instance. With EVOLUTION_WEBHOOK_SECRET set, events go to the API
+ * (connection state and recruiters' replies, `app/api/mobile/whatsapp/events`); without it,
+ * only the connection state goes to n8n as before.
+ */
+export function studentWebhookConfig() {
+  const secret = process.env.EVOLUTION_WEBHOOK_SECRET?.trim();
+  if (!secret) {
+    return {
+      enabled: true,
+      url: 'https://n8n.blackcompany.site/webhook/evolution-connection-update',
+      byEvents: false,
+      base64: false,
+      events: ['CONNECTION_UPDATE'],
+    };
+  }
+  const apiUrl = (process.env.MOBILE_API_PUBLIC_URL?.trim() || 'https://api.campus360b.site').replace(/\/+$/, '');
+  return {
+    enabled: true,
+    url: `${apiUrl}/api/mobile/whatsapp/events`,
+    headers: { 'x-campus360-secret': secret },
+    byEvents: false,
+    base64: false,
+    events: ['CONNECTION_UPDATE', 'MESSAGES_UPSERT'],
+  };
+}
+
+/**
  * Ensures an instance exists on Evolution API.
  * POST /instance/create
  */
@@ -149,13 +176,7 @@ export async function createInstance(instanceName: string): Promise<EvolutionIns
             apikey: apiKey,
           },
           body: JSON.stringify({
-            webhook: {
-              enabled: true,
-              url: 'https://n8n.blackcompany.site/webhook/evolution-connection-update',
-              byEvents: false,
-              base64: false,
-              events: ['CONNECTION_UPDATE'],
-            },
+            webhook: studentWebhookConfig(),
           }),
         }).catch(() => null);
       } catch (_) {}
@@ -185,13 +206,7 @@ export async function createInstance(instanceName: string): Promise<EvolutionIns
             apikey: apiKey,
           },
           body: JSON.stringify({
-            webhook: {
-              enabled: true,
-              url: 'https://n8n.blackcompany.site/webhook/evolution-connection-update',
-              byEvents: false,
-              base64: false,
-              events: ['CONNECTION_UPDATE'],
-            },
+            webhook: studentWebhookConfig(),
           }),
         }).catch(() => null);
       } catch (_) {}

@@ -55,6 +55,7 @@ export function WritingWorkshopModal({
   const [writtenChapters, setWrittenChapters] = useState<number[]>([]);
   const [busyChapter, setBusyChapter] = useState<number | null>(null);
   const generationId = React.useRef('');
+  const generationKey = React.useRef('');
   const outline = Array.isArray(templateReport?.table_of_contents) ? templateReport!.table_of_contents : [];
 
   // "Utiliser ce plan": start from the reference report's field and plan.
@@ -121,11 +122,16 @@ export function WritingWorkshopModal({
 
   const handleGenerate = () => {
     if (!topic.trim()) {
-      AppAlert.alert('Champs requis', 'Veuillez renseigner le thème ou sujet principal.');
+      AppAlert.alert('Champs requis', 'Indique le thème ou le sujet principal.');
       return;
     }
-    // One id per document: the plan, the report and every chapter share it.
-    generationId.current = `${docType}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    // One id per document: the plan, the report and every chapter share it. Regenerating
+    // the plan of the same subject keeps it, so a report already paid is not paid twice.
+    const key = `${docType}|${topic.trim().toLowerCase()}`;
+    if (!generationId.current || generationKey.current !== key) {
+      generationId.current = `${docType}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      generationKey.current = key;
+    }
     setWrittenChapters([]);
     setIsGenerating(true);
     void (async () => {
@@ -165,8 +171,9 @@ export function WritingWorkshopModal({
 
   const handleCopy = async () => {
     if (!generatedDoc) return;
-    const ok = await copyToClipboard(generatedDoc);
-    AppAlert.alert(ok ? 'Copié' : 'Copie impossible', ok ? 'Le document est dans le presse-papier.' : 'Sélectionne le texte pour le copier.');
+    const result = await copyToClipboard(generatedDoc);
+    if (result === 'copied') AppAlert.alert('Copié', 'Le document est dans le presse-papier.');
+    else if (result === 'failed') AppAlert.alert('Copie impossible', 'Sélectionne le texte pour le copier.');
   };
 
   return (

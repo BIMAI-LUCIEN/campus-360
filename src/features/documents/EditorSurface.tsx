@@ -6,6 +6,15 @@ import { stitchColors } from '../../theme/stitch';
 
 // Hosts an HTML page (editor, preview, style sample): a WebView on the phone,
 // an iframe on the web. `injectJavaScript` runs code inside the page.
+//
+// On the web the iframe is sandboxed (scripts only, no same-origin): a script that
+// slipped into a document cannot read the app's session. The page receives the
+// injected code by postMessage through the bridge added below.
+const WEB_BRIDGE =
+  '<script>window.addEventListener("message",function(e){if(e.source===window.parent&&e.data&&typeof e.data.__c360Inject==="string"){(0,eval)(e.data.__c360Inject);}});</script>';
+
+const withWebBridge = (html: string) =>
+  /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, (head) => head + WEB_BRIDGE) : WEB_BRIDGE + html;
 
 export type EditorSurfaceHandle = {
   injectJavaScript: (script: string) => void;
@@ -35,7 +44,7 @@ export const EditorSurface = React.forwardRef<EditorSurfaceHandle, EditorSurface
     React.useImperativeHandle(forwardedRef, () => ({
       injectJavaScript(script: string) {
         if (Platform.OS === 'web') {
-          (iframeRef.current?.contentWindow as any)?.eval(script);
+          iframeRef.current?.contentWindow?.postMessage({ __c360Inject: script }, '*');
           return;
         }
         nativeRef.current?.injectJavaScript(script);
@@ -45,7 +54,8 @@ export const EditorSurface = React.forwardRef<EditorSurfaceHandle, EditorSurface
     if (Platform.OS === 'web') {
       return React.createElement('iframe', {
         ref: iframeRef,
-        srcDoc: html,
+        srcDoc: withWebBridge(html),
+        sandbox: 'allow-scripts allow-modals allow-popups allow-downloads',
         title: 'Éditeur WYSIWYG Campus 360',
         style: {
           width: '100%',

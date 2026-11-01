@@ -224,13 +224,15 @@ export async function DELETE(request: NextRequest) {
     );
 
     const res = NextResponse.json({ success: true, whatsapp: result.whatsapp });
-    res.cookies.set('better-auth.session_token', '', {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-      expires: new Date(0),
-    });
+    for (const name of ['better-auth.session_token', '__Secure-better-auth.session_token']) {
+      res.cookies.set(name, '', {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: name.startsWith('__Secure-') || process.env.NODE_ENV === 'production',
+        path: '/',
+        expires: new Date(0),
+      });
+    }
     return withCors(res, request);
   } catch (error) {
     return withCors(mobileErrorResponse(error, request), request);

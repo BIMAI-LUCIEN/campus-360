@@ -69,7 +69,7 @@ export function ExternalOfferModal({ visible, onClose, onOfferReady }: ExternalO
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={stitchComponents.modalBackdrop}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={stitchComponents.modalBackdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>Une offre vue ailleurs</Text>

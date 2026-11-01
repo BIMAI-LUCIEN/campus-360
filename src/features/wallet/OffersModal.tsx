@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { stitchColors, stitchComponents } from '../../theme/stitch';
@@ -6,6 +6,7 @@ import {
   fetchOffers,
   formatOfferDate,
   InsufficientBalanceError,
+  newPurchaseId,
   purchaseOffer,
   type Offer,
   type OfferCode,
@@ -31,6 +32,8 @@ export function OffersModal({ visible, onClose, focus = 'all', reasonMessage, on
   const [buying, setBuying] = useState<OfferCode | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [topUpFor, setTopUpFor] = useState<Offer | null>(null);
+  const buyingRef = useRef(false);
+  const pendingPurchaseIds = useRef<Partial<Record<OfferCode, string>>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,19 +55,27 @@ export function OffersModal({ visible, onClose, focus = 'all', reasonMessage, on
   }, [visible, load]);
 
   const buy = async (offer: Offer) => {
-    if (buying) return;
+    if (buying || buyingRef.current) return;
+    buyingRef.current = true;
     setBuying(offer.code);
     setError(null);
     setNotice(null);
+    // Same id until this purchase succeeds or is refused: a retry after a lost
+    // response cannot buy the pack twice.
+    const purchaseId = (pendingPurchaseIds.current[offer.code] ??= newPurchaseId());
     try {
-      const next = await purchaseOffer(offer.code);
+      const next = await purchaseOffer(offer.code, purchaseId);
+      delete pendingPurchaseIds.current[offer.code];
       setState(next);
       setNotice(`${offer.label} activé. Solde restant : ${formatFcfa(next.balance)}.`);
       onPurchased?.(next);
     } catch (err) {
-      if (err instanceof InsufficientBalanceError) setTopUpFor(offer);
-      else setError(err instanceof Error ? err.message : "L'achat n'a pas abouti.");
+      if (err instanceof InsufficientBalanceError) {
+        delete pendingPurchaseIds.current[offer.code];
+        setTopUpFor(offer);
+      } else setError(err instanceof Error ? err.message : "L'achat n'a pas abouti.");
     } finally {
+      buyingRef.current = false;
       setBuying(null);
     }
   };
@@ -142,6 +153,7 @@ export function OffersModal({ visible, onClose, focus = 'all', reasonMessage, on
       <PaymentModal
         visible={Boolean(topUpFor)}
         onClose={() => setTopUpFor(null)}
+        minimumAmount={topUpFor?.priceCoins}
         reasonMessage={topUpFor ? `Recharge ton solde pour prendre « ${topUpFor.label} » (${formatFcfa(topUpFor.priceCoins)}).` : undefined}
         onPaymentSuccess={() => {
           const offer = topUpFor;

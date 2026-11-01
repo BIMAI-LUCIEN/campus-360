@@ -108,7 +108,7 @@ export function EditorAiChat({
         const message =
           err instanceof Error && err.message !== 'Network request failed'
             ? err.message
-            : 'Connexion impossible. Vérifiez votre réseau et réessayez.';
+            : 'Connexion impossible. Vérifie ton réseau et réessaie.';
         setMessages((prev) => [...prev, { role: 'assistant', content: message, error: true }]);
       } finally {
         setLoading(false);

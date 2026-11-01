@@ -17,7 +17,7 @@ const loadStagesDb = async (query) => {
     on() {},
     connect: async () => ({ query: async () => ({ rows: [] }), release() {} }),
   };
-  const mod = await loadTsWithPackages('lib/stages-db.ts', ['lib/database.ts', 'lib/db-ssl.ts', 'lib/free-launch.ts', 'lib/stage-pricing.ts']);
+  const mod = await loadTsWithPackages('lib/stages-db.ts', ['lib/database.ts', 'lib/db-ssl.ts', 'lib/free-launch.ts', 'lib/stage-pricing.ts', 'lib/application-rules.ts', 'lib/mobile-error.ts']);
   return { mod, calls };
 };
 

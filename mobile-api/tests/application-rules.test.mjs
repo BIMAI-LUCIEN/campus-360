@@ -6,7 +6,7 @@ import test from 'node:test';
 import { loadTs } from './helpers/load-ts.mjs';
 
 const rules = await loadTs('lib/application-rules.ts');
-const { canStudentSetStatus } = rules;
+const { canStudentSetStatus, canDispatchSetStatus, isFollowupDue } = rules;
 
 const BASE_URL = (process.env.BASE_URL || 'http://localhost:3002').replace(/\/$/, '');
 const serverUp = await fetch(`${BASE_URL}/api/health`, { signal: AbortSignal.timeout(3000) }).then(
@@ -15,12 +15,18 @@ const serverUp = await fetch(`${BASE_URL}/api/health`, { signal: AbortSignal.tim
 );
 const NO_SERVER = serverUp ? false : `serveur injoignable sur ${BASE_URL}`;
 
-test('canStudentSetStatus : seul WITHDRAWN est autorisé depuis un statut actif', () => {
-  // Avancement interdit à l'étudiant
-  assert.equal(canStudentSetStatus('PENDING', 'ACCEPTED'), false);
-  assert.equal(canStudentSetStatus('PENDING', 'INTERVIEW'), false);
-  assert.equal(canStudentSetStatus('REVIEWING', 'ACCEPTED'), false);
-  assert.equal(canStudentSetStatus('PENDING', 'REJECTED'), false);
+test('canStudentSetStatus : retrait depuis un statut actif, suite déclarée par l’étudiant', () => {
+  // L'étudiant déclare la réponse reçue, l'entretien, l'acceptation ou le refus
+  assert.equal(canStudentSetStatus('DELIVERED', 'REVIEWING'), true);
+  assert.equal(canStudentSetStatus('SENT_PENDING', 'INTERVIEW'), true);
+  assert.equal(canStudentSetStatus('INTERVIEW', 'ACCEPTED'), true);
+  assert.equal(canStudentSetStatus('PENDING', 'REJECTED'), true);
+  assert.equal(canStudentSetStatus('ACCEPTED', 'REJECTED'), true);
+  // Pas de suite sur un envoi échoué ou retiré, pas de retour en attente
+  assert.equal(canStudentSetStatus('FAILED', 'INTERVIEW'), false);
+  assert.equal(canStudentSetStatus('WITHDRAWN', 'ACCEPTED'), false);
+  assert.equal(canStudentSetStatus('INTERVIEW', 'PENDING'), false);
+  assert.equal(canStudentSetStatus('INTERVIEW', 'INTERVIEW'), false);
 
   // Retrait autorisé depuis les statuts en cours / en attente
   assert.equal(canStudentSetStatus('PENDING', 'WITHDRAWN'), true);
@@ -33,6 +39,23 @@ test('canStudentSetStatus : seul WITHDRAWN est autorisé depuis un statut actif'
   assert.equal(canStudentSetStatus('ACCEPTED', 'WITHDRAWN'), false);
   assert.equal(canStudentSetStatus('REJECTED', 'WITHDRAWN'), false);
   assert.equal(canStudentSetStatus('WITHDRAWN', 'WITHDRAWN'), false);
+});
+
+test('canDispatchSetStatus : un retour de livraison ne réécrit pas une suite déclarée', () => {
+  assert.equal(canDispatchSetStatus('SENT_PENDING', 'DELIVERED'), true);
+  assert.equal(canDispatchSetStatus('SENT_PENDING', 'FAILED'), true);
+  assert.equal(canDispatchSetStatus('INTERVIEW', 'DELIVERED'), false);
+  assert.equal(canDispatchSetStatus('ACCEPTED', 'FAILED'), false);
+  assert.equal(canDispatchSetStatus('DELIVERED', 'REVIEWING'), true);
+  assert.equal(canDispatchSetStatus('REJECTED', 'REVIEWING'), false);
+});
+
+test('isFollowupDue : J+7 après l’envoi puis après la dernière relance', () => {
+  const now = new Date('2026-11-10T00:00:00Z');
+  assert.equal(isFollowupDue('DELIVERED', '2026-11-01T00:00:00Z', null, now), true);
+  assert.equal(isFollowupDue('DELIVERED', '2026-11-01T00:00:00Z', '2026-11-08T00:00:00Z', now), false);
+  assert.equal(isFollowupDue('INTERVIEW', '2026-10-01T00:00:00Z', null, now), false);
+  assert.equal(isFollowupDue('SENT_PENDING', '2026-11-05T00:00:00Z', null, now), false);
 });
 
 test('Garde de source : direct-reach/route.ts utilise getStageJob et scraped-reports est protégé', () => {
@@ -60,7 +83,7 @@ test('Garde de source : direct-reach/route.ts utilise getStageJob et scraped-rep
 });
 
 test(
-  'HTTP : PATCH /api/mobile/stages/applications { status: ACCEPTED } renvoie 400',
+  'HTTP : PATCH /api/mobile/stages/applications sans session renvoie 401',
   { skip: NO_SERVER },
   async () => {
     // Sans session -> 401

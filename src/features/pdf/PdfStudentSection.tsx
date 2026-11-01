@@ -95,10 +95,10 @@ const getPackBadges = (pack: CampusPdfPack) => {
 
   if (pack.packType === 'exam_prep') badges.push('Ideal examen');
   if (pack.packType === 'semester') badges.push('Base semestre');
-  if (pack.packType === 'corrections') badges.push('Revision rapide');
+  if (pack.packType === 'corrections') badges.push('Révision rapide');
   if (pack.discountPercent >= 15) badges.push(`-${pack.discountPercent}%`);
   if (pack.documentCount >= 3) badges.push('Multi PDF');
-  if (!badges.length) badges.push('Selection IA');
+  if (!badges.length) badges.push('Sélection IA');
 
   return badges.slice(0, 3);
 };
@@ -133,7 +133,7 @@ const getDocumentBadges = (document: CampusDocument) => {
   if (document.alwaysFree || document.price === 0) badges.push('Gratuit');
   if (document.aiDifficulty === 'easy') badges.push('Accessible');
   if (document.aiDifficulty === 'medium') badges.push('Bon niveau');
-  if (document.aiDifficulty === 'hard') badges.push('Niveau avance');
+  if (document.aiDifficulty === 'hard') badges.push('Niveau avancé');
   if (document.quiz?.length) badges.push('Quiz IA');
   if (!badges.length) badges.push('Sélection');
 
@@ -271,49 +271,26 @@ export function PdfStudentSection({
 
   const subjects = useMemo(() => {
     const fromDocs = uniqueOptions(publishedDocuments.map((d) => d.subject)).filter(s => s !== 'Tous');
-    const defaults = [
-      'Algorithmique et Programmation C', 'Algèbre Linéaire', 'Analyse Mathématique',
-      'Bases de Données (SQL)', 'Réseaux & Télécommunications', 'Mécanique du Point',
-      'Électrostatique & Circuits', 'Chimie Générale & Organique', 'Biologie Cellulaire',
-      'Anatomie & Embryologie', 'Biochimie Médicale', 'Microéconomie', 'Macroéconomie',
-      'Comptabilité Générale (SYSCOHADA)', 'Statistiques Descriptives', 'Droit Constitutionnel',
-      'Introduction au Droit', 'Droit Civil (Personnes & Famille)', 'Culture Générale Concours'
-    ];
-    return ['Tous', ...Array.from(new Set([...fromDocs, ...defaults]))];
+    // Only values present in the catalogue: an option without any PDF would lead nowhere.
+    return ['Tous', ...fromDocs];
   }, [publishedDocuments]);
 
   const universities = useMemo(() => {
     const fromDocs = uniqueOptions(publishedDocuments.map((d) => d.university)).filter(u => u !== 'Tous');
-    const defaults = [
-      'Université de Yaoundé I', 'Université de Douala', 'Université de Yaoundé II (Soa)',
-      'Université de Dschang', 'ENSPY (Polytechnique Yaoundé)', 'ENSPD (Polytechnique Douala)',
-      'FMSB (Médecine Yaoundé)', 'FMSP (Médecine Douala)', 'ENS Yaoundé', 'ENS Maroua',
-      'IUT de Douala', 'IUT Bandjoun', 'ENAM', 'ESSEC Douala', 'Université de Buea',
-      'Université de Bamenda', 'Université de Ngaoundéré', 'Université de Maroua'
-    ];
-    return ['Tous', ...Array.from(new Set([...fromDocs, ...defaults]))];
+    // Only values present in the catalogue: an option without any PDF would lead nowhere.
+    return ['Tous', ...fromDocs];
   }, [publishedDocuments]);
 
   const faculties = useMemo(() => {
     const fromDocs = uniqueOptions(publishedDocuments.map((d) => d.faculty)).filter(f => f !== 'Tous');
-    const defaults = [
-      'Faculté des Sciences (FS)', 'Génie Informatique & Logiciel', 'Génie Électrique & Télécoms',
-      'Génie Civil & Mécanique', 'Médecine & Sciences Biomédicales', 'Sciences Économiques et Gestion (FSEG)',
-      'Sciences Juridiques et Politiques (FSJP)', 'IUT Filières Industrielles & Tertiaires',
-      'Sciences de l\'Éducation (ENS)', 'Administration & Magistrature (ENAM)',
-      'Management & Commerce (ESSEC)', 'Agronomie (FASA)'
-    ];
-    return ['Tous', ...Array.from(new Set([...fromDocs, ...defaults]))];
+    // Only values present in the catalogue: an option without any PDF would lead nowhere.
+    return ['Tous', ...fromDocs];
   }, [publishedDocuments]);
 
   const levels = useMemo(() => {
     const fromDocs = uniqueOptions(publishedDocuments.map((d) => d.level)).filter(l => l !== 'Tous');
-    const defaults = [
-      'Licence 1 (Niveau 1)', 'Licence 2 (Niveau 2)', 'Licence 3 (Niveau 3)',
-      'Concours', 'Master 1', 'Master 2', 'Niveau 1 Ingénieur', 'Niveau 1 Médecine',
-      'DUT 1ère année', 'DUT 2ème année', 'Cycle Ingénieur'
-    ];
-    return ['Tous', ...Array.from(new Set([...fromDocs, ...defaults]))];
+    // Only values present in the catalogue: an option without any PDF would lead nowhere.
+    return ['Tous', ...fromDocs];
   }, [publishedDocuments]);
 
   const visibleDocuments = useMemo(() => {
@@ -843,7 +820,7 @@ export function PdfStudentSection({
             <Text style={[styles.bodyMuted, { marginTop: 6 }]}>
               {visiblePacks.length} packs · écon. potentielle {formatCoins(
                 Math.max(0, visiblePacks.reduce((sum, pack) => sum + Math.max(0, pack.originalPrice - pack.price), 0)),
-              )} C
+              )} FCFA
             </Text>
           </View>
           {featuredPack ? (
@@ -902,7 +879,7 @@ export function PdfStudentSection({
                     <Text style={styles.cardTitle} numberOfLines={2}>{pack.title}</Text>
                     <View style={[styles.priceBadge, owned ? styles.priceBadgeOwned : styles.priceBadgeBuy]}>
                       <Text style={[styles.priceBadgeText, owned ? styles.priceBadgeTextOwned : styles.priceBadgeTextBuy]}>
-                        {owned ? 'Acheté' : `${formatCoins(pack.price)} C`}
+                        {owned ? 'Acheté' : `${formatCoins(pack.price)} FCFA`}
                       </Text>
                     </View>
                   </View>
@@ -946,7 +923,7 @@ export function PdfStudentSection({
               <Text style={styles.progressMeta}>
                 {owned
                   ? `${readCount}/${pack.documentCount} PDF lus`
-                  : `Economie: ${formatCoins(savings)} C`}
+                  : `Économie : ${formatCoins(savings)} FCFA`}
               </Text>
 
               {/* Actions */}
@@ -958,7 +935,7 @@ export function PdfStudentSection({
                   ]}
                   onPress={() => setSelectedPack(pack)}
                 >
-                  <Text style={styles.btnSecondaryText}>{inLibrary ? 'Contenu' : 'Details'}</Text>
+                  <Text style={styles.btnSecondaryText}>{inLibrary ? 'Contenu' : 'Détails'}</Text>
                 </Pressable>
                 <Pressable
                   disabled={purchasing}
@@ -1029,7 +1006,7 @@ export function PdfStudentSection({
                   {/* Badges */}
                   <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: owned ? stitchColors.emerald : stitchColors.sienna, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
                     <Text style={{ color: stitchColors.paper, fontSize: 10, fontWeight: 'bold' }}>
-                      {owned ? 'Acquis' : (document.price === 0 || document.alwaysFree ? FREE_LABEL : `${formatCoins(document.price)} C`)}
+                      {owned ? 'Acquis' : (document.price === 0 || document.alwaysFree ? FREE_LABEL : `${formatCoins(document.price)} FCFA`)}
                     </Text>
                   </View>
                 </View>
@@ -1107,7 +1084,7 @@ export function PdfStudentSection({
                           <Text style={styles.cardMeta}>{doc.pageCount} pages — {doc.subject}</Text>
                         </View>
                         <Text style={docOwned ? styles.ownedMini : styles.priceMini}>
-                          {docOwned ? '— OK' : `${formatCoins(doc.price)} C`}
+                          {docOwned ? '— OK' : `${formatCoins(doc.price)} FCFA`}
                         </Text>
                       </Pressable>
                     );
@@ -1122,7 +1099,7 @@ export function PdfStudentSection({
                   {purchasedPackIds.includes(selectedPack.id) || purchasingPackId === selectedPack.id ? (
                     <View style={[styles.btnPrimary, purchasedPackIds.includes(selectedPack.id) ? styles.btnOwned : styles.btnDisabled]}>
                       <Text style={styles.btnPrimaryText}>
-                        {purchasedPackIds.includes(selectedPack.id) ? 'Déjà acheté' : `${formatCoins(selectedPack.price)} Coins`}
+                        {purchasedPackIds.includes(selectedPack.id) ? 'Déjà acheté' : `${formatCoins(selectedPack.price)} FCFA`}
                       </Text>
                     </View>
                   ) : (
@@ -1136,7 +1113,7 @@ export function PdfStudentSection({
                         end={brandGradient.horizontal.end}
                         style={styles.btnPrimary}
                       >
-                        <Text style={styles.btnPrimaryText}>{`${formatCoins(selectedPack.price)} Coins`}</Text>
+                        <Text style={styles.btnPrimaryText}>{`${formatCoins(selectedPack.price)} FCFA`}</Text>
                       </LinearGradient>
                     </Pressable>
                   )}
@@ -1362,7 +1339,7 @@ export function PdfStudentSection({
                           <Sparkles size={14} color={$.sienna} />
                         </View>
                         <View style={[styles.assistantBubble, { backgroundColor: $.surface, borderWidth: 1, borderColor: $.line }]}>
-                          <Text style={{ color: $.soft, fontSize: 13, fontStyle: 'italic' }}>L'IA reflechit...</Text>
+                          <Text style={{ color: $.soft, fontSize: 13, fontStyle: 'italic' }}>L'IA réfléchit...</Text>
                         </View>
                       </View>
                     )}
@@ -1469,7 +1446,7 @@ export function PdfStudentSection({
                 <Text style={styles.eyebrow}>Filtres PDF</Text>
                 <View style={styles.rule} />
                 <Text style={[styles.editorialTitle, { fontSize: 18 }]}>Affiner la recherche</Text>
-                <Text style={[styles.bodyMuted, { marginTop: 4 }]}>Affiche seulement les PDF qui collent a ton besoin.</Text>
+                <Text style={[styles.bodyMuted, { marginTop: 4 }]}>Affiche seulement les PDF qui collent à ton besoin.</Text>
               </View>
               <Pressable style={styles.filterSheetClose} onPress={() => setFiltersVisible(false)}>
                 <Text style={styles.filterSheetCloseText}>×</Text>
@@ -1490,7 +1467,7 @@ export function PdfStudentSection({
 
             <View style={styles.sheetActions}>
               <Pressable style={styles.btnSecondary} onPress={resetFilters}>
-                <Text style={styles.btnSecondaryText}>Reinitialiser</Text>
+                <Text style={styles.btnSecondaryText}>Réinitialiser</Text>
               </Pressable>
               <Pressable style={styles.btnPrimary} onPress={() => setFiltersVisible(false)}>
                 <Text style={styles.btnPrimaryText}>Afficher</Text>

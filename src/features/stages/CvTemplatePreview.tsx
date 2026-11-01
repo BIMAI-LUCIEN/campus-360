@@ -34,10 +34,11 @@ export function CvTemplatePreview({ cv, template }: CvTemplatePreviewProps) {
       {!html ? null : Platform.OS === 'web'
         ? React.createElement('iframe', {
             srcDoc: html,
+            sandbox: '',
             title: 'Aperçu du CV',
             style: { width: '100%', height: '100%', border: 0, backgroundColor: stitchColors.white },
           })
-        : <WebView originWhitelist={['*']} source={{ html }} style={{ flex: 1, backgroundColor: stitchColors.white }} />}
+        : <WebView originWhitelist={['*']} javaScriptEnabled={false} source={{ html }} style={{ flex: 1, backgroundColor: stitchColors.white }} />}
     </View>
   );
 }

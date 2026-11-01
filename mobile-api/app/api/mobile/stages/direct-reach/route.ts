@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null);
     const parsed = directReachSchema.safeParse(body);
     if (!parsed.success) {
-      throw new MobileApiError('Identifiant d offre invalide.', 400);
+      throw new MobileApiError('Identifiant d’offre invalide.', 400);
     }
 
     const { jobId, customNotes } = parsed.data;

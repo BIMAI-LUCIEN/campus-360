@@ -119,7 +119,7 @@ export function StudentProfileExpressModal({
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>Avant ta candidature</Text>
