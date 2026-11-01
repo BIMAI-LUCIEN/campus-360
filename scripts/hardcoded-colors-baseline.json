@@ -1,12 +1,11 @@
 {
-  "total": 147,
+  "total": 146,
   "files": {
     "AppShell.tsx": 1,
     "components/FormattedMarkdown.tsx": 17,
     "features/documents/DocumentEditorScreen.tsx": 2,
     "features/documents/DocumentsScreen.tsx": 10,
     "features/pdf/PdfStudentSection.tsx": 5,
-    "features/pdf/SimplePdfReaderModal.tsx": 1,
     "features/stages/AiApplyModal.tsx": 14,
     "features/stages/aiMatchEngine.ts": 7,
     "features/stages/ApplicationDetailModal.tsx": 12,

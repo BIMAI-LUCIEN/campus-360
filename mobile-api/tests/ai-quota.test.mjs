@@ -59,6 +59,7 @@ test('Garde de source : présence de enforceAiQuota sur chacune des 10 routes IA
     'app/api/mobile/documents/[id]/chat/route.ts',
     'app/api/mobile/documents/[id]/sections/[sectionId]/interview/route.ts',
     'app/api/ai/pdf-chat/route.ts',
+    'app/api/ai/pdf-study/route.ts',
     'app/api/mobile/stages/cv/route.ts',
   ];
 

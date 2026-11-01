@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getCloudinaryConfig } from '@/lib/cloudinary';
+import { fetchCatalogPdf } from '@/lib/catalog-pdf';
 import { databasePool } from '@/lib/database';
 import {
   MobileApiError,
@@ -20,18 +20,9 @@ type CatalogDocument = {
   preview_path: string | null;
 };
 
-const requireEnv = (name: string) => {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`${name} is not configured.`);
-  return value;
-};
-
 // Reading every PDF of the catalogue is free (contexte.md §19); only the AI on a PDF is limited.
 // An archived PDF (withdrawn from the catalogue) is not served, as in the catalogue listing.
 const canReadFullDocument = async (_document: CatalogDocument, _user: MobileUser) => true;
-
-const isCloudinaryHost = (hostname: string) =>
-  hostname === 'cloudinary.com' || hostname.endsWith('.cloudinary.com');
 
 export async function OPTIONS(request: NextRequest) {
   return withCors(new NextResponse(null, { status: 204 }), request);
@@ -65,50 +56,7 @@ export async function GET(request: NextRequest) {
     const targetUrl = previewRequested ? document.preview_path : document.file_path;
     if (!targetUrl) throw new MobileApiError('Document non trouve.', 404);
 
-    let parsedTarget: URL;
-    try {
-      parsedTarget = new URL(targetUrl);
-    } catch {
-      throw new MobileApiError('Source du document invalide.', 502);
-    }
-
-    let pdfResponse: Response;
-    if (isCloudinaryHost(parsedTarget.hostname)) {
-      const { apiKey, apiSecret } = getCloudinaryConfig();
-      const cloudAuth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
-      pdfResponse = await fetch(parsedTarget, {
-        headers: { Authorization: `Basic ${cloudAuth}` },
-        redirect: 'error',
-      });
-      if (!pdfResponse.ok && parsedTarget.pathname.includes('/image/upload/')) {
-        const rawUrl = new URL(parsedTarget);
-        rawUrl.pathname = rawUrl.pathname.replace('/image/upload/', '/raw/upload/');
-        pdfResponse = await fetch(rawUrl, {
-          headers: { Authorization: `Basic ${cloudAuth}` },
-          redirect: 'error',
-        });
-      }
-    } else {
-      const supabaseUrl = new URL(requireEnv('SUPABASE_URL'));
-      if (parsedTarget.origin !== supabaseUrl.origin) {
-        throw new MobileApiError('Source du document non autorisee.', 403);
-      }
-      const serviceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
-      pdfResponse = await fetch(parsedTarget, {
-        headers: {
-          Authorization: `Bearer ${serviceKey}`,
-          apikey: serviceKey,
-        },
-        redirect: 'error',
-      });
-    }
-
-    if (!pdfResponse.ok) {
-      console.warn('[pdf/stream] Fetching PDF source failed:', pdfResponse.status);
-      throw new MobileApiError('Impossible de charger ce PDF.', 502);
-    }
-
-    const pdfBuffer = await pdfResponse.arrayBuffer();
+    const pdfBuffer = await fetchCatalogPdf(targetUrl);
     return withCors(
       new NextResponse(pdfBuffer, {
         status: 200,

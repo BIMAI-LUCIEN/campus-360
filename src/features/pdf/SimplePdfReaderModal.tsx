@@ -15,9 +15,6 @@ import {
 import {
   BookOpen,
   Calendar,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Download,
   ExternalLink,
   FileText,
@@ -32,6 +29,7 @@ import { authWebBaseUrl, mobileApiBaseUrl } from '../auth/betterAuth';
 import { createSignedPdfUrl, recordPdfAnalyticsEvent } from './pdfApi';
 import { askPdfAssistant, PassRequiredError, type PdfAssistantMessage, type PdfZone } from './pdfAssistant';
 import { ZoneQuestionSheet } from './ZoneQuestionSheet';
+import { PdfStudyPanel } from './PdfStudyPanel';
 import { OffersModal } from '../wallet/OffersModal';
 import { loadPdfChatHistory, savePdfChatHistory, clearPdfChatHistory } from './chatHistoryStorage';
 import { FormattedMarkdown } from '../../components/FormattedMarkdown';
@@ -85,9 +83,6 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
   const [zone, setZone] = useState<PdfZone | null>(null);
   const [assistantLoading, setAssistantLoading] = useState(false);
 
-  // Quiz state
-  const [revealedQuiz, setRevealedQuiz] = useState<Record<number, boolean>>({});
-
   const handleOpenExternal = () => {
     if (!url) return;
     if (url.includes('cloudinary.com')) {
@@ -104,7 +99,6 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
       setError('');
       setActiveTool('pdf');
       setAssistantMessages([]);
-      setRevealedQuiz({});
       setZone(null);
       return;
     }
@@ -113,7 +107,6 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
     setError('');
     setUrl(document.filePath?.startsWith('http') ? document.filePath : '');
     setActiveTool('pdf');
-    setRevealedQuiz({});
     setZone(null);
 
     // Load persistent chat history for this document
@@ -171,10 +164,6 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [document]);
-
-  const toggleQuizAnswer = (index: number) => {
-    setRevealedQuiz((prev) => ({ ...prev, [index]: !prev[index] }));
-  };
 
   const handleClearChat = () => {
     if (!document || assistantMessages.length === 0) return;
@@ -279,10 +268,6 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
 
   if (!document) return null;
 
-  // Only what the document really has; empty means "not available", never invented.
-  const effectiveStudyPlan = document.studyPlan ?? [];
-  const effectiveQuiz = document.quiz ?? [];
-  const effectiveSummary = document.aiSummary || document.description || 'Résumé non disponible pour ce document.';
 
   return (
     <Modal animationType="slide" visible={Boolean(document)} onRequestClose={onClose}>
@@ -451,12 +436,9 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                 <Text style={styles.sectionHeading}>Résumé & Synthèse du cours</Text>
               </View>
 
-              <View style={styles.cardHighlight}>
-                <Text style={styles.cardHighlightTitle}>Synthèse globale</Text>
-                <Text style={styles.bodyParagraph}>{effectiveSummary}</Text>
-              </View>
+              <PdfStudyPanel document={document} kind="summary" onAllowance={setAiAllowance} onPassRequired={setPassOffer} />
 
-              {document.description && document.description !== effectiveSummary ? (
+              {document.description && document.description !== document.aiSummary ? (
                 <View style={styles.cardStandard}>
                   <Text style={styles.cardStandardTitle}>Détails & Objectifs</Text>
                   <Text style={styles.bodyParagraph}>{document.description}</Text>
@@ -502,19 +484,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                 Suis ce parcours méthodique pour maîtriser l'intégralité du cours avant les examens.
               </Text>
 
-              <View style={styles.timelineContainer}>
-                {effectiveStudyPlan.length === 0 ? <Text style={styles.subtitle}>Plan d'étude non disponible pour ce document.</Text> : null}
-                {effectiveStudyPlan.map((step, index) => (
-                  <View key={`plan-${index}`} style={styles.timelineItem}>
-                    <View style={styles.timelineNumberBadge}>
-                      <Text style={styles.timelineNumberText}>{index + 1}</Text>
-                    </View>
-                    <View style={styles.timelineCard}>
-                      <Text style={styles.timelineCardText}>{step}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
+              <PdfStudyPanel document={document} kind="plan" onAllowance={setAiAllowance} onPassRequired={setPassOffer} />
             </ScrollView>
           ) : null}
 
@@ -526,42 +496,10 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                 <Text style={styles.sectionHeading}>Quiz d'auto-évaluation</Text>
               </View>
               <Text style={styles.sectionSubtext}>
-                Teste ta compréhension en direct. Clique sur chaque question pour révéler la réponse officielle.
+                Réponds aux questions, découvre la correction expliquée, puis enchaîne avec un nouveau quiz.
               </Text>
 
-              <View style={styles.quizList}>
-                {effectiveQuiz.length === 0 ? <Text style={styles.subtitle}>Quiz non disponible pour ce document.</Text> : null}
-                {effectiveQuiz.map((item, index) => {
-                  const isRevealed = Boolean(revealedQuiz[index]);
-                  return (
-                    <View key={`quiz-${index}`} style={styles.quizCard}>
-                      <Pressable style={styles.quizQuestionHeader} onPress={() => toggleQuizAnswer(index)}>
-                        <View style={styles.quizQuestionLeft}>
-                          <View style={styles.quizBadge}>
-                            <Text style={styles.quizBadgeText}>Q{index + 1}</Text>
-                          </View>
-                          <Text style={styles.quizQuestionText}>{item.question}</Text>
-                        </View>
-                        {isRevealed ? (
-                          <ChevronUp size={18} color={stitchColors.sienna} />
-                        ) : (
-                          <ChevronDown size={18} color={stitchColors.inkMuted} />
-                        )}
-                      </Pressable>
-
-                      {isRevealed ? (
-                        <View style={styles.quizAnswerBlock}>
-                          <View style={styles.answerIconWrap}>
-                            <CheckCircle2 size={16} color="#15803d" />
-                            <Text style={styles.answerLabel}>Réponse :</Text>
-                          </View>
-                          <Text style={styles.quizAnswerText}>{item.answer}</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  );
-                })}
-              </View>
+              <PdfStudyPanel document={document} kind="quiz" onAllowance={setAiAllowance} onPassRequired={setPassOffer} />
             </ScrollView>
           ) : null}
 
@@ -933,19 +871,6 @@ const styles = StyleSheet.create({
   sectionHeading: { fontSize: 16, fontWeight: '700', color: stitchColors.ink },
   sectionSubtext: { fontSize: 12, color: stitchColors.inkMuted, lineHeight: 16, marginTop: -4 },
 
-  cardHighlight: {
-    backgroundColor: stitchColors.paperSoft,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: stitchColors.siennaSoft,
-  },
-  cardHighlightTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: stitchColors.sienna,
-    marginBottom: 8,
-  },
   cardStandard: {
     backgroundColor: stitchColors.paperDeep,
     borderRadius: 14,
@@ -974,64 +899,7 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 12, color: stitchColors.inkMuted },
   infoValue: { fontSize: 12, fontWeight: '600', color: stitchColors.ink },
 
-  // Timeline for Plan
-  timelineContainer: { gap: 12, marginTop: 4 },
-  timelineItem: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  timelineNumberBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: stitchColors.sienna,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  timelineNumberText: { fontSize: 13, fontWeight: '700', color: stitchColors.white },
-  timelineCard: {
-    flex: 1,
-    backgroundColor: stitchColors.paperDeep,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: stitchColors.inkFaint,
-  },
-  timelineCardText: { fontSize: 13, fontWeight: '500', color: stitchColors.ink, lineHeight: 18 },
 
-  // Quiz items
-  quizList: { gap: 10, marginTop: 4 },
-  quizCard: {
-    backgroundColor: stitchColors.paperDeep,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: stitchColors.inkFaint,
-    overflow: 'hidden',
-  },
-  quizQuestionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-  },
-  quizQuestionLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, paddingRight: 8 },
-  quizBadge: {
-    backgroundColor: stitchColors.paperSoft,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: stitchColors.siennaSoft,
-  },
-  quizBadgeText: { fontSize: 11, fontWeight: '700', color: stitchColors.sienna },
-  quizQuestionText: { fontSize: 13, fontWeight: '600', color: stitchColors.ink, flex: 1, lineHeight: 18 },
-  quizAnswerBlock: {
-    backgroundColor: 'rgba(52, 211, 153, 0.12)',
-    padding: 14,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(52, 211, 153, 0.24)',
-  },
-  answerIconWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  answerLabel: { fontSize: 12, fontWeight: '700', color: stitchColors.emerald },
-  quizAnswerText: { fontSize: 13, color: stitchColors.emeraldTone, lineHeight: 18 },
 
   // Chat UI
   chatContainer: { flex: 1, backgroundColor: stitchColors.paper },

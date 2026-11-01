@@ -22,6 +22,7 @@ import {
 import type { CampusDocument, CampusPdfPack } from '../../types';
 import { createSignedPdfUrl, recordPdfAnalyticsEvent } from './pdfApi';
 import { askPdfAssistant, type PdfAssistantMessage } from './pdfAssistant';
+import { PdfStudyPanel } from './PdfStudyPanel';
 import { loadPdfChatHistory, savePdfChatHistory, clearPdfChatHistory } from './chatHistoryStorage';
 import { FormattedMarkdown } from '../../components/FormattedMarkdown';
 import { FileText, Sparkles, Calendar, HelpCircle, MessageSquare, Lock, RotateCcw } from 'lucide-react-native';
@@ -1378,12 +1379,7 @@ export function PdfStudentSection({
                   <View style={styles.readerBodyContainer}>
                     {activeTool === 'summary' ? (
                       <View style={styles.toolContent}>
-                        {readerDocument.aiSummary ? (
-                          <View style={[styles.studyBox, styles.studyBoxFeatured]}>
-                            <Text style={styles.studyBoxTitle}>Résumé de l'IA</Text>
-                            <Text style={styles.readerParagraph}>{readerDocument.aiSummary}</Text>
-                          </View>
-                        ) : null}
+                        <PdfStudyPanel document={readerDocument} kind="summary" />
                         <View style={styles.studyBox}>
                           <Text style={styles.studyBoxTitle}>Description du document</Text>
                           <Text style={styles.readerParagraph}>{readerDocument.description}</Text>
@@ -1393,38 +1389,13 @@ export function PdfStudentSection({
 
                     {activeTool === 'plan' ? (
                       <View style={styles.toolContent}>
-                        {readerDocument.studyPlan?.length ? (
-                          <View style={styles.studyBox}>
-                            <Text style={styles.studyBoxTitle}>Plan de révision recommandé</Text>
-                            {readerDocument.studyPlan.map((step, index) => (
-                              <Text style={styles.readerParagraph} key={step}>{index + 1}. {step}</Text>
-                            ))}
-                          </View>
-                        ) : (
-                          <View style={styles.studyBox}>
-                            <Text style={styles.bodyMuted}>Aucun plan de révision disponible pour ce document.</Text>
-                          </View>
-                        )}
+                        <PdfStudyPanel document={readerDocument} kind="plan" />
                       </View>
                     ) : null}
 
                     {activeTool === 'quiz' ? (
                       <View style={styles.toolContent}>
-                        {readerDocument.quiz?.length ? (
-                          <View style={styles.studyBox}>
-                            <Text style={styles.studyBoxTitle}>Quiz rapide d'auto-evaluation</Text>
-                            {readerDocument.quiz.map((item) => (
-                              <View key={item.question} style={styles.quizItem}>
-                                <Text style={styles.quizQuestion}>{item.question}</Text>
-                                <Text style={styles.cardMeta}>{item.answer}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        ) : (
-                          <View style={styles.studyBox}>
-                            <Text style={styles.bodyMuted}>Aucun quiz disponible pour ce document.</Text>
-                          </View>
-                        )}
+                        <PdfStudyPanel document={readerDocument} kind="quiz" />
                       </View>
                     ) : null}
 
@@ -2387,10 +2358,6 @@ const styles = StyleSheet.create({
     padding: 12,
     marginTop: 10,
   },
-  studyBoxFeatured: {
-    borderColor: $.sienna,
-    backgroundColor: stitchColors.warningBg,
-  },
   studyBoxTitle: {
     ...MONO,
     fontSize: 9,
@@ -2405,18 +2372,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 10,
-  },
-  quizItem: {
-    borderTopWidth: 1,
-    borderTopColor: $.line,
-    paddingTop: 10,
-    marginTop: 10,
-  },
-  quizQuestion: {
-    ...SERIF_TITLE,
-    fontSize: 14,
-    color: $.ink,
-    marginBottom: 4,
   },
 
   // ── AI chat ────────────────────────────────────────────────────────────
