@@ -7,9 +7,24 @@ const require = createRequire(import.meta.url);
 const pg = require('../mobile-api/node_modules/pg');
 const { Pool } = pg;
 
-const cloudName = 'dngtng7d4';
-const apiKey = '477236452447892';
-const apiSecret = 'VPm-MMHKLgEy1aZUyPHpITD6T7k';
+// Cloudinary credentials come from the environment or the local .env files,
+// never from this file.
+const localEnv = {};
+for (const envFile of ['mobile-api/.env.local', 'mobile-api/.env', '.env.local', '.env']) {
+  if (!fs.existsSync(envFile)) continue;
+  for (const line of fs.readFileSync(envFile, 'utf8').split(/\r?\n/)) {
+    const match = line.match(/^(CLOUDINARY_[A-Z_]+)=(.*)$/);
+    if (match && !(match[1] in localEnv)) localEnv[match[1]] = match[2].replace(/['"]/g, '').trim();
+  }
+}
+const readEnv = (name) => process.env[name]?.trim() || localEnv[name] || '';
+const cloudName = readEnv('CLOUDINARY_CLOUD_NAME');
+const apiKey = readEnv('CLOUDINARY_API_KEY');
+const apiSecret = readEnv('CLOUDINARY_API_SECRET');
+if (!cloudName || !apiKey || !apiSecret) {
+  console.error('CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY et CLOUDINARY_API_SECRET sont requis.');
+  process.exit(1);
+}
 
 let dbUrl = '';
 for (const envFile of ['mobile-api/.env.local', 'mobile-api/.env', '.env.local', '.env']) {

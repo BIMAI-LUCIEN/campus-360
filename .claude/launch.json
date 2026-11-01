@@ -4,26 +4,82 @@
     {
       "name": "expo-web",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["expo", "start", "--web", "--port", "8081"],
+      "runtimeArgs": [
+        "expo",
+        "start",
+        "--web",
+        "--port",
+        "8081"
+      ],
       "port": 8081
     },
     {
       "name": "recruiter-web-preview",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "recruiter-web"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "recruiter-web"
+      ],
       "port": 3001
     },
     {
       "name": "mobile-api",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "mobile-api"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "mobile-api"
+      ],
       "port": 3002
     },
     {
       "name": "landing-site-preview",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "landing-site", "--", "-p", "3012"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "landing-site",
+        "--",
+        "-p",
+        "3012"
+      ],
       "port": 3012
+    },
+    {
+      "name": "expo-web-local",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "expo",
+        "start",
+        "--web",
+        "--port",
+        "8081"
+      ],
+      "port": 8081,
+      "env": {
+        "EXPO_PUBLIC_AUTH_URL": "http://localhost:3002",
+        "EXPO_PUBLIC_AI_PROXY_URL": "http://localhost:3002/api/ai/pdf-chat",
+        "EXPO_PUBLIC_AUTH_WEB_URL": "http://localhost:3001",
+        "EXPO_PUBLIC_ADMIN_URL": "http://localhost:3001"
+      }
+    },
+    {
+      "name": "recruiter-web-3011",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "--prefix",
+        "recruiter-web",
+        "next",
+        "dev",
+        "recruiter-web",
+        "-p",
+        "3011"
+      ],
+      "port": 3011
     }
   ]
 }

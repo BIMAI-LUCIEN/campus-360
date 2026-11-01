@@ -45,7 +45,8 @@ const test3 = initiateSchema.safeParse({
 console.log(!test3.success ? '✅ Test 3 Passed: Non-standard amount rejected' : '❌ Test 3 Failed');
 
 // 4. Test Webhook Signature HMAC SHA-256
-const webhookSecret = 'test_notchpay_secret_key_123';
+// Throwaway secret: the script signs and checks its own payload.
+const webhookSecret = crypto.randomBytes(24).toString('hex');
 const payload = JSON.stringify({
   event: 'payment.complete',
   status: 'complete',
