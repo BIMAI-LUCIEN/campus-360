@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 
 from llm_client import LLMUnavailable, call_json
-from verifier_agent import normalize_company
+from verifier_agent import is_duplicate, normalize_company
 
 logger = logging.getLogger("AutoReviewAgent")
 
@@ -143,8 +143,15 @@ def review_pending(store, dry_run: bool = False, limit: int = MAX_REVIEWS_PER_RU
     """Settles the pending scraped offers. Returns the count per outcome."""
     counts = {"published": 0, "rejected": 0, "pending_review": 0}
     offers = store.pending_offers(limit)
+    published = []  # the same posting often comes back under two names until the recruiter is found
     for offer in offers:
         result = review_offer(offer, now)
+        if result["status"] == "published":
+            company = result["company"] or offer.get("company") or ""
+            if is_duplicate(company, offer.get("title") or "", published):
+                result = {"status": "rejected", "reason": "doublon d'une offre publiée dans la même relecture", "company": None}
+            else:
+                published.append({"company": company, "title": offer.get("title") or ""})
         counts[result["status"]] += 1
         logger.info(f"   Relecture auto [{offer.get('title', '')[:50]}] -> {result['status']} : {result['reason']}")
         if result["status"] != "pending_review" and not dry_run:

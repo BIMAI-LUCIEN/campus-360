@@ -101,6 +101,16 @@ class AutoReviewTests(unittest.TestCase):
         with model("publish", company="DHL Global Forwarding"):
             self.assertIsNone(review_offer(dict(OFFER), NOW)["company"])
 
+    def test_same_posting_under_two_names_published_once(self):
+        first = dict(OFFER, id="a", company="Smart Touch Design", title="Infographe Junior (H/F) - Stage Professionnel",
+                     description="Smart Touch Design recrute un infographe junior à Yaoundé.")
+        second = dict(first, id="b", company="SELETOO")
+        store = FakeStore([first, second])
+        with model("publish", company="Smart Touch Design"):
+            counts = review_pending(store, now=NOW)
+        self.assertEqual(counts, {"published": 1, "rejected": 1, "pending_review": 0})
+        self.assertEqual([s[1] for s in store.settled], ["published", "rejected"])
+
     def test_review_pending_settles_and_skips_writes_in_dry_run(self):
         offers = [dict(OFFER), dict(OFFER, id="job-2", source_published_at=NOW - timedelta(days=80))]
         store = FakeStore(offers)
