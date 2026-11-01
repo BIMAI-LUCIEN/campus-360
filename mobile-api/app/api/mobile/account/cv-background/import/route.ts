@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { enforceAiQuota } from '@/lib/ai-quota';
 import { buildCvImportMessages, parseCvImport } from '@/lib/cv-background';
-import { callLlm, isLlmConfigured } from '@/lib/llm';
+import { CV_MODELS, callLlm, isLlmConfigured } from '@/lib/llm';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { ExtractionError, extractSource } from '@/lib/source-extraction';
 
@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
       temperature: 0.1,
       maxTokens: 2500,
       title: 'Campus 360 Import CV',
+      models: CV_MODELS,
       timeoutMs: 60_000,
     });
     const background = parseCvImport(raw);

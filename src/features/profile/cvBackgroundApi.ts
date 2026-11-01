@@ -55,7 +55,7 @@ const MIMES: Record<string, string> = {
   txt: 'text/plain',
 };
 
-const readAsBase64 = async (asset: DocumentPicker.DocumentPickerAsset): Promise<string> => {
+export const readAsBase64 = async (asset: DocumentPicker.DocumentPickerAsset): Promise<string> => {
   if (Platform.OS === 'web' && asset.file) {
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();

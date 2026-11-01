@@ -10,6 +10,15 @@ export const DRAFTING_MODELS = [
 // Models that read images (flyers, screenshots); the drafting list does not all do.
 export const VISION_MODELS = ['openai/gpt-4o-mini', 'google/gemini-2.5-flash'];
 
+// CV, letter and offer reading run on Claude Haiku first. Every model here reads
+// images too, so the list also serves the offer photos.
+export const CV_MODELS = ['anthropic/claude-haiku-5.5', 'openai/gpt-4o-mini', 'google/gemini-2.5-flash'];
+
+// Claude models think by default on OpenRouter and can spend the whole token
+// budget on it, leaving an empty answer: these short tasks do without.
+export const modelRequestOptions = (model: string): Record<string, unknown> =>
+  model.startsWith('anthropic/') ? { reasoning: { enabled: false } } : {};
+
 export type LlmContentPart =
   | { type: 'text'; text: string }
   | { type: 'image_url'; image_url: { url: string } };
@@ -46,6 +55,7 @@ export const callLlm = async (messages: LlmMessage[], options: LlmOptions = {}):
           messages,
           temperature: options.temperature ?? 0.5,
           max_tokens: options.maxTokens ?? 1500,
+          ...modelRequestOptions(model),
         }),
         signal: AbortSignal.timeout(options.timeoutMs ?? 60_000),
       });

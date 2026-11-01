@@ -4,20 +4,17 @@ import { aiCost } from '@/lib/free-launch';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { careerContextText, careerOfferSchema } from '@/lib/career-context';
+import { cvBackgroundSchema } from '@/lib/cv-background';
+import { getCvBackground } from '@/lib/cv-background-db';
 import { databasePool } from '@/lib/database';
+import { CV_MODELS, modelRequestOptions } from '@/lib/llm';
 import { getDocumentById } from '@/lib/documents-db';
 import { corsPreflight, requireMobileUser, mobileErrorResponse, MobileApiError, withCors } from '@/lib/mobile-access';
 
 export const runtime = 'nodejs';
 
 // Free during the V1 launch (see lib/free-launch.ts).
-
-const CANDIDATE_MODELS = [
-  'openai/gpt-4o-mini',
-  'minimax/minimax-01',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'google/gemini-2.0-flash-exp:free',
-];
 
 export async function OPTIONS(request: NextRequest) {
   return corsPreflight(request);
@@ -29,6 +26,8 @@ const generateSchema = z.object({
   answers: z.record(z.string(), z.any()).optional(),
   documentId: z.string().uuid(),
   generationId: z.string().trim().min(8).max(200),
+  offer: careerOfferSchema.nullish(),
+  background: cvBackgroundSchema.nullish(),
 });
 
 export async function POST(request: NextRequest) {
@@ -95,6 +94,12 @@ export async function POST(request: NextRequest) {
     }
 
     const conversation = String(formData.conversation || '').trim();
+    const { conversation: _conversation, ...profile } = formData;
+    const careerContext = careerContextText(
+      parsed.data.background ?? (await getCvBackground(user.id).catch(() => null)),
+      parsed.data.offer,
+    );
+    const contextBlock = careerContext ? `\n\n${careerContext}` : '';
     const apiKey = process.env.OPENROUTER_API_KEY;
     let systemPrompt: string;
     let userPrompt: string;
@@ -105,26 +110,25 @@ export async function POST(request: NextRequest) {
         `Produis un CV moderne d'une à deux pages, factuel et compatible avec les logiciels de recrutement.`,
         `Structure attendue : identité et coordonnées, titre ciblé, profil, expériences et projets, formation, compétences, langues et certifications.`,
         `N'invente aucune expérience, compétence, date, entreprise ou certification.`,
+        `Si une offre est fournie, cible le titre, le profil et l'ordre des expériences sur elle, en reprenant ses mots-clés quand le parcours les justifie.`,
         `Utilise uniquement les balises HTML TipTap autorisées et ne retourne aucun markdown.`,
       ].join('\n');
-      userPrompt = `Rédige le CV à partir de cette conversation guidée et du profil confirmé.\n\nConversation :\n${conversation}\n\nProfil :\n${JSON.stringify(formData)}`;
+      userPrompt = `Rédige le CV à partir de cette conversation guidée, du profil confirmé et du parcours.\n\nConversation :\n${conversation}\n\nProfil :\n${JSON.stringify(profile)}${contextBlock}`;
     } else {
       systemPrompt = [
         `Tu es un rédacteur professionnel de lettres de motivation en français.`,
         `Produis une lettre personnalisée, convaincante et normalement limitée à une page.`,
         `Structure attendue : expéditeur, destinataire, date, objet, salutation, entreprise, candidat, collaboration, conclusion et signature.`,
         `N'invente aucune expérience, compétence, entreprise ou motivation.`,
+        `Si une offre est fournie, adresse la lettre à cette entreprise pour ce poste et relie le parcours à ses exigences.`,
         `Utilise uniquement les balises HTML TipTap autorisées et ne retourne aucun markdown.`,
       ].join('\n');
-      userPrompt = `Rédige la lettre à partir de cette conversation guidée et du profil confirmé.\n\nConversation :\n${conversation}\n\nProfil :\n${JSON.stringify(formData)}`;
+      userPrompt = `Rédige la lettre à partir de cette conversation guidée, du profil confirmé et du parcours.\n\nConversation :\n${conversation}\n\nProfil :\n${JSON.stringify(profile)}${contextBlock}`;
     }
 
     let safeHtml = '';
     if (apiKey) {
-      const preferredModel = process.env.OPENROUTER_MODEL || CANDIDATE_MODELS[0];
-      const modelsToTry = Array.from(new Set([preferredModel, ...CANDIDATE_MODELS]));
-
-      for (const model of modelsToTry) {
+      for (const model of CV_MODELS) {
         try {
           const openrouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
@@ -142,6 +146,7 @@ export async function POST(request: NextRequest) {
               ],
               temperature: 0.45,
               max_tokens: 2800,
+              ...modelRequestOptions(model),
             }),
           });
           if (!openrouterRes.ok) continue;

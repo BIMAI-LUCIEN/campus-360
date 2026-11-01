@@ -18,7 +18,7 @@ import { FileText, Mail, Briefcase, GraduationCap, Sparkles, Edit3, Download, Tr
 import { authBaseUrl, authFetch, authClient, type StudentProfile } from '../auth/betterAuth';
 import { stitchColors, stitchShadows, stitchRadius, fontFamilies } from '../../theme/stitch';
 import { GradientText } from '../../ui/GlassComponents';
-import { DocGenChat, type GenAttachment } from './DocGenChat';
+import { DocGenChat, type CareerContext, type GenAttachment } from './DocGenChat';
 import { addUrlSource, uploadDocumentFile } from './documentFilesApi';
 import { TemplateGallery } from './TemplateGallery';
 import type { TemplateCard } from './templatesApi';
@@ -334,6 +334,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   const handleGenerateFull = async (
     messages: Array<{ role: 'user' | 'assistant'; content: string }>,
     attachments: GenAttachment[] = [],
+    careerContext: CareerContext = { offer: null, background: null },
   ) => {
     if (!selectedType) return;
     setGeneratingFull(true);
@@ -400,6 +401,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
           documentId: doc.id,
           documentType: selectedType,
           generationId,
+          ...(isCareerDocument ? careerContext : {}),
         }),
       });
       if (genRes.ok) {

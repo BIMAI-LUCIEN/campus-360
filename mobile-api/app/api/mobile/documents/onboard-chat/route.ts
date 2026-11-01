@@ -2,6 +2,10 @@ import { enforceAiQuota } from '@/lib/ai-quota';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { careerContextText, careerOfferSchema } from '@/lib/career-context';
+import { cvBackgroundSchema } from '@/lib/cv-background';
+import { getCvBackground } from '@/lib/cv-background-db';
+import { CV_MODELS, modelRequestOptions } from '@/lib/llm';
 import { corsPreflight, requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
 
 export const runtime = 'nodejs';
@@ -32,6 +36,9 @@ const chatSchema = z
       .default([]),
     documentType: z.enum(['stage', 'memoire', 'cv', 'lettre_motivation', 'blank']).default('stage'),
     profileContext: z.record(z.string(), z.string()).optional().default({}),
+    // CV and letter only: the offer aimed at, and an old CV just imported.
+    offer: careerOfferSchema.nullish(),
+    background: cvBackgroundSchema.nullish(),
   })
   .passthrough();
 
@@ -44,20 +51,30 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const parsed = chatSchema.safeParse(body);
-    const { messages, documentType, profileContext } = parsed.success
+    const { messages, documentType, profileContext, offer, background } = parsed.success
       ? parsed.data
-      : { messages: [], documentType: 'stage' as const, profileContext: {} };
+      : { messages: [], documentType: 'stage' as const, profileContext: {}, offer: null, background: null };
+
+    // A CV or a letter starts from what the student already has: the old CV just
+    // imported, else the background saved on the account, and the offer aimed at.
+    const isCareer = documentType === 'cv' || documentType === 'lettre_motivation';
+    const careerContext = isCareer
+      ? careerContextText(background ?? (await getCvBackground(access.user.id).catch(() => null)), offer)
+      : '';
 
     const apiKey = process.env.OPENROUTER_API_KEY;
 
     const scenarioDirectives: Record<string, string[]> = {
       cv: [
         `Collecte le poste recherché, le résumé professionnel, les formations, expériences et projets, les compétences, langues et certifications.`,
+        `Si le parcours de l'étudiant est fourni, ne redemande pas ce qu'il contient : fais-le confirmer en une phrase, puis complète seulement ce qui manque ou reste vague.`,
+        `Si une offre est fournie, cible le CV sur elle : demande des exemples concrets pour les exigences de l'offre que le parcours ne couvre pas encore.`,
         `Ne pose pas de question académique sur une page de garde, un stage obligatoire ou un sommaire.`,
         `Après au moins trois réponses utiles, propose une synthèse courte et invite à générer le CV.`,
       ],
       lettre_motivation: [
         `Collecte l'opportunité visée, l'entreprise, le contexte de candidature, les motivations, les expériences pertinentes et la disponibilité.`,
+        `Si une offre est fournie, ne redemande ni le poste ni l'entreprise : demande pourquoi cette entreprise et quelles expériences du parcours répondent à ses exigences.`,
         `Vérifie les coordonnées du candidat et les informations du destinataire.`,
         `Après au moins trois réponses utiles, propose une synthèse courte et invite à générer la lettre.`,
       ],
@@ -83,12 +100,25 @@ export async function POST(request: NextRequest) {
       `- Tutoie l'étudiant, reste simple et direct. Pas de compliments ni de formules d'enthousiasme.`,
       `- Si une réponse reste vague (« j'ai fait plusieurs tâches »), demande un exemple précis avant de passer à la suite.`,
       `- Ne fabrique aucune information personnelle, expérience, compétence ou entreprise.`,
+      ...(careerContext ? ['', careerContext] : []),
     ].join('\n');
 
-    const formattedMessages = messages.map((m) => ({
-      role: m.role === 'assistant' ? 'assistant' : 'user',
-      content: String(m.content || ''),
-    }));
+    const formattedMessages = messages
+      .map((m) => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: String(m.content || ''),
+      }))
+      .filter((m) => m.content.trim().length > 0);
+    // Opening turn (after an import or an offer) the assistant speaks first; the
+    // models want a user turn before it, so the opening request stays in front.
+    if (formattedMessages[0]?.role !== 'user') {
+      formattedMessages.unshift({
+        role: 'user',
+        content: careerContext
+          ? 'Voici ce que tu sais déjà de moi. Résume-le en deux phrases, dis-moi ce qui manque, puis pose ta première question.'
+          : 'Commence par ta première question.',
+      });
+    }
 
     if (!apiKey) {
       return withCors(
@@ -102,7 +132,7 @@ export async function POST(request: NextRequest) {
     }
 
     const preferredModel = process.env.OPENROUTER_MODEL || CANDIDATE_MODELS[0];
-    const modelsToTry = Array.from(new Set([preferredModel, ...CANDIDATE_MODELS]));
+    const modelsToTry = isCareer ? CV_MODELS : Array.from(new Set([preferredModel, ...CANDIDATE_MODELS]));
 
     for (const model of modelsToTry) {
       try {
@@ -118,10 +148,11 @@ export async function POST(request: NextRequest) {
             model,
             messages: [
               { role: 'system', content: systemPrompt },
-              ...formattedMessages.filter((m) => m.content.trim().length > 0),
+              ...formattedMessages,
             ],
             temperature: 0.6,
             max_tokens: 800,
+            ...modelRequestOptions(model),
           }),
         });
 

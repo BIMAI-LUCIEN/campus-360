@@ -8,7 +8,7 @@ import {
   externalOfferRequestSchema,
   parseExternalOffer,
 } from '@/lib/external-offer';
-import { VISION_MODELS, callLlm, isLlmConfigured } from '@/lib/llm';
+import { CV_MODELS, callLlm, isLlmConfigured } from '@/lib/llm';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { createPrivateStageJob } from '@/lib/stages-db';
 
@@ -36,14 +36,13 @@ export async function POST(request: NextRequest) {
     if (!isLlmConfigured()) throw new MobileApiError("L'IA n'est pas disponible pour le moment.", 503);
 
     await enforceAiQuota(request, { userId: access.user.id, route: 'external-offer' });
-    const hasImages = (parsed.data.images?.length ?? 0) > 0;
     const raw = await callLlm(buildExternalOfferMessages(parsed.data), {
       temperature: 0.1,
       maxTokens: 2000,
       title: 'Campus 360 Offre externe',
-      // Nginx gives up after 60 s: both vision models must fit in that window.
+      // Nginx gives up after 60 s: Haiku and one fallback must fit in that window.
       timeoutMs: 27_000,
-      ...(hasImages ? { models: VISION_MODELS } : {}),
+      models: CV_MODELS,
     });
     // No answer at all means the models failed, not that the photo is unreadable.
     if (!raw) throw new MobileApiError("L'IA n'a pas pu lire l'offre pour le moment. Réessaie dans un instant.", 503);

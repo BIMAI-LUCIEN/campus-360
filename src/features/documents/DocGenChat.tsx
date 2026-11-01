@@ -11,12 +11,21 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { BookOpen, FileText, Link2, Paperclip, Sparkles, X, Send, Wand2 } from 'lucide-react-native';
+import { BookOpen, Briefcase, Camera, ClipboardList, FileText, FileUp, Link2, Paperclip, Sparkles, X, Send, Wand2 } from 'lucide-react-native';
 import * as SecureStore from 'expo-secure-store';
 import { authFetch } from '../auth/betterAuth';
 import { stitchColors } from '../../theme/stitch';
 import { AppAlert } from '../../ui/AppAlert';
 import { pickSourceFromPhone, SOURCE_ROLE_LABEL, type PickedFile, type SourceRole } from './documentFilesApi';
+import { careerOfferLabel, readOfferFromFile, readOfferFromImages, readOfferFromText, type CareerOffer } from './careerContextApi';
+import {
+  cvBackgroundFilledCount,
+  fetchCvBackground,
+  importCvFromFile,
+  saveCvBackground,
+  type CvBackground,
+} from '../profile/cvBackgroundApi';
+import { MAX_OFFER_IMAGES, pickOfferImages } from '../stages/externalOfferApi';
 
 type ChatRole = 'user' | 'assistant';
 type ChatMsg = { role: ChatRole; content: string };
@@ -29,6 +38,10 @@ export type GenAttachment = { id: string; role: SourceRole } & (
 );
 
 const MAX_ATTACHMENTS = 10;
+
+// CV and letter: the old CV just imported and the offer aimed at. Sent with each
+// question and with the generation (see /api/mobile/documents/onboard-chat).
+export type CareerContext = { offer: CareerOffer | null; background: CvBackground | null };
 
 const storageKeyFor = (sessionKey: string) =>
   `campus360.docgen.${sessionKey.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120)}`;
@@ -81,7 +94,7 @@ export function DocGenChat({
   onClose: () => void;
   documentType: string;
   generating: boolean;
-  onGenerate: (messages: ChatMsg[], attachments: GenAttachment[]) => void;
+  onGenerate: (messages: ChatMsg[], attachments: GenAttachment[], context: CareerContext) => void;
   profileContext?: Record<string, string>;
   sessionKey: string;
 }) {
@@ -91,6 +104,13 @@ export function DocGenChat({
   const [attachments, setAttachments] = React.useState<GenAttachment[]>([]);
   const [linkOpen, setLinkOpen] = React.useState(false);
   const [linkValue, setLinkValue] = React.useState('');
+  const [offer, setOffer] = React.useState<CareerOffer | null>(null);
+  const [background, setBackground] = React.useState<CvBackground | null>(null);
+  const [hasSavedBackground, setHasSavedBackground] = React.useState(false);
+  const [contextBusy, setContextBusy] = React.useState<string | null>(null);
+  const [offerTextOpen, setOfferTextOpen] = React.useState(false);
+  const [offerText, setOfferText] = React.useState('');
+  const isCareer = documentType === 'cv' || documentType === 'lettre_motivation';
   const scrollRef = React.useRef<ScrollView>(null);
   const activeSessionRef = React.useRef('');
   const hydratedSessionRef = React.useRef('');
@@ -104,6 +124,18 @@ export function DocGenChat({
     setAttachments([]);
     setLinkOpen(false);
     setLinkValue('');
+    setOffer(null);
+    setBackground(null);
+    setHasSavedBackground(false);
+    setOfferTextOpen(false);
+    setOfferText('');
+    if (isCareer) {
+      void fetchCvBackground()
+        .then((r) => {
+          if (activeSessionRef.current === sessionKey) setHasSavedBackground(r.saved && cvBackgroundFilledCount(r.background) > 0);
+        })
+        .catch(() => {});
+    }
     void SecureStore.getItemAsync(storageKeyFor(sessionKey))
       .then((saved) => {
         if (activeSessionRef.current !== sessionKey) return;
@@ -116,7 +148,7 @@ export function DocGenChat({
       .finally(() => {
         if (activeSessionRef.current === sessionKey) hydratedSessionRef.current = sessionKey;
       });
-  }, [sessionKey, visible]);
+  }, [sessionKey, visible, isCareer]);
 
   React.useEffect(() => {
     if (hydratedSessionRef.current !== sessionKey) return;
@@ -125,12 +157,14 @@ export function DocGenChat({
 
   const label = TYPE_LABEL[documentType] ?? 'document';
   const userTurns = messages.filter((m) => m.role === 'user').length;
+  // An old CV, a saved background or the offer already says most of it.
+  const knowsCareer = isCareer && Boolean(offer || background || hasSavedBackground);
   const requiredTurns = documentType === 'memoire'
     ? 7
-    : documentType === 'cv' || documentType === 'lettre_motivation'
-      ? 3
+    : isCareer
+      ? knowsCareer ? 1 : 3
       : 2;
-  const canGenerate = userTurns >= requiredTurns && !loading && !generating;
+  const canGenerate = userTurns >= requiredTurns && !loading && !generating && !contextBusy;
 
   const acceptsSources = documentType === 'stage' || documentType === 'memoire';
   const attachmentsFull = attachments.length >= MAX_ATTACHMENTS;
@@ -159,20 +193,15 @@ export function DocGenChat({
   const scrollToEnd = () =>
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
 
-  const send = React.useCallback(
-    async (raw: string) => {
-      const text = raw.trim();
-      if (!text || loading || generating) return;
-      const next = [...messages, { role: 'user' as const, content: text }];
-      setMessages(next);
-      setInput('');
+  const askAssistant = React.useCallback(
+    async (history: ChatMsg[], context: CareerContext) => {
       setLoading(true);
       scrollToEnd();
       try {
         const res = await authFetch('/api/mobile/documents/onboard-chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: next, documentType, profileContext }),
+          body: JSON.stringify({ messages: history, documentType, profileContext, ...(isCareer ? context : {}) }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Erreur IA.');
@@ -193,8 +222,84 @@ export function DocGenChat({
         scrollToEnd();
       }
     },
-    [messages, loading, generating, documentType, profileContext],
+    [documentType, profileContext, isCareer],
   );
+
+  const send = React.useCallback(
+    async (raw: string) => {
+      const text = raw.trim();
+      if (!text || loading || generating) return;
+      const next = [...messages, { role: 'user' as const, content: text }];
+      setMessages(next);
+      setInput('');
+      await askAssistant(next, { offer, background });
+    },
+    [messages, loading, generating, askAssistant, offer, background],
+  );
+
+  // Once an old CV or the offer is read, the assistant opens the conversation from it.
+  const openWith = async (context: CareerContext) => {
+    if (messages.length === 0) await askAssistant([], context);
+  };
+
+  const importOldCv = async () => {
+    setContextBusy('Lecture de ton ancien CV…');
+    try {
+      const imported = await importCvFromFile();
+      if (!imported) return;
+      setBackground(imported);
+      AppAlert.alert(
+        'Ancien CV lu',
+        `${cvBackgroundFilledCount(imported)} rubriques reprises. Les enregistrer dans « Mon parcours » pour tes prochaines candidatures ? Cela remplace ce qui y est déjà.`,
+        [
+          { text: 'Seulement ici', style: 'cancel' },
+          {
+            text: 'Enregistrer',
+            onPress: () => {
+              void saveCvBackground(imported)
+                .then(() => setHasSavedBackground(true))
+                .catch((error) => AppAlert.alert('Mon parcours', error instanceof Error ? error.message : 'Enregistrement impossible.'));
+            },
+          },
+        ],
+      );
+      await openWith({ offer, background: imported });
+    } catch (error) {
+      AppAlert.alert('Ancien CV', error instanceof Error ? error.message : 'Impossible de lire ce CV.');
+    } finally {
+      setContextBusy(null);
+    }
+  };
+
+  const attachOffer = async (read: () => Promise<CareerOffer | null>) => {
+    setContextBusy('Lecture de l’offre…');
+    try {
+      const next = await read();
+      if (!next) return;
+      setOffer(next);
+      setOfferTextOpen(false);
+      setOfferText('');
+      await openWith({ offer: next, background });
+    } catch (error) {
+      AppAlert.alert('Offre', error instanceof Error ? error.message : 'Impossible de lire l’offre.');
+    } finally {
+      setContextBusy(null);
+    }
+  };
+
+  const offerFromPhotos = () =>
+    attachOffer(async () => {
+      const images = await pickOfferImages(MAX_OFFER_IMAGES);
+      return images.length ? readOfferFromImages(images) : null;
+    });
+
+  const offerFromText = () => {
+    if (offerText.trim().length < 30) {
+      AppAlert.alert('Offre', 'Colle le texte complet de l’offre (30 caractères au moins).');
+      return;
+    }
+    void attachOffer(() => readOfferFromText(offerText));
+  };
 
   // Full-screen state while every section is being written.
   if (generating) {
@@ -249,8 +354,9 @@ export function DocGenChat({
               <View style={styles.empty}>
                 <Text style={styles.emptyTitle}>Parle-moi de ton {label}</Text>
                 <Text style={styles.emptyBody}>
-                  Je connais déjà les informations disponibles dans ton profil. Confirme-les et
-                  réponds à quelques questions ciblées avant la rédaction complète.
+                  {isCareer
+                    ? `Pour bien démarrer, importe ton ancien CV et joins l’offre visée (en bas) : je pars de ce que tu as déjà, de ton profil${hasSavedBackground ? ' et de « Mon parcours »' : ''}, puis je te pose seulement les questions qui manquent.`
+                    : 'Je connais déjà les informations disponibles dans ton profil. Confirme-les et réponds à quelques questions ciblées avant la rédaction complète.'}
                 </Text>
                 <View style={styles.suggestions}>
                   {(SUGGESTIONS[documentType] ?? SUGGESTIONS.blank).map((s) => (
@@ -362,11 +468,93 @@ export function DocGenChat({
             </View>
           ) : null}
 
+          {isCareer ? (
+            <View style={styles.sourcesWrap}>
+              <Text style={styles.sourcesTitle}>Ce que l’IA prend en compte</Text>
+              <View style={styles.sourcesRow}>
+                <Pressable style={[styles.sourceBtn, Boolean(contextBusy) && styles.ctaDisabled]} onPress={importOldCv} disabled={Boolean(contextBusy)}>
+                  <FileUp size={14} color={stitchColors.sienna} />
+                  <Text style={styles.sourceBtnText}>{background ? 'Changer d’ancien CV' : 'Importer mon ancien CV'}</Text>
+                </Pressable>
+                <Pressable style={[styles.sourceBtn, Boolean(contextBusy) && styles.ctaDisabled]} onPress={offerFromPhotos} disabled={Boolean(contextBusy)}>
+                  <Camera size={14} color={stitchColors.sienna} />
+                  <Text style={styles.sourceBtnText}>Offre en photo</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.sourceBtn, Boolean(contextBusy) && styles.ctaDisabled]}
+                  onPress={() => attachOffer(readOfferFromFile)}
+                  disabled={Boolean(contextBusy)}
+                >
+                  <FileText size={14} color={stitchColors.sienna} />
+                  <Text style={styles.sourceBtnText}>Offre PDF / Word</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.sourceBtn, (Boolean(contextBusy) || offerTextOpen) && styles.ctaDisabled]}
+                  onPress={() => setOfferTextOpen(true)}
+                  disabled={Boolean(contextBusy) || offerTextOpen}
+                >
+                  <ClipboardList size={14} color={stitchColors.sienna} />
+                  <Text style={styles.sourceBtnText}>Coller l’offre</Text>
+                </Pressable>
+              </View>
+              {offerTextOpen ? (
+                <View style={styles.linkRow}>
+                  <TextInput
+                    style={[styles.input, styles.linkInput]}
+                    placeholder="Texte de l’offre…"
+                    placeholderTextColor={stitchColors.inkSubtle}
+                    value={offerText}
+                    onChangeText={setOfferText}
+                    multiline
+                  />
+                  <Pressable style={styles.linkAdd} onPress={offerFromText} disabled={Boolean(contextBusy)}>
+                    <Text style={styles.linkAddText}>Lire</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setOfferTextOpen(false)} hitSlop={8}>
+                    <X size={16} color={stitchColors.inkMuted} />
+                  </Pressable>
+                </View>
+              ) : null}
+              {contextBusy ? (
+                <View style={styles.chip}>
+                  <ActivityIndicator size="small" color={stitchColors.sienna} />
+                  <Text style={styles.chipText}>{contextBusy}</Text>
+                </View>
+              ) : null}
+              {background ? (
+                <View style={styles.chip}>
+                  <FileUp size={14} color={stitchColors.inkMuted} />
+                  <Text style={styles.chipText} numberOfLines={1}>
+                    Ancien CV : {cvBackgroundFilledCount(background)} rubriques
+                  </Text>
+                  <Pressable onPress={() => setBackground(null)} hitSlop={8} accessibilityLabel="Retirer l’ancien CV">
+                    <X size={14} color={stitchColors.inkMuted} />
+                  </Pressable>
+                </View>
+              ) : hasSavedBackground ? (
+                <View style={styles.chip}>
+                  <FileUp size={14} color={stitchColors.inkMuted} />
+                  <Text style={styles.chipText} numberOfLines={1}>« Mon parcours » enregistré</Text>
+                </View>
+              ) : null}
+              {offer ? (
+                <View style={styles.chip}>
+                  <Briefcase size={14} color={stitchColors.inkMuted} />
+                  <Text style={styles.chipText} numberOfLines={1}>{careerOfferLabel(offer)}</Text>
+                  <Text style={styles.chipRole}>Offre visée</Text>
+                  <Pressable onPress={() => setOffer(null)} hitSlop={8} accessibilityLabel="Retirer l’offre">
+                    <X size={14} color={stitchColors.inkMuted} />
+                  </Pressable>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+
           {/* Generate CTA */}
           <View style={styles.ctaWrap}>
             <Pressable
               style={[styles.cta, !canGenerate && styles.ctaDisabled]}
-              onPress={() => onGenerate(messages, acceptsSources ? attachments : [])}
+              onPress={() => onGenerate(messages, acceptsSources ? attachments : [], { offer, background })}
               disabled={!canGenerate}
             >
               <Wand2 size={17} color={stitchColors.white} strokeWidth={2.2} />

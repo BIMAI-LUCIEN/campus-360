@@ -4,7 +4,7 @@ import { enforceAiQuota } from '@/lib/ai-quota';
 import { cvBackgroundToText } from '@/lib/cv-background';
 import { getCvBackground } from '@/lib/cv-background-db';
 import { buildCvFillMessages, cvFillRequestSchema, parseCvFill } from '@/lib/cv-fill';
-import { callLlm, isLlmConfigured } from '@/lib/llm';
+import { CV_MODELS, callLlm, isLlmConfigured } from '@/lib/llm';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { chargeStageApplication, isCharged, refundStageApplication } from '@/lib/stage-charge';
 import { getStageJob } from '@/lib/stages-db';
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
         temperature: 0.3,
         maxTokens: 1800,
         title: 'Campus 360 CV',
+        models: CV_MODELS,
         timeoutMs: 45_000,
       });
       cv = parseCvFill(raw, input);
