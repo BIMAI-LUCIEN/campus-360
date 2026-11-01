@@ -8,6 +8,9 @@ import { authFetch } from '../auth/betterAuth';
 
 export const MAX_OFFER_IMAGES = 3;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+// The API proxy refuses bodies over 10 MB; base64 adds a third, so 7 MB of photos at most.
+const MAX_TOTAL_IMAGE_BYTES = 7 * 1024 * 1024;
+const base64Bytes = (base64: string) => base64.length * 0.75;
 
 export interface OfferImage {
   uri: string;
@@ -28,15 +31,15 @@ export async function pickOfferImages(remaining: number): Promise<OfferImage[]> 
     mediaTypes: ['images'],
     allowsMultipleSelection: remaining > 1,
     selectionLimit: remaining,
-    quality: 0.7,
+    // Phone cameras shoot 12 to 50 MP: a stronger compression keeps a flyer readable and under the limits.
+    quality: 0.4,
     base64: true,
     exif: false,
   });
   if (result.canceled || !result.assets?.length) return [];
   return result.assets.slice(0, remaining).map((asset) => {
     if (!asset.base64) throw new Error('Impossible de lire cette image. Réessaie avec une autre.');
-    // base64 is 4/3 of the file size.
-    if (asset.base64.length * 0.75 > MAX_IMAGE_BYTES) throw new Error('Image trop lourde : 4 Mo au plus par photo.');
+    if (base64Bytes(asset.base64) > MAX_IMAGE_BYTES) throw new Error('Image trop lourde : 4 Mo au plus par photo.');
     const mime = asset.mimeType === 'image/png' || asset.mimeType === 'image/webp' ? asset.mimeType : 'image/jpeg';
     return { uri: asset.uri, mime, base64: asset.base64 };
   });
@@ -45,6 +48,9 @@ export async function pickOfferImages(remaining: number): Promise<OfferImage[]> 
 /** Reads the offer with the AI and returns it as a private offer, ready to apply to. */
 export async function importExternalOffer(input: { text: string; images: OfferImage[] }): Promise<StageJob> {
   const text = input.text.trim();
+  if (input.images.reduce((total, image) => total + base64Bytes(image.base64), 0) > MAX_TOTAL_IMAGE_BYTES) {
+    throw new Error('Photos trop lourdes ensemble : retire une photo ou prends une capture d’écran.');
+  }
   const res = await authFetch('/api/mobile/stages/external', {
     method: 'POST',
     body: JSON.stringify({

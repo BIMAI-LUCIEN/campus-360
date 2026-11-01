@@ -3,13 +3,12 @@
 
 export const DRAFTING_MODELS = [
   'openai/gpt-4o-mini',
+  'google/gemini-2.5-flash-lite',
   'minimax/minimax-01',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'google/gemini-2.0-flash-exp:free',
 ];
 
 // Models that read images (flyers, screenshots); the drafting list does not all do.
-export const VISION_MODELS = ['openai/gpt-4o-mini', 'google/gemini-2.0-flash-001'];
+export const VISION_MODELS = ['openai/gpt-4o-mini', 'google/gemini-2.5-flash'];
 
 export type LlmContentPart =
   | { type: 'text'; text: string }
@@ -50,12 +49,16 @@ export const callLlm = async (messages: LlmMessage[], options: LlmOptions = {}):
         }),
         signal: AbortSignal.timeout(options.timeoutMs ?? 60_000),
       });
-      if (!response.ok) continue;
+      if (!response.ok) {
+        console.warn(`[llm] ${model} answered ${response.status}: ${(await response.text().catch(() => '')).slice(0, 200)}`);
+        continue;
+      }
       const data = (await response.json()) as { choices?: { message?: { content?: string } }[] };
       const content = data.choices?.[0]?.message?.content?.trim();
       if (content) return content;
-    } catch {
+    } catch (error) {
       // try the next model
+      console.warn(`[llm] ${model} failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   return null;

@@ -41,9 +41,12 @@ export async function POST(request: NextRequest) {
       temperature: 0.1,
       maxTokens: 2000,
       title: 'Campus 360 Offre externe',
-      timeoutMs: 60_000,
+      // Nginx gives up after 60 s: both vision models must fit in that window.
+      timeoutMs: 27_000,
       ...(hasImages ? { models: VISION_MODELS } : {}),
     });
+    // No answer at all means the models failed, not that the photo is unreadable.
+    if (!raw) throw new MobileApiError("L'IA n'a pas pu lire l'offre pour le moment. Réessaie dans un instant.", 503);
     const offer = parseExternalOffer(raw);
     if (!offer) {
       throw new MobileApiError("L'IA n'a pas trouvé d'offre lisible. Prends une photo plus nette ou colle le texte de l'offre.", 422);
