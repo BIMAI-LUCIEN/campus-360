@@ -66,6 +66,16 @@ class FilterPostTests(unittest.TestCase):
     def test_short_text_rejected(self):
         self._assert_case(_case("Stage"))
 
+    def test_company_founding_year_is_not_the_post_date(self):
+        text = "ICT Channel Development Intern. Notre client est une entreprise qui a été fondée en 2016. Au Cameroun, elle recrute." + LONG
+        ok, reason = filter_post("ICT Channel Development Intern", text, "ACME", today=TODAY)
+        self.assertTrue(ok, reason)
+
+    def test_old_post_date_still_rejected_next_to_founding_year(self):
+        text = "Offre d'emploi. Publié: Mon, 19 Feb 2024 08:00:00 GMT. Entreprise créée en 2016." + LONG
+        ok, reason = filter_post("Offre d'emploi Digital Manager", text, "StarTimes", today=TODAY)
+        self.assertEqual((ok, reason), (False, "annonce datée d'une année passée"))
+
 
 if __name__ == "__main__":
     unittest.main()

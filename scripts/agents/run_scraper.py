@@ -33,6 +33,7 @@ def main(argv=None):
     parser.add_argument("--no-db", action="store_true", help="Dry-run sans aucune connexion à la base (ni lecture)")
     parser.add_argument("--from-fixture", type=Path, default=None, help="Items lus dans un jeu étiqueté au lieu de la collecte réseau")
     parser.add_argument("--offline-llm", action="store_true", help="Faux modèle : aucun appel au modèle (payant)")
+    parser.add_argument("--review-only", action="store_true", help="Relecture automatique des offres en attente, sans collecte")
     parser.add_argument("--city", type=str, default=None, help="Ville ou région ciblée au Cameroun (ex: Bafoussam, Buea, Garoua, Douala, Yaoundé, Kribi)")
 
     args = parser.parse_args(argv)
@@ -42,6 +43,8 @@ def main(argv=None):
     if args.no_db and not args.dry_run:
         print("--no-db exige --dry-run.")
         return 2
+    if args.review_only:
+        return review_only(dry_run=args.dry_run)
     selected_platforms = [p.strip().upper() for p in args.platforms.split(",") if p.strip()]
 
     print("================================================================")
@@ -91,6 +94,18 @@ def main(argv=None):
     if args.dry_run:
         print("Dry-run : aucune écriture en base.")
     print("================================================================")
+    return 0
+
+def review_only(dry_run: bool) -> int:
+    """Agent 6 alone: settles the offers already waiting in pending_review."""
+    from auto_review_agent import review_pending
+    from job_store import JobStore
+    store = JobStore(dry_run=dry_run)
+    try:
+        counts = review_pending(store, dry_run=dry_run, limit=200)
+    finally:
+        store.close()
+    print(f"Relecture automatique : {counts}" + (" (dry-run : aucune écriture)" if dry_run else ""))
     return 0
 
 if __name__ == "__main__":

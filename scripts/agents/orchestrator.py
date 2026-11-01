@@ -27,9 +27,22 @@ from job_store import JobStore
 from offer_pipeline import process as process_offer
 from company_check_agent import CompanyCheckAgent
 from offer_page_reader import OfferPageReader
+from verifier_agent import is_duplicate
+from auto_review_agent import review_pending
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("ScraperOrchestrator")
+
+
+def _search_terms(*parts: str) -> str:
+    """Joins search parts without repeating a word: "stage" + "stage Cameroun" + "Cameroun"
+    used to give "stage stage Cameroun Cameroun", which Facebook answered with a single post."""
+    words, seen = [], set()
+    for word in " ".join(p for p in parts if p).split():
+        if word.lower() not in seen:
+            seen.add(word.lower())
+            words.append(word)
+    return " ".join(words)
 
 class ScraperOrchestrator:
     def __init__(self):
@@ -107,9 +120,9 @@ class ScraperOrchestrator:
                 elif "LINKEDIN" in platforms and not self.treg_linkedin_agent.is_configured():
                     logger.info("LinkedIn : Treg non configuré, passage aux sources de secours.")
                 if not li_items and self.apify_agent.is_configured():
-                    li_items = self.apify_agent.scrape_linkedin_posts(query=f"stage {query}{city_suffix} Cameroun", limit=limit_per_platform)
+                    li_items = self.apify_agent.scrape_linkedin_posts(query=_search_terms("stage", query, city_suffix, "Cameroun"), limit=limit_per_platform)
                 if not li_items:
-                    li_items = self.linkedin_agent.search_linkedin_reports(query=f"rapport de stage {query}{city_suffix}", max_results=limit_per_platform)
+                    li_items = self.linkedin_agent.search_linkedin_reports(query=_search_terms("rapport de stage", query, city_suffix), max_results=limit_per_platform)
                 collected_items.extend(li_items)
             except Exception as e:
                 logger.error(f"Erreur Agent LinkedIn : {e}")
@@ -118,10 +131,10 @@ class ScraperOrchestrator:
             try:
                 fb_items = []
                 if self.apify_agent.is_configured():
-                    fb_items = self.apify_agent.scrape_facebook_posts(query=f"stage {query}{city_suffix} Cameroun", limit=limit_per_platform)
-                    fb_items += self.apify_agent.scrape_facebook_posts(query=f"recrutement emploi {query}{city_suffix} Cameroun", limit=limit_per_platform)
+                    fb_items = self.apify_agent.scrape_facebook_posts(query=_search_terms("stage", query, city_suffix, "Cameroun"), limit=limit_per_platform)
+                    fb_items += self.apify_agent.scrape_facebook_posts(query=_search_terms("recrutement emploi", query, city_suffix, "Cameroun"), limit=limit_per_platform)
                 if not fb_items:
-                    fb_items = self.facebook_agent.search_facebook_reports(query=f"rapport de stage {query}{city_suffix}", max_results=limit_per_platform)
+                    fb_items = self.facebook_agent.search_facebook_reports(query=_search_terms("rapport de stage", query, city_suffix), max_results=limit_per_platform)
                 collected_items.extend(fb_items)
             except Exception as e:
                 logger.error(f"Erreur Agent Facebook : {e}")
@@ -129,7 +142,7 @@ class ScraperOrchestrator:
         if "TIKTOK" in collect_platforms:
             try:
                 if self.apify_agent.is_configured():
-                    tt_items = self.apify_agent.scrape_tiktok_posts(query=f"stage {query}{city_suffix} Cameroun", limit=limit_per_platform)
+                    tt_items = self.apify_agent.scrape_tiktok_posts(query=_search_terms("stage", query, city_suffix, "Cameroun"), limit=limit_per_platform)
                     collected_items.extend(tt_items)
             except Exception as e:
                 logger.error(f"Erreur Agent TikTok : {e}")
@@ -146,7 +159,11 @@ class ScraperOrchestrator:
         # 3. Analysis: offers go through the 4-agent pipeline, academic documents through the report analyzer.
         reports_saved = 0
         statuses = {"published": 0, "pending_review": 0, "rejected": 0, "deferred": 0}
+        reviewed = {}
         existing = store.recent_offers()
+        seen_sources = getattr(store, "seen_sources", None)
+        seen_urls, seen_titles = seen_sources() if seen_sources else (set(), set())
+        already_seen = 0
         run_error = None
         # Field check (agent 5): paid Google search per company, so only on a real --live run.
         self.company_checker.live = live and not dry_run
@@ -181,6 +198,12 @@ class ScraperOrchestrator:
                         cap_reached = True
                         logger.info(f"Plafond quotidien de {cap} offres atteint : éléments restants non traités.")
                         break
+                    # Most items come back every day: skipping them before the paid page read
+                    # leaves the read budget to the new ones.
+                    if self._already_seen(item, seen_urls, seen_titles, existing):
+                        already_seen += 1
+                        logger.info("   -> déjà vu lors d'un passage précédent, ignoré")
+                        continue
                     # Feed summaries (Google News RSS) are replaced by the offer's full page text.
                     # Offline runs (tests, --from-fixture) never touch the network.
                     if preloaded_items is None:
@@ -194,6 +217,12 @@ class ScraperOrchestrator:
                         self._notify_published(result, item)
                 except Exception as e:
                     logger.error(f"Erreur lors du traitement de l'élément : {e}")
+            # Agent 6: no offer waits for a human. Real runs only (one model call per offer).
+            if live and not dry_run and hasattr(store, "pending_offers"):
+                try:
+                    reviewed = review_pending(store)
+                except Exception as review_err:
+                    logger.error(f"Relecture automatique interrompue : {review_err}")
         except Exception as error:
             run_error = f"{type(error).__name__}: {error}"
             raise
@@ -214,10 +243,27 @@ class ScraperOrchestrator:
             "platforms": platforms,
             "added_today": added_today,
             "cap_reached": cap_reached,
+            "already_seen": already_seen,
+            "auto_review": reviewed,
         }
 
-        logger.info(f"🏁 Mission terminée en {duration}s : {reports_saved} rapports, offres {statuses}.")
+        logger.info(f"🏁 Mission terminée en {duration}s : {reports_saved} rapports, offres {statuses}, déjà vues {already_seen}.")
         return summary
+
+    # Google News links are redirects that the page reader replaces with the real page,
+    # so for them the stored URL differs and the title is what identifies the post.
+    _REDIRECT_URL = re.compile(r"^https?://news\.google\.com/", re.IGNORECASE)
+
+    def _already_seen(self, item: dict, seen_urls: set, seen_titles: set, existing: list) -> bool:
+        url = item.get("url") or ""
+        if url and url in seen_urls:
+            return True
+        title = (item.get("title") or "").strip()
+        if self._REDIRECT_URL.match(url) and title.lower() in seen_titles:
+            return True
+        # Structured sources name the company: a known offer is caught before any paid call.
+        company = item.get("company")
+        return bool(company and title and is_duplicate(company, title, existing))
 
     # A report example must be a real document. Social posts (TikTok, Facebook…)
     # only carry a caption: the AI used to invent a title the video did not match.

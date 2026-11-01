@@ -193,5 +193,68 @@ class DailyCapTests(unittest.TestCase):
         self.assertIsNone(dry.finished["run_id"])
 
 
+class SeenStore(FakeStore):
+    urls, titles, offers = set(), set(), []
+
+    def recent_offers(self):
+        return list(SeenStore.offers)
+
+    def seen_sources(self):
+        return set(SeenStore.urls), set(SeenStore.titles)
+
+
+class AlreadySeenTests(unittest.TestCase):
+    """Items seen on a previous run are skipped before the paid page read and the models."""
+
+    def run_pipeline(self, items):
+        orch = make(FakeTreg(configured=False))
+        decision = {"status": "pending_review", "kind": "stage", "confidence": 0.5, "reason": "test", "stage": "verifier"}
+        with mock.patch.object(orchestrator, "JobStore", SeenStore),                 mock.patch.object(orchestrator, "process_offer", return_value=decision) as process,                 mock.patch.object(orchestrator.ScraperOrchestrator, "_enrich_with_full_page") as enrich:
+            summary = orch.run_full_pipeline(platforms=["LINKEDIN"], dry_run=True, preloaded_items=items)
+        return summary, process, enrich
+
+    def tearDown(self):
+        SeenStore.urls, SeenStore.titles, SeenStore.offers = set(), set(), []
+
+    def test_known_url_is_skipped_before_page_read(self):
+        SeenStore.urls = {OFFER["url"]}
+        summary, process, enrich = self.run_pipeline([dict(OFFER)])
+        self.assertEqual(summary["already_seen"], 1)
+        self.assertEqual(process.call_count, 0)
+        self.assertEqual(enrich.call_count, 0)
+
+    def test_google_news_redirect_matched_by_title(self):
+        SeenStore.titles = {"offre d'emploi digital manager startimes"}
+        news = {"platform": "CAMEROON_WEB", "title": "Offre d'emploi Digital Manager StarTimes",
+                "url": "https://news.google.com/rss/articles/abc", "snippet": "x"}
+        summary, process, _ = self.run_pipeline([news])
+        self.assertEqual(summary["already_seen"], 1)
+        self.assertEqual(process.call_count, 0)
+
+    def test_same_title_on_a_direct_url_is_not_skipped(self):
+        SeenStore.titles = {OFFER["title"].lower()}
+        summary, process, _ = self.run_pipeline([dict(OFFER)])
+        self.assertEqual(summary["already_seen"], 0)
+        self.assertEqual(process.call_count, 1)
+
+    def test_known_company_and_title_skipped(self):
+        SeenStore.offers = [{"company": "ReliefWeb", "title": "Supply Chain Intern"}]
+        summary, process, _ = self.run_pipeline([dict(OFFER, url="https://www.linkedin.com/jobs/view/99")])
+        self.assertEqual(summary["already_seen"], 1)
+        self.assertEqual(process.call_count, 0)
+
+    def test_new_item_goes_through(self):
+        summary, process, enrich = self.run_pipeline([dict(OFFER)])
+        self.assertEqual(summary["already_seen"], 0)
+        self.assertEqual(process.call_count, 1)
+
+
+class SearchTermsTests(unittest.TestCase):
+    def test_words_are_not_repeated(self):
+        self.assertEqual(orchestrator._search_terms("stage", "stage Cameroun", "", "Cameroun"), "stage Cameroun")
+        self.assertEqual(orchestrator._search_terms("recrutement emploi", "stage Cameroun", " Douala", "Cameroun"),
+                         "recrutement emploi stage Cameroun Douala")
+
+
 if __name__ == "__main__":
     unittest.main()

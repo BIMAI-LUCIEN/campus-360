@@ -40,8 +40,16 @@ def _matches(patterns: list, text: str) -> bool:
     return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
 
 
+# "fondée en 2016", "since 2018": the company's history, not the date of the post.
+HISTORY_YEAR = re.compile(
+    r"(fond[ée]e?s?|cr[ée]{2}e?s?|cr[ée]ation|depuis|founded|established|since|incorporated)\s+(en|in|le|de|l'an)?\s*(20[12]\d)",
+    re.IGNORECASE,
+)
+
+
 def _has_past_year_only(text: str, today: date) -> bool:
     """True when the post mentions years and all of them are in the past."""
+    text = HISTORY_YEAR.sub(" ", text)
     years = {int(y) for y in re.findall(r"\b(20[12]\d)\b", text)}
     return bool(years) and max(years) < today.year
 

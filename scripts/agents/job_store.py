@@ -119,6 +119,71 @@ class JobStore:
             )
             return [dict(row) for row in cur.fetchall()]
 
+    # Rejections that a later run can overturn: the page was not read or the models were down.
+    RETRYABLE_REJECTIONS = ("texte trop court", "analyse IA indisponible")
+
+    def seen_sources(self, days: int = 45) -> tuple:
+        """(urls, titles) of items already stored or rejected for good, so a run does not pay
+        again to read and analyze them. A failure returns empty sets: the run goes on."""
+        if not self.conn:
+            return set(), set()
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """select source_url, null from public.stage_jobs
+                        where source_url is not null and created_at > now() - make_interval(days => %s)
+                       union all
+                       select source_url, source_title from public.stage_job_rejections
+                        where created_at > now() - make_interval(days => %s) and not (reason = any(%s))""",
+                    (days, days, list(self.RETRYABLE_REJECTIONS)),
+                )
+                rows = cur.fetchall()
+        except Exception as err:
+            self.conn.rollback()
+            logger.warning(f"Lecture des sources déjà vues impossible ({type(err).__name__}).")
+            return set(), set()
+        urls = {url for url, _ in rows if url}
+        titles = {title.strip().lower() for _, title in rows if title and title.strip()}
+        return urls, titles
+
+    # --- automatic review (agent 6) ------------------------------------------------
+    def pending_offers(self, limit: int = 40) -> list:
+        """Scraped offers waiting for review, oldest first, with what the reviewer reads."""
+        if not self.conn:
+            return []
+        with self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """select j.id::text as id, j.title, j.description, j.kind::text as kind, j.location,
+                          j.apply_method::text as apply_method, j.source_url, j.source_published_at, j.expires_at,
+                          j.review_reason, j.created_at, c.name as company,
+                          coalesce(nullif(c.contact_email, ''), j.evidence->>'contact_email') as contact_email,
+                          c.contact_whatsapp
+                     from public.stage_jobs j
+                     join public.stage_companies c on c.id = j.company_id
+                    where j.status = 'pending_review' and j.source = 'SCRAPED'
+                    order by j.created_at
+                    limit %s""",
+                (limit,),
+            )
+            return [dict(row) for row in cur.fetchall()]
+
+    def settle_review(self, job_id: str, status: str, reason: str, reviewer: str, company: str = None) -> bool:
+        """Publishes or rejects a pending offer. `company` replaces an unidentified one.
+        Returns False when the offer was no longer pending (an admin got there first)."""
+        if self.dry_run or not self.conn:
+            return False
+        with self.conn, self.conn.cursor() as cur:
+            company_id = self._company_id(cur, company, {}, None) if company else None
+            cur.execute(
+                """update public.stage_jobs
+                      set status = %s, review_reason = %s, reviewed_at = now(), reviewed_by = %s,
+                          company_id = coalesce(%s, company_id),
+                          company_normalized = coalesce(%s, company_normalized)
+                    where id = %s and status = 'pending_review'""",
+                (status, reason[:500], reviewer, company_id, normalize_company(company) if company else None, job_id),
+            )
+            return cur.rowcount > 0
+
     def log_rejection(self, stage: str, reason: str, item: dict):
         if self.dry_run or not self.conn:
             return
