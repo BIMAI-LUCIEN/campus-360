@@ -21,6 +21,9 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 - **Commandes :** `PYTHONUTF8=1 python -m unittest discover -s tests -p "test_*.py"` → 114 tests OK (`tests/test_auto_review.py` : 12).
 - **Points ouverts :** pas déployé ; après le push, lancer `python3 scripts/agents/run_scraper.py --review-only` sur le VPS pour vider l'arriéré. Les deux annonces « Infographe Junior » (SELETOO et Smart Touch Design) sont la même offre sous deux noms et seraient publiées toutes les deux. Chaque décision coûte un appel au modèle (OpenRouter).
 - **À reporter dans contexte-code.md :** §3.7, agent 6 `auto_review_agent.py` et option `--review-only` ; `pending_review` n'est plus qu'un état transitoire.
+- **Mise en production (commits 9a87831 et 3e768d4) :** `--review-only` sur le VPS → 34 offres traitées, 12 publiées, 22 rejetées. Les deux « Infographe Junior » (même URL emploi.cm) étaient publiées toutes les deux : un exemplaire repassé en `rejected` à la main, et `review_pending` écarte désormais un doublon publié dans la même relecture (3e768d4, 115 tests). `deploy-vps.yml` ne se déclenche pas pour `scripts/agents/**` : le VPS a été mis à jour par `git pull --ff-only` dans `/opt/campus-360`.
+- **Passage réel du 2026-11-01 (10 h, Douala) avec le nouveau code :** 95 collectés, 79 sautés comme déjà vus, plafond de lectures payantes jamais atteint, requête Facebook `stage Cameroun`, 3 publiées (1 directe, 2 par la relecture automatique), 0 en attente. API : 69 offres.
+- **Points ouverts :** « Deploy Mobile API to Vercel » échoue déjà depuis 1250a29 (antérieur à ces changements). L'offre « Directeur de Carrière » (ATLANTIC GROUP) a été publiée directement par le pipeline : la règle « profil senior » ne s'applique qu'à la relecture automatique, pas aux offres publiées d'office.
 
 ---
 
