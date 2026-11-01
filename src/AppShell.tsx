@@ -59,6 +59,9 @@ import {
   completeStudentOnboarding,
   registerPushToken,
   unregisterPushToken,
+  fetchNotificationsInbox,
+  markNotificationsRead,
+  clearNotificationsInbox,
   type AuthCapabilities,
   type StudentProfile,
   type StudentSession,
@@ -388,7 +391,14 @@ export function AppShell() {
     body: string;
     receivedAt: string;
     data?: unknown;
+    read?: boolean;
   }>>([]);
+  // Unread count of the server inbox (null until it answered once).
+  const [serverUnread, setServerUnread] = React.useState<number | null>(null);
+  // Offer to open in the stages screen (tap on a « nouveau stage » notification).
+  const [focusJobId, setFocusJobId] = React.useState<string | null>(null);
+  // Why this phone gets no push (shown in the notification settings), or null.
+  const [pushIssue, setPushIssue] = React.useState<string | null>(null);
 
   // ── Effects ──────────────────────────────────────────────────────────────
   // Asks the phone for permission (once) and sends the Expo push token to the API.
@@ -413,7 +423,7 @@ export function AppShell() {
       const projectId =
         Constants.expoConfig?.extra?.eas?.projectId ??
         Constants.easConfig?.projectId;
-      if (!projectId) return;
+      if (!projectId) { setPushIssue('Configuration push absente de cette version de l’app.'); return; }
       const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
       pushTokenRef.current = tokenResult.data;
       await registerPushToken(
@@ -421,8 +431,38 @@ export function AppShell() {
         Platform.OS === 'android' ? 'Android Device' : Platform.OS === 'ios' ? 'iOS Device' : 'Web Device',
         Platform.OS === 'android' ? 'android' : Platform.OS === 'ios' ? 'ios' : 'web',
       );
-    } catch {}
+      setPushIssue(null);
+    } catch (error) {
+      // Typically a build without Firebase (FCM) on Android: the inbox still works.
+      console.warn('[push] registration failed:', error);
+      setPushIssue('Les alertes sur l’écran du téléphone ne sont pas encore disponibles sur cette version. Tes notifications restent visibles dans la cloche.');
+    }
   }, []);
+
+  // The bell reads the server inbox: notifications survive a restart and appear even
+  // when the push could not reach the phone.
+  const refreshInbox = React.useCallback(async () => {
+    try {
+      const inbox = await fetchNotificationsInbox();
+      setServerUnread(inbox.unread);
+      setNotifications(
+        inbox.notifications.map((item) => ({
+          id: item.id,
+          title: item.title,
+          body: item.body,
+          receivedAt: item.createdAt,
+          data: item.data,
+          read: item.read,
+        })),
+      );
+    } catch {
+      // Offline: keep what is shown.
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (studentSession) void refreshInbox();
+  }, [studentSession, refreshInbox]);
 
   React.useEffect(() => {
     if (studentSession) void registerForPush(true);
@@ -454,7 +494,9 @@ export function AppShell() {
       data: notif.request.content.data,
     };
     setNotifications((prev) => [entry, ...prev.filter((item) => item.id !== entry.id)]);
-  }, []);
+    // The push is also in the server inbox: reload it to get its id and the unread count.
+    void refreshInbox();
+  }, [refreshInbox]);
 
   // Latest tap handler, readable from the listeners registered once at launch.
   const notificationTapRef = React.useRef<(data: unknown) => void>(() => {});
@@ -878,6 +920,8 @@ export function AppShell() {
     if (pushTokenRef.current) await unregisterPushToken(pushTokenRef.current);
     pushTokenRef.current = null;
     setStudentSession(null);
+    setNotifications([]);
+    setServerUnread(null);
     await clearStudentSession().catch(() => undefined);
     setStudentProfile(null);
     setPurchasedDocuments([]); setPurchasedPacks([]);
@@ -1047,7 +1091,11 @@ export function AppShell() {
     // App opened from a notification: wait for the session to be restored.
     if (!studentSession) { pendingNotificationData.current = data; return; }
     pendingNotificationData.current = undefined;
-    if (type === 'job_match' || type === 'welcome') openSection('stages');
+    if (type === 'job_match') {
+      const jobId = (data as { jobId?: unknown }).jobId;
+      if (typeof jobId === 'string' && jobId) setFocusJobId(jobId);
+      openSection('stages');
+    } else if (type === 'job_digest' || type === 'welcome') openSection('stages');
     else if (type === 'wallet_topup') { openSection('account'); void syncStudentAccount(studentSession); }
     else if (type === 'purchase' || type === 'pack_purchase') { openSection('library'); void syncStudentAccount(studentSession); }
     else if (type === 'contribution_published') { setContributionsVisible(true); void syncStudentAccount(studentSession); }
@@ -1064,7 +1112,8 @@ export function AppShell() {
       notificationTapRef.current(pendingNotificationData.current);
     }
   }, [studentSession]);
-  const unreadNotifications = notifications.filter((notif) => new Date(notif.receivedAt).getTime() > notificationsSeenAt).length;
+  const unreadNotifications =
+    serverUnread ?? notifications.filter((notif) => new Date(notif.receivedAt).getTime() > notificationsSeenAt).length;
 
   // ── Render ────────────────────────────────────────────────────────────────
   if (!fontsLoaded && !fontError && !fontTimeout) {
@@ -1199,7 +1248,13 @@ export function AppShell() {
             {activeSection !== 'account' && (
               <TopBar
                 appName="Campus 360"
-                onBellPress={() => { setNotificationsVisible(true); setNotificationsSeenAt(Date.now()); }}
+                onBellPress={() => {
+                  setNotificationsVisible(true);
+                  setNotificationsSeenAt(Date.now());
+                  if (studentSession) {
+                    void refreshInbox().then(() => markNotificationsRead()).then(() => setServerUnread(0));
+                  }
+                }}
                 hasUnread={unreadNotifications > 0}
                 unreadCount={unreadNotifications}
                 onAvatarPress={() => openSection('account')}
@@ -1234,6 +1289,8 @@ export function AppShell() {
             >
               {activeSection === 'stages' && (
                 <StagesScreen
+                  focusJobId={focusJobId}
+                  onFocusHandled={() => setFocusJobId(null)}
                   studentProfile={{
                     // Real values only: these feed the CV / application sent to recruiters.
                     fullName: studentProfile?.name || '',
@@ -1593,6 +1650,8 @@ export function AppShell() {
                   <Pressable
                     onPress={() => {
                       setNotifications([]);
+                      setServerUnread(0);
+                      if (studentSession) void clearNotificationsInbox();
                       if (Platform.OS !== 'web') void Notifications.dismissAllNotificationsAsync().catch(() => undefined);
                     }}
                     style={{ paddingHorizontal: 12, paddingVertical: 6, marginRight: 8 }}
@@ -1617,7 +1676,7 @@ export function AppShell() {
                     if (lowerTitle.includes('recharge') || lowerTitle.includes('crédité')) { emoji = '💸'; bgColor = stitchColors.emeraldBg; }
                     else if (lowerTitle.includes('pack') || lowerTitle.includes('iut')) { emoji = '✨'; bgColor = stitchColors.siennaBg; }
                     else if (lowerTitle.includes('premium')) { emoji = '👑'; bgColor = stitchColors.warningBg; }
-                    else if (lowerTitle.includes('stage')) { emoji = '💼'; bgColor = stitchColors.siennaBg; }
+                    else if (lowerTitle.includes('stage') || lowerTitle.includes('candidature') || lowerTitle.includes('réponse')) { emoji = '💼'; bgColor = stitchColors.siennaBg; }
                     else if (lowerTitle.includes('document')) { emoji = '📄'; bgColor = stitchColors.siennaBg; }
                     let timeStr = 'Récemment';
                     try { const diffMs = Date.now() - new Date(notif.receivedAt).getTime(); const diffMins = Math.floor(diffMs / 60000); const diffHrs = Math.floor(diffMins / 60); if (diffMins < 1) timeStr = 'À l’instant'; else if (diffMins < 60) timeStr = `Il y a ${diffMins} min`; else if (diffHrs < 24) timeStr = `Il y a ${diffHrs} h`; else timeStr = `Il y a ${Math.floor(diffHrs / 24)} j`; } catch {}
@@ -1661,8 +1720,11 @@ export function AppShell() {
                       : 'État des notifications inconnu'}
                 </Text>
                 <Text style={{ fontSize: 13, color: stitchColors.inkMuted, lineHeight: 19 }}>
-                  Campus 360 t'envoie les alertes de tes candidatures, achats et recharges. Pour les activer ou les couper, passe par les réglages de ton téléphone.
+                  Campus 360 te prévient des nouveaux stages qui te correspondent, de tes candidatures et de tes recharges. Pour les activer ou les couper, passe par les réglages de ton téléphone.
                 </Text>
+                {pushIssue ? (
+                  <Text style={{ fontSize: 13, color: stitchColors.warningDeep, lineHeight: 19 }}>{pushIssue}</Text>
+                ) : null}
                 {notifPermission !== 'granted' && Platform.OS !== 'web' && (
                   <PrimaryButtonLocal label="Activer les notifications" onPress={() => { void registerForPush(true); }} />
                 )}

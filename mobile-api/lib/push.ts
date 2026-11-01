@@ -22,8 +22,34 @@ const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 const isExpoToken = (token: string) =>
   token.startsWith('ExponentPushToken') || token.startsWith('ExpoPushToken');
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Keeps the notification in the student's inbox (app_notifications, migration 0028): the
+ * bell of the app reads it there, so it is never lost when the push cannot be delivered.
+ * Returns false when this exact job alert was already recorded (one alert per offer).
+ */
+async function recordInInbox(userId: string, msg: PushInput): Promise<boolean> {
+  const data = msg.data ?? {};
+  const type = typeof data.type === 'string' ? data.type : 'info';
+  const jobId = typeof data.jobId === 'string' && UUID.test(data.jobId) ? data.jobId : null;
+  const result = await databasePool.query(
+    `insert into public.app_notifications (user_id, type, title, body, data, job_id)
+     values ($1, $2, $3, $4, $5::jsonb, $6)
+     on conflict (user_id, job_id) where type = 'job_match' do nothing
+     returning id`,
+    [userId, type, msg.title.slice(0, 200), msg.body.slice(0, 500), JSON.stringify(data), type === 'job_match' ? jobId : null],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
 export async function sendPushToUser(userId: string, msg: PushInput): Promise<void> {
   try {
+    const recorded = await recordInInbox(userId, msg).catch((error) => {
+      console.error('[push] inbox insert failed:', error);
+      return true;
+    });
+    if (!recorded) return;
     const { rows } = await databasePool.query<{ push_token: string }>(
       'select push_token from public.app_user_push_tokens where user_id = $1',
       [userId],

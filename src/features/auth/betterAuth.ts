@@ -687,6 +687,33 @@ export const purchaseIaPack = async (packId: 'micro' | 'standard' | 'boost') =>
     body: JSON.stringify({ packId }),
   })).json() as Promise<{ ok: boolean; balanceCoins: number; iaCredits: number }>;
 
+export type InboxNotification = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown>;
+  createdAt: string;
+  read: boolean;
+};
+
+/** The student's notifications kept by the server (survive a restart, shown even without push). */
+export const fetchNotificationsInbox = async (): Promise<{ notifications: InboxNotification[]; unread: number }> => {
+  const response = await authFetch('/api/mobile/notifications');
+  return (await response.json()) as { notifications: InboxNotification[]; unread: number };
+};
+
+export const markNotificationsRead = async (ids?: string[]) => {
+  await authFetchRaw('/api/mobile/notifications', {
+    method: 'PATCH',
+    body: JSON.stringify(ids?.length ? { ids } : { all: true }),
+  }).catch(() => undefined);
+};
+
+export const clearNotificationsInbox = async () => {
+  await authFetchRaw('/api/mobile/notifications', { method: 'DELETE' }).catch(() => undefined);
+};
+
 /** Sign-out: this device stops receiving the account's notifications (best effort). */
 export const unregisterPushToken = async (pushToken: string) => {
   await authFetchRaw('/api/mobile/notifications/register', {

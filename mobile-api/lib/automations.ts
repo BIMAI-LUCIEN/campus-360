@@ -14,7 +14,6 @@ import { sendPushToUser } from './push';
  * or block the business action that triggered it.
  */
 
-const MAX_ALERTED_STUDENTS = 500;
 const APP_NAME = 'Campus 360';
 
 type JobForMatching = {
@@ -190,40 +189,6 @@ export const sendWelcomeWithOffers = async (userId: string, skills: readonly str
     });
   } catch (error) {
     console.error('[automations] sendWelcomeWithOffers failed:', error);
-  }
-};
-
-/** 2. Push "new internship for you" to students whose skills cover >= 70 % of the requirements. */
-export const alertMatchingStudents = async (job: JobForMatching) => {
-  try {
-    if (job.requirements.length === 0) return 0;
-    const { rows } = await databasePool.query<{ app_user_id: string; skills: string[] | null }>(
-      `select app_user_id::text as app_user_id, skills
-         from public.stage_students
-        where app_user_id is not null and coalesce(array_length(skills, 1), 0) > 0
-        limit $1`,
-      [MAX_ALERTED_STUDENTS],
-    );
-    const targets = rows
-      .map((row) => ({ userId: row.app_user_id, score: computeMatchScore(row.skills ?? [], job.requirements) }))
-      .filter((target) => target.score >= MATCH_ALERT_THRESHOLD);
-
-    // Small batches: bounded concurrency on the DB and the Expo push API.
-    for (let i = 0; i < targets.length; i += 20) {
-      await Promise.all(
-        targets.slice(i, i + 20).map((target) =>
-          sendPushToUser(target.userId, {
-            title: 'Nouveau stage pour toi',
-            body: `${job.title} chez ${job.companyName} (${target.score} % de correspondance)`,
-            data: { type: 'job_match', jobId: job.id, score: target.score },
-          }),
-        ),
-      );
-    }
-    return targets.length;
-  } catch (error) {
-    console.error('[automations] alertMatchingStudents failed:', error);
-    return 0;
   }
 };
 

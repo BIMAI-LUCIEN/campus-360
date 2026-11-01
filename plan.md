@@ -6,6 +6,7 @@
 
 ---
 ## Reprise
+- **Module 32 (alertes de nouveaux stages) :** 32.1 à 32.5 `[X]` le 2026-11-01 (tsc app/mobile-api 0, mobile-api 379 pass / 0 fail) ; 32.6 cron au déploiement ; 32.7 🔒 Firebase/FCM pour le push Android.
 - **Module 31 (audit app mobile, lots 2 à 5) :** 31.1 à 31.23 `[X]` le 2026-11-01 (typecheck app, mobile-api, recruiter-web 0 ; mobile-api 369 pass / 0 fail / 20 skip ; lint:colors 147, baseline abaissée ; expo-web : suivi en chargement puis erreur, profil en initiales). Non vérifié sur téléphone. Migration 0027 à appliquer au déploiement.
 - **Tâche en cours :** 27.6 et 27.7 `[~]` (code écrit, parcours navigateur à faire) ; 27.1 à 27.5 validées le 2026-10-30.
 - **Prochaine (Module 27) :** migration 0023 appliquée le 2026-10-30 (avec 0024_pricing_v2, venue d'un autre chantier : ne plus modifier ce fichier). Poser `ADMIN_SERVICE_SECRET` et `MOBILE_API_INTERNAL_URL` dans les `.env.local` locaux, puis parcours navigateur 27.6 (admin) et 27.7 (`expo-web-local`, 375 px) avec des sessions ouvertes par l'utilisateur, puis 27.8. `lint:colors` échoue sur `DocumentsScreen.tsx` (+4, commit `65679ce`, hors Module 27).
@@ -3269,6 +3270,18 @@ Source : `docs/audit-mobile-2026-11-01.md` (lot 1 livré, commits `63c5887` et `
 - [X] **Tâche 31.21 : Plus de données inventées** — note ★ 4.8, « partenaire vérifié », score 98 %, photos de locaux, « Douala / 3 à 6 mois », « Lucien Miguel », badge « Vérifié », écoles fictives des filtres.
 - [X] **Tâche 31.22 : Accessibilité** — cibles ≥ 44 px (boutons ✕, envoi), libellés d'accessibilité, contrastes des badges de statut.
 - [X] **Tâche 31.23 : Textes** — accents, tutoiement partout, restes d'anglais.
+
+## 🔔 MODULE 32 : Alertes de nouveaux stages et boîte de notifications
+
+Demande du 2026-11-01 : prévenir l'étudiant dès qu'un stage arrive, surtout s'il lui correspond. Constat : `alertMatchingStudents` n'était appelé nulle part, la liste de la cloche n'existait qu'en mémoire, et aucun jeton push n'est enregistré en production (APK sans Firebase/FCM).
+
+- [X] **Tâche 32.1 : Migration 0028** — `app_notifications` (boîte serveur, une alerte par étudiant et par offre), `stage_jobs.alerted_at` (offres déjà publiées marquées annoncées).
+- [X] **Tâche 32.2 : Score d'alerte** — `lib/job-alert-score.ts` : compétences (exigences ou texte de l'offre) + filière (titre et secteur, mots entiers) ; simulation sur les données réelles sans faux positif relevé.
+- [X] **Tâche 32.3 : Moteur d'alertes** — `lib/job-alerts.ts` : offres réservées une fois (`for update skip locked`), « Nouveau stage pour toi » si score ≥ 60 (3 max par passage), résumé quotidien pour les autres ; déclenché par `ingest`, `review` et la route cron `POST /api/mobile/stages/alerts`.
+- [X] **Tâche 32.4 : Boîte de notifications** — chaque push est d'abord enregistré ; `GET/PATCH/DELETE /api/mobile/notifications` ; la cloche lit le serveur, compte les non-lues, « Tout effacer » vide la boîte.
+- [X] **Tâche 32.5 : Ouverture de l'offre** — une alerte ouvre le détail de l'offre dans l'écran des stages.
+- [ ] **Tâche 32.6 : Cron VPS** — appeler `/api/mobile/stages/alerts` toutes les 10 min (offres publiées par les agents et l'admin).
+- [!] **Tâche 32.7 : Push Android (FCM)** — 🔒 projet Firebase, `google-services.json`, clé FCM V1 sur EAS, puis nouvel APK.
 
 ## Journal d'exécution
 **[2026-10-23] Tâche 26.5 validée (execute / test-and-verify)** — Intégration Checkout Nyole durcie et fiabilisée : ouverture in-app du checkout officiel (`WebBrowser.openBrowserAsync`), polling en arrière-plan avec fermeture automatique dès confirmation (`WebBrowser.dismissBrowser()`), support multi-formats de signature Nyole (hex direct et `v1=`), persistance du `failure_message` et indication explicite du code USSD de validation `#150*50#` pour Orange Money Cameroun. 9/9 tests `payments.test.mjs` passés, `tsc --noEmit` 0 erreur.

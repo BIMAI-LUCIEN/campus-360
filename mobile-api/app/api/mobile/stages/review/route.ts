@@ -7,6 +7,8 @@ import { mobileErrorResponse, withCors } from '@/lib/mobile-access';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 import { listPendingStageJobs, reviewStageJob } from '@/lib/stages-db';
 
+import { triggerJobAlerts } from '@/lib/job-alerts';
+
 export const runtime = 'nodejs';
 
 // Human review of scraped offers, called by the Hermes Telegram bot.
@@ -69,6 +71,8 @@ export async function POST(request: NextRequest) {
     if (!updated) {
       return withCors(NextResponse.json({ error: "Offre introuvable ou déjà traitée." }, { status: 404 }), request);
     }
+    // A published offer is announced to the students it fits (lib/job-alerts.ts).
+    if (decision === 'publish') triggerJobAlerts();
     return withCors(NextResponse.json({ ok: true, jobId, status: decision === 'publish' ? 'published' : 'rejected' }), request);
   } catch (error) {
     if (error instanceof SyntaxError) {

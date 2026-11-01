@@ -77,6 +77,9 @@ interface StagesScreenProps {
   onSelectJob?: (job: StageJob) => void;
   onOpenWallet?: () => void;
   onProfileSaved?: (patch: ApplicationProfilePatch) => void;
+  /** Offer to open as soon as the list has it (tap on a « nouveau stage » notification). */
+  focusJobId?: string | null;
+  onFocusHandled?: () => void;
 }
 
 export const BANNER_POOLS: Record<string, string[]> = {
@@ -219,6 +222,8 @@ export function StagesScreen({
   onSelectJob,
   onOpenWallet,
   onProfileSaved,
+  focusJobId,
+  onFocusHandled,
 }: StagesScreenProps) {
   // Offers already loaded in this session are shown at once; the network only refreshes them.
   const [jobs, setJobs] = useState<StageJob[]>(
@@ -400,6 +405,15 @@ export function StagesScreen({
       message: `Offre de stage « ${job.title} »${company}, à retrouver dans l'app Campus 360 : https://campus360b.site`,
     }).catch(() => undefined);
   };
+
+  // A notification about a precise offer opens its detail once the list contains it.
+  useEffect(() => {
+    if (!focusJobId) return;
+    const target = jobs.find((job) => job.id === focusJobId);
+    if (!target) return;
+    setSelectedDetailJob(target);
+    onFocusHandled?.();
+  }, [focusJobId, jobs]);
 
   const enrichedJobs = useMemo(() => {
     return jobs.map((job) => {
