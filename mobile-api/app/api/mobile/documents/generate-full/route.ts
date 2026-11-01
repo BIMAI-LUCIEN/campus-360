@@ -29,9 +29,8 @@ const SECTION_CHUNKS = 6;
 
 const CANDIDATE_MODELS = [
   'openai/gpt-4o-mini',
+  'google/gemini-2.5-flash-lite',
   'minimax/minimax-01',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'google/gemini-2.0-flash-exp:free',
 ];
 
 export async function OPTIONS(request: NextRequest) {

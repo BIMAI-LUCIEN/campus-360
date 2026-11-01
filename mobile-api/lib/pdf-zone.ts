@@ -7,8 +7,8 @@ export const MAX_ZONE_IMAGE_BYTES = 1.5 * 1024 * 1024;
 // Models that read images; text-only fallbacks are skipped when a zone is attached.
 export const VISION_MODELS = [
   'openai/gpt-4o-mini',
-  'google/gemini-2.0-flash-001',
-  'google/gemini-2.0-flash-exp:free',
+  'google/gemini-2.5-flash',
+  'google/gemini-2.5-flash-lite',
 ];
 
 export type PdfZone = { page: number; image: string };

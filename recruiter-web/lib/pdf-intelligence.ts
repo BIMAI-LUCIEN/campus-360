@@ -77,9 +77,9 @@ const inferSubject = (text: string, fallback: string) => {
 };
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-// A free-tier model by default; overridable via OPENROUTER_MODEL. Kept in sync
+// A low-cost model by default; overridable via OPENROUTER_MODEL. Kept in sync
 // with the mobile assistant route so both features share one model config.
-const DEFAULT_FREE_MODEL = 'google/gemini-2.0-flash-exp:free';
+const DEFAULT_FREE_MODEL = 'google/gemini-2.5-flash-lite';
 const LLM_TIMEOUT_MS = 20_000;
 
 // Best-effort extraction of a JSON object from an LLM response that may wrap it

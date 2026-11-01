@@ -14,9 +14,8 @@ export const runtime = 'nodejs';
 
 const CANDIDATE_MODELS = [
   'openai/gpt-4o-mini',
+  'google/gemini-2.5-flash-lite',
   'minimax/minimax-01',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'google/gemini-2.0-flash-exp:free',
 ];
 
 // Per group: the student's own documents and the references are searched separately.

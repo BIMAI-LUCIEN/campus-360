@@ -42,7 +42,7 @@ type DocumentRow = {
 const ACTION_OF: Record<StudyKind, AiActionKind> = { summary: 'summary', plan: 'sheet', quiz: 'quiz' };
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const CANDIDATE_MODELS = ['openai/gpt-4o-mini', 'google/gemini-2.0-flash-001', 'meta-llama/llama-3.3-70b-instruct:free'];
+const CANDIDATE_MODELS = ['openai/gpt-4o-mini', 'google/gemini-2.5-flash-lite', 'minimax/minimax-01'];
 // Under this, the PDF is a scan or nearly empty: the metadata alone is used if it says enough.
 const MIN_COURSE_CHARS = 300;
 

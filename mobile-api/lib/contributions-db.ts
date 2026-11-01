@@ -12,7 +12,7 @@ import { extractSource } from './source-extraction';
 
 const ACTIVE = ['analyzing', 'ready', 'pending_review', 'probable_duplicate', 'published'];
 const MINHASH_SCAN = 500;
-const INTAKE_MODELS = ['openai/gpt-4o-mini', 'google/gemini-2.0-flash-001'];
+const INTAKE_MODELS = ['openai/gpt-4o-mini', 'google/gemini-2.5-flash'];
 
 type Row = Record<string, any>;
 
