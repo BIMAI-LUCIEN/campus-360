@@ -31,7 +31,11 @@ const projectRoot = path.resolve(__dirname, '..');
 const inputPath = path.resolve(projectRoot, 'app', 'globals.css');
 const outputPath = path.resolve(projectRoot, 'app', 'globals.compiled.css');
 
-const css = fs.readFileSync(inputPath, 'utf8');
+// globals.css imports our output for Next.js. Compiling that import too would copy the
+// previous output into the new one at every build, and fail when the file does not exist yet.
+const css = fs
+  .readFileSync(inputPath, 'utf8')
+  .replace(/^@import\s+["']\.\/globals\.compiled\.css["'];?[ \t]*$/m, '');
 
 const result = await postcss([tailwindcssPostcss()]).process(css, {
   from: inputPath,

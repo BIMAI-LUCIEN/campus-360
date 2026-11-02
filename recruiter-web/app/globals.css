@@ -207,6 +207,8 @@
   --shadow-popover: 0 12px 32px -8px rgba(17, 24, 39, 0.12), 0 4px 8px -4px rgba(17, 24, 39, 0.06);
   --shadow-topbar: 0 1px 0 0 rgba(17, 24, 39, 0.05);
   --shadow-sidebar: 1px 0 0 0 rgba(17, 24, 39, 0.05);
+  --shadow-stitch-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-stitch-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
 /* ============================================================================

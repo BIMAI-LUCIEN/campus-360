@@ -1,2 +1,5 @@
 .vercel
 .env*
+
+# Généré par scripts/prebuild-css.mjs à chaque build
+app/globals.compiled.css
