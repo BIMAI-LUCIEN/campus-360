@@ -60,15 +60,8 @@ import { OfficialCvView } from './OfficialCvView';
 
 import {
 
-  getDaysSinceApplication,
-
-  isEligibleForFollowup,
-
-  generateFollowupReminderMessage,
 
   updateApplicationNotes,
-  recordApplicationReminder,
-
   updateApplicationStatus,
 
   withdrawStageApplication,
@@ -79,6 +72,7 @@ import { exportOfficialCvToPdf } from './pdfExportService';
 
 import { missingCvFields } from './cvHtml';
 
+import { ApplicationFollowup } from './ApplicationFollowup';
 import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from './contactTargets';
 import { AppAlert } from '../../ui/AppAlert';
 
@@ -98,6 +92,8 @@ interface ApplicationDetailModalProps {
 
   onNotesUpdated?: (applicationId: string, notes: string) => void;
 
+  onApplicationPatched?: (applicationId: string, patch: Partial<StageApplication>) => void;
+
 }
 
 
@@ -114,7 +110,7 @@ const STATUS_CONFIG: Record<
 
   SENT_PENDING: { label: 'En cours d’envoi', bg: 'rgba(59, 130, 246, 0.12)', text: stitchColors.tertiary, border: 'rgba(59, 130, 246, 0.25)', icon: Send },
 
-  DELIVERED: { label: 'Délivrée', bg: 'rgba(16, 185, 129, 0.12)', text: stitchColors.mentheInk, border: 'rgba(16, 185, 129, 0.25)', icon: CheckCircle2 },
+  DELIVERED: { label: 'Envoyée', bg: 'rgba(16, 185, 129, 0.12)', text: stitchColors.mentheInk, border: 'rgba(16, 185, 129, 0.25)', icon: CheckCircle2 },
 
   FAILED: { label: 'Échec d’envoi', bg: 'rgba(239, 68, 68, 0.12)', text: stitchColors.corailInk, border: 'rgba(239, 68, 68, 0.25)', icon: XCircle },
 
@@ -177,6 +173,8 @@ export function ApplicationDetailModal({
 
   onNotesUpdated,
 
+  onApplicationPatched,
+
 }: ApplicationDetailModalProps) {
 
   const [activeTab, setActiveTab] = useState<'cv' | 'letter' | 'company'>('cv');
@@ -221,9 +219,6 @@ export function ApplicationDetailModal({
 
   const refCode = `CAMPUS-${application.id.slice(0, 6).toUpperCase()}`;
 
-  const daysElapsed = getDaysSinceApplication(application.appliedAt);
-
-  const eligibleReminder = isEligibleForFollowup(application);
 
   const currentStatusConf = STATUS_CONFIG[application.status] || STATUS_CONFIG.PENDING;
 
@@ -325,23 +320,20 @@ export function ApplicationDetailModal({
 
 
 
-  const handleSendReminderWhatsapp = () => {
-
-    const msg = generateFollowupReminderMessage(application, studentName);
+  // Opens the conversation with the company. A reminder is sent from the follow-up block.
+  const handleContactWhatsapp = () => {
 
     const rawPhone = companyWhatsapp(company);
 
     if (!rawPhone) {
 
-      AppAlert.alert('Relance impossible', `${CONTACT_UNAVAILABLE} : pas de numéro WhatsApp. Copie le message et envoie-le par un autre moyen.`);
+      AppAlert.alert('WhatsApp indisponible', `${CONTACT_UNAVAILABLE} : pas de numéro WhatsApp.`);
 
       return;
 
     }
 
-    const waUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(msg)}`;
-
-    void recordApplicationReminder(application.id);
+    const waUrl = `https://wa.me/${rawPhone}`;
 
     if (Platform.OS === 'web') {
 
@@ -717,7 +709,7 @@ export function ApplicationDetailModal({
 
                     style={({ pressed }) => [styles.whatsappActionBtn, pressed && { opacity: 0.85 }]}
 
-                    onPress={handleSendReminderWhatsapp}
+                    onPress={handleContactWhatsapp}
 
                   >
 
@@ -767,47 +759,10 @@ export function ApplicationDetailModal({
 
               <View style={styles.tabContent}>
 
-                {/* Urgent Follow-up Banner */}
-
-                {eligibleReminder && (
-
-                  <View style={styles.urgentBanner}>
-
-                    <Clock size={14} color={stitchColors.warningTone} />
-
-                    <View style={{ flex: 1 }}>
-
-                      <Text style={styles.urgentBannerTitle}>
-
-                        Relance J+7 recommandée ({daysElapsed} jours sans réponse)
-
-                      </Text>
-
-                      <Text style={styles.urgentBannerSub}>
-
-                        Confirme ta motivation par un message courtois sur WhatsApp.
-
-                      </Text>
-
-                    </View>
-
-                    <Pressable
-
-                      style={styles.urgentRelanceBtn}
-
-                      onPress={handleSendReminderWhatsapp}
-
-                    >
-
-                      <Text style={styles.urgentRelanceBtnText}>Relancer</Text>
-
-                    </Pressable>
-
-                  </View>
-
-                )}
-
-
+                <ApplicationFollowup
+                  application={application}
+                  onChanged={(patch) => onApplicationPatched?.(application.id, patch)}
+                />
 
                 {/* Recruitment Pipeline Status */}
 
@@ -977,7 +932,7 @@ export function ApplicationDetailModal({
 
                         style={styles.contactBtn}
 
-                        onPress={handleSendReminderWhatsapp}
+                        onPress={handleContactWhatsapp}
 
                       >
 
@@ -1508,76 +1463,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
 
     color: '#1E293B',
-
-  },
-
-  urgentBanner: {
-
-    flexDirection: 'row',
-
-    alignItems: 'center',
-
-    gap: 10,
-
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-
-    borderRadius: 12,
-
-    padding: 12,
-
-    borderWidth: 1,
-
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-
-    marginBottom: 14,
-
-  },
-
-  urgentBannerTitle: {
-
-    fontFamily: fontFamilies.inter,
-
-    fontSize: 12,
-
-    fontWeight: '700',
-
-    color: '#FBBF24',
-
-    marginBottom: 2,
-
-  },
-
-  urgentBannerSub: {
-
-    fontFamily: fontFamilies.inter,
-
-    fontSize: 11,
-
-    color: stitchColors.inkMuted,
-
-  },
-
-  urgentRelanceBtn: {
-
-    backgroundColor: stitchColors.warningTone,
-
-    paddingVertical: 6,
-
-    paddingHorizontal: 10,
-
-    borderRadius: 8,
-
-  },
-
-  urgentRelanceBtnText: {
-
-    fontFamily: fontFamilies.inter,
-
-    fontSize: 11.5,
-
-    fontWeight: '700',
-
-    color: '#000000',
 
   },
 

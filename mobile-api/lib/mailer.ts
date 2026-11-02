@@ -87,11 +87,13 @@ export const sendTransactionalEmail = async ({
   subject,
   text,
   html,
+  replyTo,
 }: {
   to: string;
   subject: string;
   text: string;
   html: string;
+  replyTo?: string;
 }): Promise<boolean> => {
   const resend = getClient();
   if (!resend) {
@@ -100,7 +102,14 @@ export const sendTransactionalEmail = async ({
     return false;
   }
   try {
-    const { error } = await resend.emails.send({ from: defaultFrom, to, subject, text, html });
+    const { error } = await resend.emails.send({
+      from: defaultFrom,
+      to,
+      subject,
+      text,
+      html,
+      ...(replyTo ? { replyTo } : {}),
+    });
     if (error) {
       // eslint-disable-next-line no-console
       console.error(`[mailer] sendTransactionalEmail "${subject}" failed:`, error);

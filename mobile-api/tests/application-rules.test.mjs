@@ -6,7 +6,7 @@ import test from 'node:test';
 import { loadTs } from './helpers/load-ts.mjs';
 
 const rules = await loadTs('lib/application-rules.ts');
-const { canStudentSetStatus, canDispatchSetStatus, isFollowupDue } = rules;
+const { canStudentSetStatus, canDispatchSetStatus, followupState, followupRecipient } = rules;
 
 const BASE_URL = (process.env.BASE_URL || 'http://localhost:3002').replace(/\/$/, '');
 const serverUp = await fetch(`${BASE_URL}/api/health`, { signal: AbortSignal.timeout(3000) }).then(
@@ -50,12 +50,49 @@ test('canDispatchSetStatus : un retour de livraison ne réécrit pas une suite d
   assert.equal(canDispatchSetStatus('REJECTED', 'REVIEWING'), false);
 });
 
-test('isFollowupDue : J+7 après l’envoi puis après la dernière relance', () => {
-  const now = new Date('2026-11-10T00:00:00Z');
-  assert.equal(isFollowupDue('DELIVERED', '2026-11-01T00:00:00Z', null, now), true);
-  assert.equal(isFollowupDue('DELIVERED', '2026-11-01T00:00:00Z', '2026-11-08T00:00:00Z', now), false);
-  assert.equal(isFollowupDue('INTERVIEW', '2026-10-01T00:00:00Z', null, now), false);
-  assert.equal(isFollowupDue('SENT_PENDING', '2026-11-05T00:00:00Z', null, now), false);
+const NOW = new Date('2026-11-22T00:00:00Z');
+const state = (over = {}) =>
+  followupState(
+    { status: 'DELIVERED', appliedAt: '2026-11-15T00:00:00Z', hasRecipient: true, offerExpired: false, ...over },
+    NOW,
+  );
+
+test('followupState : J+7 après l’envoi, puis 7 jours après la dernière relance', () => {
+  assert.equal(state({ appliedAt: '2026-11-15T00:00:01Z' }), 'waiting'); // J+6 et des poussières
+  assert.equal(state(), 'due'); // J+7
+  assert.equal(state({ appliedAt: '2026-11-01T00:00:00Z', lastRemindedAt: '2026-11-16T00:00:00Z', reminderCount: 1 }), 'waiting');
+  assert.equal(state({ appliedAt: '2026-11-08T00:00:00Z', lastRemindedAt: '2026-11-15T00:00:00Z', reminderCount: 1 }), 'due'); // J+14
+});
+
+test('followupState : plafond de 2 relances, puis « sans réponse » à J+21', () => {
+  const second = { appliedAt: '2026-11-01T00:00:00Z', reminderCount: 2 };
+  assert.equal(state({ ...second, lastRemindedAt: '2026-11-20T00:00:00Z' }), 'waiting');
+  assert.equal(state({ ...second, lastRemindedAt: '2026-11-15T00:00:00Z' }), 'exhausted');
+  assert.equal(state({ ...second, reminderCount: 3, lastRemindedAt: '2026-11-15T00:00:00Z' }), 'exhausted');
+});
+
+test('followupState : sans e-mail ou offre expirée, seule la question reste', () => {
+  assert.equal(state({ hasRecipient: false }), 'ask');
+  assert.equal(state({ offerExpired: true }), 'ask');
+  assert.equal(state({ hasRecipient: false, offerExpired: true }), 'ask');
+});
+
+test('followupState : chaque statut', () => {
+  assert.equal(state({ status: 'PENDING' }), 'due'); // envoi par l'étudiant, confirmé avant la relance
+  assert.equal(state({ status: 'DELIVERED' }), 'due');
+  for (const status of ['FAILED', 'REVIEWING', 'INTERVIEW', 'ACCEPTED', 'REJECTED', 'WITHDRAWN']) {
+    assert.equal(state({ status }), 'none', status);
+  }
+  assert.equal(state({ status: 'SENT_PENDING', appliedAt: '2026-11-21T00:00:00Z' }), 'unconfirmed'); // 24 h
+  assert.equal(state({ status: 'SENT_PENDING', appliedAt: '2026-11-21T00:00:01Z' }), 'none');
+  assert.equal(state({ appliedAt: 'pas une date' }), 'none');
+});
+
+test('followupRecipient : une vraie adresse ou rien', () => {
+  assert.equal(followupRecipient(' rh@exemple.cm '), 'rh@exemple.cm');
+  for (const value of ['', null, undefined, 'rh', 'rh@', '@exemple.cm', 'rh@exemple', 'a b@exemple.cm']) {
+    assert.equal(followupRecipient(value), null, String(value));
+  }
 });
 
 test('Garde de source : direct-reach/route.ts utilise getStageJob et scraped-reports est protégé', () => {

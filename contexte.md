@@ -1146,3 +1146,68 @@ Décisions prises par l'agent à la demande de l'utilisateur (« fais les meille
 - Scans flous ou manuscrits : le modèle doit dire quand il ne lit pas ; l'étudiant peut entourer plus large.
 - Modèle vision indisponible : bascule sur Gemini Flash, sinon message clair sans réponse inventée.
 - Données : images non stockées, seulement transmises à OpenRouter.
+
+## 21. Cadrage validé : Relance recruteur et suivi des candidatures (2026-11-02, voie Bounded)
+
+> Décisions du point 3 et des points 6 et 8 prises par l'agent à la demande de Miguel (« réponds-toi et pars sur la meilleure solution »). L'intégration WhatsApp n'est pas active : la V1 n'en dépend pas. Remplace pour ce périmètre la ligne « la relance J+7 existante reste en l'état » du §11.2.
+
+### Constat (code relu, production lue le 2026-11-02 en lecture seule)
+- Aucun push à J+7 : le badge n'apparaît qu'à l'ouverture de l'écran de suivi. `isFollowupDue` n'est appelée que par les tests.
+- `scripts/n8n/campus360_j7_relance_workflow.json` appelle une route absente (`/api/mobile/stages/followups`), enverrait sans l'accord de l'étudiant et contient des secrets de secours en clair.
+- « Dernière relance envoyée » s'enregistre à l'ouverture de WhatsApp, sans preuve d'envoi. Aucun plafond, aucun contrôle serveur, `SENT_PENDING` éligible, règle différente côté admin (`admin-platform-service.ts:440`).
+- Offres en ligne : 70. 34 se postulent sur un site externe (`LINK`). Sur les 36 restantes, 35 ont un e-mail, 1 n'a aucun contact, **aucune n'a un numéro seul**.
+- **Correction du 2026-11-02 (exécution) :** l'onglet WhatsApp de `AiApplyModal.tsx` ouvre `wa.me` et n'a pas besoin de la liaison : ce canal fonctionne, l'écrit initial le disait à tort inactif. Sur téléphone, l'étudiant envoie depuis sa messagerie ou WhatsApp et la candidature reste en `PENDING`.
+- Candidatures en production : 3 (2 `PENDING`, 1 `SENT_PENDING` de 24 jours), **aucune `DELIVERED`**. Le circuit d'envoi complet reste à prouver.
+- Expéditeur vérifié : `MAIL_FROM` (mobile-api) et `CAMPUS360_MAIL_FROM` (n8n) utilisent le domaine `campus360b.site`.
+- Pour l'e-mail, `DELIVERED` signifie « accepté par Resend », pas « arrivé en boîte ». Le recruteur répond directement à l'étudiant (`reply_to`) : Campus 360 ne voit pas les réponses par e-mail.
+
+### 2. Fonctionnalités
+**V1**
+1. **Push à l'échéance**, regroupé par étudiant, une fois par échéance.
+2. **Relance par e-mail en 1 tap**, envoyée par le serveur, avec `reply_to` de l'étudiant. Texte fixe, neutre, généré par le serveur (poste, date de candidature, nom). Gratuite.
+3. **Règle unique côté serveur** : statut `DELIVERED`, ou `PENDING` après confirmation de l'étudiant (« Ta candidature est-elle bien partie ? »), e-mail de l'entreprise présent, offre non expirée, à J+7 puis J+14, 2 relances maximum. L'admin s'aligne dessus.
+4. **« Tu as eu une réponse ? »** sur la carte : seule source du suivi pour les réponses par e-mail.
+5. **Envoi non confirmé** : `SENT_PENDING` depuis plus de 24 h n'ouvre aucune relance ; la carte affiche « Envoi non confirmé ».
+6. **Libellés** : le libellé et le push de `DELIVERED` disent « envoyée », plus « délivrée » ni « bien arrivée ».
+7. **Nettoyage** : retrait du workflow n8n mort ; `wa.me` retiré de la relance (aucune offre concernée).
+
+**V1.5 (à la main)** : aucun. Les échecs d'envoi restent signalés par `notifyAdmin`.
+
+**V2**
+- Détection des adresses invalides par webhook Resend : utile quand le volume le justifiera.
+- Rappel de la date d'entretien : la date n'est pas saisie aujourd'hui.
+- Messages personnalisés par l'IA : coût sans preuve de gain.
+- Statistiques de réponse par relance : à faire quand il y aura du volume.
+- Relance WhatsApp : quand l'API officielle sera intégrée.
+
+**Boucle de retour** : push → réponse déclarée ou relance → statut à jour → offres similaires si l'étudiant reste sans réponse.
+
+### 3. Parcours
+1. Push à 9 h heure de Douala : « 2 candidatures sans réponse depuis 7 jours ». L'appui ouvre le suivi.
+2. La carte demande « Tu as eu une réponse de <entreprise> ? ». **Oui** : réponse reçue, entretien, acceptée ou refusée, et les relances s'arrêtent. **Non** : la relance est proposée. La question passe avant la relance (option retenue) pour ne pas relancer un recruteur qui a déjà répondu et garder le suivi juste.
+3. Aperçu (destinataire et message), puis « Envoyer par e-mail ». « Relance envoyée le … » ne s'affiche que si Resend a accepté ; sinon l'échec s'affiche et l'étudiant peut réessayer.
+
+| Situation | Comportement |
+|---|---|
+| Aucun e-mail | Pas de relance, message à copier, question sur la réponse |
+| Offre `LINK` | Pas de relance |
+| Offre expirée | Ni push ni relance, question sur la réponse |
+| 2 relances sans réponse, J+21 | Affichage calculé « Sans réponse », offres similaires ; l'étudiant peut encore déclarer une réponse |
+
+Le même composant sert à l'écran de suivi et à `ApplicationDetailModal.tsx`.
+
+### 6. Architecture
+- **Envoi direct depuis `mobile-api`** (Resend via `lib/mailer.ts`, avec un nouveau paramètre `replyTo`), sans n8n : pas de PDF à joindre, et le résultat est connu immédiatement.
+- **Route étudiant** `POST /api/mobile/stages/applications/remind` : contrôle de propriété, `isFollowupDue` étendue, destinataire lu en base (jamais fourni par le client). Réserver la relance par une mise à jour conditionnelle avant l'envoi, annuler si Resend refuse : ni double envoi, ni faux succès.
+- **Route serveur** `POST /api/mobile/stages/followups`, protégée par `N8N_INGESTION_SECRET`, sur le modèle de `stages/alerts`. Déclenchée par un cron VPS quotidien, comme `campus360-job-alerts.sh` (le serveur est en Europe/Berlin : caler sur 9 h à Douala).
+- **Migration 0029** sur `stage_applications` : `reminder_count` (repris à 1 si `last_reminded_at` existe), `followup_notified_at`. Pas de colonne de canal : la relance part toujours par e-mail.
+- **Admin** : `getAdminApplications` applique la même règle ; le test d'alignement est à définir au plan.
+- **Ancien APK** : `reminded: true` sur `PATCH applications` reste accepté tant que les anciennes versions circulent.
+
+### 8. Risques
+- **Circuit jamais prouvé en production** (aucune `DELIVERED`) : faire un envoi réel de bout en bout, avec accord et une adresse de test, avant de livrer. C'est la première tâche.
+- **Réputation du domaine et harcèlement des recruteurs** : plafond de 2, texte fixe, destinataire lu en base.
+- **Adresse invalide non détectée** : un refus immédiat de Resend s'affiche, un rebond ultérieur reste invisible jusqu'à la V2. Limites du forfait Resend : à vérifier.
+- **Étudiant sans jeton push** : aucun jeton en production tant que Firebase n'est pas posé (plan.md 32.7). Le rappel arrive dans la cloche de l'app, pas sur l'écran du téléphone.
+- **Secrets du workflow mort** : à vérifier s'ils sont encore valides et à renouveler dans ce cas (action de l'utilisateur).
+- **Données personnelles** : l'e-mail de l'étudiant est déjà transmis au recruteur à la candidature ; la relance n'ajoute rien de nouveau.

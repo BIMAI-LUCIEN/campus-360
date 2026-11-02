@@ -1248,7 +1248,7 @@ export function AiApplyModal({
                     <View style={styles.receiptStatusBadge}>
                       <Text style={styles.receiptStatusBadgeText}>
                         {dispatchReceipt?.status === 'DELIVERED'
-                          ? 'Délivrée'
+                          ? 'Envoyée'
                           : "En cours d'acheminement · SENT_PENDING"}
                       </Text>
                     </View>

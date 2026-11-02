@@ -55,7 +55,7 @@ test('garde de source : plus de jeton en URL ni de session par identifiant', () 
 });
 
 test('copies recruiter-web identiques', () => {
-  for (const file of ['origins.ts', 'client-ip.ts', 'db-ssl.ts']) {
+  for (const file of ['origins.ts', 'client-ip.ts', 'db-ssl.ts', 'application-rules.ts']) {
     assert.equal(read(`../recruiter-web/lib/${file}`), read(`lib/${file}`), file);
   }
 });

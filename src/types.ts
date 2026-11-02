@@ -75,6 +75,15 @@ export type StageJob = {
   workspacePhotos?: string[];
 };
 
+export type FollowupState = 'due' | 'ask' | 'waiting' | 'exhausted' | 'unconfirmed' | 'none';
+
+export type ApplicationFollowup = {
+  state: FollowupState;
+  reminderCount: number;
+  recipient?: string;
+  message?: string;
+};
+
 export type StageApplication = {
   id: string;
   studentId: string;
@@ -86,6 +95,7 @@ export type StageApplication = {
   generatedCvText?: string;
   generatedLetterText?: string;
   lastRemindedAt?: string;
+  followup?: ApplicationFollowup;
   statusUpdatedAt?: string;
   job?: StageJob;
   notes?: string;

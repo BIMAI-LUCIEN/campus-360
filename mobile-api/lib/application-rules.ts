@@ -27,15 +27,49 @@ export const canDispatchSetStatus = (current: string, next: string): boolean => 
   return false;
 };
 
-/** J+7 follow-up: 7 days after sending, then 7 days after the last reminder. */
-export const isFollowupDue = (
-  status: string,
-  appliedAt: string,
-  lastRemindedAt: string | null | undefined,
+export const MAX_REMINDERS = 2;
+export const REMINDER_INTERVAL_DAYS = 7;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * PENDING is what a student's own send leaves (their mailbox or wa.me, on the phone): the
+ * app asks them to confirm the send before a reminder. DELIVERED is a send by Campus 360.
+ */
+export const FOLLOWUP_STATUSES = ['PENDING', 'DELIVERED'];
+
+/**
+ * due: a reminder can go out. ask: the deadline passed but no e-mail or the offer expired,
+ * so only « did you get a reply? » remains. waiting: before the deadline. exhausted: no
+ * reply after the last reminder. unconfirmed: a send by Campus 360 that never came back.
+ */
+export type FollowupState = 'due' | 'ask' | 'waiting' | 'exhausted' | 'unconfirmed' | 'none';
+
+/** The company's real address, or null: a reminder is never sent to a guess. */
+export const followupRecipient = (email: string | null | undefined): string | null => {
+  const value = (email || '').trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? value : null;
+};
+
+/** J+7 then J+14, 2 reminders at most (contexte.md §21). The single rule of the follow-up. */
+export const followupState = (
+  input: {
+    status: string;
+    appliedAt: string;
+    lastRemindedAt?: string | null;
+    reminderCount?: number | null;
+    hasRecipient: boolean;
+    offerExpired: boolean;
+  },
   now: Date = new Date(),
-): boolean => {
-  if (!['PENDING', 'SENT_PENDING', 'DELIVERED'].includes(status)) return false;
-  const since = new Date(lastRemindedAt || appliedAt).getTime();
-  if (!Number.isFinite(since)) return false;
-  return now.getTime() - since >= 7 * 24 * 60 * 60 * 1000;
+): FollowupState => {
+  const applied = new Date(input.appliedAt).getTime();
+  if (input.status === 'SENT_PENDING') {
+    return Number.isFinite(applied) && now.getTime() - applied >= DAY_MS ? 'unconfirmed' : 'none';
+  }
+  if (!FOLLOWUP_STATUSES.includes(input.status)) return 'none';
+  const since = new Date(input.lastRemindedAt || input.appliedAt).getTime();
+  if (!Number.isFinite(since)) return 'none';
+  if (now.getTime() - since < REMINDER_INTERVAL_DAYS * DAY_MS) return 'waiting';
+  if ((input.reminderCount ?? 0) >= MAX_REMINDERS) return 'exhausted';
+  return input.hasRecipient && !input.offerExpired ? 'due' : 'ask';
 };

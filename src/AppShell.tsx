@@ -1104,7 +1104,7 @@ export function AppShell() {
       const documentId = (data as { documentId?: unknown }).documentId;
       if (typeof documentId === 'string' && documentId) setEditingDocumentId(documentId);
       else openSection('documents');
-    } else if (type === 'application' || type === 'application_status') openSection('applications');
+    } else if (type === 'application' || type === 'application_status' || type === 'application_followup') openSection('applications');
   };
   notificationTapRef.current = openFromNotification;
   React.useEffect(() => {
@@ -1310,6 +1310,7 @@ export function AppShell() {
                 <ApplicationsTimelineScreen
                   studentName={studentProfile?.name || 'Étudiant'}
                   onBack={() => openSection('account')}
+                  onOpenOffers={() => openSection('stages')}
                 />
               )}
 

@@ -6,6 +6,7 @@
 
 ---
 ## Reprise
+- **Module 33 (relance recruteur et suivi) :** code écrit le 2026-11-02, non commité : 33.1 annulée ; 33.3 à 33.12 `[X]` ; 33.13 `[~]` ; 33.2, 33.14, 33.15, 33.16 `[!]` 🔒. Migration 0029 non appliquée sur la base partagée (le push sur `main` la lance et déploie). Suite : commit et déploiement avec accord, parcours réel 33.15, cron 33.16.
 - **Module 32 (alertes de nouveaux stages) :** 32.1 à 32.5 `[X]` le 2026-11-01 (tsc app/mobile-api 0, mobile-api 379 pass / 0 fail) ; 32.6 cron au déploiement ; 32.7 🔒 Firebase/FCM pour le push Android.
 - **Module 31 (audit app mobile, lots 2 à 5) :** 31.1 à 31.23 `[X]` le 2026-11-01 (typecheck app, mobile-api, recruiter-web 0 ; mobile-api 369 pass / 0 fail / 20 skip ; lint:colors 147, baseline abaissée ; expo-web : suivi en chargement puis erreur, profil en initiales). Non vérifié sur téléphone. Migration 0027 à appliquer au déploiement.
 - **Tâche en cours :** 27.6 et 27.7 `[~]` (code écrit, parcours navigateur à faire) ; 27.1 à 27.5 validées le 2026-10-30.
@@ -29,7 +30,7 @@
   - 🔒 **Module 25 :** 25.18 (choix A/B et feu vert VPS), 25.2, 25.10, 25.15, 25.16 (inchangés).
   - **Migrations :** toutes appliquées (0000, 0004 à 0015) ; 0013 le 2026-10-23.
 - **Commit de référence :** commit « feat(documents): modèle IUT de Douala fidèle au rapport de référence », parent af05514.
-- **Dernière entrée journal :** 2026-10-31 · Livraison Module 30 (VPS + OTA) · deploy
+- **Dernière entrée journal :** 2026-11-02 · Module 33, tâches 33.1 à 33.15 · execute
 ---
 
 ## 🏛️ HISTORIQUE DES MODULES DÉJÀ VALIDÉS (1 à 8)
@@ -3282,6 +3283,93 @@ Demande du 2026-11-01 : prévenir l'étudiant dès qu'un stage arrive, surtout s
 - [X] **Tâche 32.5 : Ouverture de l'offre** — une alerte ouvre le détail de l'offre dans l'écran des stages.
 - [ ] **Tâche 32.6 : Cron VPS** — appeler `/api/mobile/stages/alerts` toutes les 10 min (offres publiées par les agents et l'admin).
 - [!] **Tâche 32.7 : Push Android (FCM)** — 🔒 projet Firebase, `google-services.json`, clé FCM V1 sur EAS, puis nouvel APK.
+
+## 🔁 MODULE 33 : Relance recruteur et suivi des candidatures
+
+Source : `contexte.md` §21 (cadrage du 2026-11-02). WhatsApp n'est pas intégré : la relance part par e-mail, envoyée par le serveur après un tap de l'étudiant.
+
+**Décisions déjà prises :** question « Tu as eu une réponse ? » avant la relance ; statut `DELIVERED` ou `PENDING` confirmé par l'étudiant (corrigé le 2026-11-02, voir `contexte.md` §21), e-mail présent, offre non expirée ; J+7 puis J+14, 2 relances maximum ; texte fixe généré par le serveur ; gratuite ; `wa.me` retiré ; envoi direct depuis `mobile-api`, sans n8n ; pas de colonne de canal.
+
+**Dépendance :** sans la tâche 32.7, aucun push n'atteint Android (aucun jeton enregistré en production). `sendPushToUser` écrit d'abord dans `app_notifications` : la cloche de l'app reçoit l'échéance, le push suivra après 32.7.
+
+### Lot 1 : preuve d'envoi et données
+- [X] **Tâche 33.1 : Canal e-mail par défaut quand WhatsApp n'est pas disponible** — annulée le 2026-11-02, aucun code : prémisse fausse. L'onglet WhatsApp fonctionne déjà en manuel (`wa.me`), l'automatique y est masqué. Forcer l'e-mail irait contre le mode de candidature de l'offre.
+  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`, `src/features/stages/contactTargets.ts`
+  - **Action :** une offre `WHATSAPP` qui a un e-mail se postule par e-mail. Une offre sans e-mail garde son message d'indisponibilité actuel, sans envoi impossible proposé.
+  - **DoD :** `npm run typecheck` code 0 ; dans `expo-web-local` à 375 px, le canal e-mail est présélectionné sur une offre `WHATSAPP` avec e-mail.
+- [!] **Tâche 33.2 : Prouver l'envoi de candidature de bout en bout** — 🔒 accord et adresse de test à fournir par l'utilisateur. Ne concerne plus que le bouton « Laisser Campus 360 l'envoyer » et le web : sur téléphone, le parcours principal part de la messagerie de l'étudiant.
+  - **Fichiers :** `scripts/n8n/send_stage_application_workflow.json`, `mobile-api/app/api/mobile/stages/dispatch/route.ts` (seulement si un défaut est trouvé)
+  - **Action :** une candidature par e-mail vers l'adresse de test passe de `SENT_PENDING` à `DELIVERED`. Le workflow actif sur n8n est comparé à celui du dépôt, et tout défaut trouvé est corrigé.
+  - **DoD :** e-mail reçu à l'adresse de test, `reply_to` égal à l'e-mail de l'étudiant, statut `DELIVERED` lu en base pour cette candidature.
+- [X] **Tâche 33.3 : Migration 0029** — appliquée deux fois sur un Postgres embarqué jetable (PGlite) : idempotente, relance existante comptée. Base partagée : au déploiement.
+  - **Fichiers :** `mobile-api/sql/0029_application_followups.sql` (nouveau)
+  - **Action :** `stage_applications` reçoit `reminder_count` (entier, 0 par défaut, repris à 1 si `last_reminded_at` existe) et `followup_notified_at` (date nullable). Un index couvre la recherche quotidienne des échéances. Application sur la base partagée seulement au déploiement, avec accord.
+  - **DoD :** migration appliquée sur une base de test, relancée sans erreur ni changement ; colonnes et reprise contrôlées par requête.
+
+### Lot 2 : services et API
+- [X] **Tâche 33.4 : Règle unique de relance** — `followupState` ; ajout de l'état `ask`. Correction : `PENDING` compte aussi, avec confirmation de l'étudiant.
+  - **Fichiers :** `mobile-api/lib/application-rules.ts`, `mobile-api/tests/application-rules.test.mjs`
+  - **Action :** une fonction pure renvoie l'état de suivi : `due`, `waiting`, `exhausted`, `unconfirmed` ou `none`. `PENDING` et `SENT_PENDING` de plus de 24 h donnent `unconfirmed`. Seul `DELIVERED` peut donner `due`, avec e-mail présent, offre non expirée et moins de 2 relances, 7 jours après l'envoi puis 7 jours après la dernière relance.
+  - **DoD :** `cd mobile-api && node --test tests/application-rules.test.mjs` : tous les cas passent (J+6, J+7, J+14, plafond, offre expirée, sans e-mail, chaque statut).
+- [X] **Tâche 33.5 : Message de relance et `reply_to`**
+  - **Fichiers :** `mobile-api/lib/mailer.ts`, `mobile-api/lib/application-followup-email.ts` (nouveau), `mobile-api/tests/application-followup-email.test.mjs` (nouveau)
+  - **Action :** `sendTransactionalEmail` accepte un `replyTo` optionnel sans changer les appels existants. Le serveur génère l'objet et le texte, neutres, à partir du poste, de la date et du nom. Les valeurs sont échappées en HTML et nettoyées des retours à la ligne dans l'objet.
+  - **DoD :** `cd mobile-api && node --test tests/application-followup-email.test.mjs` passe, y compris un nom contenant du HTML et un titre avec retour à la ligne.
+- [X] **Tâche 33.6 : Route d'envoi de la relance** — SQL réel testé sur PGlite (une seule connexion) ; le verrou n'a pas été éprouvé avec deux connexions réelles.
+  - **Fichiers :** `mobile-api/app/api/mobile/stages/applications/remind/route.ts` (nouveau), `mobile-api/lib/stages-db.ts`, `mobile-api/tests/application-remind.test.mjs` (nouveau)
+  - **Action :** `POST` authentifié, limité en débit, réservé au propriétaire. Le destinataire est lu en base. La relance est réservée par une mise à jour conditionnelle avant l'envoi, puis annulée si Resend refuse. Réponses : 401, 404, 409 (pas d'échéance ou plafond), 422 (pas d'e-mail), 502 (refus de Resend), 200 avec la date.
+  - **DoD :** `cd mobile-api && node --test tests/application-remind.test.mjs` passe : autre étudiant refusé, deux appels simultanés donnent un seul envoi, refus de Resend sans relance comptée.
+- [X] **Tâche 33.7 : Exposer l'état de suivi et fermer l'ancien chemin**
+  - **Fichiers :** `mobile-api/lib/stages-db.ts`, `mobile-api/app/api/mobile/stages/applications/route.ts`, `mobile-api/tests/application-remind.test.mjs`
+  - **Action :** `GET` renvoie pour chaque candidature l'état calculé par le serveur, le nombre de relances et le destinataire à afficher. `PATCH` avec `reminded: true` reste accepté pour les anciens APK, mais applique la même règle et le même plafond.
+  - **DoD :** `cd mobile-api && npm run typecheck` code 0 ; tests : `PATCH reminded` refusé hors échéance, compteur augmenté à l'échéance.
+- [X] **Tâche 33.8 : Rappels quotidiens** — SQL réel testé sur PGlite. Cron à installer en 33.16.
+  - **Fichiers :** `mobile-api/lib/application-followups.ts` (nouveau), `mobile-api/app/api/mobile/stages/followups/route.ts` (nouveau), `mobile-api/tests/application-followups.test.mjs` (nouveau), `src/AppShell.tsx`
+  - **Action :** `POST` protégé par `N8N_INGESTION_SECRET` (refus si absent), sur le modèle de `stages/alerts`. Une seule notification par étudiant et par passage, regroupant ses échéances. `followup_notified_at` empêche un second rappel pour la même échéance. Le type `application_followup` ouvre l'écran de suivi.
+  - **DoD :** `cd mobile-api && node --test tests/application-followups.test.mjs` passe : sans secret 401, deux échéances pour un étudiant donnent une notification, un second passage n'en crée aucune.
+
+### Lot 3 : interface
+- [X] **Tâche 33.9 : Bloc de suivi et de relance**
+  - **Fichiers :** `src/features/stages/ApplicationFollowup.tsx` (nouveau), `src/features/stages/stagesApi.ts`, `src/types.ts`
+  - **Action :** un seul composant enchaîne la question, le choix du statut ou l'aperçu (destinataire et message), puis l'envoi, avec états d'envoi, de succès et d'échec réessayable. « Relance envoyée le … » n'apparaît qu'après la réponse 200. Couleurs issues des tokens de `stitch.ts`.
+  - **DoD :** `npm run typecheck` code 0 ; `npm run lint:colors` sans hausse.
+- [X] **Tâche 33.10 : Brancher le bloc et retirer `wa.me`**
+  - **Fichiers :** `src/ui/screens/ApplicationsTimelineScreen.tsx`, `src/features/stages/ApplicationDetailModal.tsx`, `src/features/stages/stagesApi.ts`
+  - **Action :** les deux écrans utilisent le bloc. Les fonctions de relance par `wa.me`, le calcul local d'éligibilité et le faux enregistrement disparaissent. Les libellés suivent l'état du serveur : relance due, en attente, « Envoi non confirmé », « Sans réponse ».
+  - **DoD :** `npm run typecheck` code 0 ; `grep -n "wa.me" src/ui/screens/ApplicationsTimelineScreen.tsx` ne renvoie rien, et plus aucun `wa.me` de relance dans `ApplicationDetailModal.tsx`.
+- [X] **Tâche 33.11 : Cas sans relance et offres similaires** — accès aux offres : ouvre la liste des stages (proposition retenue, à confirmer).
+  - **Fichiers :** `src/features/stages/ApplicationFollowup.tsx`, `src/ui/screens/ApplicationsTimelineScreen.tsx`
+  - **Action :** sans e-mail, le message se copie et la question reste posée. Une offre expirée garde seulement la question. Après 2 relances sans réponse, à J+21, la carte affiche « Sans réponse » et un accès aux offres similaires, et l'étudiant peut encore déclarer une réponse.
+  - **DoD :** `npm run typecheck` code 0 ; chaque cas constaté dans le navigateur (tâche 33.15).
+- [X] **Tâche 33.12 : Dire « envoyée » au lieu de « délivrée »**
+  - **Fichiers :** `src/ui/screens/ApplicationsTimelineScreen.tsx`, `src/features/stages/ApplicationDetailModal.tsx`, `mobile-api/lib/automations.ts`
+  - **Action :** le libellé de `DELIVERED` et le push ne promettent plus l'arrivée en boîte. Le statut en base ne change pas.
+  - **DoD :** `grep -rn "Délivrée\|bien arrivée" src mobile-api/lib` ne renvoie rien ; typecheck app et `mobile-api` code 0.
+
+### Lot 4 : admin et nettoyage
+- [~] **Tâche 33.13 : Aligner l'admin sur la règle** — règle et jumeau faits, typecheck et test d'alignement OK ; écran `/admin/applications` non constaté (migration et session admin requises).
+  - **Fichiers :** `recruiter-web/lib/application-rules.ts` (nouveau, jumeau), `recruiter-web/lib/admin-platform-service.ts`, `recruiter-web/app/admin/applications/ApplicationsDashboardClient.tsx`, `mobile-api/tests/sessions-origins.test.mjs`
+  - **Action :** le compteur et le filtre admin utilisent la même règle que le serveur mobile. Le test des fichiers jumeaux vérifie l'alignement.
+  - **DoD :** `cd recruiter-web && npm run typecheck` code 0 ; `cd mobile-api && node --test tests/sessions-origins.test.mjs` passe ; dans `/admin/applications`, compteur et filtre affichent les candidatures dues d'un jeu de test.
+- [!] **Tâche 33.14 : Retirer le workflow mort** — workflow et `test-challenger-m5-it2-persistence-followup.mjs` retirés du dépôt. 🔒 Reste : état sur n8n (désactiver s'il existe) et renouvellement des clés par l'utilisateur. `test-modules-11-12.mjs` gardé : il porte sa propre copie de l'ancienne règle.
+  - **Fichiers :** `scripts/n8n/campus360_j7_relance_workflow.json` (supprimé), `scripts/test-modules-11-12.mjs`, `scripts/test-challenger-m5-it2-persistence-followup.mjs`
+  - **Action :** le workflow quitte le dépôt, et les scripts qui lisent l'ancienne règle sont mis à jour ou retirés. Sur n8n, le workflow est désactivé s'il existe encore (avec accord). L'utilisateur renouvelle les clés concernées si elles sont encore valides.
+  - **DoD :** `grep -rl "stages/followups" scripts` ne renvoie plus ce workflow ; état sur n8n constaté et noté au journal.
+
+### Lot 5 : validation et livraison
+- [!] **Tâche 33.15 : Parcours complet dans le navigateur** — partiel : chaque branche du bloc cliquée à 375 px avec le réseau simulé. 🔒 Parcours réel dans l'app et dans les deux écrans : migration 0029 et session étudiante requises.
+  - **Fichiers :** aucun, sauf correctifs ; captures dans `.agent/screenshots/m33/`
+  - **Action :** avec une session étudiante de test et des candidatures de test, à 375 px, passer par chaque branche : réponse déclarée, relance envoyée, échec de l'envoi, sans e-mail, offre expirée, envoi non confirmé, « Sans réponse ». Vérifier requête réseau et donnée enregistrée.
+  - **DoD :** chaque branche constatée, aucune erreur console, `npm test` dans `mobile-api` sans échec, verdict par fonctionnalité dans le journal (`/test-and-verify`).
+- [!] **Tâche 33.16 : Mise en production** — 🔒 accord pour la migration, le cron et la mise à jour de l'app.
+  - **Fichiers :** script cron sur le VPS (`/usr/local/bin/campus360-followups.sh`, nouveau), `scripts/deploy-vps.sh` si nécessaire
+  - **Action :** migration 0029 appliquée, API déployée, cron quotidien calé sur 9 h à Douala (serveur en Europe/Berlin), OTA publiée. Une relance réelle part vers l'adresse de test.
+  - **DoD :** `/api/mobile/stages/followups` sans secret → 401 ; un passage du cron écrit son résultat au log ; relance reçue à l'adresse de test, `reminder_count` à 1 en base.
+
+**À demander à l'utilisateur :**
+- Adresse e-mail de test et accord pour l'envoi réel (33.2, 33.16).
+- Accès aux offres similaires (33.11) : ouvrir la liste des stages triée par le score de compatibilité existant (proposition), plutôt qu'un nouveau moteur de recommandation.
+- Renouvellement des clés citées dans le workflow mort (33.14).
 
 ## Journal d'exécution
 **[2026-10-23] Tâche 26.5 validée (execute / test-and-verify)** — Intégration Checkout Nyole durcie et fiabilisée : ouverture in-app du checkout officiel (`WebBrowser.openBrowserAsync`), polling en arrière-plan avec fermeture automatique dès confirmation (`WebBrowser.dismissBrowser()`), support multi-formats de signature Nyole (hex direct et `v1=`), persistance du `failure_message` et indication explicite du code USSD de validation `#150*50#` pour Orange Money Cameroun. 9/9 tests `payments.test.mjs` passés, `tsc --noEmit` 0 erreur.

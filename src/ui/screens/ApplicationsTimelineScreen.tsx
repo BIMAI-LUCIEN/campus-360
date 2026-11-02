@@ -7,8 +7,6 @@ import {
   ScrollView,
   Pressable,
   RefreshControl,
-  Linking,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
 
@@ -57,13 +55,8 @@ import {
 
   withdrawStageApplication,
 
-  generateFollowupReminderMessage,
-
   getDaysSinceApplication,
 
-  isEligibleForFollowup,
-
-  recordApplicationReminder,
   getStoredApplicationsAsync,
 
 } from '../../features/stages/stagesApi';
@@ -72,7 +65,7 @@ import { ApplicationDetailModal } from '../../features/stages/ApplicationDetailM
 
 import { stitchColors } from '../../theme/stitch';
 
-import { companyWhatsapp } from '../../features/stages/contactTargets';
+import { ApplicationFollowup } from '../../features/stages/ApplicationFollowup';
 import { AppAlert } from '../AppAlert';
 
 
@@ -82,6 +75,8 @@ interface ApplicationsTimelineProps {
   studentName: string;
 
   onBack?: () => void;
+
+  onOpenOffers?: () => void;
 
 }
 
@@ -99,7 +94,7 @@ const STATUS_CONFIG: Record<
 
   SENT_PENDING: { label: 'En cours d’envoi', bg: 'rgba(59, 130, 246, 0.12)', text: stitchColors.tertiary, border: 'rgba(59, 130, 246, 0.25)', icon: Send },
 
-  DELIVERED: { label: 'Délivrée', bg: 'rgba(16, 185, 129, 0.12)', text: stitchColors.mentheInk, border: 'rgba(16, 185, 129, 0.25)', icon: CheckCircle2 },
+  DELIVERED: { label: 'Envoyée', bg: 'rgba(16, 185, 129, 0.12)', text: stitchColors.mentheInk, border: 'rgba(16, 185, 129, 0.25)', icon: CheckCircle2 },
 
   FAILED: { label: 'Échec d’envoi', bg: 'rgba(239, 68, 68, 0.12)', text: stitchColors.corailInk, border: 'rgba(239, 68, 68, 0.25)', icon: XCircle },
 
@@ -117,7 +112,7 @@ const STATUS_CONFIG: Record<
 
 
 
-export function ApplicationsTimelineScreen({ studentName, onBack }: ApplicationsTimelineProps) {
+export function ApplicationsTimelineScreen({ studentName, onBack, onOpenOffers }: ApplicationsTimelineProps) {
 
   const [applications, setApplications] = useState<StageApplication[]>(() => peekStudentApplications() ?? []);
 
@@ -219,59 +214,10 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
 
 
-  const handleSendReminder = async (app: StageApplication) => {
-
-    const reminderMsg = generateFollowupReminderMessage(app, studentName || 'Étudiant');
-
-    const rawPhone = companyWhatsapp(app.job?.company);
-
-    if (!rawPhone) {
-
-      AppAlert.alert('Relance impossible', "Cette entreprise n'a pas de numéro WhatsApp. Copie le message et envoie-le par un autre moyen.");
-
-      return;
-
-    }
-
-    const waUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(reminderMsg)}`;
-
-
-
-    const markReminded = () => {
-      void recordApplicationReminder(app.id);
-      setApplications((prev) =>
-        prev.map((a) => (a.id === app.id ? { ...a, lastRemindedAt: new Date().toISOString() } : a)),
-      );
-    };
-
-
-
-    if (Platform.OS === 'web') {
-      markReminded();
-      window.open(waUrl, '_blank');
-    } else {
-
-      AppAlert.alert(
-
-        'Message de relance J+7 préparé',
-
-        reminderMsg,
-
-        [
-
-          { text: 'Envoyer sur WhatsApp', onPress: () => { markReminded(); void Linking.openURL(waUrl); } },
-
-          { text: 'Annuler', style: 'cancel' },
-
-        ]
-
-      );
-
-    }
-
+  const patchApplication = (appId: string, patch: Partial<StageApplication>) => {
+    setApplications((prev) => prev.map((a) => (a.id === appId ? { ...a, ...patch } : a)));
+    setSelectedApp((current) => (current && current.id === appId ? { ...current, ...patch } : current));
   };
-
-
 
   return (
 
@@ -341,7 +287,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
           <Text style={styles.duoMessage}>
 
-            « Relancer un recruteur à J+7 permet de confirmer ta motivation et d'accélérer le traitement de ton dossier. »
+            « Une semaine sans réponse ? Une relance courte remet ton dossier sous les yeux du recruteur. »
 
           </Text>
 
@@ -405,9 +351,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
             const daysElapsed = getDaysSinceApplication(app.appliedAt);
 
-            const isPending = app.status === 'PENDING' || app.status === 'SENT_PENDING' || app.status === 'DELIVERED';
-
-            const isEligibleReminder = isEligibleForFollowup(app);
+            const isWaiting = app.followup?.state === 'waiting';
 
             const refCode = `CAMPUS-${app.id.slice(0, 5).toUpperCase()}`;
 
@@ -471,24 +415,6 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
 
 
-                {/* Urgent Followup J+7 Badge */}
-
-                {isEligibleReminder && (
-
-                  <View style={styles.urgentBanner} testID={`urgent-banner-${app.id}`}>
-
-                    <Clock size={12} color={stitchColors.warningTone} />
-
-                    <Text style={styles.urgentBannerText}>
-
-                      Relance J+7 recommandée ({daysElapsed}j sans réponse)
-
-                    </Text>
-
-                  </View>
-
-                )}
-
                 {app.lastRemindedAt && (
 
                   <View style={styles.lastRemindedPill}>
@@ -497,7 +423,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
                     <Text style={styles.lastRemindedText}>
 
-                      Dernière relance envoyée le {new Date(app.lastRemindedAt).toLocaleDateString('fr-FR')}
+                      Relance envoyée le {new Date(app.lastRemindedAt).toLocaleDateString('fr-FR')}
 
                     </Text>
 
@@ -506,6 +432,12 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
                 )}
 
 
+
+                <ApplicationFollowup
+                  application={app}
+                  onChanged={(patch) => patchApplication(app.id, patch)}
+                  onOpenOffers={onOpenOffers}
+                />
 
                 {/* Perforated / Cutout Ticket Separator */}
 
@@ -631,31 +563,13 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
 
 
 
-                  {isEligibleReminder ? (
-
-                    <Pressable
-
-                      testID={`btn-relance-j7-${app.id}`}
-
-                      style={styles.reminderBtn}
-
-                      onPress={() => handleSendReminder(app)}
-
-                    >
-
-                      <MessageSquare size={13} color={stitchColors.white} />
-
-                      <Text style={styles.reminderBtnText}>💬 Relancer sur WhatsApp (J+7)</Text>
-
-                    </Pressable>
-
-                  ) : isPending ? (
+                  {isWaiting ? (
 
                     <View style={styles.waitingBadge}>
 
                       <Clock size={11} color={stitchColors.inkSubtle} />
 
-                      <Text style={styles.waitingBadgeText}>Dépôt il y a {daysElapsed}j (relance à J+7)</Text>
+                      <Text style={styles.waitingBadgeText}>Envoyée il y a {daysElapsed}j</Text>
 
                     </View>
 
@@ -702,6 +616,8 @@ export function ApplicationsTimelineScreen({ studentName, onBack }: Applications
           }
 
         }}
+
+        onApplicationPatched={patchApplication}
 
         onNotesUpdated={(appId, notes) => {
 
@@ -1342,68 +1258,6 @@ const styles = StyleSheet.create({
     color: stitchColors.inkSubtle,
 
     fontWeight: '500',
-
-  },
-
-  reminderBtn: {
-
-    flexDirection: 'row',
-
-    alignItems: 'center',
-
-    gap: 5,
-
-    backgroundColor: stitchColors.primary,
-
-    paddingHorizontal: 12,
-
-    paddingVertical: 7,
-
-    borderRadius: 6,
-
-  },
-
-  reminderBtnText: {
-
-    fontSize: 11.5,
-
-    fontWeight: '500',
-
-    color: stitchColors.white,
-
-  },
-
-  urgentBanner: {
-
-    flexDirection: 'row',
-
-    alignItems: 'center',
-
-    gap: 6,
-
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-
-    borderWidth: 0.5,
-
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-
-    borderRadius: 6,
-
-    paddingHorizontal: 10,
-
-    paddingVertical: 5,
-
-    marginTop: 8,
-
-  },
-
-  urgentBannerText: {
-
-    fontSize: 11,
-
-    fontWeight: '600',
-
-    color: '#FBBF24',
 
   },
 

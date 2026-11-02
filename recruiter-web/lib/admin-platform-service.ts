@@ -1,3 +1,4 @@
+import { followupRecipient, followupState } from './application-rules';
 import { databasePool } from './database';
 
 export interface AdminStageJob {
@@ -418,8 +419,8 @@ export async function getAdminApplications(params?: {
 }): Promise<AdminApplication[]> {
   try {
     const sql = `
-      SELECT a.id, a.student_id, a.job_id, a.status, a.applied_at, a.last_reminded_at,
-             a.cv_file_url, a.letter_file_url,
+      SELECT a.id, a.student_id, a.job_id, a.status, a.applied_at, a.last_reminded_at, a.reminder_count,
+             a.cv_file_url, a.letter_file_url, j.expires_at as job_expires_at, c.contact_email as company_contact_email,
              s.full_name as student_name, s.email as student_email, s.phone_whatsapp as student_whatsapp,
              s.major as student_major, s.education_level as student_level,
              j.title as job_title,
@@ -434,10 +435,18 @@ export async function getAdminApplications(params?: {
 
     const result = await databasePool.query<any>(sql);
 
-    return result.rows.map((row: any) => {
+    const applications: AdminApplication[] = result.rows.map((row: any) => {
       const applied = new Date(row.applied_at).getTime();
       const diffDays = Math.floor((Date.now() - applied) / 86400000);
-      const isEligible = row.status === 'PENDING' && diffDays >= 7 && !row.last_reminded_at;
+      const isEligible =
+        followupState({
+          status: row.status,
+          appliedAt: row.applied_at,
+          lastRemindedAt: row.last_reminded_at,
+          reminderCount: row.reminder_count,
+          hasRecipient: Boolean(followupRecipient(row.company_contact_email)),
+          offerExpired: Boolean(row.job_expires_at) && new Date(row.job_expires_at).getTime() <= Date.now(),
+        }) === 'due';
 
       return {
         id: String(row.id),
@@ -460,6 +469,7 @@ export async function getAdminApplications(params?: {
         letterFileUrl: row.letter_file_url,
       };
     });
+    return params?.relanceJ7Only ? applications.filter((a) => a.isEligibleForFollowup) : applications;
   } catch (err) {
     console.error('[AdminApplications] DB query failed:', (err as Error).message);
     throw err;

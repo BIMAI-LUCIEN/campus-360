@@ -1,6 +1,15 @@
 import { databasePool } from './database';
 import { isPaidOffer, stageApplyCredits, stageApplyPrice } from './stage-pricing';
-import { BLOCKS_RESEND, canDispatchSetStatus } from './application-rules';
+import {
+  BLOCKS_RESEND,
+  canDispatchSetStatus,
+  FOLLOWUP_STATUSES,
+  followupRecipient,
+  followupState,
+  MAX_REMINDERS,
+  REMINDER_INTERVAL_DAYS,
+} from './application-rules';
+import { buildFollowupEmail } from './application-followup-email';
 import { MobileApiError } from './mobile-error';
 
 export type StageStatus =
@@ -249,7 +258,8 @@ export const listStudentApplications = async (studentId: string) => {
     const result = await databasePool.query<StageJobRow & Record<string, unknown>>(
       `select a.id as application_id, a.student_id, a.job_id, a.status as application_status,
               a.applied_at, a.cv_file_url, a.letter_file_url, a.generated_cv_text,
-              a.generated_letter_text, a.last_reminded_at, a.student_notes, a.status_updated_at,
+              a.generated_letter_text, a.last_reminded_at, a.reminder_count, a.student_notes, a.status_updated_at,
+              s.full_name as student_full_name,
               j.*, c.name as company_name, c.industry as company_industry,
               c.address as company_address, c.contact_email as company_contact_email,
               c.contact_whatsapp as company_contact_whatsapp, c.kyb_score as company_kyb_score,
@@ -258,25 +268,56 @@ export const listStudentApplications = async (studentId: string) => {
          from public.stage_applications a
          join public.stage_jobs j on j.id = a.job_id
          join public.stage_companies c on c.id = j.company_id
+         join public.stage_students s on s.id = a.student_id
         where a.student_id = $1
         order by a.applied_at desc`,
       [studentId],
     );
-    return result.rows.map((row) => ({
-      id: String(row.application_id),
-      studentId: String(row.student_id),
-      jobId: String(row.job_id),
-      status: String(row.application_status) as StageStatus,
-      appliedAt: new Date(String(row.applied_at)).toISOString(),
-      cvFileUrl: row.cv_file_url ? String(row.cv_file_url) : undefined,
-      letterFileUrl: row.letter_file_url ? String(row.letter_file_url) : undefined,
-      generatedCvText: row.generated_cv_text ? String(row.generated_cv_text) : undefined,
-      generatedLetterText: row.generated_letter_text ? String(row.generated_letter_text) : undefined,
-      lastRemindedAt: row.last_reminded_at ? new Date(String(row.last_reminded_at)).toISOString() : undefined,
-      notes: row.student_notes ? String(row.student_notes) : undefined,
-      statusUpdatedAt: row.status_updated_at ? new Date(String(row.status_updated_at)).toISOString() : undefined,
-      job: mapJob(row),
-    }));
+    return result.rows.map((row) => {
+      const appliedAt = new Date(String(row.applied_at)).toISOString();
+      const lastRemindedAt = row.last_reminded_at ? new Date(String(row.last_reminded_at)).toISOString() : undefined;
+      const reminderCount = Number(row.reminder_count) || 0;
+      const status = String(row.application_status) as StageStatus;
+      const recipient = followupRecipient(row.company_contact_email);
+      const state = followupState({
+        status,
+        appliedAt,
+        lastRemindedAt,
+        reminderCount,
+        hasRecipient: Boolean(recipient),
+        offerExpired: new Date(row.expires_at).getTime() <= Date.now(),
+      });
+      return {
+        id: String(row.application_id),
+        studentId: String(row.student_id),
+        jobId: String(row.job_id),
+        status,
+        appliedAt,
+        cvFileUrl: row.cv_file_url ? String(row.cv_file_url) : undefined,
+        letterFileUrl: row.letter_file_url ? String(row.letter_file_url) : undefined,
+        generatedCvText: row.generated_cv_text ? String(row.generated_cv_text) : undefined,
+        generatedLetterText: row.generated_letter_text ? String(row.generated_letter_text) : undefined,
+        lastRemindedAt,
+        notes: row.student_notes ? String(row.student_notes) : undefined,
+        statusUpdatedAt: row.status_updated_at ? new Date(String(row.status_updated_at)).toISOString() : undefined,
+        followup: {
+          state,
+          reminderCount,
+          recipient: recipient ?? undefined,
+          // The exact text the server would send, shown before sending or to copy.
+          message:
+            state === 'due' || state === 'ask'
+              ? buildFollowupEmail({
+                  studentName: String(row.student_full_name ?? ''),
+                  jobTitle: row.title,
+                  companyName: row.company_name,
+                  appliedAt,
+                }).message
+              : undefined,
+        },
+        job: mapJob(row),
+      };
+    });
   } catch (err) {
     console.warn('[stages-db] listStudentApplications failed:', err);
     throw err;
@@ -337,16 +378,87 @@ export const updateStudentApplicationNotes = async (studentId: string, applicati
   return Boolean(result.rows[0]);
 };
 
-/** Records a J+7 follow-up the student has just sent; returns its date. */
-export const recordStudentApplicationReminder = async (studentId: string, applicationId: string) => {
-  const result = await databasePool.query<{ last_reminded_at: string }>(
-    `update public.stage_applications set last_reminded_at = now()
-      where id = $1 and student_id = $2
-      returning last_reminded_at`,
+/** What the reminder rule and the e-mail need, for an application of this student. */
+export const getReminderTarget = async (studentId: string, applicationId: string) => {
+  const { rows } = await databasePool.query<Record<string, unknown>>(
+    `select a.status, a.applied_at, a.last_reminded_at, a.reminder_count,
+            (j.expires_at is not null and j.expires_at <= now()) as offer_expired,
+            j.title as job_title, c.name as company_name, c.contact_email,
+            s.full_name as student_name, s.email as student_email
+       from public.stage_applications a
+       join public.stage_jobs j on j.id = a.job_id
+       join public.stage_companies c on c.id = j.company_id
+       join public.stage_students s on s.id = a.student_id
+      where a.id = $1 and a.student_id = $2`,
     [applicationId, studentId],
   );
-  const row = result.rows[0];
-  return row ? new Date(String(row.last_reminded_at)).toISOString() : null;
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    status: String(row.status),
+    appliedAt: new Date(String(row.applied_at)).toISOString(),
+    lastRemindedAt: row.last_reminded_at ? new Date(String(row.last_reminded_at)).toISOString() : null,
+    reminderCount: Number(row.reminder_count) || 0,
+    offerExpired: row.offer_expired === true,
+    jobTitle: String(row.job_title ?? ''),
+    companyName: row.company_name ? String(row.company_name) : null,
+    contactEmail: row.contact_email ? String(row.contact_email) : null,
+    studentName: String(row.student_name ?? ''),
+    studentEmail: row.student_email ? String(row.student_email) : null,
+  };
+};
+
+/**
+ * Claims one reminder, same rule as followupState. The row lock makes a second concurrent
+ * call see the first one's update and stop: only one reminder goes out.
+ */
+export const reserveStudentApplicationReminder = async (
+  studentId: string,
+  applicationId: string,
+  options: { requireEmail?: boolean } = {},
+) => {
+  const { rows } = await databasePool.query<{ last_reminded_at: string; reminder_count: number; previous: string | null }>(
+    `with target as (
+       select a.id, a.last_reminded_at as previous
+         from public.stage_applications a
+         join public.stage_jobs j on j.id = a.job_id
+         join public.stage_companies c on c.id = j.company_id
+        where a.id = $1 and a.student_id = $2
+          and a.status::text = any($3::text[])
+          and a.reminder_count < $4
+          and coalesce(a.last_reminded_at, a.applied_at) <= now() - make_interval(days => $5)
+          and (j.expires_at is null or j.expires_at > now())
+          and (not $6 or c.contact_email like '%@%')
+        for update of a
+     )
+     update public.stage_applications a
+        set last_reminded_at = now(), reminder_count = a.reminder_count + 1
+       from target
+      where a.id = target.id
+      returning a.last_reminded_at, a.reminder_count, target.previous`,
+    [applicationId, studentId, FOLLOWUP_STATUSES, MAX_REMINDERS, REMINDER_INTERVAL_DAYS, options.requireEmail === true],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    lastRemindedAt: new Date(String(row.last_reminded_at)).toISOString(),
+    reminderCount: Number(row.reminder_count),
+    previous: row.previous ? new Date(String(row.previous)).toISOString() : null,
+  };
+};
+
+/** Gives a claimed reminder back when the provider refused it. */
+export const releaseStudentApplicationReminder = async (
+  studentId: string,
+  applicationId: string,
+  previous: string | null,
+) => {
+  await databasePool.query(
+    `update public.stage_applications
+        set last_reminded_at = $3, reminder_count = greatest(reminder_count - 1, 0)
+      where id = $1 and student_id = $2`,
+    [applicationId, studentId, previous],
+  );
 };
 
 /** Current status of the student's application to an offer, or null when there is none. */

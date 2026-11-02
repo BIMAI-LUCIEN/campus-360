@@ -648,43 +648,37 @@ export function getDaysSinceApplication(appliedAt: string): number {
   return Math.floor(diffMs / (24 * 3600 * 1000));
 }
 
-/** J+7: 7 days after sending, then 7 days after the last follow-up (same rule as the server). */
-export function isEligibleForFollowup(app: StageApplication): boolean {
-  if (app.status !== 'PENDING' && app.status !== 'SENT_PENDING' && app.status !== 'DELIVERED') return false;
-  return getDaysSinceApplication(app.lastRemindedAt || app.appliedAt) >= 7;
-}
 
-export function generateFollowupReminderMessage(app: StageApplication, studentName: string): string {
-  const company = app.job?.company?.name?.trim();
-  const jobTitle = app.job?.title?.trim();
-  const appliedDateStr = new Date(app.appliedAt).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  const greeting = company ? `Bonjour ${company},` : 'Bonjour,';
-  const position = jobTitle ? ` pour le poste « ${jobTitle} »` : '';
-  return `${greeting} je me permets de faire suite à ma candidature du ${appliedDateStr}${position}. Toujours très motivé pour rejoindre vos équipes, je me tiens à votre disposition pour échanger. Bien cordialement, ${studentName}.`;
-}
-
-/** Records on the server a J+7 follow-up the student has just sent. */
-export async function recordApplicationReminder(applicationId: string): Promise<boolean> {
-  let lastRemindedAt = new Date().toISOString();
+/** Asks the server to send a reminder to the recruiter. Sent only when the server says so. */
+export async function sendApplicationReminder(
+  applicationId: string,
+  confirmedSent: boolean,
+): Promise<{ success: true; lastRemindedAt: string; reminderCount: number } | { success: false; error: string }> {
+  let response: Response;
   try {
-    const response = await authFetchRaw('/api/mobile/stages/applications', {
-      method: 'PATCH',
+    response = await authFetchRaw('/api/mobile/stages/applications/remind', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ applicationId, reminded: true }),
+      body: JSON.stringify({ applicationId, confirmedSent }),
     });
-    if (!response.ok) return false;
-    const data = (await response.json().catch(() => null)) as { lastRemindedAt?: string } | null;
-    if (data?.lastRemindedAt) lastRemindedAt = data.lastRemindedAt;
   } catch {
-    return false;
+    return { success: false, error: "Pas de connexion au serveur : la relance n'est pas partie. Réessaie." };
   }
-  localApplications = localApplications.map((a) => (a.id === applicationId ? { ...a, lastRemindedAt } : a));
+  const data = (await response.json().catch(() => null)) as
+    | { lastRemindedAt?: string; reminderCount?: number; error?: string }
+    | null;
+  if (!response.ok || !data?.lastRemindedAt) {
+    return { success: false, error: data?.error || "La relance n'est pas partie. Réessaie." };
+  }
+  const { lastRemindedAt } = data;
+  const reminderCount = data.reminderCount ?? 1;
+  localApplications = localApplications.map((a) =>
+    a.id === applicationId
+      ? { ...a, lastRemindedAt, followup: { state: 'waiting' as const, reminderCount, recipient: a.followup?.recipient } }
+      : a,
+  );
   persistApplicationsLocally(localApplications);
-  return true;
+  return { success: true, lastRemindedAt, reminderCount };
 }
 
 export async function directReachRecruiter(jobId: string, customNotes?: string) {

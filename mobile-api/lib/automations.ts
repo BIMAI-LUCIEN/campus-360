@@ -59,7 +59,7 @@ export const notifyAdmin = async (subject: string, details: Record<string, strin
 };
 
 const APPLICATION_STATUS_PUSH: Record<string, { title: string; body: (company: string) => string }> = {
-  DELIVERED: { title: 'Candidature envoyée', body: (c) => `Ta candidature est bien arrivée chez ${c}.` },
+  DELIVERED: { title: 'Candidature envoyée', body: (c) => `Ta candidature est partie chez ${c}. Le recruteur te répondra directement.` },
   FAILED: { title: 'Envoi échoué', body: (c) => `Ta candidature à ${c} n'a pas pu partir. Ton paiement t'a été rendu, réessaie.` },
   REVIEWING: { title: 'Réponse reçue', body: (c) => `${c} t'a répondu sur WhatsApp. Ouvre la conversation.` },
 };

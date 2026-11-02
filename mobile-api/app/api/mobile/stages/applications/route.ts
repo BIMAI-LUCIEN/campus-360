@@ -4,7 +4,7 @@ import { z } from 'zod';
 import {
   ensureStageStudent,
   listStudentApplications,
-  recordStudentApplicationReminder,
+  reserveStudentApplicationReminder,
   updateStudentApplicationNotes,
   updateStudentApplicationStatus,
   StageStatus,
@@ -15,7 +15,7 @@ import { canStudentSetStatus } from '@/lib/application-rules';
 import { databasePool } from '@/lib/database';
 
 // One change per call: a status the student reports, their private notes, or a
-// J+7 follow-up they have just sent.
+// follow-up an older APK has just opened in WhatsApp (see applications/remind).
 const updateSchema = z
   .object({
     applicationId: z.string().uuid(),
@@ -66,8 +66,15 @@ export async function PATCH(request: NextRequest) {
       return withCors(NextResponse.json({ success: true, notes: input.notes.trim() }), request);
     }
     if (input.reminded) {
-      const lastRemindedAt = await recordStudentApplicationReminder(studentId, input.applicationId);
-      return withCors(NextResponse.json({ success: true, lastRemindedAt }), request);
+      // Older APKs still report a WhatsApp reminder here: same rule and same cap as a sent one.
+      const reserved = await reserveStudentApplicationReminder(studentId, input.applicationId);
+      if (!reserved) {
+        return withCors(
+          NextResponse.json({ error: "Aucune relance n'est possible pour cette candidature pour le moment." }, { status: 409 }),
+          request,
+        );
+      }
+      return withCors(NextResponse.json({ success: true, lastRemindedAt: reserved.lastRemindedAt }), request);
     }
 
     const currentStatus = currentRes.rows[0].status;
