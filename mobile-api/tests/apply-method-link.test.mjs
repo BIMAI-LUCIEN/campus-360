@@ -5,7 +5,7 @@ import test from 'node:test';
 
 import { loadTs } from './helpers/load-ts.mjs';
 
-const { APPLY_LINK_LABEL, isLinkApply, safeApplyUrl } = await loadTs('../src/features/stages/applyTarget.ts');
+const { APPLY_LINK_LABEL, APPLY_LINK_SHORT_LABEL, isLinkApply, safeApplyUrl } = await loadTs('../src/features/stages/applyTarget.ts');
 const read = (rel) => fs.readFileSync(path.resolve(rel), 'utf8');
 
 test('offre à lien : reconnaissance de la méthode', () => {
@@ -53,11 +53,61 @@ test('API : l’URL de l’offre est renvoyée à l’app', () => {
 test('app : la carte ouvre le site au lieu du formulaire', () => {
   const screen = read('../src/ui/screens/StagesScreen.tsx');
   assert.match(screen, /isLinkApply\(job\)/);
-  assert.match(screen, /openApplyLink/);
-  assert.match(screen, /safeApplyUrl\(job\.sourceUrl\)/);
+  assert.match(screen, /useApplyOnSite\(\)/);
   assert.ok(APPLY_LINK_LABEL.length > 0);
   // The one-click apply must not be reachable for a LINK offer.
-  assert.match(screen, /if \(isLinkApply\(job\)\) \{\s*\n\s*openApplyLink\(job\);\s*\n\s*return;/);
+  assert.match(screen, /if \(isLinkApply\(job\)\) \{\s*\n\s*openOnSite\(job\);\s*\n\s*return;/);
+});
+
+test('app : l’accueil suit la même règle que les Stages', () => {
+  const home = read('../src/ui/screens/HomeScreen.tsx');
+  assert.match(home, /if \(isLinkApply\(job\)\) \{\s*\n\s*openOnSite\(job\);\s*\n\s*return;/);
+  // Every card goes through that rule, and none promises a one-click apply on such an offer.
+  assert.equal((home.match(/setApplyingJob\(job\)/g) ?? []).length, 1);
+  assert.equal((home.match(/startApply\(job\)/g) ?? []).length, 3);
+  assert.match(home, /isLinkApply\(job\) \? APPLY_LINK_SHORT_LABEL : '1-Clic'/);
+  assert.ok(APPLY_LINK_SHORT_LABEL.length > 0);
+});
+
+test('app : seul le site https est ouvert, et le retour propose le suivi', () => {
+  const hook = read('../src/features/stages/useApplyOnSite.ts');
+  assert.match(hook, /safeApplyUrl\(job\.sourceUrl\)/);
+  assert.match(hook, /recordOnSiteApplication\(job\)/);
+  assert.match(hook, /Tu as postulé \?/);
+});
+
+test('serveur : /cv ne débite pas une offre à lien', () => {
+  const src = read('app/api/mobile/stages/cv/route.ts');
+  assert.ok(src.indexOf("applyMethod === 'LINK'") > 0, 'contrôle présent');
+  assert.ok(src.indexOf("applyMethod === 'LINK'") < src.indexOf('chargeStageApplication(userId'), 'contrôle avant le débit');
+});
+
+test('serveur : le suivi sur le site est gratuit et réservé aux offres à lien', () => {
+  const src = read('app/api/mobile/stages/apply-on-site/route.ts');
+  assert.match(src, /applyMethod !== 'LINK'/);
+  assert.match(src, /status: 422/);
+  assert.ok(!src.includes('chargeStageApplication'), 'aucun débit');
+  assert.ok(!fs.existsSync('app/api/mobile/stages/direct-reach/route.ts'), 'direct-reach supprimée');
+});
+
+test('serveur : pas de relance ni de rappel pour une candidature sur le site', () => {
+  const followups = read('lib/application-followups.ts');
+  assert.match(followups, /j\.apply_method::text <> 'LINK'/);
+  const db = read('lib/stages-db.ts');
+  assert.match(db, /onSite \? null : followupRecipient/);
+  assert.match(db, /row\.apply_method !== 'LINK' && row\.contact_email/);
+});
+
+test('serveur : aucune adresse inventée pour une entreprise sans contact', () => {
+  assert.ok(!read('lib/stages-db.ts').includes('recrutement@'));
+  assert.ok(!read('../recruiter-web/lib/admin-platform-service.ts').includes('contact@campus360b.site'));
+});
+
+test('admin : une offre à lien exige une URL https', () => {
+  const route = read('../recruiter-web/app/api/admin/stages/route.ts');
+  assert.match(route, /job\.applyMethod === 'LINK' && !\/\^https:/);
+  const service = read('../recruiter-web/lib/admin-platform-service.ts');
+  assert.equal((service.match(/apply_method::text <> 'LINK'/g) ?? []).length, 2);
 });
 
 test('app : le type expose la méthode et l’URL', () => {

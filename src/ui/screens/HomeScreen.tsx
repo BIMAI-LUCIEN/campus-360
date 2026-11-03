@@ -27,6 +27,8 @@ import {
 import { type StudentProfile } from '../../features/auth/betterAuth';
 import { fetchStageJobs, fetchStudentApplications, peekStageJobs, peekStudentApplications } from '../../features/stages/stagesApi';
 import { AiApplyModal, type ApplicationProfilePatch } from '../../features/stages/AiApplyModal';
+import { APPLY_LINK_SHORT_LABEL, isLinkApply } from '../../features/stages/applyTarget';
+import { useApplyOnSite } from '../../features/stages/useApplyOnSite';
 import type { StageApplication, StageJob, Transaction } from '../../types';
 import {
   stitchColors,
@@ -89,6 +91,16 @@ export function HomeScreen({
   const [loading, setLoading] = useState(() => peekStageJobs() === null);
   const [applyingJob, setApplyingJob] = useState<StageJob | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+  const { openOnSite } = useApplyOnSite();
+
+  // Same rule as the Stages screen: an offer without recipient is applied to on its website.
+  const startApply = (job: StageJob) => {
+    if (isLinkApply(job)) {
+      openOnSite(job);
+      return;
+    }
+    setApplyingJob(job);
+  };
 
   const effectiveSkills = useMemo(() => {
     if (studentSkills && studentSkills.length > 0) return studentSkills;
@@ -281,7 +293,7 @@ export function HomeScreen({
                 <Pressable
                   key={job.id}
                   style={({ pressed }) => [styles.carouselCard, pressed && { opacity: 0.94 }]}
-                  onPress={() => setApplyingJob(job)}
+                  onPress={() => startApply(job)}
                 >
                   <View style={styles.carouselImageWrap}>
                     <Image
@@ -338,7 +350,7 @@ export function HomeScreen({
                         </Text>
                       </View>
                       <View style={styles.carouselApplyBadge}>
-                        <Text style={styles.carouselApplyText}>1-Clic</Text>
+                        <Text style={styles.carouselApplyText}>{isLinkApply(job) ? APPLY_LINK_SHORT_LABEL : '1-Clic'}</Text>
                         <ArrowRight size={11} color={stitchColors.primary} strokeWidth={2.5} />
                       </View>
                     </View>
@@ -376,7 +388,7 @@ export function HomeScreen({
                 <Pressable
                   key={job.id}
                   style={({ pressed }) => [styles.jobCard, pressed && { opacity: 0.92 }]}
-                  onPress={() => setApplyingJob(job)}
+                  onPress={() => startApply(job)}
                 >
                   <View style={styles.jobCardHeader}>
                     <View style={{ flex: 1, paddingRight: 8 }}>
@@ -416,10 +428,10 @@ export function HomeScreen({
                       style={({ pressed }) => [styles.applyBtn, pressed && { opacity: 0.88 }]}
                       onPress={(e) => {
                         e.stopPropagation();
-                        setApplyingJob(job);
+                        startApply(job);
                       }}
                     >
-                      <Text style={styles.applyBtnText}>Postuler</Text>
+                      <Text style={styles.applyBtnText}>{isLinkApply(job) ? APPLY_LINK_SHORT_LABEL : 'Postuler'}</Text>
                     </Pressable>
                   </View>
                 </Pressable>

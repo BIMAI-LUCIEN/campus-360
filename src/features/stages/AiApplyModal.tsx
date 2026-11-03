@@ -216,7 +216,7 @@ export function AiApplyModal({
   };
 
   useEffect(() => {
-    if (visible && job) {
+    if (visible && job && !isLinkApply(job)) {
       // If student has incomplete profile, prompt express modal first
       if (isProfileIncomplete) {
         setShowExpressModal(true);

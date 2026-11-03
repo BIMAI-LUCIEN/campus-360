@@ -66,6 +66,7 @@ import { ApplicationDetailModal } from '../../features/stages/ApplicationDetailM
 import { stitchColors } from '../../theme/stitch';
 
 import { ApplicationFollowup } from '../../features/stages/ApplicationFollowup';
+import { isLinkApply } from '../../features/stages/applyTarget';
 import { AppAlert } from '../AppAlert';
 
 
@@ -391,23 +392,25 @@ export function ApplicationsTimelineScreen({ studentName, onBack, onOpenOffers }
 
                 <Text style={styles.ticketJobTitle} numberOfLines={2}>{app.job?.title || 'Stage Professionnel'}</Text>
 
-                <View style={styles.ticketCompanyRow}>
+                <View style={styles.ticketCompanyBlock}>
 
-                  <Building2 size={13} color={stitchColors.inkSubtle} />
+                  <View style={styles.ticketCompanyRow}>
 
-                  <Text style={styles.ticketCompanyName}>{app.job?.company?.name || 'Entreprise Partenaire'}</Text>
+                    <Building2 size={13} color={stitchColors.inkSubtle} />
+
+                    <Text style={styles.ticketCompanyName}>{app.job?.company?.name || 'Entreprise Partenaire'}</Text>
+
+                  </View>
 
                   {app.job?.location && (
 
-                    <>
-
-                      <Text style={styles.ticketDot}>•</Text>
+                    <View style={styles.ticketCompanyRow}>
 
                       <MapPin size={12} color={stitchColors.inkSubtle} />
 
                       <Text style={styles.ticketLocationText}>{app.job.location}</Text>
 
-                    </>
+                    </View>
 
                   )}
 
@@ -531,7 +534,11 @@ export function ApplicationsTimelineScreen({ studentName, onBack, onOpenOffers }
 
                     <Eye size={15} color="#A78BFA" />
 
-                    <Text style={styles.viewDossierButtonText}>👁️ Voir ma candidature & CV officiel</Text>
+                    <Text style={styles.viewDossierButtonText}>
+
+                      {isLinkApply(app.job) ? '👁️ Voir mon suivi' : '👁️ Voir ma candidature & CV officiel'}
+
+                    </Text>
 
                   </View>
 
@@ -1001,6 +1008,14 @@ const styles = StyleSheet.create({
 
   },
 
+  ticketCompanyBlock: {
+
+    gap: 4,
+
+    marginBottom: 12,
+
+  },
+
   ticketCompanyRow: {
 
     flexDirection: 'row',
@@ -1009,11 +1024,11 @@ const styles = StyleSheet.create({
 
     gap: 6,
 
-    marginBottom: 12,
-
   },
 
   ticketCompanyName: {
+
+    flex: 1,
 
     fontSize: 12,
 
@@ -1023,15 +1038,9 @@ const styles = StyleSheet.create({
 
   },
 
-  ticketDot: {
-
-    color: stitchColors.inkMuted,
-
-    fontSize: 11,
-
-  },
-
   ticketLocationText: {
+
+    flex: 1,
 
     fontSize: 11.5,
 
@@ -1337,6 +1346,8 @@ const styles = StyleSheet.create({
 
   viewDossierButtonLeft: {
 
+    flex: 1,
+
     flexDirection: 'row',
 
     alignItems: 'center',
@@ -1346,6 +1357,8 @@ const styles = StyleSheet.create({
   },
 
   viewDossierButtonText: {
+
+    flexShrink: 1,
 
     fontSize: 12.5,
 

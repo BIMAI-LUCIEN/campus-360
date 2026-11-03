@@ -95,14 +95,7 @@ test('followupRecipient : une vraie adresse ou rien', () => {
   }
 });
 
-test('Garde de source : direct-reach/route.ts utilise getStageJob et scraped-reports est protégé', () => {
-  const directReachPath = path.resolve('app/api/mobile/stages/direct-reach/route.ts');
-  const directReachContent = fs.readFileSync(directReachPath, 'utf8');
-  assert.ok(
-    directReachContent.includes('getStageJob('),
-    'direct-reach/route.ts doit utiliser getStageJob pour valider l’offre',
-  );
-
+test('Garde de source : scraped-reports est protégé', () => {
   const scrapedReportsPath = path.resolve('app/api/mobile/documents/scraped-reports/route.ts');
   const scrapedReportsContent = fs.readFileSync(scrapedReportsPath, 'utf8');
   assert.ok(

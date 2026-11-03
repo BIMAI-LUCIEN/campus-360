@@ -56,7 +56,8 @@ const jobSchema = z.object({
   isSponsored: z.boolean().default(false),
   expiresAt: z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'Date invalide'),
 }).superRefine((job, ctx) => {
-  if (job.applyMethod === 'LINK' && !job.applyUrl) ctx.addIssue({ code: 'custom', path: ['applyUrl'], message: 'Lien de candidature requis' });
+  // The app only opens https links: any other one would leave the student stuck.
+  if (job.applyMethod === 'LINK' && !/^https:\/\/\S+$/i.test(job.applyUrl ?? '')) ctx.addIssue({ code: 'custom', path: ['applyUrl'], message: 'Lien de candidature https requis' });
   if (job.applyMethod === 'EMAIL' && !job.contactEmail) ctx.addIssue({ code: 'custom', path: ['contactEmail'], message: 'E-mail requis' });
   if (job.applyMethod === 'WHATSAPP' && !job.contactWhatsapp) ctx.addIssue({ code: 'custom', path: ['contactWhatsapp'], message: 'Numéro WhatsApp requis' });
 });
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
       const reviewer = `admin:${user?.email ?? 'inconnu'}`.slice(0, 80);
       const updated = await reviewAdminJob(body.jobId, body.decision, reviewer);
       if (!updated) {
-        return NextResponse.json({ error: 'Offre introuvable ou déjà traitée' }, { status: 404 });
+        return NextResponse.json({ error: 'Offre introuvable, déjà traitée ou sans lien https valide' }, { status: 404 });
       }
       return NextResponse.json({
         ok: true,

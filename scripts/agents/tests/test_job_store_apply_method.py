@@ -47,7 +47,7 @@ class FakeConn:
         return False
 
 
-def saved_apply_method(**field_overrides) -> str:
+def saved_apply_method(source_url="https://www.linkedin.com/jobs/view/1", **field_overrides) -> str:
     fields = {"title": "Stagiaire", "company": "FAYAT Group", "city": "Yaoundé", "deadline": None,
               "duration": None, "stipend": None, "contact_email": None, "contact_whatsapp": None,
               "apply_url": None, "skills": [], "summary": ""}
@@ -55,7 +55,7 @@ def saved_apply_method(**field_overrides) -> str:
     store = JobStore.__new__(JobStore)
     store.dry_run = False
     store.conn = FakeConn()
-    item = {"platform": "LINKEDIN", "title": "Stagiaire", "url": "https://www.linkedin.com/jobs/view/1",
+    item = {"platform": "LINKEDIN", "title": "Stagiaire", "url": source_url,
             "snippet": "x", "flyer_url": None, "published_at": None}
     decision = {"status": "published", "kind": "stage", "confidence": 0.85, "reason": "ok"}
     store.save_offer(item, {"fields": fields, "evidence": {}}, decision)
@@ -74,8 +74,13 @@ class ApplyMethodTests(unittest.TestCase):
     def test_link_when_only_a_url(self):
         self.assertEqual(saved_apply_method(apply_url="https://www.linkedin.com/jobs/view/1"), "LINK")
 
+    def test_no_link_when_the_source_is_not_https(self):
+        # The app only opens https: such an offer must not promise a site it cannot open.
+        self.assertEqual(saved_apply_method(source_url="http://x.cm/1", apply_url="http://x.cm/1"), "PHYSICAL")
+        self.assertEqual(saved_apply_method(source_url=None), "PHYSICAL")
+
     def test_physical_when_nothing(self):
-        self.assertEqual(saved_apply_method(), "PHYSICAL")
+        self.assertEqual(saved_apply_method(source_url=None), "PHYSICAL")
 
 
 if __name__ == "__main__":

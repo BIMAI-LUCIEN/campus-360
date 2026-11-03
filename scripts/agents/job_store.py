@@ -240,8 +240,9 @@ class JobStore:
             apply_method = "WHATSAPP"
         elif fields.get("contact_email"):
             apply_method = "EMAIL"
-        elif fields.get("apply_url"):
+        elif str(item.get("url") or "").lower().startswith("https://"):
             # Only the URL of the posting is known: the student applies there (task 25.17).
+            # The app opens source_url (item["url"]) and refuses anything but https.
             apply_method = "LINK"
         else:
             apply_method = "PHYSICAL"

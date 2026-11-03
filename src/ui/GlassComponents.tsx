@@ -12,6 +12,7 @@ import {
   View,
   type ViewStyle,
   type TextStyle,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, {
@@ -418,6 +419,8 @@ export function BottomNav({
   activeSection: string;
   onPress: (section: string) => void;
 }) {
+  // On the smallest phones the bar with its pill would be wider than the screen.
+  const narrow = useWindowDimensions().width < 360;
   return (
     <View style={styles.bottomNavWrap} pointerEvents="box-none">
       <View style={styles.bottomNav}>
@@ -430,7 +433,7 @@ export function BottomNav({
                 testID={`nav-${key}`}
                 accessibilityLabel={label}
                 onPress={() => onPress(key)}
-                style={({ pressed }) => [styles.navActivePill, pressed && { opacity: 0.9 }]}
+                style={({ pressed }) => [styles.navActivePill, narrow && styles.navItemNarrow, pressed && { opacity: 0.9 }]}
               >
                 <Icon size={17} color={stitchColors.white} strokeWidth={2.4} />
                 <Text style={styles.navActiveLabel}>{label}</Text>
@@ -444,7 +447,7 @@ export function BottomNav({
               accessibilityLabel={label}
               onPress={() => onPress(key)}
               hitSlop={8}
-              style={({ pressed }) => [styles.navInactiveItem, pressed && { opacity: 0.6 }]}
+              style={({ pressed }) => [styles.navInactiveItem, narrow && styles.navItemNarrow, pressed && { opacity: 0.6 }]}
             >
               <Icon size={20} color={stitchColors.inkMuted} strokeWidth={1.8} />
             </Pressable>
@@ -1422,6 +1425,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: stitchColors.white,
+  },
+  navItemNarrow: {
+    paddingHorizontal: 9,
   },
   navInactiveItem: {
     paddingHorizontal: 14,

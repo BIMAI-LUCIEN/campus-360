@@ -29,6 +29,8 @@ export async function POST(request: NextRequest) {
     // The price comes from the stored offer, never from the client.
     const job = await getStageJob(parsed.data.jobId, access.user.id);
     if (!job) throw new MobileApiError('Offre de stage indisponible.', 404);
+    // Nothing would be sent after this payment: the student applies on the offer's website.
+    if (job.applyMethod === 'LINK') throw new MobileApiError("Cette offre se postule sur le site de l'offre.", 422);
 
     await enforceAiQuota(request, { userId: access.user.id, route: 'cv-fill' });
 

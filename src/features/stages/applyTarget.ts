@@ -5,8 +5,10 @@
 // No imports: loaded as-is by the Node tests.
 
 export const APPLY_LINK_LABEL = 'Postuler sur le site';
+export const APPLY_LINK_SHORT_LABEL = 'Sur le site';
+export const APPLY_LINK_TRACK_LABEL = "J'ai postulé : ajouter à mon suivi";
 export const APPLY_LINK_NOTICE =
-  "Candidature sur le site de l'offre : elle ne sera pas suivie dans Campus 360.";
+  "Candidature sur le site de l'offre, sans frais Campus 360. Une fois faite, ajoute-la à ton suivi.";
 export const APPLY_LINK_MISSING = "Le lien de cette offre n'est pas disponible.";
 
 export const isLinkApply = (job: { applyMethod?: string } | null | undefined): boolean =>

@@ -37,6 +37,7 @@ export const runApplicationFollowups = async (): Promise<FollowupsResult> => {
              and (a.followup_notified_at is null
                   or a.followup_notified_at < coalesce(a.last_reminded_at, a.applied_at) + make_interval(days => $3))
              and (j.expires_at is null or j.expires_at > now())
+             and j.apply_method::text <> 'LINK'
            order by a.applied_at
            limit $4
            for update of a skip locked)

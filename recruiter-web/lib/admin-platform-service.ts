@@ -231,8 +231,9 @@ export async function reviewAdminJob(jobId: string, decision: 'publish' | 'rejec
   const { rowCount } = await databasePool.query(
     `UPDATE public.stage_jobs
         SET status = $2, reviewed_at = now(), reviewed_by = $3
-      WHERE id = $1 AND status = 'pending_review'`,
-    [jobId, decision === 'publish' ? 'published' : 'rejected', reviewer],
+      WHERE id = $1 AND status = 'pending_review'
+        AND (NOT $4 OR apply_method::text <> 'LINK' OR coalesce(source_url, '') ~* '^https://[^[:space:]]+$')`,
+    [jobId, decision === 'publish' ? 'published' : 'rejected', reviewer, decision === 'publish'],
   );
   return (rowCount ?? 0) > 0;
 }
@@ -246,8 +247,9 @@ export async function bulkReviewAdminJobs(
   const { rowCount } = await databasePool.query(
     `UPDATE public.stage_jobs
         SET status = $2, reviewed_at = now(), reviewed_by = $3
-      WHERE id = ANY($1::uuid[]) AND status = 'pending_review'`,
-    [jobIds, decision === 'publish' ? 'published' : 'rejected', reviewer],
+      WHERE id = ANY($1::uuid[]) AND status = 'pending_review'
+        AND (NOT $4 OR apply_method::text <> 'LINK' OR coalesce(source_url, '') ~* '^https://[^[:space:]]+$')`,
+    [jobIds, decision === 'publish' ? 'published' : 'rejected', reviewer, decision === 'publish'],
   );
   return rowCount ?? 0;
 }
@@ -589,7 +591,7 @@ async function upsertCompanyForJob(input: AdminJobInput): Promise<string> {
       input.companyName.trim(),
       input.companyIndustry?.trim() || 'Non précisé',
       input.companyAddress?.trim() || input.location?.trim() || 'Cameroun',
-      input.contactEmail?.trim() || 'contact@campus360b.site',
+      input.contactEmail?.trim() || '',
       input.contactWhatsapp ?? '',
     ],
   );

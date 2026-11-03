@@ -3,6 +3,7 @@ import { ActivityIndicator, Platform, Pressable, Share, StyleSheet, Text, View }
 
 import type { AppStatus, StageApplication } from '../../types';
 import { stitchColors } from '../../theme/stitch';
+import { isLinkApply } from './applyTarget';
 import { sendApplicationReminder, updateApplicationStatus } from './stagesApi';
 
 type Step = 'confirm' | 'notSent' | 'question' | 'outcome' | 'next';
@@ -107,6 +108,13 @@ export function ApplicationFollowup({ application, onChanged, onOpenOffers }: Pr
             <Action label="Voir d'autres offres" onPress={onOpenOffers} testID={`followup-offers-${application.id}`} />
           ) : null}
         </>
+      );
+    }
+    if (state === 'ask' && isLinkApply(application.job)) {
+      return (
+        <Text style={styles.body}>
+          Tu as postulé sur le site de l'offre : pas de relance depuis Campus 360. Surveille ta boîte e-mail et ton espace sur ce site.
+        </Text>
       );
     }
     if (state === 'ask' && !followup?.recipient) {

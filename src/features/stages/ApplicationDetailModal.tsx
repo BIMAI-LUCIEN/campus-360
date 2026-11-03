@@ -73,6 +73,8 @@ import { exportOfficialCvToPdf } from './pdfExportService';
 import { missingCvFields } from './cvHtml';
 
 import { ApplicationFollowup } from './ApplicationFollowup';
+
+import { isLinkApply } from './applyTarget';
 import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from './contactTargets';
 import { AppAlert } from '../../ui/AppAlert';
 
@@ -201,7 +203,9 @@ export function ApplicationDetailModal({
 
       setCopied(false);
 
-      setActiveTab('cv');
+      // Applied on the offer's website: no CV nor letter here, only the follow-up.
+
+      setActiveTab(isLinkApply(application.job) ? 'company' : 'cv');
 
     }
 
@@ -529,6 +533,10 @@ export function ApplicationDetailModal({
 
           <View style={styles.tabBar}>
 
+            {!isLinkApply(job) && (
+
+            <>
+
             <Pressable
 
               testID="tab-detail-cv"
@@ -570,6 +578,10 @@ export function ApplicationDetailModal({
               </Text>
 
             </Pressable>
+
+            </>
+
+            )}
 
 
 
@@ -938,7 +950,7 @@ export function ApplicationDetailModal({
 
                         <MessageSquare size={13} color={stitchColors.emeraldDeep} />
 
-                        <Text style={styles.contactBtnText}>
+                        <Text style={styles.contactBtnText} numberOfLines={1}>
 
                           {company.contactWhatsapp}
 
@@ -956,7 +968,7 @@ export function ApplicationDetailModal({
 
                         <Mail size={13} color="#60A5FA" />
 
-                        <Text style={styles.contactBtnText}>{company.contactEmail}</Text>
+                        <Text style={styles.contactBtnText} numberOfLines={1}>{company.contactEmail}</Text>
 
                       </Pressable>
 
@@ -1228,7 +1240,7 @@ const styles = StyleSheet.create({
 
     paddingVertical: 10,
 
-    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    backgroundColor: stitchColors.white,
 
     borderBottomWidth: 1,
 
@@ -1264,9 +1276,9 @@ const styles = StyleSheet.create({
 
   tabBtnActive: {
 
-    backgroundColor: 'rgba(124, 58, 237, 0.25)',
+    backgroundColor: stitchColors.primary,
 
-    borderColor: 'rgba(139, 92, 246, 0.4)',
+    borderColor: stitchColors.primary,
 
   },
 
@@ -1284,7 +1296,7 @@ const styles = StyleSheet.create({
 
   tabBtnTextActive: {
 
-    color: stitchColors.primary,
+    color: stitchColors.white,
 
     fontWeight: '700',
 
@@ -1305,6 +1317,8 @@ const styles = StyleSheet.create({
   actionRowTop: {
 
     flexDirection: 'row',
+
+    flexWrap: 'wrap',
 
     gap: 8,
 
@@ -1348,9 +1362,13 @@ const styles = StyleSheet.create({
 
   secondaryActionBtn: {
 
+    flexGrow: 1,
+
     flexDirection: 'row',
 
     alignItems: 'center',
+
+    justifyContent: 'center',
 
     gap: 6,
 
@@ -1382,9 +1400,13 @@ const styles = StyleSheet.create({
 
   whatsappActionBtn: {
 
+    flexGrow: 1,
+
     flexDirection: 'row',
 
     alignItems: 'center',
+
+    justifyContent: 'center',
 
     gap: 5,
 
@@ -1412,9 +1434,13 @@ const styles = StyleSheet.create({
 
   emailActionBtn: {
 
+    flexGrow: 1,
+
     flexDirection: 'row',
 
     alignItems: 'center',
+
+    justifyContent: 'center',
 
     gap: 5,
 
@@ -1671,6 +1697,8 @@ const styles = StyleSheet.create({
 
     flexDirection: 'row',
 
+    flexWrap: 'wrap',
+
     gap: 8,
 
     marginTop: 8,
@@ -1678,6 +1706,8 @@ const styles = StyleSheet.create({
   },
 
   contactBtn: {
+
+    maxWidth: '100%',
 
     flexDirection: 'row',
 
@@ -1700,6 +1730,8 @@ const styles = StyleSheet.create({
   },
 
   contactBtnText: {
+
+    flexShrink: 1,
 
     fontFamily: fontFamilies.inter,
 

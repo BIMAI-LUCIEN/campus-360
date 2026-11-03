@@ -55,11 +55,11 @@ import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from '../../featur
 import { formatAddedAgo } from '../../features/stages/addedAt';
 import {
   APPLY_LINK_LABEL,
-  APPLY_LINK_MISSING,
   APPLY_LINK_NOTICE,
+  APPLY_LINK_TRACK_LABEL,
   isLinkApply,
-  safeApplyUrl,
 } from '../../features/stages/applyTarget';
+import { useApplyOnSite } from '../../features/stages/useApplyOnSite';
 import { applyPriceLine } from '../../features/stages/applyPrice';
 import { AppAlert } from '../AppAlert';
 
@@ -255,6 +255,7 @@ export function StagesScreen({
 
   // The parent rebuilds the skills array on every render: depend on its content, not its identity.
   const skillsKey = (studentProfile.skills ?? []).join('|');
+  const { openOnSite, trackOnSite } = useApplyOnSite();
   const requestId = React.useRef(0);
 
   const loadData = async (force = false) => {
@@ -367,23 +368,11 @@ export function StagesScreen({
     });
   };
 
-  // 'LINK' offers (scraped, no contact) are applied to on their own website.
-  const openApplyLink = (job: StageJob) => {
-    const url = safeApplyUrl(job.sourceUrl);
-    if (!url) {
-      AppAlert.alert('Lien indisponible', APPLY_LINK_MISSING);
-      return;
-    }
-    Linking.openURL(url).catch(() => {
-      AppAlert.alert('Lien indisponible', "Impossible d'ouvrir le site de l'offre.");
-    });
-  };
-
   const handleApplyFromDetail = () => {
     const job = selectedDetailJob;
     if (!job) return;
     if (isLinkApply(job)) {
-      openApplyLink(job);
+      openOnSite(job);
       return;
     }
     if (Platform.OS === 'ios') {
@@ -714,7 +703,7 @@ export function StagesScreen({
                   <View style={styles.skillsRow}>
                     {job.requirements.slice(0, 3).map((skill, sIdx) => (
                       <View key={sIdx} style={styles.skillTag}>
-                        <Text style={styles.skillTagText}>{skill}</Text>
+                        <Text style={styles.skillTagText} numberOfLines={1}>{skill}</Text>
                       </View>
                     ))}
                     {job.requirements.length > 3 && (
@@ -747,7 +736,7 @@ export function StagesScreen({
                           e.stopPropagation();
                         }
                         if (isLinkApply(job)) {
-                          openApplyLink(job);
+                          openOnSite(job);
                           return;
                         }
                         setApplyingJob(job);
@@ -1121,12 +1110,14 @@ export function StagesScreen({
                       </View>
                     )}
 
-                    <View style={styles.officialCvTipBox}>
-                      <Text style={styles.officialCvTipTitle}>📄 Candidature Optimisée Campus 360</Text>
-                      <Text style={styles.officialCvTipDesc}>
-                        Postuler via le bouton « Postuler en 1 Clic » transmettra automatiquement votre CV officiel RH 2 colonnes avec lettre de motivation ciblée directement au recruteur.
-                      </Text>
-                    </View>
+                    {!isLinkApply(selectedDetailJob) && (
+                      <View style={styles.officialCvTipBox}>
+                        <Text style={styles.officialCvTipTitle}>📄 Candidature Optimisée Campus 360</Text>
+                        <Text style={styles.officialCvTipDesc}>
+                          Postuler via le bouton « Postuler en 1 Clic » transmettra automatiquement votre CV officiel RH 2 colonnes avec lettre de motivation ciblée directement au recruteur.
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 )}
 
@@ -1149,7 +1140,17 @@ export function StagesScreen({
                   </View>
 
                   {isLinkApply(selectedDetailJob) ? (
-                    <Text style={styles.recruiterSubtitle}>{APPLY_LINK_NOTICE}</Text>
+                    <>
+                      <Text style={styles.recruiterSubtitle}>{APPLY_LINK_NOTICE}</Text>
+                      <Pressable
+                        testID="btn-track-on-site"
+                        style={styles.trackOnSiteBtn}
+                        onPress={() => void trackOnSite(selectedDetailJob)}
+                      >
+                        <CheckCircle2 size={15} color={stitchColors.primary} />
+                        <Text style={styles.trackOnSiteText}>{APPLY_LINK_TRACK_LABEL}</Text>
+                      </Pressable>
+                    </>
                   ) : (
                   <View style={styles.recruiterActionsRow}>
                     <Pressable
@@ -1604,12 +1605,32 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   skillTag: {
+    maxWidth: '100%',
     borderWidth: 1,
     borderColor: stitchColors.glassBorder,
     backgroundColor: stitchColors.paperSoft,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3.5,
+  },
+  trackOnSiteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 44,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: stitchColors.primary,
+  },
+  trackOnSiteText: {
+    flexShrink: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: stitchColors.primary,
   },
   skillTagText: {
     fontSize: 11,
@@ -1945,6 +1966,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   detailSkillChip: {
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: stitchColors.paperSoft,
@@ -1959,6 +1981,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(124, 58, 237, 0.25)',
   },
   detailSkillChipText: {
+    flexShrink: 1,
     fontSize: 12,
     color: stitchColors.inkSoft,
     fontWeight: '500',

@@ -278,7 +278,9 @@ export const listStudentApplications = async (studentId: string) => {
       const lastRemindedAt = row.last_reminded_at ? new Date(String(row.last_reminded_at)).toISOString() : undefined;
       const reminderCount = Number(row.reminder_count) || 0;
       const status = String(row.application_status) as StageStatus;
-      const recipient = followupRecipient(row.company_contact_email);
+      // Applied on the offer's website: no reminder goes through Campus 360.
+      const onSite = row.apply_method === 'LINK';
+      const recipient = onSite ? null : followupRecipient(row.company_contact_email);
       const state = followupState({
         status,
         appliedAt,
@@ -306,7 +308,7 @@ export const listStudentApplications = async (studentId: string) => {
           recipient: recipient ?? undefined,
           // The exact text the server would send, shown before sending or to copy.
           message:
-            state === 'due' || state === 'ask'
+            !onSite && (state === 'due' || state === 'ask')
               ? buildFollowupEmail({
                   studentName: String(row.student_full_name ?? ''),
                   jobTitle: row.title,
@@ -322,6 +324,32 @@ export const listStudentApplications = async (studentId: string) => {
     console.warn('[stages-db] listStudentApplications failed:', err);
     throw err;
   }
+};
+
+/**
+ * The student reports an application made on the offer's website. Free and idempotent:
+ * an application already followed keeps its status, only a withdrawn one starts again.
+ */
+export const recordOnSiteApplication = async (studentId: string, jobId: string) => {
+  const inserted = await databasePool.query(
+    `insert into public.stage_applications (student_id, job_id, generated_cv_text, generated_letter_text)
+     values ($1, $2, '', '')
+     on conflict (student_id, job_id) do update set
+       status = 'PENDING',
+       status_updated_at = now(),
+       applied_at = now()
+     where public.stage_applications.status = 'WITHDRAWN'
+     returning id, student_id, job_id, status, applied_at`,
+    [studentId, jobId],
+  );
+  if (inserted.rows[0]) return inserted.rows[0];
+  const existing = await databasePool.query(
+    `select id, student_id, job_id, status, applied_at
+       from public.stage_applications
+      where student_id = $1 and job_id = $2`,
+    [studentId, jobId],
+  );
+  return existing.rows[0] ?? null;
 };
 
 export const createStageApplication = async (input: {
@@ -383,7 +411,7 @@ export const getReminderTarget = async (studentId: string, applicationId: string
   const { rows } = await databasePool.query<Record<string, unknown>>(
     `select a.status, a.applied_at, a.last_reminded_at, a.reminder_count,
             (j.expires_at is not null and j.expires_at <= now()) as offer_expired,
-            j.title as job_title, c.name as company_name, c.contact_email,
+            j.title as job_title, j.apply_method, c.name as company_name, c.contact_email,
             s.full_name as student_name, s.email as student_email
        from public.stage_applications a
        join public.stage_jobs j on j.id = a.job_id
@@ -402,7 +430,7 @@ export const getReminderTarget = async (studentId: string, applicationId: string
     offerExpired: row.offer_expired === true,
     jobTitle: String(row.job_title ?? ''),
     companyName: row.company_name ? String(row.company_name) : null,
-    contactEmail: row.contact_email ? String(row.contact_email) : null,
+    contactEmail: row.apply_method !== 'LINK' && row.contact_email ? String(row.contact_email) : null,
     studentName: String(row.student_name ?? ''),
     studentEmail: row.student_email ? String(row.student_email) : null,
   };
@@ -501,7 +529,8 @@ export const ingestStageJob = async (input: IngestJobInput): Promise<{
     const compName = input.companyName.trim();
     const compIndustry = input.industry?.trim() || 'Technologies & Services';
     const compLocation = input.location?.trim() || 'Yaoundé';
-    const compEmail = input.contactEmail?.trim() || `recrutement@${compName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'stage'}.org`;
+    // Never an invented address: an application would leave for it.
+    const compEmail = input.contactEmail?.trim() || '';
     const compWhatsapp = input.contactWhatsapp?.trim() || null;
 
     // 1. Ensure company exists or insert it
@@ -518,7 +547,7 @@ export const ingestStageJob = async (input: IngestJobInput): Promise<{
         await client.query(
           `update public.stage_companies set
              contact_whatsapp = coalesce($1, contact_whatsapp),
-             contact_email = coalesce($2, contact_email)
+             contact_email = coalesce(nullif($2, ''), contact_email)
            where id = $3`,
           [compWhatsapp, compEmail, companyId],
         );
@@ -545,7 +574,7 @@ export const ingestStageJob = async (input: IngestJobInput): Promise<{
       [companyId, normalizedTitle, compLocation],
     );
 
-    const applyMethod = compWhatsapp ? 'WHATSAPP' : 'EMAIL';
+    const applyMethod = compWhatsapp ? 'WHATSAPP' : compEmail ? 'EMAIL' : 'PHYSICAL';
     // The description is stored as published by the source: never summarized nor padded.
     const safeDesc = (input.description ?? '').trim();
     const reqs = input.requirements ?? [];

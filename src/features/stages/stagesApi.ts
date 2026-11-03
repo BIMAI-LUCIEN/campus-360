@@ -433,6 +433,41 @@ export async function submitStageApplication(
   return appId;
 }
 
+/** The student applied on the offer's website: free entry in the follow-up, nothing is sent. */
+export async function recordOnSiteApplication(
+  job: StageJob,
+): Promise<{ success: true } | { success: false; error: string }> {
+  let response: Response;
+  try {
+    response = await authFetchRaw('/api/mobile/stages/apply-on-site', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: job.id }),
+    });
+  } catch {
+    return { success: false, error: 'Pas de connexion au serveur. Réessaie.' };
+  }
+  const payload = (await response.json().catch(() => ({}))) as {
+    application?: { id?: string; status?: AppStatus; applied_at?: string };
+    error?: string;
+  };
+  const application = payload.application;
+  if (!response.ok || !application?.id) {
+    return { success: false, error: payload.error || "Ta candidature n'a pas pu être ajoutée à ton suivi." };
+  }
+  const entry: StageApplication = {
+    id: application.id,
+    studentId: 'student-current',
+    jobId: job.id,
+    status: application.status ?? 'PENDING',
+    appliedAt: application.applied_at ?? new Date().toISOString(),
+    job,
+  };
+  localApplications = [entry, ...localApplications.filter((a) => a.id !== entry.id)];
+  persistApplicationsLocally(localApplications);
+  return { success: true };
+}
+
 export interface DispatchStageApplicationParams {
   jobId: string;
   channel: 'whatsapp' | 'email';
@@ -679,13 +714,4 @@ export async function sendApplicationReminder(
   );
   persistApplicationsLocally(localApplications);
   return { success: true, lastRemindedAt, reminderCount };
-}
-
-export async function directReachRecruiter(jobId: string, customNotes?: string) {
-  const response = await authFetch('/api/mobile/stages/direct-reach', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jobId, customNotes }),
-  });
-  return response.json();
 }
