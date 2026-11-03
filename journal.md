@@ -4,7 +4,15 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 
 ---
 
-**2026-11-02 · hors plan · execute · non commité · Débordements et offres « postuler sur le site »**
+**2026-11-03 · hors plan · deploy-and-push · `c37d6e3`, `21295f0`, `2abf55a` · Livraison des débordements et des offres « sur le site »**
+
+- **Production :** VPS sur `2abf55a` (run « Deploy to VPS » réussi), migration `0031` appliquée, 0 ligne touchée (0 entreprise concernée au comptage d'avant push). OTA publiée sur `production`, runtime 1.2.0, groupe `af02d658-f057-44f4-a556-0bb9bfcae712`.
+- **Preuve :** `api.campus360b.site/api/health` 200, `{"status":"ok","db":"connected"}` ; admin et landing 200 ; article promo 404 ; sans session, `apply-on-site` et `cv` 401, `direct-reach` 404 ; PM2 `online` sur les trois services ; 34 offres `LINK` publiées, 34 en https. Avant push : typecheck app, mobile-api, recruiter-web, landing 0 ; `mobile-api` 423 pass / 0 fail / 20 skip (l'entrée du 2026-11-02 annonçait 429 pass, chiffre non retrouvé à ce passage) ; `lint:colors` 143 ; `test_job_store_apply_method` 5 OK.
+- **Points ouverts :** écriture réelle de `apply-on-site` et retour depuis le site jamais testés sur téléphone ; portail admin non testé à l'écran ; workflows Vercel en échec, comme aux pushs précédents.
+
+---
+
+**2026-11-02 · hors plan · execute · livré le 2026-11-03 (voir au-dessus) · Débordements et offres « postuler sur le site »**
 
 - **App :** dossier de candidature (rangée d'actions et contacts passent à la ligne, onglets lisibles), compétences des offres, lignes entreprise et lieu du suivi, barre du bas à 320 px.
 - **Offres `LINK` :** `useApplyOnSite` partagé entre Stages et Accueil (plus de cul-de-sac sur l'accueil, libellé « Sur le site »), « Tu as postulé ? » au retour, bouton « J'ai postulé » sur le détail, entrée gratuite dans le suivi (`POST /stages/apply-on-site`, 422 hors `LINK`), dossier sans onglets CV et lettre, ni relance ni rappel.
