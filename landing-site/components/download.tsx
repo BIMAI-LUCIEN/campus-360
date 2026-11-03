@@ -40,7 +40,7 @@ export function Download() {
   return (
     <section className="py-24 bg-[var(--color-paper-deep)]">
       <div className="max-w-6xl mx-auto px-6">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
           {/* Left — text */}
           <div className="space-y-6">
@@ -72,7 +72,7 @@ export function Download() {
 
           {/* Right — QR */}
           <div className="flex justify-center lg:justify-end">
-            <div className="bg-[var(--color-paper)] border border-[var(--color-ink-faint)] rounded-[var(--radius-editorial)] p-8">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-ink-faint)] rounded-[var(--radius-editorial)] p-3 sm:p-8">
               <div className="flex flex-col items-center gap-4">
                 <div className="flex items-center gap-2 text-[var(--color-ink-subtle)]">
                   <QrCode className="w-5 h-5" />

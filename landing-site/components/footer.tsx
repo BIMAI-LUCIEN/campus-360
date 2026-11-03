@@ -22,7 +22,7 @@ export function Footer() {
           </div>
 
           {/* Nav columns */}
-          <div className="grid grid-cols-3 gap-10">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-10">
             <div>
               <h4 className="kicker mb-4">Produit</h4>
               <ul className="space-y-3 text-sm text-[var(--color-ink-muted)]">

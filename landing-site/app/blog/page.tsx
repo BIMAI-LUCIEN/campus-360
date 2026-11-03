@@ -135,12 +135,12 @@ export default function BlogIndexPage() {
           <p className="text-sm text-[var(--color-ink-light)] mb-6">
             1 email par semaine max. Désabonnement en 1 clic.
           </p>
-          <form className="flex gap-2 max-w-md mx-auto">
+          <form className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto">
             <input
               type="email"
               required
               placeholder="ton.email@universite.com"
-              className="flex-1 px-4 py-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="flex-1 min-w-0 px-4 py-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-paper)] focus:outline-none focus:ring-2 focus:ring-brand-500"
               aria-label="Adresse email"
             />
             <button

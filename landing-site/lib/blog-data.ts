@@ -176,42 +176,6 @@ Tu peux aussi payer en cash via un de nos partenaires (+ de 200 points de dépô
 À très vite sur Campus 360. 🚀`,
   },
   {
-    slug: "offre-rentree-2026-premium",
-    title: "Premium à -50% pour la rentrée 2026",
-    description:
-      "Du 1er juillet au 30 septembre 2026, l'abonnement Premium passe à 4 950 FCFA/mois au lieu de 9 900. Sans engagement.",
-    category: "Promo",
-    author: "Équipe Campus 360",
-    authorRole: "Annonces",
-    publishedAt: "2026-07-01",
-    readingMinutes: 3,
-    tags: ["promo", "Premium", "rentrée"],
-    content: `La rentrée approche, on a une offre pour toi.
-
-## L'offre
-
-**Premium à -50%** : 4 950 FCFA/mois au lieu de 9 900.
-
-- Du 1er juillet au 30 septembre 2026
-- Sans engagement (annulation en 1 clic)
-- Garanti 14 jours satisfait ou remboursé
-
-## Ce que ça inclut
-
-- PDFs illimités dans tout le catalogue
-- Assistant IA sans limite
-- Mode hors-ligne prioritaire
-- Support prioritaire
-
-## Comment en profiter
-
-1. Télécharge l'app Campus 360
-2. Crée ton compte
-3. Va dans "Premium" → l'offre s'applique automatiquement
-
-À très vite. ✌️`,
-  },
-  {
     slug: "top-7-fiches-ia-reussir-examens",
     title: "Top 7 des fiches générées par IA qui ont fait réussir",
     description:
