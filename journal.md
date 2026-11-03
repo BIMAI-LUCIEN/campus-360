@@ -4,6 +4,17 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 
 ---
 
+**2026-11-02 · hors plan · execute · non commité · Débordements et offres « postuler sur le site »**
+
+- **App :** dossier de candidature (rangée d'actions et contacts passent à la ligne, onglets lisibles), compétences des offres, lignes entreprise et lieu du suivi, barre du bas à 320 px.
+- **Offres `LINK` :** `useApplyOnSite` partagé entre Stages et Accueil (plus de cul-de-sac sur l'accueil, libellé « Sur le site »), « Tu as postulé ? » au retour, bouton « J'ai postulé » sur le détail, entrée gratuite dans le suivi (`POST /stages/apply-on-site`, 422 hors `LINK`), dossier sans onglets CV et lettre, ni relance ni rappel.
+- **Serveur et admin :** `/stages/cv` en 422 sur `LINK` avant débit ; `direct-reach` supprimée ; https exigé (formulaire admin, publication, `job_store.py`) ; plus d'adresses inventées ; migration `0031` (à appliquer au déploiement).
+- **Site public :** formulaire du blog, pied de page et bloc QR à 320 px ; article « Premium à -50 % » retiré (contredit le modèle sans abonnement).
+- **Preuve :** typecheck app, mobile-api, recruiter-web, landing 0 ; `mobile-api` 429 pass / 0 fail / 20 skip ; `test_job_store_apply_method` 5 OK ; `lint:colors` 143 (base 146) ; requêtes neuves validées par `EXPLAIN` sans écriture ; contrôle Playwright à 320, 375, 1280 sur candidatures simulées et requête d'ajout au suivi simulée ; sondes réelles : `/cv` et `/apply-on-site` 422, sans session 401, `direct-reach` 404.
+- **Points ouverts :** écriture réelle de `apply-on-site` jamais exécutée (base distante) ; retour depuis le site simulé par un événement `focus`, pas testé sur téléphone Android ; option payante « Préparer mon CV » pour ces offres non faite (décision produit) ; portail admin non testé à l'écran.
+
+---
+
 **2026-11-01 · hors plan · vps-deploy · aucun nouveau commit · Contrôle « tout est en production »**
 
 - **Constat :** `main` = `origin/main` = VPS = `last-good-sha` = `9e0ed6c`, aucun commit en attente. Aucun déploiement relancé. Builds et redémarrages PM2 de mobile-api et recruiter-web postérieurs à ce commit ; landing construite après son dernier commit (`afe0f50`). OTA : run `9a87831` réussi, il contient le dernier commit touchant l'app (`9cbadad`). APK du 2026-11-01 (`b0f5f54`), `app.json`, `package.json` et `eas.json` inchangés depuis le 2026-10-28.

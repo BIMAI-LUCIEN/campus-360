@@ -298,6 +298,10 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
+  - `src/features/stages/useApplyOnSite.ts` — offres `LINK` : ouvre le site (https seulement), demande « Tu as postulé ? » au retour, ajoute au suivi via `/stages/apply-on-site`. Utilisé par Stages et Accueil ; aucune offre `LINK` n'ouvre `AiApplyModal`.
+
+
+
   - `src/features/stages/stagesApi.ts` — client stages ; plus de données de démonstration (23.2).
 
 
@@ -520,7 +524,7 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-- **Attention :** `recruiter-web` n'a pas les routes `stages/ingest`, `stages/dispatch`, `stages/review`, `stages/direct-reach`, `whatsapp/instance`, `documents/scraped-reports`. Les routes stages existantes sont des copies divergentes (§8).
+- **Attention :** `recruiter-web` n'a pas les routes `stages/ingest`, `stages/dispatch`, `stages/review`, `whatsapp/instance`, `documents/scraped-reports`. Les routes stages existantes sont des copies divergentes (§8).
 
 
 
@@ -1058,7 +1062,7 @@ Méthodes relevées dans le code. Toutes les routes `mobile/*` exigent une sessi
 
 
 
-| POST | `/api/mobile/stages/direct-reach` | `mobile/stages/direct-reach/route.ts` | Oui (voir §10 : pas encore de contrôle de statut de l'offre) |
+| POST | `/api/mobile/stages/apply-on-site` | `mobile/stages/apply-on-site/route.ts` | Oui (offre `LINK` seulement, gratuit, 422 sinon) |
 
 
 
@@ -1463,7 +1467,7 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 
 
-6. **`stages/direct-reach` :** durci (23.12) : validation stricte via `getStageJob` (404 si inexistante, expirée ou suspendue) avant toute action.
+6. **`stages/direct-reach` :** supprimée le 2026-11-02 (aucun appelant, créait une candidature gratuite sur n'importe quelle offre).
 
 
 
@@ -1674,6 +1678,8 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 
 ## 13. Journal des mises à jour
+
+- **2026-11-02** — Offres « sur le site » (`LINK`) : `useApplyOnSite`, route `stages/apply-on-site`, `direct-reach` supprimée, `/stages/cv` en 422, pas de relance ni de rappel, https exigé en admin et au scraping. Migration `0031` : plus d'adresses inventées pour une entreprise sans contact.
 
 - **2026-10-25** — **Migration Passerelle de Paiement vers SasPay (docs.saspay.me).**
   - Passerelle principale configurée sur SasPay avec la clé live fournie.

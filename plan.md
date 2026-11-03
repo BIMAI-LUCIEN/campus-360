@@ -6,6 +6,7 @@
 
 ---
 ## Reprise
+- **Offres « sur le site » et débordements (hors plan) :** corrigés le 2026-11-02, non commités, migration `0031` à appliquer au déploiement (détail dans `journal.md`).
 - **Module 33 (relance recruteur et suivi) :** livré le 2026-11-02 (commit `58d7d1a`, VPS et OTA, migration 0029 appliquée). 33.1 annulée ; 33.3 à 33.12 `[X]` ; 33.13 `[~]` ; 33.2, 33.14, 33.15, 33.16 `[!]` 🔒. Cron des rappels installé le 2026-11-02, premier passage le 2026-11-03 à 9 h, à contrôler dans `/var/log/campus-followups.log`. Suite : relance réelle vers une adresse de test (33.2, 33.16), parcours réel 33.15.
 - **Module 32 (alertes de nouveaux stages) :** 32.1 à 32.5 `[X]` le 2026-11-01 (tsc app/mobile-api 0, mobile-api 379 pass / 0 fail) ; 32.6 cron au déploiement ; 32.7 🔒 Firebase/FCM pour le push Android.
 - **Module 31 (audit app mobile, lots 2 à 5) :** 31.1 à 31.23 `[X]` le 2026-11-01 (typecheck app, mobile-api, recruiter-web 0 ; mobile-api 369 pass / 0 fail / 20 skip ; lint:colors 147, baseline abaissée ; expo-web : suivi en chargement puis erreur, profil en initiales). Non vérifié sur téléphone. Migration 0027 à appliquer au déploiement.
