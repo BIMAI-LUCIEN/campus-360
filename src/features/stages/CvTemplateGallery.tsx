@@ -10,6 +10,7 @@ const THUMBNAILS: Record<CvTemplateId, ImageSourcePropType> = {
   prestige: require('../../../assets/cv-templates/prestige.png'),
   ingenieur: require('../../../assets/cv-templates/ingenieur.png'),
   etudiant: require('../../../assets/cv-templates/etudiant.png'),
+  ats: require('../../../assets/cv-templates/ats.png'),
 };
 
 interface CvTemplateGalleryProps {

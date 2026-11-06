@@ -1,5 +1,7 @@
 import type { OfficialCvData } from '../../types';
-import type { CvTemplateId } from './cvHtml';
+import type { CvStyle, CvTemplateId } from './cvHtml';
+import type { CareerOffer } from '../documents/careerContextApi';
+import type { CvReview } from '../documents/cvJuryApi';
 import { readJsonFile, writeJsonFile } from '../documents/localJsonStore';
 
 // Every CV the student generates (one per application, or from the CV page) is kept here,
@@ -17,6 +19,15 @@ export interface SavedCv {
   jobTitle: string;
   company: string;
   officialCv: OfficialCvData;
+  /** Offer seen outside the app, kept so the jury can judge the CV against it later. */
+  offer?: CareerOffer | null;
+  /** cv-fill generation the CV came from: its first jury review is free (server rule). */
+  sourceGenerationId?: string;
+  /** Last jury verdict, and the score before the last correction. */
+  review?: CvReview;
+  previousScore?: number;
+  /** Accent colour, font and spacing of the preview and the PDF. */
+  style?: CvStyle;
 }
 
 export type NewSavedCv = Omit<SavedCv, 'id' | 'createdAt'>;
@@ -35,6 +46,12 @@ export async function saveCvToLibrary(entry: NewSavedCv): Promise<SavedCv> {
   const list = await loadCvLibrary();
   await writeJsonFile(CV_LIBRARY_KEY, [saved, ...list].slice(0, MAX_SAVED_CVS));
   return saved;
+}
+
+export async function updateCvInLibrary(id: string, patch: Partial<Omit<SavedCv, 'id' | 'createdAt'>>): Promise<SavedCv[]> {
+  const next = (await loadCvLibrary()).map((cv) => (cv.id === id ? { ...cv, ...patch } : cv));
+  await writeJsonFile(CV_LIBRARY_KEY, next);
+  return next;
 }
 
 export async function removeCvFromLibrary(id: string): Promise<SavedCv[]> {

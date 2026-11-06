@@ -604,7 +604,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle} numberOfLines={1}>
-              {report?.title || 'Rapport de stage'}
+              {report?.title || 'Document'}
             </Text>
             {saveState === 'error' ? (
               <Pressable onPress={() => flushPendingSave()} hitSlop={8} accessibilityRole="button">

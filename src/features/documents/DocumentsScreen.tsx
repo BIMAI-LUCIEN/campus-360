@@ -19,13 +19,15 @@ import { authBaseUrl, authFetch, authClient, type StudentProfile } from '../auth
 import { stitchColors, stitchShadows, stitchRadius, fontFamilies } from '../../theme/stitch';
 import { GradientText } from '../../ui/GlassComponents';
 import { DocGenChat, type CareerContext, type GenAttachment } from './DocGenChat';
+import { CvBuilderModal } from './CvBuilderModal';
+import { CvJuryPanel } from './CvJuryPanel';
 import { addUrlSource, uploadDocumentFile } from './documentFilesApi';
 import { TemplateGallery } from './TemplateGallery';
 import type { TemplateCard } from './templatesApi';
 import { CvTemplatePreview } from '../stages/CvTemplatePreview';
 import { CvTemplateGallery } from '../stages/CvTemplateGallery';
 import { exportOfficialCvPdf } from '../stages/pdfExportService';
-import { loadCvLibrary, removeCvFromLibrary, saveCvToLibrary, savedCvTitle, type SavedCv } from '../stages/cvLibrary';
+import { loadCvLibrary, removeCvFromLibrary, saveCvToLibrary, savedCvTitle, updateCvInLibrary, type SavedCv } from '../stages/cvLibrary';
 import { CV_TEMPLATES, missingCvFields, type CvTemplateId } from '../stages/cvHtml';
 import { deleteCvPhoto, fetchCvPhoto, pickCvPhoto, saveCvPhoto } from '../stages/cvPhoto';
 import type { OfficialCvData } from '../../types';
@@ -76,6 +78,8 @@ type CreateStep = 'type-select' | 'form' | 'generating' | null;
 
 type DocumentsScreenProps = {
   onEditDocument: (id: string) => void;
+  /** Profile already loaded by the shell: used until (or if not) this screen's own fetch answers. */
+  accountProfile?: StudentProfile | null;
 };
 
 const IA_CREDITS_PER_GEN = 5;
@@ -136,7 +140,7 @@ const COMMON_SKILLS = [
   'Power BI', 'Réseaux sociaux',
 ];
 
-export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
+export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScreenProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -154,7 +158,8 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   const [galleryVisible, setGalleryVisible] = useState(false);
   const [creating, setCreating] = useState(false);
   const [iaCredits, setIaCredits] = useState<number | null>(null);
-  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
+  const [fetchedProfile, setStudentProfile] = useState<StudentProfile | null>(null);
+  const studentProfile = fetchedProfile ?? accountProfile ?? null;
 
   // CV form state
   const [cvFullName, setCvFullName] = useState('');
@@ -178,6 +183,8 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   const [genChatVisible, setGenChatVisible] = useState(false);
   const [generatingFull, setGeneratingFull] = useState(false);
   const [cvPreviewVisible, setCvPreviewVisible] = useState(false);
+  const [cvBuilderVisible, setCvBuilderVisible] = useState(false);
+  const [builderKind, setBuilderKind] = useState<'cv' | 'lettre_motivation'>('cv');
   // Layout of the official CV and the student's photo (kept for this session only).
   const [cvTemplate, setCvTemplate] = useState<CvTemplateId>('classic');
   const [cvPhoto, setCvPhoto] = useState<string | null>(null);
@@ -185,6 +192,14 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
   // CV library: every CV generated for a job, plus the one being previewed.
   const [savedCvs, setSavedCvs] = useState<SavedCv[]>([]);
   const [selectedSavedCv, setSelectedSavedCv] = useState<SavedCv | null>(null);
+  const [savedCvTab, setSavedCvTab] = useState<'preview' | 'jury'>('preview');
+
+  // Jury verdicts and corrections are kept in "Mes CV" at once (local library).
+  const patchSavedCv = (id: string, patch: Partial<Omit<SavedCv, 'id' | 'createdAt'>>) => {
+    setSelectedSavedCv((current) => (current && current.id === id ? { ...current, ...patch } : current));
+    setSavedCvs((list) => list.map((cv) => (cv.id === id ? { ...cv, ...patch } : cv)));
+    void updateCvInLibrary(id, patch).catch(() => AppAlert.alert('Mes CV', 'Ce changement n’a pas pu être enregistré.'));
+  };
 
   // Only what the profile really knows: missing fields print "[à compléter]".
   const officialCvData: OfficialCvData = useMemo(() => {
@@ -300,6 +315,18 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
     fetchCvPhoto().then(setCvPhoto).catch(() => {});
     loadCvLibrary().then(setSavedCvs).catch(() => {});
   }, []);
+
+  // A CV follows its own path (like an application), not the document editor.
+  const chooseType = (key: string) => {
+    if (key === 'cv' || key === 'lettre_motivation') {
+      setBuilderKind(key);
+      setCreateStep(null);
+      setCvBuilderVisible(true);
+      return;
+    }
+    setSelectedType(key);
+    setCreateStep('form');
+  };
 
   // ─── Reset form ───────────────────────────────────────────────────────────────
   const resetForm = () => {
@@ -516,7 +543,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
             <Pressable
               key={tile.key}
               style={({ pressed }) => [styles.tile, pressed && styles.tilePressed]}
-              onPress={() => { setSelectedType(tile.key); setCreateStep('form'); }}
+              onPress={() => chooseType(tile.key)}
             >
               <View style={[styles.tileIcon, { backgroundColor: tile.tint }]}>
                 <tile.Icon size={20} color={tile.color} strokeWidth={2} />
@@ -579,8 +606,17 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                 </Text>
               </View>
               <Text style={styles.cardTitle}>{savedCvTitle(cv)}</Text>
+              <Pressable
+                testID={`saved-cv-jury-${cv.id}`}
+                onPress={() => { setSavedCvTab('jury'); setSelectedSavedCv(cv); }}
+                style={styles.juryLink}
+              >
+                <Text style={styles.juryLinkText}>
+                  {cv.review ? `Jury : ${cv.review.score}/7 retiennent ce CV · revoir` : 'Faire juger ce CV'}
+                </Text>
+              </Pressable>
               <View style={styles.cardActions}>
-                <Pressable style={[styles.actionButton, styles.editButton]} onPress={() => setSelectedSavedCv(cv)}>
+                <Pressable style={[styles.actionButton, styles.editButton]} onPress={() => { setSavedCvTab('preview'); setSelectedSavedCv(cv); }}>
                   <Eye size={13} color={stitchColors.white} strokeWidth={2.2} style={{ marginRight: 6 }} />
                   <Text style={styles.editButtonText}>Voir</Text>
                 </Pressable>
@@ -588,7 +624,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                   style={[styles.actionButton, styles.pdfButton]}
                   onPress={async () => {
                     try {
-                      await exportOfficialCvPdf(cv.officialCv, cv.templateId);
+                      await exportOfficialCvPdf(cv.officialCv, cv.templateId, cv.style);
                     } catch {
                       AppAlert.alert('Erreur', 'Impossible d’exporter ce CV.');
                     }
@@ -764,15 +800,47 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
             </View>
             {selectedSavedCv ? (
               <>
-                <View style={styles.officialCvPreviewBox}>
-                  <CvTemplatePreview cv={selectedSavedCv.officialCv} template={selectedSavedCv.templateId} />
+                <View style={styles.savedCvTabs}>
+                  <Pressable testID="saved-cv-tab-preview" style={[styles.savedCvTab, savedCvTab === 'preview' && styles.savedCvTabOn]} onPress={() => setSavedCvTab('preview')}>
+                    <Text style={styles.savedCvTabText}>Aperçu</Text>
+                  </Pressable>
+                  <Pressable testID="saved-cv-tab-jury" style={[styles.savedCvTab, savedCvTab === 'jury' && styles.savedCvTabOn]} onPress={() => setSavedCvTab('jury')}>
+                    <Text style={styles.savedCvTabText}>{selectedSavedCv.review ? `Jury ${selectedSavedCv.review.score}/7` : 'Jury'}</Text>
+                  </Pressable>
                 </View>
+                {savedCvTab === 'jury' ? (
+                  <ScrollView style={styles.officialCvPreviewBox} contentContainerStyle={{ padding: 16, paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+                    <CvJuryPanel
+                      cv={selectedSavedCv.officialCv}
+                      template={selectedSavedCv.templateId}
+                      offer={selectedSavedCv.offer ?? null}
+                      sourceGenerationId={selectedSavedCv.sourceGenerationId}
+                      review={selectedSavedCv.review}
+                      previousScore={selectedSavedCv.previousScore}
+                      student={{
+                        fullName: studentProfile?.name || undefined,
+                        university: studentProfile?.university || undefined,
+                        major: studentProfile?.faculty || undefined,
+                        educationLevel: studentProfile?.level || undefined,
+                        skills: studentProfile?.skills ?? [],
+                      }}
+                      onReviewed={(review, previousScore) => patchSavedCv(selectedSavedCv.id, { review, previousScore })}
+                      onCorrected={(officialCv, sourceGenerationId) => patchSavedCv(selectedSavedCv.id, { officialCv, sourceGenerationId })}
+                      onSwitchToAts={() => { patchSavedCv(selectedSavedCv.id, { templateId: 'ats' }); setSavedCvTab('preview'); }}
+                      onCreditsChange={setIaCredits}
+                    />
+                  </ScrollView>
+                ) : (
+                  <View style={styles.officialCvPreviewBox}>
+                    <CvTemplatePreview cv={selectedSavedCv.officialCv} template={selectedSavedCv.templateId} style={selectedSavedCv.style} />
+                  </View>
+                )}
                 <View style={styles.officialCvFooter}>
                   <Pressable
                     style={({ pressed }) => [styles.officialCvDownloadBtn, pressed && { opacity: 0.88 }]}
                     onPress={async () => {
                       try {
-                        await exportOfficialCvPdf(selectedSavedCv.officialCv, selectedSavedCv.templateId);
+                        await exportOfficialCvPdf(selectedSavedCv.officialCv, selectedSavedCv.templateId, selectedSavedCv.style);
                       } catch {
                         AppAlert.alert('Erreur', 'Impossible d’exporter ce CV.');
                       }
@@ -826,10 +894,7 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
                       i % 2 === 0 ? styles.posterCardLeft : styles.posterCardRight,
                       pressed && styles.posterCardPressed,
                     ]}
-                    onPress={() => {
-                      setSelectedType(t.key);
-                      setCreateStep('form');
-                    }}
+                    onPress={() => chooseType(t.key)}
                   >
                     {/* Folio number — sets the editorial tone */}
                     <Text style={styles.posterFolio}>— 0{i + 1}</Text>
@@ -1047,6 +1112,24 @@ export function DocumentsScreen({ onEditDocument }: DocumentsScreenProps) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <CvBuilderModal
+        kind={builderKind}
+        onLetterReady={(id) => { fetchDocuments(); onEditDocument(id); }}
+        visible={cvBuilderVisible}
+        onClose={() => setCvBuilderVisible(false)}
+        baseCv={officialCvData}
+        profile={{
+          fullName: studentProfile?.name ?? '',
+          university: studentProfile?.university ?? '',
+          major: studentProfile?.faculty ?? '',
+          educationLevel: studentProfile?.level ?? '',
+          skills: studentProfile?.skills ?? [],
+        }}
+        freeLaunch={isFreeLaunch()}
+        onCreditsChange={setIaCredits}
+        onLibraryChange={(next) => setSavedCvs((prev) => (Array.isArray(next) ? next : [next, ...prev]))}
+      />
 
       {/* Guided onboarding chat → full document generation */}
       <DocGenChat
@@ -1444,6 +1527,12 @@ const styles = StyleSheet.create({
   cvPhotoRemoveText: { fontSize: 13, fontWeight: '600', color: stitchColors.inkMuted },
   cvPreviewControls: { paddingHorizontal: 16, paddingBottom: 4 },
   officialCvPreviewBox: { flex: 1, marginHorizontal: 12, marginBottom: 8, borderRadius: 12, overflow: 'hidden', backgroundColor: stitchColors.white },
+  savedCvTabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 10 },
+  savedCvTab: { flex: 1, minHeight: 40, borderRadius: 10, borderWidth: 1, borderColor: stitchColors.surfaceContainerHigh, alignItems: 'center', justifyContent: 'center' },
+  savedCvTabOn: { borderColor: stitchColors.primary, backgroundColor: stitchColors.primaryContainer },
+  savedCvTabText: { color: stitchColors.primary, fontWeight: '600' },
+  juryLink: { paddingVertical: 6, marginBottom: 4 },
+  juryLinkText: { color: stitchColors.primary, fontWeight: '600', fontSize: 13 },
 
   // Modale CV Officiel RH
   officialCvModalOverlay: {

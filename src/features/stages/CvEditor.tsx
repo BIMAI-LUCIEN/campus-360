@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import type { OfficialCvData } from '../../types';
 import { AddButton, Field, fieldStyles, ItemCard, linesToList, ListField, Section } from '../profile/cvFields';
+import { DateRangeFields, MissionSuggestions, RubriquesEditor } from './CvEditorExtras';
 
 // Field-by-field editor for the generated CV: every change goes straight into
 // the OfficialCvData that the preview, the PDF and the sent application use.
@@ -36,6 +37,14 @@ export function CvEditor({ cv, onChange }: Props) {
         <Field label="E-mail" value={details.email} onChangeText={(email) => patch({ detailsPersonnels: { ...details, email } })} />
         <Field label="Téléphone" value={details.telephone} onChangeText={(telephone) => patch({ detailsPersonnels: { ...details, telephone } })} />
         <Field label="Adresse" value={details.adresse ?? ''} onChangeText={(adresse) => patch({ detailsPersonnels: { ...details, adresse } })} />
+        <View style={fieldStyles.row}>
+          <View style={fieldStyles.half}>
+            <Field label="Nationalité" value={details.nationalite ?? ''} onChangeText={(nationalite) => patch({ detailsPersonnels: { ...details, nationalite } })} />
+          </View>
+          <View style={fieldStyles.half}>
+            <Field label="Âge" value={details.age ?? ''} onChangeText={(age) => patch({ detailsPersonnels: { ...details, age } })} />
+          </View>
+        </View>
       </Section>
 
       <Section title="Expériences" count={experiences.length} defaultOpen>
@@ -50,10 +59,12 @@ export function CvEditor({ cv, onChange }: Props) {
                   <Field label="Ville" value={exp.ville} onChangeText={(ville) => update({ ville })} />
                 </View>
                 <View style={fieldStyles.half}>
-                  <Field label="Période" value={exp.periode} onChangeText={(periode) => update({ periode })} />
+                  <Field label="Période (texte libre)" value={exp.periode} onChangeText={(periode) => update({ periode })} />
                 </View>
               </View>
+              <DateRangeFields debut={exp.debut} fin={exp.fin} onChange={update} testID={`cv-exp-${i}-date`} />
               <Field label="Missions" value={exp.missions.join('\n')} onChangeText={(v) => update({ missions: linesToList(v) })} placeholder="Une mission par ligne" multiline />
+              <MissionSuggestions poste={exp.poste} missions={exp.missions} onAdd={(m) => update({ missions: [...exp.missions, m] })} testID={`cv-exp-${i}-suggest`} />
             </ItemCard>
           );
         })}
@@ -72,9 +83,10 @@ export function CvEditor({ cv, onChange }: Props) {
                   <Field label="Ville" value={f.ville} onChangeText={(ville) => update({ ville })} />
                 </View>
                 <View style={fieldStyles.half}>
-                  <Field label="Période" value={f.periode} onChangeText={(periode) => update({ periode })} />
+                  <Field label="Période (texte libre)" value={f.periode} onChangeText={(periode) => update({ periode })} />
                 </View>
               </View>
+              <DateRangeFields debut={f.debut} fin={f.fin} onChange={update} testID={`cv-form-${i}-date`} />
             </ItemCard>
           );
         })}
@@ -116,6 +128,10 @@ export function CvEditor({ cv, onChange }: Props) {
           );
         })}
         <AddButton label="Ajouter une langue" onPress={() => patch({ langues: [...langues, { langue: '', niveau: '' }] })} />
+      </Section>
+
+      <Section title="Autres rubriques" count={(cv.rubriques ?? []).length}>
+        <RubriquesEditor rubriques={cv.rubriques ?? []} onChange={(rubriques) => patch({ rubriques })} />
       </Section>
 
       <Section title="Loisirs" count={cv.loisirs.length}>

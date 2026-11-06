@@ -31,6 +31,28 @@ export const cvFillRequestSchema = z.object({
 
 export type CvFillRequest = z.infer<typeof cvFillRequestSchema>;
 
+type ExternalOffer = { title: string; company: string; location: string; description: string; requirements: string[] };
+
+/**
+ * Same filling for an offer seen outside the app. The offer only targets the CV:
+ * it stays out of `notes`, so nothing from it passes the grounding check.
+ */
+export const externalCvFillInput = (
+  offer: ExternalOffer,
+  student: CvFillRequest['student'],
+  notes: string,
+): CvFillRequest => ({
+  jobId: 'external',
+  job: {
+    title: offer.title,
+    company: offer.company || undefined,
+    description: [offer.location ? `Lieu : ${offer.location}` : '', offer.description].filter(Boolean).join('\n') || undefined,
+    requirements: offer.requirements,
+  },
+  student,
+  notes: notes || undefined,
+});
+
 // Lenient reading of the model output: wrong types become empty, lists are capped.
 const str = (max: number) => z.preprocess((v) => (typeof v === 'string' ? v : ''), z.string()).transform((v) => v.trim().slice(0, max));
 const strList = (maxItems: number, max: number) =>
@@ -92,6 +114,25 @@ export const mentioned = (source: string, value: string, share = 0): boolean => 
 };
 
 const SKILL_SHARE = 0.5;
+
+// Every number the model writes (volumes, %, years) must come from the student:
+// `mentioned` skips short words, so "500 factures" would otherwise pass on "factures".
+const numbersOf = (value: string): string[] => (value.match(/\d+(?:[.,]\d+)?/g) ?? []).map((n) => n.replace(',', '.'));
+export const numbersGrounded = (source: string, value: string): boolean => {
+  const known = new Set(numbersOf(source));
+  return numbersOf(value).every((n) => known.has(n));
+};
+
+/** Keeps the sentences of a summary whose numbers all come from the student. */
+const groundedSummary = (source: string, summary: string): string =>
+  summary.split(/(?<=[.!?])\s+/).filter((sentence) => numbersGrounded(source, sentence)).join(' ').trim();
+
+/** Jury answers given by the student: his own words, so they count as facts. */
+export const juryAnswersText = (answers: { question: string; reponse: string }[] | undefined): string =>
+  (answers ?? [])
+    .filter((a) => a.reponse.trim())
+    .map((a) => `${a.question.trim()} — ${a.reponse.trim()}`)
+    .join('\n');
 
 export const buildCvFillMessages = (input: CvFillRequest): LlmMessage[] => {
   const { job, student, notes } = input;
@@ -159,12 +200,18 @@ export const parseCvFill = (raw: string | null, input: CvFillRequest): FilledCv 
 
   return {
     ...cv,
+    titrePoste: numbersGrounded(source, cv.titrePoste) ? cv.titrePoste : '',
+    profil: groundedSummary(source, cv.profil),
     // An experience must have a title, a named company must come from the notes,
-    // and each mission must reword something the student described.
+    // and each mission must reword something the student described, numbers included.
     experiences: notes
       ? cv.experiences
         .filter((e) => e.poste && (!e.entreprise || mentioned(notes, e.entreprise)))
-        .map((e) => ({ ...e, missions: e.missions.filter((mission) => mentioned(notes, mission, SKILL_SHARE)) }))
+        .map((e) => ({
+          ...e,
+          periode: numbersGrounded(source, e.periode) ? e.periode : '',
+          missions: e.missions.filter((mission) => mentioned(notes, mission, SKILL_SHARE) && numbersGrounded(source, mission)),
+        }))
       : [],
     formations: cv.formations.filter((f) => f.diplome && (!f.etablissement || mentioned(source, f.etablissement))),
     langues: cv.langues
@@ -176,7 +223,10 @@ export const parseCvFill = (raw: string | null, input: CvFillRequest): FilledCv 
         cv.competences.professionnelles.filter((skill) => mentioned(source, skill, SKILL_SHARE)),
         input.student.skills ?? [],
       ),
-      habilitesRelationnelles: cv.competences.habilitesRelationnelles.filter((h) => mentioned(source, h, SKILL_SHARE)),
+      // Already listed as a professional skill: printing it twice looks careless.
+      habilitesRelationnelles: cv.competences.habilitesRelationnelles.filter((h) =>
+        mentioned(source, h, SKILL_SHARE)
+        && ![...cv.competences.professionnelles, ...(input.student.skills ?? [])].some((skill) => fold(skill) === fold(h))),
       logiciels: cv.competences.logiciels
         .map((log) => ({ ...log, items: log.items.filter((item) => mentioned(source, item)) }))
         .filter((log) => log.items.length > 0),

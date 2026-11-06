@@ -3,7 +3,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { OfficialCvData } from '../../types';
-import { buildApplicationHtml, generateOfficialCvHtml, type CvTemplateId, type DocumentExportData } from './cvHtml';
+import { buildApplicationHtml, generateOfficialCvHtml, type CvStyle, type CvTemplateId, type DocumentExportData } from './cvHtml';
 import { AppAlert } from '../../ui/AppAlert';
 import { documentDownloadName } from '../documents/documentFileName';
 
@@ -63,8 +63,8 @@ const printHtmlOnWeb = (htmlContent: string, downloadName: string): boolean => {
 /**
  * Déclenche l'export ou l'impression PDF selon la plateforme pour le CV Officiel
  */
-export async function exportOfficialCvPdf(cv: OfficialCvData, template: CvTemplateId = 'classic'): Promise<boolean> {
-  const htmlContent = generateOfficialCvHtml(cv, template);
+export async function exportOfficialCvPdf(cv: OfficialCvData, template: CvTemplateId = 'classic', style?: CvStyle | null): Promise<boolean> {
+  const htmlContent = generateOfficialCvHtml(cv, template, style);
   const fullName = `${cv.detailsPersonnels.nom}_${cv.detailsPersonnels.prenom}`.replace(/\s+/g, '_');
   const filename = documentDownloadName(`CV ${cv.detailsPersonnels.nom} ${cv.detailsPersonnels.prenom}`, 'pdf', 'CV');
 

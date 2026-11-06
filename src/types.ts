@@ -209,7 +209,16 @@ export type CvPersonalDetails = {
   adresse?: string;
 };
 
-export type CvExperience = {
+/**
+ * Structured dates, "YYYY-MM". `fin` may also be "present" ("ce jour").
+ * When set, they replace the free `periode` text on the printed CV.
+ */
+export type CvDateRange = {
+  debut?: string;
+  fin?: string;
+};
+
+export type CvExperience = CvDateRange & {
   poste: string;
   entreprise: string;
   ville: string;
@@ -217,11 +226,21 @@ export type CvExperience = {
   missions: string[];
 };
 
-export type CvFormation = {
+export type CvFormation = CvDateRange & {
   diplome: string;
   etablissement: string;
   ville: string;
   periode: string;
+};
+
+export type CvRubriqueKind = 'activites' | 'certificats' | 'realisations' | 'personnalisee';
+
+/** Optional section; the order of `OfficialCvData.rubriques` is the printed order. */
+export type CvRubrique = {
+  id: string;
+  kind: CvRubriqueKind;
+  titre: string;
+  items: string[];
 };
 
 export type CvLogicielCategory = {
@@ -251,4 +270,6 @@ export type OfficialCvData = {
   competences: CvCompetences;
   langues: CvLangue[];
   loisirs: string[];
+  /** Extra sections (activities, certificates, achievements, custom). Absent on older CVs. */
+  rubriques?: CvRubrique[];
 };

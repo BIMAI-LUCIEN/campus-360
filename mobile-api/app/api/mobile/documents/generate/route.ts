@@ -94,7 +94,14 @@ export async function POST(request: NextRequest) {
     }
 
     const conversation = String(formData.conversation || '').trim();
-    const { conversation: _conversation, ...profile } = formData;
+    const { conversation: _conversation, ...sentProfile } = formData;
+    // The account is the reference for who is writing, even if the client sent nothing.
+    const profile = {
+      ...sentProfile,
+      fullName: String(sentProfile.fullName || '').trim() || user.name || '',
+      email: String(sentProfile.email || '').trim() || user.email || '',
+    };
+    const identityRule = `Reprends tels quels le nom, l'e-mail et le téléphone du profil. N'invente jamais une identité ou des coordonnées : si une donnée manque, écris [à compléter].`;
     const careerContext = careerContextText(
       parsed.data.background ?? (await getCvBackground(user.id).catch(() => null)),
       parsed.data.offer,
@@ -110,6 +117,7 @@ export async function POST(request: NextRequest) {
         `Produis un CV moderne d'une à deux pages, factuel et compatible avec les logiciels de recrutement.`,
         `Structure attendue : identité et coordonnées, titre ciblé, profil, expériences et projets, formation, compétences, langues et certifications.`,
         `N'invente aucune expérience, compétence, date, entreprise ou certification.`,
+        identityRule,
         `Si une offre est fournie, cible le titre, le profil et l'ordre des expériences sur elle, en reprenant ses mots-clés quand le parcours les justifie.`,
         `Utilise uniquement les balises HTML TipTap autorisées et ne retourne aucun markdown.`,
       ].join('\n');
@@ -120,6 +128,7 @@ export async function POST(request: NextRequest) {
         `Produis une lettre personnalisée, convaincante et normalement limitée à une page.`,
         `Structure attendue : expéditeur, destinataire, date, objet, salutation, entreprise, candidat, collaboration, conclusion et signature.`,
         `N'invente aucune expérience, compétence, entreprise ou motivation.`,
+        identityRule,
         `Si une offre est fournie, adresse la lettre à cette entreprise pour ce poste et relie le parcours à ses exigences.`,
         `Utilise uniquement les balises HTML TipTap autorisées et ne retourne aucun markdown.`,
       ].join('\n');

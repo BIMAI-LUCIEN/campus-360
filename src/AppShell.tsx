@@ -1389,6 +1389,7 @@ export function AppShell() {
               {activeSection === 'documents' && (
                 <DocumentsScreen
                   onEditDocument={(id) => setEditingDocumentId(id)}
+                  accountProfile={studentProfile}
                 />
               )}
 

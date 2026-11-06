@@ -23,6 +23,34 @@ test('le prompt contient l’offre, le profil, les notes et la règle « n’inv
   assert.match(user.content, /Boulangerie Le Palmier/);
 });
 
+test('offre externe : le CV vise l’offre, mais ses exigences ne deviennent pas des faits', () => {
+  const external = m.externalCvFillInput(
+    { title: 'Assistant comptable', company: 'Orange', location: 'Douala', description: 'Saisie comptable', requirements: ['SAP'] },
+    { skills: ['Excel'] },
+    'Stage chez Boulangerie Le Palmier',
+  );
+  assert.equal(m.cvFillRequestSchema.safeParse(external).success, true);
+  const [, user] = m.buildCvFillMessages(external);
+  assert.match(user.content, /Assistant comptable/);
+  assert.match(user.content, /Lieu : Douala/);
+  assert.equal(m.cvFillSource(external).includes('SAP'), false);
+  const cv = m.parseCvFill(answer({
+    competences: { professionnelles: ['SAP'] },
+    experiences: [
+      { poste: 'Comptable', entreprise: 'Orange', missions: [] },
+      { poste: 'Stagiaire', entreprise: 'Boulangerie Le Palmier', missions: [] },
+    ],
+  }), external);
+  assert.deepEqual(cv.competences.professionnelles, ['Excel']);
+  assert.deepEqual(cv.experiences.map((e) => e.entreprise), ['Boulangerie Le Palmier']);
+});
+
+test('une qualité déjà listée en compétence n’apparaît pas deux fois', () => {
+  const withTeam = m.cvFillRequestSchema.parse({ jobId: 'j', job: { title: 'Stage' }, student: { skills: ['travail en équipe'] }, notes: 'rigueur' });
+  const cv = m.parseCvFill(answer({ competences: { habilitesRelationnelles: ['Travail en équipe', 'Rigueur'] } }), withTeam);
+  assert.deepEqual(cv.competences.habilitesRelationnelles, ['Rigueur']);
+});
+
 test('une réponse illisible donne null', () => {
   assert.equal(m.parseCvFill(null, input()), null);
   assert.equal(m.parseCvFill('pas de json', input()), null);
@@ -134,4 +162,34 @@ test('une langue sans niveau s’affiche seule dans chaque gabarit', () => {
     assert.ok(html.includes('Anglais'), id);
     assert.ok(!/Anglais ?:/.test(html) && !html.includes('Anglais ()'), id);
   }
+});
+
+test('34.5 : un chiffre répondu au jury passe, un chiffre non répondu est retiré', () => {
+  const notes = [
+    'Stage chez Boulangerie Le Palmier : saisie des factures, suivi de la caisse.',
+    'Réponses de l’étudiant aux questions du jury :',
+    m.juryAnswersText([
+      { question: 'Combien de factures saisissais-tu par mois ?', reponse: 'environ 120 factures par mois' },
+      { question: 'Combien de clients ?', reponse: '' },
+    ]),
+  ].join('\n');
+  const cv = m.parseCvFill(answer({
+    titrePoste: 'Stagiaire comptable',
+    profil: 'Je saisis 120 factures par mois. J’ai géré 300 clients.',
+    experiences: [{ poste: 'Stagiaire', entreprise: 'Boulangerie Le Palmier', ville: '', periode: '', missions: [
+      'Saisie de 120 factures par mois',
+      'Suivi de la caisse pour 300 clients',
+    ] }],
+    formations: [], competences: { professionnelles: ['Power BI'], habilitesRelationnelles: [], logiciels: [] }, langues: [], loisirs: [],
+  }), input(notes));
+  assert.deepEqual(cv.experiences[0].missions, ['Saisie de 120 factures par mois']);
+  assert.equal(cv.profil, 'Je saisis 120 factures par mois.');
+  assert.ok(!cv.competences.professionnelles.includes('Power BI'), 'exigence de l’offre non confirmée absente');
+});
+
+test('34.5 : question sans réponse ignorée, aucune réponse = texte vide', () => {
+  assert.equal(m.juryAnswersText([{ question: 'Q ?', reponse: '  ' }]), '');
+  assert.equal(m.juryAnswersText(undefined), '');
+  assert.equal(m.numbersGrounded('Licence 3, 2025', 'Licence 3 en 2025'), true);
+  assert.equal(m.numbersGrounded('Licence 3', '+35 % de ventes'), false);
 });

@@ -1,4 +1,4 @@
-import type { OfficialCvData } from '../../types';
+import type { CvRubriqueKind, OfficialCvData } from '../../types';
 
 // HTML of the application PDF and of the official CV. Every value coming from
 // the student or the model is escaped; an empty field prints "[à compléter]"
@@ -44,6 +44,34 @@ const langueLine = (l: { langue: string; niveau: string }, sep = ' : '): string 
 
 const list = <T,>(items: T[], render: (item: T) => string, empty = `<div class="item-sub-title">${TO_COMPLETE}</div>`): string =>
   items.length ? items.map(render).join('') : empty;
+
+const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+/** "2024-03" → "mars 2024"; anything else → "". */
+export const formatCvMonth = (value?: string): string => {
+  const match = /^(\d{4})-(\d{2})$/.exec((value || '').trim());
+  const month = match ? Number(match[2]) : 0;
+  return match && month >= 1 && month <= 12 ? `${MONTHS[month - 1]} ${match[1]}` : '';
+};
+
+/** Printed period: the structured dates when the student set them, else the free text. */
+export const cvPeriode = (item: { periode?: string; debut?: string; fin?: string }): string => {
+  const start = formatCvMonth(item.debut);
+  const end = item.fin === 'present' ? 'aujourd’hui' : formatCvMonth(item.fin);
+  if (start || end) return [start, end].filter(Boolean).join(' – ');
+  return (item.periode || '').trim();
+};
+
+export const RUBRIQUE_TITRES: Record<CvRubriqueKind, string> = {
+  activites: 'Activités extra-professionnelles',
+  certificats: 'Certificats',
+  realisations: 'Réalisations',
+  personnalisee: 'Autre rubrique',
+};
+
+/** Extra sections worth printing, in the student's order. */
+const printedRubriques = <R extends { titre: string; items: string[] }>(rubriques: R[] | undefined): R[] =>
+  (rubriques ?? []).filter((r) => r.titre.trim() && r.items.some((item) => item.trim()));
 
 // Fields that must exist before a CV can be exported or sent.
 export const missingCvFields = (cv: OfficialCvData): string[] => {
@@ -221,6 +249,7 @@ export const CV_TEMPLATES = [
   { id: 'prestige', label: 'Prestige', description: 'Photo carrée, colonne marine' },
   { id: 'ingenieur', label: 'Ingénieur', description: 'Frise chronologique, profil technique' },
   { id: 'etudiant', label: 'Étudiant', description: 'Minimaliste, bandeau arrondi' },
+  { id: 'ats', label: 'ATS', description: 'Une colonne, lu par les logiciels de tri' },
 ] as const;
 export type CvTemplateId = (typeof CV_TEMPLATES)[number]['id'];
 
@@ -232,6 +261,17 @@ export const isCvTemplateId = (value: unknown): value is CvTemplateId =>
  * contact and photo always come from the profile; a section the AI left empty
  * keeps the profile's version.
  */
+const foldKey = (value: string): string => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9|]+/g, '');
+
+// The AI rewrites an experience without the month/year pickers the student set:
+// the same experience (same title and organisation) keeps them.
+const keepDates = <T extends { debut?: string; fin?: string }>(items: T[], base: T[], key: (item: T) => string): T[] =>
+  items.map((item) => {
+    if (item.debut || item.fin) return item;
+    const same = base.find((b) => foldKey(key(b)) === foldKey(key(item)));
+    return same && (same.debut || same.fin) ? { ...item, debut: same.debut, fin: same.fin } : item;
+  });
+
 export function mergeAiCv(base: OfficialCvData, ai: Partial<OfficialCvData> | null | undefined): OfficialCvData {
   if (!ai) return base;
   const pick = <T,>(value: T[] | undefined, fallback: T[]): T[] => (value && value.length ? value : fallback);
@@ -240,8 +280,8 @@ export function mergeAiCv(base: OfficialCvData, ai: Partial<OfficialCvData> | nu
     ...base,
     titrePoste: ai.titrePoste?.trim() || base.titrePoste,
     profil: ai.profil?.trim() || base.profil,
-    experiences: pick(ai.experiences, base.experiences),
-    formations: pick(ai.formations, base.formations),
+    experiences: keepDates(pick(ai.experiences, base.experiences), base.experiences, (e) => `${e.poste}|${e.entreprise}`),
+    formations: keepDates(pick(ai.formations, base.formations), base.formations, (f) => `${f.diplome}|${f.etablissement}`),
     competences: {
       professionnelles: pick(competences?.professionnelles, base.competences.professionnelles),
       habilitesRelationnelles: pick(competences?.habilitesRelationnelles, base.competences.habilitesRelationnelles),
@@ -252,10 +292,71 @@ export function mergeAiCv(base: OfficialCvData, ai: Partial<OfficialCvData> | nu
   };
 }
 
+// ---------------------------------------------------------------------------
+// Preview settings (accent colour, font, line spacing), kept with the CV in the
+// library and applied to the preview and to the PDF. Print-only colours.
+// ---------------------------------------------------------------------------
+
+export const CV_ACCENTS = [
+  { id: 'modele', label: 'Du modèle', color: null },
+  { id: 'violet', label: 'Violet', color: '#6D28D9' },
+  { id: 'emeraude', label: 'Émeraude', color: '#047857' },
+  { id: 'bordeaux', label: 'Bordeaux', color: '#9F1239' },
+  { id: 'bleu', label: 'Bleu', color: '#1D4ED8' },
+  { id: 'anthracite', label: 'Anthracite', color: '#1F2937' },
+] as const;
+export const CV_FONTS = [
+  { id: 'modele', label: 'Du modèle', css: null },
+  { id: 'sans', label: 'Sans empattement', css: 'Arial, Helvetica, sans-serif' },
+  { id: 'serif', label: 'Avec empattement', css: 'Georgia, "Times New Roman", serif' },
+] as const;
+export const CV_SPACINGS = [
+  { id: 'compact', label: 'Serré', value: 1.25 },
+  { id: 'normal', label: 'Normal', value: null },
+  { id: 'aere', label: 'Aéré', value: 1.65 },
+] as const;
+
+export type CvStyle = {
+  accent?: (typeof CV_ACCENTS)[number]['id'];
+  police?: (typeof CV_FONTS)[number]['id'];
+  interligne?: (typeof CV_SPACINGS)[number]['id'];
+};
+
+// Where each template prints its accent colour.
+const ACCENT_CSS: Record<CvTemplateId, (a: string) => string> = {
+  classic: (a) => `.section-heading { color: ${a} !important; border-bottom-color: ${a} !important; } .blue-divider { background-color: ${a} !important; }`,
+  prestige: (a) => `.navy { background: ${a} !important; } .name { color: ${a} !important; }`,
+  ingenieur: (a) => `.badge, .rule i { background: ${a} !important; } .job, .tl-date, .tl-org, .contact .ic, .name span { color: ${a} !important; } .heading h2 { border-bottom-color: ${a} !important; } .photo { box-shadow: 0 0 0 0.6mm ${a} !important; }`,
+  etudiant: (a) => `.pill { background: ${a} !important; } .name, h2, .job { color: ${a} !important; }`,
+  ats: (a) => `h1, h2 { color: ${a} !important; } h2 { border-bottom-color: ${a} !important; }`,
+};
+
+/** Adds the student's settings to a rendered CV; no settings → the HTML unchanged. */
+export const applyCvStyle = (html: string, template: CvTemplateId, style?: CvStyle | null): string => {
+  if (!style) return html;
+  const accent = CV_ACCENTS.find((a) => a.id === style.accent)?.color;
+  const font = CV_FONTS.find((f) => f.id === style.police)?.css;
+  const spacing = CV_SPACINGS.find((s) => s.id === style.interligne)?.value;
+  const rules = [
+    accent ? ACCENT_CSS[template](accent) : '',
+    font ? `body, body * { font-family: ${font} !important; }` : '',
+    spacing ? `body, body * { line-height: ${spacing} !important; }` : '',
+  ].filter(Boolean).join('\n');
+  if (!rules) return html;
+  const tag = `<style data-cv-style>${rules}</style>`;
+  return html.includes('</body>') ? html.replace('</body>', `${tag}\n</body>`) : `${html}${tag}`;
+};
+
 /**
- * Génère le code HTML du CV. Le gabarit "classic" est le 2 colonnes officiel.
+ * Génère le code HTML du CV. "classic" est le gabarit officiel, "ats" la version
+ * une colonne pour les logiciels de tri ; `style` applique les réglages d'aperçu.
  */
-export function generateOfficialCvHtml(cv: OfficialCvData, template: CvTemplateId = 'classic'): string {
+export function generateOfficialCvHtml(cv: OfficialCvData, template: CvTemplateId = 'classic', style?: CvStyle | null): string {
+  return applyCvStyle(renderCvHtml(cv, template), template, style);
+}
+
+function renderCvHtml(cv: OfficialCvData, template: CvTemplateId): string {
+  if (template === 'ats') return atsCvHtml(cv);
   if (template !== 'classic' && isCvTemplateId(template)) return generateDesignCvHtml(cv, template);
   const c = escapeDeep(cv);
   const p = c.detailsPersonnels;
@@ -451,14 +552,14 @@ export function generateOfficialCvHtml(cv: OfficialCvData, template: CvTemplateI
       <td class="col-left"><span class="label">Prénom :</span> ${todo(p.prenom)}</td>
       <td class="col-right"><span class="label">Numéro de téléphone :</span> ${todo(p.telephone)}</td>
     </tr>
-    <tr>
-      <td class="col-left"><span class="label">Nationalité :</span> ${todo(p.nationalite)}</td>
-      <td class="col-right"><span class="label">Adresse :</span> ${todo(p.adresse)}</td>
-    </tr>
-    <tr>
-      <td class="col-left"><span class="label">Âge :</span> ${todo(p.age)}</td>
+    ${p.nationalite || p.adresse ? `<tr>
+      <td class="col-left">${p.nationalite ? `<span class="label">Nationalité :</span> ${p.nationalite}` : ''}</td>
+      <td class="col-right">${p.adresse ? `<span class="label">Adresse :</span> ${p.adresse}` : ''}</td>
+    </tr>` : ''}
+    ${p.age ? `<tr>
+      <td class="col-left"><span class="label">Âge :</span> ${p.age}</td>
       <td class="col-right"></td>
-    </tr>
+    </tr>` : ''}
   </table>
 
   <!-- 2. Expérience professionnelle -->
@@ -467,8 +568,8 @@ export function generateOfficialCvHtml(cv: OfficialCvData, template: CvTemplateI
     <div class="exp-item">
       <div class="item-main-title">${exp.poste}</div>
       <div class="item-top-row">
-        <span class="item-sub-title">${exp.entreprise}, ${exp.ville}</span>
-        <span class="item-date-right">${exp.periode}</span>
+        <span class="item-sub-title">${joinParts([exp.entreprise, exp.ville])}</span>
+        <span class="item-date-right">${cvPeriode(exp)}</span>
       </div>
       <ul class="cv-bullet-list">
         ${exp.missions.map(m => `<li>${m}</li>`).join('')}
@@ -482,9 +583,9 @@ export function generateOfficialCvHtml(cv: OfficialCvData, template: CvTemplateI
     <div class="form-item">
       <div class="item-top-row">
         <span class="item-main-title">${form.diplome}</span>
-        <span class="item-date-right">${form.periode}</span>
+        <span class="item-date-right">${cvPeriode(form)}</span>
       </div>
-      <div class="item-sub-title">${form.etablissement}, ${form.ville}</div>
+      <div class="item-sub-title">${joinParts([form.etablissement, form.ville])}</div>
     </div>
   `)}
 
@@ -495,14 +596,14 @@ export function generateOfficialCvHtml(cv: OfficialCvData, template: CvTemplateI
     ${list(c.competences.professionnelles, comp => `<li>${comp}</li>`, `<li>${TO_COMPLETE}</li>`)}
   </ul>
 
-  <div class="skills-inline-text">
-    <span class="label">Habilités personnelles et relationnelles :</span> ${todo(c.competences.habilitesRelationnelles.join(', '))}
-  </div>
+  ${c.competences.habilitesRelationnelles.length ? `<div class="skills-inline-text">
+    <span class="label">Habilités personnelles et relationnelles :</span> ${c.competences.habilitesRelationnelles.join(', ')}
+  </div>` : ''}
 
-  <div class="competences-subheading">Maîtrise des logiciels</div>
+  ${c.competences.logiciels.length ? `<div class="competences-subheading">Maîtrise des logiciels</div>
   <ul class="cv-bullet-list">
-    ${list(c.competences.logiciels, log => `<li>${log.categorie ? `<strong>${log.categorie} :</strong> ` : ''}${log.items.join(', ')}</li>`, `<li>${TO_COMPLETE}</li>`)}
-  </ul>
+    ${list(c.competences.logiciels, log => `<li>${log.categorie ? `<strong>${log.categorie} :</strong> ` : ''}${log.items.join(', ')}</li>`)}
+  </ul>` : ''}
 
   <!-- 5. Langues -->
   <div class="section-heading">Langues</div>
@@ -510,11 +611,14 @@ export function generateOfficialCvHtml(cv: OfficialCvData, template: CvTemplateI
     ${list(c.langues, lang => `<div>${langueLine(lang, ': ')}</div>`)}
   </div>
 
+  ${printedRubriques(c.rubriques).map((r) => `<div class="section-heading">${r.titre}</div>
+  <ul class="cv-bullet-list">${r.items.filter((item) => item.trim()).map((item) => `<li>${item}</li>`).join('')}</ul>`).join('')}
+
   <!-- 6. Autres informations importantes -->
-  <div class="section-heading">Autres informations importantes</div>
+  ${c.loisirs.length ? `<div class="section-heading">Autres informations importantes</div>
   <div style="font-size: 9.5pt; color: #374151; margin-bottom: 12px;">
-    <span class="label">Loisirs :</span> ${todo(c.loisirs.join(', '))}
-  </div>
+    <span class="label">Loisirs :</span> ${c.loisirs.join(', ')}
+  </div>` : ''}
 
   <div class="page-footer-num">1</div>
 </body>
@@ -526,7 +630,7 @@ export function generateOfficialCvHtml(cv: OfficialCvData, template: CvTemplateI
 // in the RN theme. Every value is escaped by escapeDeep before it is used.
 // ---------------------------------------------------------------------------
 
-type DesignTemplateId = Exclude<CvTemplateId, 'classic'>;
+type DesignTemplateId = Exclude<CvTemplateId, 'classic' | 'ats'>;
 type EscapedCv = Escaped<OfficialCvData>;
 
 // 24px stroke icons (Lucide shapes), drawn with currentColor.
@@ -550,7 +654,7 @@ const joinParts = (parts: (string | undefined)[], sep = ', '): string => parts.f
 const contactLines = (p: EscapedCv['detailsPersonnels']) => [
   { icon: 'phone' as const, text: todo(p.telephone) },
   { icon: 'mail' as const, text: todo(p.email) },
-  { icon: 'pin' as const, text: todo(p.adresse) },
+  ...(p.adresse ? [{ icon: 'pin' as const, text: p.adresse }] : []),
   ...(p.nationalite ? [{ icon: 'flag' as const, text: p.nationalite }] : []),
   ...(p.age ? [{ icon: 'user' as const, text: p.age }] : []),
 ];
@@ -637,15 +741,16 @@ function prestigeCv(cv: OfficialCvData, c: EscapedCv, nom: string, prenom: strin
       ${list(c.experiences, (exp) => `
         <div class="item">
           <div class="item-title">${exp.poste}</div>
-          <div class="item-sub">${joinParts([exp.entreprise, exp.ville])}${exp.periode ? ` <span class="date">| ${exp.periode}</span>` : ''}</div>
+          <div class="item-sub">${joinParts([exp.entreprise, exp.ville])}${cvPeriode(exp) ? ` <span class="date">| ${cvPeriode(exp)}</span>` : ''}</div>
           ${exp.missions.length ? `<ul class="missions">${exp.missions.map((m) => `<li>${m}</li>`).join('')}</ul>` : ''}
         </div>`, `<div class="todo">${TO_COMPLETE}</div>`)}
       <h2>Formation</h2>
       ${list(c.formations, (form) => `
         <div class="item">
           <div class="item-title">${form.diplome}</div>
-          <div class="item-sub">${joinParts([form.etablissement, form.ville])}${form.periode ? ` <span class="date">| ${form.periode}</span>` : ''}</div>
+          <div class="item-sub">${joinParts([form.etablissement, form.ville])}${cvPeriode(form) ? ` <span class="date">| ${cvPeriode(form)}</span>` : ''}</div>
         </div>`, `<div class="todo">${TO_COMPLETE}</div>`)}
+      ${printedRubriques(c.rubriques).map((r) => `<h2>${r.titre}</h2><ul class="missions">${r.items.filter((i) => i.trim()).map((i) => `<li>${i}</li>`).join('')}</ul>`).join('')}
     </main>
   </div>`;
 }
@@ -719,13 +824,14 @@ function ingenieurCv(cv: OfficialCvData, c: EscapedCv, nom: string, prenom: stri
     <div class="rule"><i></i><i></i></div>
     ${c.profil ? `${heading('user', 'Profil')}<div class="profile">${c.profil}</div>` : ''}
     ${heading('briefcase', 'Expérience professionnelle')}
-    ${timeline(c.experiences, (exp) => exp.periode, (exp) => `
+    ${timeline(c.experiences, (exp) => cvPeriode(exp), (exp) => `
       <div><span class="tl-title">${exp.poste}</span>${joinParts([exp.entreprise, exp.ville]) ? ` • <span class="tl-org">${joinParts([exp.entreprise, exp.ville])}</span>` : ''}</div>
       ${exp.missions.length ? `<ul class="missions">${exp.missions.map((m) => `<li>${m}</li>`).join('')}</ul>` : ''}`)}
     ${heading('cap', 'Formation')}
-    ${timeline(c.formations, (form) => form.periode, (form) => `
+    ${timeline(c.formations, (form) => cvPeriode(form), (form) => `
       <div class="tl-title">${form.diplome}</div>
       <div class="tl-org">${joinParts([form.etablissement, form.ville])}</div>`)}
+    ${printedRubriques(c.rubriques).map((r) => `${heading('user', r.titre)}<ul class="missions profile">${r.items.filter((i) => i.trim()).map((i) => `<li>${i}</li>`).join('')}</ul>`).join('')}
     ${heading('gear', 'Compétences')}
     <table class="skills">
       ${skillRows.map((row) => `<tr><td class="label">${row.label}</td><td class="value">${todo(row.value)}</td></tr>`).join('')}
@@ -746,8 +852,8 @@ function etudiantCv(cv: OfficialCvData, c: EscapedCv, nom: string, prenom: strin
   return `
   <style>
     ${BASE_CSS}
-    body { font-family: "Raleway", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: ${navy}; }
-    .band { margin: 10mm 0 0 8mm; background: #EEEEEF; border-radius: 30mm 0 0 30mm; padding: 6mm 12mm 6mm 8mm; display: flex; align-items: center; gap: 9mm; min-height: 50mm; }
+    body { font-family: "Raleway", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: ${navy}; padding-top: 10mm; }
+    .band { margin: 0 0 0 8mm; background: #EEEEEF; border-radius: 30mm 0 0 30mm; padding: 6mm 12mm 6mm 8mm; display: flex; align-items: center; gap: 9mm; min-height: 50mm; }
     .photo { width: 42mm; height: 42mm; border-radius: 50%; object-fit: cover; background: #D1D5DB; color: ${navy}; font-size: 24pt; flex: 0 0 42mm; }
     .name { font-size: 24pt; letter-spacing: 1px; text-transform: uppercase; font-weight: 300; line-height: 1.1; }
     .name b { font-weight: 700; }
@@ -787,17 +893,18 @@ function etudiantCv(cv: OfficialCvData, c: EscapedCv, nom: string, prenom: strin
         ${list(c.formations, (form) => `
           <div class="item">
             <div class="item-title">${form.diplome}</div>
-            <div class="item-sub">${joinParts([joinParts([form.etablissement, form.ville]), form.periode], ' | ')}</div>
+            <div class="item-sub">${joinParts([joinParts([form.etablissement, form.ville]), cvPeriode(form)], ' | ')}</div>
           </div>`, `<div class="line todo">${TO_COMPLETE}</div>`)}
       </section>
       <section><h2>Expérience</h2>
         ${list(c.experiences, (exp) => `
           <div class="item">
             <div class="item-title">${exp.poste}</div>
-            <div class="item-sub">${joinParts([joinParts([exp.entreprise, exp.ville]), exp.periode], ' | ')}</div>
+            <div class="item-sub">${joinParts([joinParts([exp.entreprise, exp.ville]), cvPeriode(exp)], ' | ')}</div>
             ${exp.missions.length ? `<ul class="missions">${exp.missions.map((m) => `<li>${m}</li>`).join('')}</ul>` : ''}
           </div>`, `<div class="line todo">${TO_COMPLETE}</div>`)}
       </section>
+      ${printedRubriques(c.rubriques).map((r) => `<section><h2>${r.titre}</h2><ul class="missions">${r.items.filter((i) => i.trim()).map((i) => `<li>${i}</li>`).join('')}</ul></section>`).join('')}
     </div>
   </div>`;
 }
@@ -823,6 +930,63 @@ function generateDesignCvHtml(cv: OfficialCvData, template: DesignTemplateId): s
 </head>
 <body>
   ${DESIGN_RENDERERS[template](cv, c, nom, prenom)}
+</body>
+</html>`;
+}
+
+/**
+ * "ATS" — one column, standard headings, no table, icon, photo or text box:
+ * parsers read it in order. Same content as the other templates.
+ */
+function atsCvHtml(cv: OfficialCvData): string {
+  const c = escapeDeep(cv);
+  const p = c.detailsPersonnels;
+  const fullName = joinParts([p.prenom, (p.nom || '').toUpperCase()], ' ') || TO_COMPLETE;
+  const contact = joinParts([todo(p.email), todo(p.telephone), p.adresse, p.nationalite, p.age], ' | ');
+  const bullets = (items: string[]) => (items.length ? `<ul>${items.map((i) => `<li>${i}</li>`).join('')}</ul>` : '');
+  const skills = [...c.competences.professionnelles, ...c.competences.habilitesRelationnelles];
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Curriculum Vitae — ${fullName}</title>
+  <style>
+    @page { size: A4 portrait; margin: 14mm 17mm; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #FFFFFF; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #111827; font-size: 10pt; line-height: 1.4; }
+    h1 { font-size: 18pt; margin: 0; color: #111827; }
+    .title { font-size: 11.5pt; font-weight: 700; margin: 1mm 0; }
+    .contact { margin: 0 0 3mm; }
+    h2 { font-size: 11pt; text-transform: uppercase; letter-spacing: 0.4px; margin: 4.5mm 0 1.5mm; padding-bottom: 0.8mm; border-bottom: 0.3mm solid #111827; color: #111827; }
+    h3 { font-size: 10pt; margin: 2.2mm 0 0.3mm; }
+    .meta { color: #374151; }
+    ul { margin: 0.8mm 0 0 5mm; padding: 0; }
+    li { margin-bottom: 0.5mm; }
+    p { margin: 0.6mm 0; }
+  </style>
+</head>
+<body>
+  <h1>${fullName}</h1>
+  <div class="title">${todo(c.titrePoste)}</div>
+  <div class="contact">${contact}</div>
+  ${c.profil ? `<h2>Profil</h2><p>${c.profil}</p>` : ''}
+  <h2>Expérience professionnelle</h2>
+  ${list(c.experiences, (exp) => `
+    <h3>${joinParts([exp.poste, exp.entreprise], ' — ')}</h3>
+    <div class="meta">${joinParts([exp.ville, cvPeriode(exp)], ' | ')}</div>
+    ${bullets(exp.missions)}`, `<p>${TO_COMPLETE}</p>`)}
+  <h2>Formation</h2>
+  ${list(c.formations, (form) => `
+    <h3>${form.diplome}</h3>
+    <div class="meta">${joinParts([joinParts([form.etablissement, form.ville]), cvPeriode(form)], ' | ')}</div>`, `<p>${TO_COMPLETE}</p>`)}
+  <h2>Compétences</h2>
+  ${skills.length ? bullets(skills) : `<p>${TO_COMPLETE}</p>`}
+  ${c.competences.logiciels.length ? `<h2>Logiciels</h2>${bullets(softwareLines(c))}` : ''}
+  <h2>Langues</h2>
+  ${c.langues.length ? bullets(c.langues.map((l) => langueLine(l))) : `<p>${TO_COMPLETE}</p>`}
+  ${printedRubriques(c.rubriques).map((r) => `<h2>${r.titre}</h2>${bullets(r.items.filter((i) => i.trim()))}`).join('')}
+  ${c.loisirs.length ? `<h2>Centres d'intérêt</h2><p>${c.loisirs.join(', ')}</p>` : ''}
 </body>
 </html>`;
 }

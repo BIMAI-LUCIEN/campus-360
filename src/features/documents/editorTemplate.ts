@@ -766,7 +766,7 @@ ${coverCss(style, 'auto', true)}
 </head>
 <body style="--band: ${style.page.bandColor}; --band-text: ${style.headerFooter.headerTextColor}; --accent: ${style.page.accentColor};">
   <div class="pages">
-    <section class="document-sheet preview-page cover-page">${coverHtml(cover, style, logos)}</section>
+    ${doc.template_type === 'cv' || doc.template_type === 'lettre_motivation' ? '' : `<section class="document-sheet preview-page cover-page">${coverHtml(cover, style, logos)}</section>`}
     ${body}
   </div>
   <script>
