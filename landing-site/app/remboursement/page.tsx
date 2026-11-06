@@ -21,7 +21,7 @@ export default function RemboursementPage() {
 
       <LegalSection title="2. Recharges de wallet Mobile Money">
         <p>Si tu as effectué une recharge de portefeuille par erreur et qu&apos;aucun coin n&apos;a encore été dépensé, tu peux demander un remboursement sous 7 jours calendaires suivant le paiement.</p>
-        <p>La demande doit être formulée avec la référence de transaction Notch Pay et le numéro de téléphone émetteur.</p>
+        <p>La demande doit être formulée avec la référence de transaction SasPay et le numéro de téléphone émetteur.</p>
       </LegalSection>
 
       <LegalSection title="3. Candidatures, rédaction, packs et Pass">
@@ -31,7 +31,7 @@ export default function RemboursementPage() {
 
       <LegalSection title="4. Procédure de réclamation">
         <ol className="list-decimal pl-5 space-y-2">
-          <li>Contacte notre équipe via notre <Link href="/contact" className="text-[var(--color-primary)] underline">formulaire de contact</Link> ou par email à <a href="mailto:support@campus360b.site" className="text-[var(--color-primary)] underline">support@campus360b.site</a>.</li>
+          <li>Contacte notre équipe via notre <Link href="/contact" className="text-[var(--color-sienna)] underline">formulaire de contact</Link> ou par email à <a href="mailto:support@campus360b.site" className="text-[var(--color-sienna)] underline">support@campus360b.site</a>.</li>
           <li>Transmets ton adresse email de compte et la référence de paiement concernée.</li>
           <li>Notre équipe examine la réclamation et te répond sous 48 heures ouvrées.</li>
         </ol>

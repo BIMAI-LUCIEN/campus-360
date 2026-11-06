@@ -30,7 +30,7 @@ export default function SuppressionComptePage() {
       <LegalSection title="2. Demande de suppression sans l'application">
         <p>Si tu n&apos;as plus accès à ton téléphone ou si tu as désinstallé l&apos;application, tu peux demander la suppression par email :</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Envoie un email à <a href="mailto:privacy@campus360b.site" className="text-[var(--color-primary)] underline">privacy@campus360b.site</a> ou utilise notre <Link href="/contact" className="text-[var(--color-primary)] underline">formulaire de contact</Link>.</li>
+          <li>Envoie un email à <a href="mailto:privacy@campus360b.site" className="text-[var(--color-sienna)] underline">privacy@campus360b.site</a> ou utilise notre <Link href="/contact" className="text-[var(--color-sienna)] underline">formulaire de contact</Link>.</li>
           <li>Précise l&apos;adresse email exacte associée à ton compte Campus 360 avec pour objet <em>« Demande de suppression de compte »</em>.</li>
           <li>Après vérification de ton identité, ton compte sera intégralement supprimé sous <strong>48 heures ouvrées</strong>.</li>
         </ul>

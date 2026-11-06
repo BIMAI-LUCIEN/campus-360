@@ -560,6 +560,10 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
+  - Pages légales : `confidentialite`, `cookies`, `conditions`, `remboursement`, `mentions-legales`, `suppression-compte` (gabarit `components/legal-page.tsx`) ; bandeau d'information `components/cookie-notice.tsx` (cookies indispensables seulement : ajouter un outil d'audience impose un vrai consentement).
+
+
+
 
 
 

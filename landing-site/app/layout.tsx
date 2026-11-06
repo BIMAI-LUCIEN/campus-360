@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import localFont from "next/font/local";
 import { siteUrl } from "@/lib/site";
+import { CookieNotice } from "@/components/cookie-notice";
 import "./globals.css";
 
 // Brand fonts (brand book v1), self-hosted: Sora for titles, Inter for text,
@@ -158,12 +159,7 @@ const jsonLd = {
         "@type": "Offer",
         price: "0",
         priceCurrency: "XOF",
-      },
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: "4.7",
-        ratingCount: "128",
-      },
+      }
     },
   ],
 };
@@ -195,6 +191,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         {children}
+        <CookieNotice />
       </body>
     </html>
   );

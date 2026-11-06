@@ -4,6 +4,16 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 
 ---
 
+**2026-11-06 · hors plan · aucun skill · commit « feat(landing): pages légales » · Conformité données personnelles et cookies (site public)**
+
+- **Confidentialité réécrite** (`landing-site/app/confidentialite/page.tsx`) : base légale (loi n° 2024/017 du 23/12/2024, loi n° 2010/012, RGPD pour l'UE), données réelles, finalités et bases, IA, destinataires (entreprises à qui l'étudiant postule), sous-traitants réels (SasPay au lieu de Notch Pay, Contabo, Gemini), transferts hors Cameroun, durées, sécurité et violation, droits avec délai de 30 jours, mineurs, cookies.
+- **Cookies :** nouvelle page `app/cookies/page.tsx` (cookies Better Auth réels : `campus-landing.*`, `better-auth.*`, état OAuth) ; bandeau d'information `components/cookie-notice.tsx` (aucun cookie non indispensable, donc pas de consentement à recueillir) ; lien au pied de page et au sitemap.
+- **Mentions légales :** IP du VPS retirée, hébergeurs à jour (Contabo, Supabase, Cloudinary ; Vercel retiré). `remboursement` : Notch Pay remplacé par SasPay. `layout.tsx` : note `aggregateRating` 4,7/128 inventée retirée du JSON-LD (fausse note = pratique trompeuse). `--color-primary` inexistant remplacé par `--color-sienna` sur les pages légales.
+- **Preuve :** `tsc --noEmit` landing 0 ; `/cookies`, `/confidentialite`, `/mentions-legales` 200 en dev ; bandeau affiché, « Compris » le masque et ne revient pas au rechargement ; aucun débordement à 375 px.
+- **Points ouverts :** identité de l'éditeur (forme juridique, siège, RCCM/NIU, directeur de publication) encore `[à compléter]` ; boîte `privacy@campus360b.site` à créer si absente ; déclaration du traitement auprès de l'autorité de protection des données dès qu'elle est opérationnelle ; tout futur outil d'audience exigera un vrai bandeau accepter/refuser.
+
+---
+
 **2026-11-03 · hors plan · deploy-and-push · `c37d6e3`, `21295f0`, `2abf55a` · Livraison des débordements et des offres « sur le site »**
 
 - **Production :** VPS sur `2abf55a` (run « Deploy to VPS » réussi), migration `0031` appliquée, 0 ligne touchée (0 entreprise concernée au comptage d'avant push). OTA publiée sur `production`, runtime 1.2.0, groupe `af02d658-f057-44f4-a556-0bb9bfcae712`.

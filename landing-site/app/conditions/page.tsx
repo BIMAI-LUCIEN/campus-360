@@ -16,7 +16,7 @@ export default function ConditionsPage() {
       updatedAt="octobre 2026"
     >
       <LegalSection title="1. Éditeur et objet du service">
-        <p>La plateforme Campus 360 est éditée par [à compléter : raison sociale et forme juridique], immatriculée au Cameroun sous le numéro [à compléter : RCCM / NIU]. Pour toute question légale : <a href="mailto:legal@campus360b.site" className="text-[var(--color-primary)] underline">legal@campus360b.site</a>.</p>
+        <p>La plateforme Campus 360 est éditée par [à compléter : raison sociale et forme juridique], immatriculée au Cameroun sous le numéro [à compléter : RCCM / NIU]. Pour toute question légale : <a href="mailto:legal@campus360b.site" className="text-[var(--color-sienna)] underline">legal@campus360b.site</a>.</p>
         <p>Campus 360 propose aux étudiants des outils d&apos;aide à la réussite académique et à l&apos;insertion professionnelle : consultation de cours et anciens examens, assistance méthodologique à la rédaction de rapports de stage, et mise en relation avec des offres de stage.</p>
       </LegalSection>
 
@@ -43,7 +43,7 @@ export default function ConditionsPage() {
       </LegalSection>
 
       <LegalSection title="5. Clôture de compte">
-        <p>Tu peux fermer et supprimer définitivement ton compte à tout moment depuis l&apos;application (Profil &gt; Supprimer mon compte) ou via notre <Link href="/suppression-compte" className="text-[var(--color-primary)] underline">page dédiée</Link>.</p>
+        <p>Tu peux fermer et supprimer définitivement ton compte à tout moment depuis l&apos;application (Profil &gt; Supprimer mon compte) ou via notre <Link href="/suppression-compte" className="text-[var(--color-sienna)] underline">page dédiée</Link>.</p>
         <p>Campus 360 se réserve le droit de restreindre ou suspendre l&apos;accès à un compte en cas d&apos;attaque avérée, de tentative de fraude aux paiements ou de non-respect caractérisé des présentes conditions.</p>
       </LegalSection>
 
