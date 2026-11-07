@@ -60,7 +60,12 @@ import {
   isLinkApply,
 } from '../../features/stages/applyTarget';
 import { useApplyOnSite } from '../../features/stages/useApplyOnSite';
-import { applyPriceLine } from '../../features/stages/applyPrice';
+import { applyPriceLine, jobApplyPrice } from '../../features/stages/applyPrice';
+import {
+  APPLY_LINK_NO_REFUND_NOTICE,
+  formatKitButtonLabel,
+  isOfferExpired,
+} from '../../features/stages/applyTarget';
 import { AppAlert } from '../AppAlert';
 
 interface StagesScreenProps {
@@ -371,7 +376,7 @@ export function StagesScreen({
   const handleApplyFromDetail = () => {
     const job = selectedDetailJob;
     if (!job) return;
-    if (isLinkApply(job)) {
+    if (isLinkApply(job) && isOfferExpired(job)) {
       openOnSite(job);
       return;
     }
@@ -728,30 +733,60 @@ export function StagesScreen({
                       </Text>
                     </View>
 
-                    <Pressable
-                      testID={`btn-postuler-${job.id}`}
-                      style={styles.applyBtn}
-                      onPress={(e) => {
-                        if (e && typeof e.stopPropagation === 'function') {
-                          e.stopPropagation();
-                        }
-                        if (isLinkApply(job)) {
-                          openOnSite(job);
-                          return;
-                        }
-                        setApplyingJob(job);
-                      }}
-                    >
-                      {isLinkApply(job) ? (
-                        <ExternalLink size={13} color={stitchColors.white} />
-                      ) : (
+                    {isLinkApply(job) ? (
+                      <View style={styles.linkActionsCol}>
+                        {!isOfferExpired(job) && (
+                          <Pressable
+                            testID={`btn-postuler-${job.id}`}
+                            style={styles.applyBtn}
+                            onPress={(e) => {
+                              if (e && typeof e.stopPropagation === 'function') {
+                                e.stopPropagation();
+                              }
+                              setApplyingJob(job);
+                            }}
+                          >
+                            <Sparkles size={13} color={stitchColors.white} />
+                            <Text style={styles.applyBtnText}>
+                              {formatKitButtonLabel(jobApplyPrice(job))}
+                            </Text>
+                          </Pressable>
+                        )}
+                        <Pressable
+                          testID={`btn-site-direct-${job.id}`}
+                          style={styles.directSiteLinkBtn}
+                          onPress={(e) => {
+                            if (e && typeof e.stopPropagation === 'function') {
+                              e.stopPropagation();
+                            }
+                            openOnSite(job);
+                          }}
+                        >
+                          <ExternalLink size={12} color={stitchColors.primary} />
+                          <Text style={styles.directSiteLinkText}>{APPLY_LINK_LABEL}</Text>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <Pressable
+                        testID={`btn-postuler-${job.id}`}
+                        style={styles.applyBtn}
+                        onPress={(e) => {
+                          if (e && typeof e.stopPropagation === 'function') {
+                            e.stopPropagation();
+                          }
+                          setApplyingJob(job);
+                        }}
+                      >
                         <Sparkles size={13} color={stitchColors.white} />
-                      )}
-                      <Text style={styles.applyBtnText}>
-                        {isLinkApply(job) ? APPLY_LINK_LABEL : 'Postuler'}
-                      </Text>
-                    </Pressable>
+                        <Text style={styles.applyBtnText}>Postuler</Text>
+                      </Pressable>
+                    )}
                   </View>
+                  {isLinkApply(job) && !isOfferExpired(job) && (
+                    <Text style={styles.noRefundHintText} testID={`kit-no-refund-${job.id}`}>
+                      {APPLY_LINK_NO_REFUND_NOTICE}
+                    </Text>
+                  )}
                 </View>
               </Pressable>
             );
@@ -1200,20 +1235,39 @@ export function StagesScreen({
                 </Text>
               </View>
 
-              <Pressable
-                testID="btn-sticky-apply"
-                style={styles.stickyApplyBtn}
-                onPress={handleApplyFromDetail}
-              >
-                {isLinkApply(selectedDetailJob) ? (
-                  <ExternalLink size={17} color={stitchColors.white} />
-                ) : (
+              {isLinkApply(selectedDetailJob) ? (
+                <View style={styles.linkActionsCol}>
+                  {!isOfferExpired(selectedDetailJob) && (
+                    <Pressable
+                      testID="btn-sticky-apply"
+                      style={styles.stickyApplyBtn}
+                      onPress={handleApplyFromDetail}
+                    >
+                      <Sparkles size={16} color={stitchColors.white} />
+                      <Text style={styles.stickyApplyBtnText}>
+                        {formatKitButtonLabel(jobApplyPrice(selectedDetailJob))}
+                      </Text>
+                    </Pressable>
+                  )}
+                  <Pressable
+                    testID="btn-sticky-site-direct"
+                    style={styles.directSiteLinkBtn}
+                    onPress={() => openOnSite(selectedDetailJob)}
+                  >
+                    <ExternalLink size={13} color={stitchColors.primary} />
+                    <Text style={styles.directSiteLinkText}>{APPLY_LINK_LABEL}</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable
+                  testID="btn-sticky-apply"
+                  style={styles.stickyApplyBtn}
+                  onPress={handleApplyFromDetail}
+                >
                   <Sparkles size={17} color={stitchColors.white} />
-                )}
-                <Text style={styles.stickyApplyBtnText}>
-                  {isLinkApply(selectedDetailJob) ? APPLY_LINK_LABEL : 'Postuler en 1 Clic'}
-                </Text>
-              </Pressable>
+                  <Text style={styles.stickyApplyBtnText}>Postuler en 1 Clic</Text>
+                </Pressable>
+              )}
             </View>
           </View>
 
@@ -1683,6 +1737,30 @@ const styles = StyleSheet.create({
     color: stitchColors.white,
     fontSize: 13,
     fontWeight: '700',
+  },
+  linkActionsCol: {
+    alignItems: 'flex-end',
+    gap: 6,
+    flexShrink: 1,
+  },
+  directSiteLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  directSiteLinkText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: stitchColors.primary,
+    textDecorationLine: 'underline',
+  },
+  noRefundHintText: {
+    fontSize: 10.5,
+    color: stitchColors.inkMuted,
+    marginTop: 8,
+    lineHeight: 14,
   },
 
   // ── Immersive Stage Detail Screen Styles (§R3) ─────────────────────────────

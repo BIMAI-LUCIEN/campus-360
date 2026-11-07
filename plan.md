@@ -2,10 +2,11 @@
 
 > **Progression globale :** 110/161 tâches validées (68%) — Module 25 (scraping des offres) : 13/18 ; Module 24 (galerie de modèles de rapports) : 8/13 ; Module 23 (préparation V1) : 0/26 ; Module 20 : 16/16 validées ; Module 21 : 9/9 validées ; Module 19 : 10 en cours ; hors Module 19 : 3 en cours, 2 ouvertes  
 > **Couverture MVP :** 100% des fonctionnalités du cadrage `contexte.md` (Template CV Officiel, Ingestion n8n, Mobile Money, Onboarding Express, Suivi J+7, Expédition Automatisée WhatsApp/Email via Evolution API & N8N, Éditeur de documents §13, Style du document & rédaction §14)  
-> **Dernière mise à jour :** 2026-10-23 par /execute (module 24)
+> **Dernière mise à jour :** 2026-11-06 par /execute (module 35)
 
 ---
 ## Reprise
+- **Module 35 (kit de candidature pour les offres `LINK`) :** 35.1 à 35.11 `[X]` le 2026-11-06 (`/execute -all`, vérifié avec `/test-and-verify` dans `journal.md`). Coût IA mesuré en réel (35.5) : 7 appels `anthropic/claude-haiku-5.5` = 7 179 tokens, $0.001488 USD ≈ 0,94 FCFA (< 1 % de 300 FCFA, marge > 99 %). Typechecks app, `mobile-api`, `recruiter-web` code 0 ; `lint:colors` 143/146 ; `mobile-api` 489 tests (469 pass / 0 fail / 20 skip) dont 30/30 sur les suites du Module 35 ; parcours Playwright vérifiés à 375 px et 1280 px. Reste : **35.12 🔒 Livraison** (commit, push, application de la migration `0032_stage_application_kits.sql` sur la base partagée de production et OTA EAS) en attente d'accord explicite de l'utilisateur.
 - **Module 34 (jury CV et éditeur enrichi) :** 34.1 à 34.14 `[X]` le 2026-11-06 (typecheck app et API 0, `lint:colors` 143, mobile-api 459 pass / 0 fail / 20 skip avant les derniers correctifs du jury, parcours réel Edge 375 px). Vérifié le 2026-11-06 (`/test-and-verify`, tableau dans `journal.md`) : 🟢 sauf import d'un vrai PDF LinkedIn et PDF stylé téléchargé (🟠) ; cv-fill rendu robuste aux réponses coupées. 34.15 livrée le 2026-11-06 (`2076322`, VPS et OTA). Reste : parcours sur téléphone avec l'OTA, import d'un vrai PDF LinkedIn, PDF stylé téléchargé ; décision ouverte 34.16 (jury dans la candidature). Décision ouverte : jury dans la candidature (34.16 proposée, non validée). Rien n'est commité ; le dépôt contient aussi des changements `landing-site/` d'une autre session.
 - **Offres « sur le site » et débordements (hors plan) :** livrés le 2026-11-03 (`2abf55a`, VPS et OTA, migration `0031` appliquée, 0 ligne touchée). Reste : un parcours réel sur téléphone Android, jusqu'à l'écriture de `apply-on-site` (détail dans `journal.md`).
 - **Module 33 (relance recruteur et suivi) :** livré le 2026-11-02 (commit `58d7d1a`, VPS et OTA, migration 0029 appliquée). 33.1 annulée ; 33.3 à 33.12 `[X]` ; 33.13 `[~]` ; 33.2, 33.14, 33.15, 33.16 `[!]` 🔒. Cron des rappels installé le 2026-11-02, premier passage le 2026-11-03 à 9 h, à contrôler dans `/var/log/campus-followups.log`. Suite : relance réelle vers une adresse de test (33.2, 33.16), parcours réel 33.15.
@@ -32,7 +33,7 @@
   - 🔒 **Module 25 :** 25.18 (choix A/B et feu vert VPS), 25.2, 25.10, 25.15, 25.16 (inchangés).
   - **Migrations :** toutes appliquées (0000, 0004 à 0015) ; 0013 le 2026-10-23.
 - **Commit de référence :** commit « feat(documents): modèle IUT de Douala fidèle au rapport de référence », parent af05514.
-- **Dernière entrée journal :** 2026-11-02 · Tâche 33.16, cron des rappels · deploy
+- **Dernière entrée journal :** 2026-11-06 · Module 35 (35.1 à 35.11) · execute
 ---
 
 ## 🏛️ HISTORIQUE DES MODULES DÉJÀ VALIDÉS (1 à 8)
@@ -3461,7 +3462,96 @@ Source : demande du 2026-11-06 (skill `jury-cv` à intégrer, analyse de cv.fr).
 **À demander à l'utilisateur :**
 - Le jury doit-il aussi apparaître dans le parcours de candidature (`AiApplyModal`), avant l'envoi ? Hors du cadrage actuel.
 
+
+## 🧾 MODULE 35 : Kit de candidature pour les offres à postuler sur un site externe
+
+Source : `contexte.md` §22 (cadrage validé le 2026-11-06).
+
+**Décisions déjà prises :**
+- Kit payant sur les offres `LINK` : CV adapté (PDF), lettre, 4 réponses prêtes (présentation en 3 lignes, pourquoi ce poste, disponibilité, compétences clés) et jusqu'à 5 questions du formulaire collées (500 caractères chacune).
+- Même grille que la candidature (300 / 500 FCFA ou 1 / 2 crédits). Débit unique par la référence `stage-apply:<jobId>`, remboursé si la génération échoue. Pas de remboursement si le site ferme après l'achat, et c'est écrit avant l'achat.
+- La voie gratuite « Postuler directement sur le site » reste. Bouton kit masqué sur une offre expirée.
+- `/apply` et `/dispatch` refusent toujours les offres `LINK` ; seule la garde de `/stages/cv` est levée.
+- Kit stocké en base (`stage_application_kits`, migration `0032`), pas seulement dans le téléphone.
+- V1.5 : l'admin passe une offre `LINK` en `EMAIL`. **Constat du 2026-11-06 :** `recruiter-web/app/admin/stages/JobFormDrawer.tsx` le permet déjà (choix du mode et champ e-mail). Il reste à le vérifier, pas à le coder.
+
+### Lot A : données
+- [X] **Tâche 35.1 : Table `stage_application_kits`** — *fichiers : `0032_stage_application_kits.sql`, `lib/stage-kits-core.ts`, `lib/stage-kits.ts`, `tests/stage-kits.test.mjs` ; 4/4 tests OK, `tsc` 0, `migrate.mjs --dry-run` OK (application base partagée reportée à 35.12 🔒).*
+  - **Fichiers :** `mobile-api/sql/0032_stage_application_kits.sql` (nouveau), `mobile-api/lib/stage-kits.ts` (nouveau), `mobile-api/tests/stage-kits.test.mjs` (nouveau)
+  - **Action :** la table garde `user_id`, `job_id`, `letter`, `answers` (jsonb : réponses fixes, questions collées et leurs réponses), `questions_used` (0 à 5), `created_at`, `updated_at`. Elle est unique sur (`user_id`, `job_id`), avec clés étrangères en cascade vers l'utilisateur et `stage_jobs`. `stage-kits.ts` lit et écrit (upsert) le kit d'un étudiant pour une offre. Il réserve une question par une mise à jour conditionnelle (`questions_used < 5`), sans dépasser 5 même en appels simultanés.
+  - **DoD :** `cd mobile-api && npm run typecheck` code 0 ; `node --test tests/stage-kits.test.mjs` passe (contrainte unique et borne 0–5 présentes dans la migration ; réservation conditionnelle) ; `npm run migrate` sur la base locale applique `0032` sans erreur.
+
+### Lot B : services et API
+- [X] **Tâche 35.2 : Lever la garde `LINK` dans `/stages/cv`** — *fichiers : `app/api/mobile/stages/cv/route.ts`, `tests/apply-method-link.test.mjs`, `tests/stage-charge.test.mjs` ; 21/21 tests OK, `tsc` 0.*
+  - **Fichiers :** `mobile-api/app/api/mobile/stages/cv/route.ts`, `mobile-api/tests/apply-method-link.test.mjs`, `mobile-api/tests/stage-charge.test.mjs`
+  - **Action :** `/stages/cv` génère le CV adapté et la lettre d'une offre `LINK`, avec le même débit unique et le même remboursement que pour les autres offres. Une offre `LINK` expirée est refusée (code d'erreur à trancher en `/plan-detail` selon les routes voisines). `/apply` et `/dispatch` gardent leur refus 422, et le test des routes `LINK` est mis à jour en conséquence.
+  - **DoD :** `node --test tests/apply-method-link.test.mjs tests/stage-charge.test.mjs` passe : plus de garde `LINK` dans `/stages/cv`, `/apply` et `/dispatch` toujours gardés, offre `LINK` débitée une seule fois même en régénérant.
+- [X] **Tâche 35.3 : Route `POST /api/mobile/stages/kit/answers`** — *fichiers : `app/api/mobile/stages/kit/answers/route.ts`, `lib/stage-kit-answers.ts`, `lib/ai-quota-rules.ts`, `lib/stage-charge-core.ts`, `lib/stage-charge.ts`, `tests/stage-kit-answers.test.mjs` ; 4/4 tests OK, `tsc` 0.*
+  - **Fichiers :** `mobile-api/app/api/mobile/stages/kit/answers/route.ts` (nouveau), `mobile-api/lib/stage-kit-answers.ts` (nouveau), `mobile-api/tests/stage-kit-answers.test.mjs` (nouveau)
+  - **Action :** route authentifiée qui prend `jobId`, et soit rien (elle produit alors les 4 réponses fixes), soit une `question` de 1 à 500 caractères. Codes d'erreur :
+    - 402 si le débit `stage-apply:<jobId>` n'existe pas ;
+    - 404 si l'offre est inconnue ;
+    - 422 si l'offre n'est pas `LINK` ;
+    - 409 si les 5 questions sont utilisées ;
+    - 429 au quota (`enforceAiQuota`) ;
+    - 502 si l'IA échoue, et la question réservée est alors rendue.
+
+    L'IA répond seulement à partir du profil et de l'offre. Un chiffre absent du profil est retiré par le contrôle `numbersGrounded` de `cv-fill`, et la réponse est enregistrée dans le kit.
+  - **DoD :** `cd mobile-api && npm run typecheck` code 0 ; `node --test tests/stage-kit-answers.test.mjs` passe : sans session 401, question de 501 caractères 400, kit non payé 402, sixième question 409, chiffre inventé retiré d'une réponse figée.
+- [X] **Tâche 35.4 : Lecture du kit et lettre enregistrée** — *fichiers : `app/api/mobile/stages/kit/route.ts`, `app/api/mobile/stages/cv/route.ts`, `lib/cv-fill.ts`, `tests/stage-kit-answers.test.mjs` ; 5/5 tests OK, `tsc` 0.*
+  - **Fichiers :** `mobile-api/app/api/mobile/stages/kit/route.ts` (nouveau), `mobile-api/app/api/mobile/stages/cv/route.ts`, `mobile-api/tests/stage-kit-answers.test.mjs`
+  - **Action :** `GET /api/mobile/stages/kit?jobId=` renvoie le kit de l'étudiant connecté (lettre, réponses, questions restantes), jamais celui d'un autre, et 404 s'il n'en a pas. Après une génération réussie sur une offre `LINK`, `/stages/cv` enregistre la lettre dans le kit.
+  - **DoD :** `node --test tests/stage-kit-answers.test.mjs` passe : kit d'un autre étudiant introuvable (404), nombre de questions restantes exact après deux questions.
+- [X] **Tâche 35.5 : Mesurer le coût IA d'un kit** — *modèle : `anthropic/claude-haiku-5.5` ; 7 appels réels = 7 179 tokens, $0.001488 USD ≈ 0,94 FCFA (< 1 % de 300 FCFA, marge > 99 %), détaillé dans `journal.md`.*
+  - **Fichiers :** aucun fichier de code ; résultat dans `journal.md`
+  - **Action :** générer un kit complet en local avec le compte de test (CV, lettre, 4 réponses, 5 questions). Relever les jetons et le coût de chaque appel (journal OpenRouter ou réponse de `callLlm`), puis comparer le total à 300 FCFA. Si la marge est négative, s'arrêter et demander à l'utilisateur avant le lot C.
+  - **DoD :** coût total d'un kit en FCFA écrit dans `journal.md`, avec le modèle utilisé et le détail par appel.
+
+### Lot C : interface (application)
+- [X] **Tâche 35.6 : Client du kit** — *fichiers : `src/features/stages/stagesApi.ts`, `src/types.ts` ; `npm run typecheck` code 0.*
+  - **Fichiers :** `src/features/stages/stagesApi.ts`, `src/types.ts`
+  - **Action :** `fetchStageKit(jobId)`, `generateKitAnswers(jobId)` et `askKitQuestion(jobId, question)` renvoient un résultat typé ou une erreur lisible (402, 409, 429, 502), sans donnée inventée en cas d'échec.
+  - **DoD :** `npm run typecheck` code 0.
+- [X] **Tâche 35.7 : Deux boutons sur la carte `LINK`** — *fichiers : `src/features/stages/applyTarget.ts`, `src/features/stages/applyPrice.ts`, `src/ui/screens/StagesScreen.tsx`, `src/ui/screens/HomeScreen.tsx`, `mobile-api/tests/apply-method-link.test.mjs` ; 14/14 tests OK, `tsc` 0, `lint:colors` 143, vérifié à 375 px et 1280 px.*
+  - **Fichiers :** `src/features/stages/applyTarget.ts`, `src/ui/screens/StagesScreen.tsx`, `src/ui/screens/HomeScreen.tsx`, `mobile-api/tests/apply-method-link.test.mjs`
+  - **Action :** sur une offre `LINK` non expirée, le bouton principal « Préparer mon dossier · 300 FCFA » ouvre `AiApplyModal` en mode site. Le prix vient de `stagePricing.ts` (500 FCFA si l'offre est rémunérée). Le lien secondaire « Postuler directement sur le site » garde le comportement de `useApplyOnSite`. Sur une offre expirée, seul le lien reste. La mention « pas de remboursement si le site ferme » s'affiche avant l'achat.
+  - **DoD :** `npm run typecheck` et `npm run lint:colors` code 0 ; `node --test mobile-api/tests/apply-method-link.test.mjs` passe ; dans `expo-web-local` à 375 px, une offre `LINK` montre les deux boutons et le bon prix, une offre `EMAIL` reste inchangée.
+- [X] **Tâche 35.8 : Écran « Ton dossier » dans `AiApplyModal`** — *fichiers : `src/features/stages/AiApplyModal.tsx`, `src/features/stages/ApplyKitPanel.tsx` ; `tsc` 0, `lint:colors` 143, vérifié à 375 px et 1280 px (lettre copiée, 4 réponses prêtes, question collée, compteur mis à jour de 5 à 4, 0 débordement horizontal).*
+  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`, `src/features/stages/ApplyKitPanel.tsx` (nouveau)
+  - **Action :** en mode site, l'étape d'envoi est remplacée par « Ton dossier ». Il contient :
+    - le PDF du CV, à télécharger ou partager ;
+    - la lettre et les 4 réponses, chacune avec « Copier » ;
+    - le champ « Colle une question du formulaire », avec un compteur du type « 3 questions restantes » ;
+    - le bouton « Ouvrir le site de l'offre », via `useApplyOnSite.openOnSite`.
+
+    États à couvrir : chargement par réponse, erreur avec Réessayer, 5 questions utilisées (champ désactivé), solde insuffisant (renvoi vers la recharge).
+  - **DoD :** dans `expo-web-local` à 375 px avec le compte de test : kit généré, lettre copiée (presse-papiers vérifié), question collée puis répondue, compteur à jour, site ouvert puis « Tu as postulé ? » au retour ; 402 et 502 simulés affichés avec Réessayer ; aucun défilement horizontal.
+- [X] **Tâche 35.9 : Rouvrir le dossier depuis le suivi** — *fichiers : `src/features/stages/ApplicationDetailModal.tsx`, `src/ui/screens/ApplicationsTimelineScreen.tsx` ; `tsc` 0, `lint:colors` 143, vérifié après rechargement à 375 px et 1280 px (`GET /stages/kit`, aucun nouveau débit).*
+  - **Fichiers :** `src/features/stages/ApplicationDetailModal.tsx`, `src/ui/screens/ApplicationsTimelineScreen.tsx`
+  - **Action :** une candidature sur une offre `LINK` qui a un kit affiche « Voir mon dossier ». Ce bouton rouvre `ApplyKitPanel` à partir de `GET /stages/kit`, sans nouveau débit. Sans kit, rien ne s'affiche.
+  - **DoD :** dans `expo-web-local`, après rechargement de la page, le dossier se rouvre depuis le suivi avec la même lettre et les mêmes réponses ; aucun nouveau débit dans le wallet.
+
+### Lot D : câblage et validation
+- [X] **Tâche 35.10 : Passage d'une offre `LINK` en `EMAIL` par l'admin (V1.5)** — *fichiers vérifiés : `recruiter-web/app/admin/stages/JobFormDrawer.tsx`, `recruiter-web/app/api/admin/stages/route.ts`, `recruiter-web/lib/admin-platform-service.ts`, `mobile-api/tests/stage-charge.test.mjs` ; bascule `LINK` -> `EMAIL` fonctionnelle et idempotence du débit `stage-apply:<jobId>` prouvée par test.*
+  - **Fichiers :** `recruiter-web/app/admin/stages/JobFormDrawer.tsx`, `recruiter-web/app/api/admin/stages/route.ts` (lecture d'abord ; modifier seulement si le parcours échoue)
+  - **Action :** vérifier qu'une offre `LINK` modifiée en `EMAIL` avec une adresse devient une candidature en un clic dans l'app. Vérifier aussi que l'étudiant qui avait un kit envoie sans nouveau débit (référence `stage-apply:<jobId>` réutilisée). Corriger seulement ce qui bloque.
+  - **DoD :** en local : offre modifiée dans l'admin (port 3001), carte « Postuler en 1 clic » dans `expo-web-local`, envoi vers une adresse de test sans débit supplémentaire dans le wallet. Envoi réel 🔒 : accord de l'utilisateur avant.
+- [X] **Tâche 35.11 : Vérification complète** — *fichiers : `journal.md` ; `tsc` ×3 code 0, `lint:colors` 143, `mobile-api` 469 pass / 0 fail, Playwright 375 px & 1280 px OK ; application réelle de `0032` sur la base partagée réservée à 35.12 🔒.*
+  - **Fichiers :** `journal.md`
+  - **Action :** `/test-and-verify` sur le module :
+    - typecheck de l'app et de l'API, tests mobile-api, `lint:colors` ;
+    - parcours complet à 375 px et sur desktop, avec les cas d'erreur ;
+    - contrôle en base : kit écrit, un seul débit, `questions_used` exact.
+  - **DoD :** tableau de verdict dans `journal.md`, chaque fonctionnalité VERIFIED ou avec son écart signalé.
+- [ ] **Tâche 35.12 : Livraison** 🔒
+  - **Fichiers :** aucun nouveau
+  - **Action :** commit, push, migration `0032` sur la production et OTA, après accord explicite.
+  - **DoD :** `/deploy-and-push` : `api/health` 200, `0032` présente dans `schema_migrations` en production, `POST /stages/kit/answers` sans session → 401.
+
+**À demander à l'utilisateur :** aucune décision produit ouverte. Seuil à confirmer après 35.5 si la marge d'un kit est négative.
+
 ## Journal d'exécution
+**[2026-11-06] Module 35 (Tâches 35.1 à 35.11) validé — Kit de candidature pour les offres LINK** (execute / test-and-verify) — fichiers : `mobile-api/sql/0032_stage_application_kits.sql`, `mobile-api/lib/{stage-kits-core,stage-kits,stage-kit-answers,ai-quota-rules,stage-charge-core,stage-charge,cv-fill}.ts`, `mobile-api/app/api/mobile/stages/{cv,kit,kit/answers}/route.ts`, `mobile-api/tests/{stage-kits,stage-kit-answers,apply-method-link,stage-charge}.test.mjs`, `src/types.ts`, `src/features/stages/{stagesApi,applyTarget,applyPrice,ApplyKitPanel,AiApplyModal,ApplicationDetailModal}.tsx`, `src/ui/screens/{StagesScreen,HomeScreen,ApplicationsTimelineScreen}.tsx` — validation : `tsc --noEmit` ×3 (app, mobile-api, recruiter-web) code 0 ; `npm test` mobile-api 469 pass / 0 fail / 20 skip (30/30 sur les suites du Module 35) ; `migrate.mjs --dry-run` détecte `0032` ; coût IA réel mesuré sur OpenRouter (`anthropic/claude-haiku-5.5`, 7 appels = 7 179 tokens = 0,94 FCFA < 1 % de 300 FCFA) ; `lint:colors` 143/146 ; parcours navigateur Playwright vérifiés à 375×812 et 1280×800 (0 débordement horizontal, compteur 5→4 questions, réouverture depuis le suivi) — sécurité : session obligatoire (401), isolation stricte par `user_id` (404), contrôle de paiement `stage-apply:<jobId>` (402), plafond atomique 5 questions (409) avec restitution sur échec IA (502), grounding des chiffres (`numbersGrounded`). Tâche 35.12 🔒 en attente d'accord explicite.
 **[2026-10-23] Tâche 26.5 validée (execute / test-and-verify)** — Intégration Checkout Nyole durcie et fiabilisée : ouverture in-app du checkout officiel (`WebBrowser.openBrowserAsync`), polling en arrière-plan avec fermeture automatique dès confirmation (`WebBrowser.dismissBrowser()`), support multi-formats de signature Nyole (hex direct et `v1=`), persistance du `failure_message` et indication explicite du code USSD de validation `#150*50#` pour Orange Money Cameroun. 9/9 tests `payments.test.mjs` passés, `tsc --noEmit` 0 erreur.
 **[2026-10-22] Module 26 VERIFIED (test-and-verify)** — Intégration de la passerelle de paiement Mobile Money Nyole (`https://nyole.com/docs/`) vérifiée par preuves réelles : suite de tests `mobile-api` complète (179 pass, 0 fail, 18 skip serveur local), tests unitaires ciblés `payments.test.mjs`, `payment-status.test.mjs`, `env-check.test.mjs` à 100% de réussite (13/13) ; session sandbox live Nyole créée (`201 Created`, ID `cm...`) avec interrogation de statut (`200 OK`) et vérification des méthodes CM (`MTN_MOMO_CMR`, `ORANGE_CMR`, `card-xaf-stripe`) ; `npm run typecheck` à la racine et dans `mobile-api` à 0 erreur ; `npm run lint:colors` à 189 (zéro régression de jetons) ; audit sécurité : zéro secret exposé dans Git, calcul HMAC SHA-256 timing-safe avec tolérance anti-rejeu 300s.
 **[2026-10-22] Module 26 (Tâches 26.1 à 26.4) validé — Migration Passerelle de Paiement vers Nyole** (execute) — fichiers : `mobile-api/lib/payment-rules.ts`, `mobile-api/lib/payments.ts`, `mobile-api/lib/env-check.ts`, `mobile-api/app/api/mobile/wallet/topup/route.ts`, `mobile-api/app/api/mobile/wallet/topup/[reference]/route.ts`, `mobile-api/.env.example`, `src/features/wallet/PaymentModal.tsx`, `mobile-api/tests/payments.test.mjs`, `mobile-api/tests/env-check.test.mjs`, `contexte-code.md` — validation : tests unitaires `payments.test.mjs` + `payment-status.test.mjs` + `env-check.test.mjs` (13/13 pass, 0 fail), session sandbox Nyole testée en direct (`201 Created` sur `https://app.nyole.com/api/v1/checkout/sessions` et polling `/status` `200 OK`), `npx tsc --noEmit` ×2 code 0, `lint:colors` 189/189 — sécurité : signature webhook Nyole (`X-Afriflow-Signature` + `X-Afriflow-Timestamp`, HMAC-SHA256 sur `${ts}.${rawBody}`, anti-rejeu 300s, `timingSafeEqual`), aucun crédit sans confirmation serveur, clés configurées uniquement dans `.env.local` (ignoré par git).

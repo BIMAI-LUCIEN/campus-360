@@ -1,4 +1,12 @@
-import type { StageJob, StageApplication, StudentProfileData, AppStatus, OfficialCvData, JobKind } from '../../types';
+import type {
+  StageJob,
+  StageApplication,
+  StudentProfileData,
+  AppStatus,
+  OfficialCvData,
+  JobKind,
+  StageApplicationKit,
+} from '../../types';
 import { authFetch, authFetchRaw } from '../auth/betterAuth';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
@@ -714,4 +722,141 @@ export async function sendApplicationReminder(
   );
   persistApplicationsLocally(localApplications);
   return { success: true, lastRemindedAt, reminderCount };
+}
+
+
+export type StageKitApiResult<T> =
+  | ({ ok: true } & T)
+  | {
+      ok: false;
+      status: number;
+      error: string;
+    };
+
+const readableKitError = (status: number, serverError?: string): string => {
+  if (serverError?.trim()) return serverError.trim();
+  if (status === 402) return "Prépare d'abord ton dossier pour débloquer les réponses du kit.";
+  if (status === 409) return 'Tu as déjà utilisé les 5 questions incluses dans ce kit.';
+  if (status === 429) return "Limite d'appels IA atteinte. Patiente quelques instants avant de réessayer.";
+  if (status === 502 || status === 503) return "L'IA n'a pas pu répondre pour le moment. Réessaie.";
+  return 'Impossible de récupérer le dossier pour le moment. Réessaie.';
+};
+
+/** Reads the saved kit for a LINK offer, or returns { ok: false, status: 404 } when none exists. */
+export async function fetchStageKit(
+  jobId: string,
+): Promise<StageKitApiResult<{ kit: StageApplicationKit }>> {
+  let response: Response;
+  try {
+    response = await authFetchRaw(`/api/mobile/stages/kit?jobId=${encodeURIComponent(jobId)}`);
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      error: 'Pas de connexion au serveur. Vérifie ta connexion et réessaie.',
+    };
+  }
+  const data = (await response.json().catch(() => null)) as
+    | { kit?: StageApplicationKit; error?: string }
+    | null;
+  if (!response.ok || !data?.kit) {
+    return {
+      ok: false,
+      status: response.status,
+      error: readableKitError(response.status, data?.error),
+    };
+  }
+  return { ok: true, kit: data.kit };
+}
+
+/** Generates (or reads if already generated) the 4 ready answers of a paid LINK kit. */
+export async function generateKitAnswers(
+  jobId: string,
+  options?: {
+    student?: {
+      fullName?: string;
+      university?: string;
+      major?: string;
+      educationLevel?: string;
+      skills?: string[];
+    };
+    notes?: string;
+  },
+): Promise<StageKitApiResult<{ kit: StageApplicationKit; cached: boolean }>> {
+  let response: Response;
+  try {
+    response = await authFetchRaw('/api/mobile/stages/kit/answers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobId,
+        ...(options?.student ? { student: options.student } : {}),
+        ...(options?.notes?.trim() ? { notes: options.notes.trim().slice(0, 4000) } : {}),
+      }),
+    });
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      error: 'Pas de connexion au serveur. Vérifie ta connexion et réessaie.',
+    };
+  }
+  const data = (await response.json().catch(() => null)) as
+    | { kit?: StageApplicationKit; cached?: boolean; error?: string }
+    | null;
+  if (!response.ok || !data?.kit) {
+    return {
+      ok: false,
+      status: response.status,
+      error: readableKitError(response.status, data?.error),
+    };
+  }
+  return { ok: true, kit: data.kit, cached: Boolean(data.cached) };
+}
+
+/** Answers one pasted form question (up to 5 per kit, 500 chars max). */
+export async function askKitQuestion(
+  jobId: string,
+  question: string,
+  options?: {
+    student?: {
+      fullName?: string;
+      university?: string;
+      major?: string;
+      educationLevel?: string;
+      skills?: string[];
+    };
+    notes?: string;
+  },
+): Promise<StageKitApiResult<{ kit: StageApplicationKit; answer: string }>> {
+  let response: Response;
+  try {
+    response = await authFetchRaw('/api/mobile/stages/kit/answers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobId,
+        question: question.trim(),
+        ...(options?.student ? { student: options.student } : {}),
+        ...(options?.notes?.trim() ? { notes: options.notes.trim().slice(0, 4000) } : {}),
+      }),
+    });
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      error: 'Pas de connexion au serveur. Vérifie ta connexion et réessaie.',
+    };
+  }
+  const data = (await response.json().catch(() => null)) as
+    | { kit?: StageApplicationKit; answer?: string; error?: string }
+    | null;
+  if (!response.ok || !data?.kit || typeof data.answer !== 'string') {
+    return {
+      ok: false,
+      status: response.status,
+      error: readableKitError(response.status, data?.error),
+    };
+  }
+  return { ok: true, kit: data.kit, answer: data.answer };
 }

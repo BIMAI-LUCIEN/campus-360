@@ -3,10 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { enforceAiQuota } from '@/lib/ai-quota';
 import { cvBackgroundToText } from '@/lib/cv-background';
 import { getCvBackground } from '@/lib/cv-background-db';
-import { buildCvFillMessages, cvFillRequestSchema, parseCvFill } from '@/lib/cv-fill';
+import { buildCvFillMessages, buildKitCoverLetter, cvFillRequestSchema, parseCvFill } from '@/lib/cv-fill';
 import { CV_MODELS, callLlm, isLlmConfigured } from '@/lib/llm';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { chargeStageApplication, isCharged, refundStageApplication } from '@/lib/stage-charge';
+import { upsertStageKitLetter } from '@/lib/stage-kits';
 import { getStageJob } from '@/lib/stages-db';
 
 export const runtime = 'nodejs';
@@ -27,10 +28,13 @@ export async function POST(request: NextRequest) {
     if (!isLlmConfigured()) throw new MobileApiError("L'IA n'est pas disponible pour le moment.", 503);
 
     // The price comes from the stored offer, never from the client.
+    // LINK offers are allowed here so the student can purchase the application kit
+    // (CV + cover letter + ready answers) before applying on the external site.
+    // Expired or unavailable offers return null from getStageJob -> 404.
     const job = await getStageJob(parsed.data.jobId, access.user.id);
-    if (!job) throw new MobileApiError('Offre de stage indisponible.', 404);
-    // Nothing would be sent after this payment: the student applies on the offer's website.
-    if (job.applyMethod === 'LINK') throw new MobileApiError("Cette offre se postule sur le site de l'offre.", 422);
+    if (!job || (job.expiresAt && new Date(job.expiresAt).getTime() <= Date.now())) {
+      throw new MobileApiError('Offre de stage indisponible ou expirée.', 404);
+    }
 
     await enforceAiQuota(request, { userId: access.user.id, route: 'cv-fill' });
 
@@ -65,7 +69,13 @@ export async function POST(request: NextRequest) {
       throw new MobileApiError("L'IA n'a pas pu remplir le CV. Tes coins ou crédits t'ont été rendus, réessaie.", 502);
     }
 
-    return withCors(NextResponse.json({ cv, payment }), request);
+    let kit = undefined;
+    if (job.applyMethod === 'LINK') {
+      const letter = buildKitCoverLetter(parsed.data, access.user.name);
+      kit = await upsertStageKitLetter(userId, job.id, letter).catch(() => undefined);
+    }
+
+    return withCors(NextResponse.json({ cv, payment, ...(kit ? { kit } : {}) }), request);
   } catch (error) {
     return withCors(mobileErrorResponse(error, request), request);
   }

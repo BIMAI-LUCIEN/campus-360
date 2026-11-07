@@ -3,6 +3,7 @@ import { MobileApiError } from './mobile-access';
 import { stageApplyCredits, stageApplyPrice, type StagePricingInput } from './stage-pricing';
 import {
   chargeApplicationOn,
+  hasPaidApplicationOn,
   InsufficientFundsError,
   refundApplicationOn,
   type ChargeClient,
@@ -10,6 +11,9 @@ import {
 } from './stage-charge-core';
 
 export const stageApplyReference = (jobId: string) => `stage-apply:${jobId}`;
+
+export const hasPaidStageApplication = (userId: string, jobId: string): Promise<boolean> =>
+  hasPaidApplicationOn(databasePool, userId, stageApplyReference(jobId));
 
 const inTransaction = async <T>(work: (client: ChargeClient) => Promise<T>): Promise<T> => {
   const client = await databasePool.connect();

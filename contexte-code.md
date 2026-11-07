@@ -298,7 +298,7 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-  - `src/features/stages/useApplyOnSite.ts` — offres `LINK` : ouvre le site (https seulement), demande « Tu as postulé ? » au retour, ajoute au suivi via `/stages/apply-on-site`. Utilisé par Stages et Accueil ; aucune offre `LINK` n'ouvre `AiApplyModal`.
+  - `src/features/stages/useApplyOnSite.ts` — offres `LINK` : voie gratuite qui ouvre le site (https seulement), demande « Tu as postulé ? » au retour et ajoute au suivi via `/stages/apply-on-site`. Sur une offre `LINK` active, la carte propose aussi le kit payant (« Préparer mon dossier · 300/500 FCFA ») qui ouvre `AiApplyModal` en mode site et affiche `ApplyKitPanel.tsx` (CV PDF, lettre, 4 réponses prêtes et jusqu'à 5 questions collées).
 
 
 
@@ -820,7 +820,9 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-| `stage_applications` | Candidatures (statut `stage_app_status`) | `stages/apply`, `stages/dispatch` |
+| `stage_applications` | Candidatures (statut `stage_app_status`) | `stages/apply`, `stages/dispatch`, `stages/apply-on-site` |
+
+| `stage_application_kits` | Kits de candidature pour les offres `LINK` (`letter`, `answers` jsonb, `questions_used` 0..5, unique `user_id, job_id`) | `stages/cv`, `stages/kit/answers` (`lib/stage-kits.ts`) |
 
 
 
@@ -1067,6 +1069,12 @@ Méthodes relevées dans le code. Toutes les routes `mobile/*` exigent une sessi
 
 
 | POST | `/api/mobile/stages/apply-on-site` | `mobile/stages/apply-on-site/route.ts` | Oui (offre `LINK` seulement, gratuit, 422 sinon) |
+
+| POST | `/api/mobile/stages/cv` | `mobile/stages/cv/route.ts` | Oui (adapte le CV à l'offre, toutes méthodes y compris `LINK` non expirée, débit unique `stage-apply:<jobId>`, enregistre la lettre du kit `LINK`) |
+
+| GET | `/api/mobile/stages/kit` | `mobile/stages/kit/route.ts` | Oui (renvoie le kit `LINK` de l'étudiant connecté, 404 sinon) |
+
+| POST | `/api/mobile/stages/kit/answers` | `mobile/stages/kit/answers/route.ts` | Oui (génère les 4 réponses fixes ou répond à une question collée ≤ 500 car., plafond 5 questions, exige paiement `stage-apply:<jobId>`) |
 
 
 
@@ -1683,6 +1691,8 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 
 ## 13. Journal des mises à jour
+
+- **2026-11-06** `/execute` — **Module 35 (Kit de candidature pour les offres `LINK`, tâches 35.1 à 35.11) :** migration `0032_stage_application_kits.sql` (écrite, à appliquer en 35.12 🔒), `lib/stage-kits-core.ts`, `lib/stage-kits.ts`, `lib/stage-kit-answers.ts`, routes `GET /api/mobile/stages/kit` et `POST /api/mobile/stages/kit/answers`, garde `LINK` levée dans `POST /api/mobile/stages/cv` (avec sauvegarde de la lettre du kit et refus 404 si offre expirée), composant `ApplyKitPanel.tsx`, deux boutons sur les cartes `LINK` (`StagesScreen.tsx`, `HomeScreen.tsx`) et réouverture depuis le suivi (`ApplicationsTimelineScreen.tsx`, `ApplicationDetailModal.tsx`).
 
 - **2026-11-02** — Offres « sur le site » (`LINK`) : `useApplyOnSite`, route `stages/apply-on-site`, `direct-reach` supprimée, `/stages/cv` en 422, pas de relance ni de rappel, https exigé en admin et au scraping. Migration `0031` : plus d'adresses inventées pour une entreprise sans contact.
 

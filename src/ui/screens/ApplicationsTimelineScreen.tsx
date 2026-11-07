@@ -54,6 +54,7 @@ import {
   updateApplicationStatus,
 
   withdrawStageApplication,
+  fetchStageKit,
 
   getDaysSinceApplication,
 
@@ -120,6 +121,8 @@ export function ApplicationsTimelineScreen({ studentName, onBack, onOpenOffers }
   const [refreshing, setRefreshing] = useState(false);
 
   const [selectedApp, setSelectedApp] = useState<StageApplication | null>(null);
+  const [selectedInitialTab, setSelectedInitialTab] = useState<'cv' | 'letter' | 'company' | 'kit' | undefined>(undefined);
+  const [kitJobIds, setKitJobIds] = useState<Record<string, boolean>>({});
 
   const [loadError, setLoadError] = useState<string | null>(null);
   // True until the server answered once: the empty state is only shown after that.
@@ -136,6 +139,21 @@ export function ApplicationsTimelineScreen({ studentName, onBack, onOpenOffers }
       const data = await fetchStudentApplications();
 
       setApplications(data);
+      const linkApps = data.filter((a) => isLinkApply(a.job) && a.jobId);
+      if (linkApps.length > 0) {
+        void Promise.all(
+          linkApps.map(async (a) => {
+            try {
+              const res = await fetchStageKit(a.jobId);
+              return [a.jobId, res.ok && Boolean(res.kit)] as const;
+            } catch {
+              return [a.jobId, false] as const;
+            }
+          }),
+        ).then((entries) => {
+          setKitJobIds(Object.fromEntries(entries));
+        });
+      }
 
     } catch (error) {
 
@@ -524,10 +542,11 @@ export function ApplicationsTimelineScreen({ studentName, onBack, onOpenOffers }
 
                   style={styles.viewDossierButton}
 
-                  onPress={() => setSelectedApp(app)}
-
                   testID={`btn-view-dossier-${app.id}`}
-
+                  onPress={() => {
+                    setSelectedInitialTab(undefined);
+                    setSelectedApp(app);
+                  }}
                 >
 
                   <View style={styles.viewDossierButtonLeft}>
@@ -545,6 +564,23 @@ export function ApplicationsTimelineScreen({ studentName, onBack, onOpenOffers }
                   <ChevronRight size={16} color="#A78BFA" />
 
                 </Pressable>
+
+                {isLinkApply(app.job) && kitJobIds[app.jobId] && (
+                  <Pressable
+                    style={[styles.viewDossierButton, { marginTop: 8 }]}
+                    testID={`btn-view-kit-${app.id}`}
+                    onPress={() => {
+                      setSelectedInitialTab('kit');
+                      setSelectedApp(app);
+                    }}
+                  >
+                    <View style={styles.viewDossierButtonLeft}>
+                      <FileCheck size={15} color={stitchColors.sienna} />
+                      <Text style={styles.viewDossierButtonText}>Voir mon dossier</Text>
+                    </View>
+                    <ChevronRight size={16} color={stitchColors.sienna} />
+                  </Pressable>
+                )}
 
 
 
@@ -605,6 +641,7 @@ export function ApplicationsTimelineScreen({ studentName, onBack, onOpenOffers }
         application={selectedApp}
 
         studentName={studentName}
+        initialTab={selectedInitialTab}
 
         onClose={() => setSelectedApp(null)}
 

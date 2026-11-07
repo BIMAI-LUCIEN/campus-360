@@ -38,7 +38,9 @@ import {
   type GeneratedApplicationResult,
 } from './stagesApi';
 import { analyzeJobMatch, type MatchAnalysis } from './aiMatchEngine';
-import { APPLY_LINK_NOTICE, isLinkApply } from './applyTarget';
+import { APPLY_LINK_NO_REFUND_NOTICE, isLinkApply } from './applyTarget';
+import { ApplyKitPanel } from './ApplyKitPanel';
+import { useApplyOnSite } from './useApplyOnSite';
 import { exportApplicationPdf, buildWhatsAppPitch, generateCvPdfBase64 } from './pdfExportService';
 import { mergeAiCv, missingCvFields, type CvTemplateId } from './cvHtml';
 import { CvTemplateGallery } from './CvTemplateGallery';
@@ -98,6 +100,8 @@ export function AiApplyModal({
 }: AiApplyModalProps) {
   // template: the student picks the CV layout and tells the AI what is not in the profile.
   const [step, setStep] = useState<'template' | 'generating' | 'preview' | 'send' | 'sent'>('template');
+  const { openOnSite } = useApplyOnSite();
+  const isSiteMode = isLinkApply(job);
   const [cvTemplate, setCvTemplate] = useState<CvTemplateId>('classic');
   // Kept while the screen lives, so the next application starts from the same notes.
   const [cvNotes, setCvNotes] = useState('');
@@ -172,19 +176,13 @@ export function AiApplyModal({
   // Sélectionne le canal par défaut
   useEffect(() => {
     if (visible && job) {
-      // Safety net: a 'LINK' offer has no recipient, the screens open its website instead.
-      if (isLinkApply(job)) {
-        AppAlert.alert("Candidature sur le site de l'offre", APPLY_LINK_NOTICE);
-        onClose();
-        return;
-      }
       if (job.applyMethod === 'EMAIL') {
         setSelectedChannel('email');
       } else {
         setSelectedChannel('whatsapp');
       }
     }
-  }, [visible, job, onClose]);
+  }, [visible, job]);
 
   // Compute Match Analysis
   const matchAnalysis: MatchAnalysis | null = useMemo(() => {
@@ -675,7 +673,11 @@ export function AiApplyModal({
 
             {step !== 'sent' && (
               <View style={styles.stepper}>
-                {(['Préparer', 'Vérifier', 'Envoyer'] as const).map((label, i) => {
+                {([
+                  'Préparer',
+                  'Vérifier',
+                  isSiteMode ? 'Ton dossier' : 'Envoyer',
+                ] as const).map((label, i) => {
                   const current = step === 'template' || step === 'generating' ? 0 : step === 'preview' ? 1 : 2;
                   return (
                     <View key={label} style={styles.stepperItem}>
@@ -747,6 +749,11 @@ export function AiApplyModal({
                           ? "CV adapté et lettre compris. Payé une seule fois à la génération, rendu si l'IA ou l'envoi échoue."
                           : 'Recharge ton portefeuille ou prends un pack pour que l’IA rédige ton CV et ta lettre.'}
                       </Text>
+                      {isSiteMode && (
+                        <Text style={styles.payGateHint} testID="modal-kit-no-refund">
+                          {APPLY_LINK_NO_REFUND_NOTICE}
+                        </Text>
+                      )}
                       <Pressable onPress={() => setShowOffers(true)} testID="btn-open-packs">
                         <Text style={styles.payGateLink}>Packs : 5 candidatures pour 1 000 F, 12 pour 2 000 F</Text>
                       </Pressable>
@@ -982,7 +989,9 @@ export function AiApplyModal({
                       style={({ pressed }) => [styles.primaryOneClickBtn, styles.footerPrimaryBtn, pressed && { opacity: 0.9 }]}
                       onPress={() => setStep('send')}
                     >
-                      <Text style={styles.primaryOneClickBtnText}>Continuer vers l'envoi</Text>
+                      <Text style={styles.primaryOneClickBtnText}>
+                        {isSiteMode ? 'Voir mon dossier complet' : "Continuer vers l'envoi"}
+                      </Text>
                     </Pressable>
                   </View>
                 )}
@@ -996,6 +1005,25 @@ export function AiApplyModal({
                   <Pressable style={styles.backLink} onPress={() => setStep('preview')} hitSlop={8}>
                     <Text style={styles.backLinkText}>‹ Revenir à mon CV et ma lettre</Text>
                   </Pressable>
+                  {isSiteMode ? (
+                    <ApplyKitPanel
+                      job={job}
+                      letterText={editableLetter}
+                      studentContext={{
+                        fullName: currentProfile.fullName,
+                        university: currentProfile.university,
+                        major: currentProfile.major,
+                        educationLevel: currentProfile.educationLevel,
+                        skills: currentProfile.skills,
+                      }}
+                      notes={cvNotes}
+                      downloadingPdf={downloadingPdf}
+                      onDownloadPdf={handleDownloadPdf}
+                      onOpenSite={(targetJob) => openOnSite(targetJob)}
+                      onRecharge={() => setShowPaymentModal(true)}
+                    />
+                  ) : (
+                    <>
                 {/* Quick Utility Actions Row: Copier WhatsApp & Télécharger PDF */}
                 <View style={styles.utilRow}>
                   <Pressable
@@ -1186,6 +1214,8 @@ export function AiApplyModal({
                     </View>
                   )}
                 </View>
+                    </>
+                  )}
                 </ScrollView>
               </View>
             )}

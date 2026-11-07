@@ -5,7 +5,15 @@ import test from 'node:test';
 
 import { loadTs } from './helpers/load-ts.mjs';
 
-const { APPLY_LINK_LABEL, APPLY_LINK_SHORT_LABEL, isLinkApply, safeApplyUrl } = await loadTs('../src/features/stages/applyTarget.ts');
+const {
+  APPLY_LINK_LABEL,
+  APPLY_LINK_NO_REFUND_NOTICE,
+  APPLY_LINK_SHORT_LABEL,
+  formatKitButtonLabel,
+  isLinkApply,
+  isOfferExpired,
+  safeApplyUrl,
+} = await loadTs('../src/features/stages/applyTarget.ts');
 const read = (rel) => fs.readFileSync(path.resolve(rel), 'utf8');
 
 test('offre à lien : reconnaissance de la méthode', () => {
@@ -50,21 +58,28 @@ test('API : l’URL de l’offre est renvoyée à l’app', () => {
   assert.match(src, /'WHATSAPP' \| 'EMAIL' \| 'LINK' \| 'PHYSICAL'/);
 });
 
-test('app : la carte ouvre le site au lieu du formulaire', () => {
+test('app : la carte LINK propose les deux boutons (kit payant et lien gratuit vers le site) et masque le kit si expirée', () => {
   const screen = read('../src/ui/screens/StagesScreen.tsx');
   assert.match(screen, /isLinkApply\(job\)/);
   assert.match(screen, /useApplyOnSite\(\)/);
-  assert.ok(APPLY_LINK_LABEL.length > 0);
-  // The one-click apply must not be reachable for a LINK offer.
-  assert.match(screen, /if \(isLinkApply\(job\)\) \{\s*\n\s*openOnSite\(job\);\s*\n\s*return;/);
+  assert.equal(formatKitButtonLabel(300), 'Préparer mon dossier · 300 FCFA');
+  assert.equal(formatKitButtonLabel(500), 'Préparer mon dossier · 500 FCFA');
+  assert.equal(APPLY_LINK_LABEL, 'Postuler directement sur le site');
+  assert.match(screen, /formatKitButtonLabel\(jobApplyPrice\(job\)\)/);
+  assert.match(screen, /!isOfferExpired\(job\)/);
+  assert.match(screen, /APPLY_LINK_NO_REFUND_NOTICE/);
+  assert.ok(APPLY_LINK_NO_REFUND_NOTICE.includes('pas de remboursement'));
+  assert.equal(isOfferExpired({ expiresAt: '2020-01-01T00:00:00Z' }, Date.parse('2026-11-06T00:00:00Z')), true);
+  assert.equal(isOfferExpired({ expiresAt: '2027-01-01T00:00:00Z' }, Date.parse('2026-11-06T00:00:00Z')), false);
 });
 
-test('app : l’accueil suit la même règle que les Stages', () => {
+test('app : l’accueil suit la même règle que les Stages (deux boutons sur une offre LINK, kit masqué si expirée)', () => {
   const home = read('../src/ui/screens/HomeScreen.tsx');
-  assert.match(home, /if \(isLinkApply\(job\)\) \{\s*\n\s*openOnSite\(job\);\s*\n\s*return;/);
-  // Every card goes through that rule, and none promises a one-click apply on such an offer.
+  assert.match(home, /if \(isLinkApply\(job\) && isOfferExpired\(job\)\) \{\s*\n\s*openOnSite\(job\);\s*\n\s*return;/);
+  assert.match(home, /formatKitButtonLabel\(jobApplyPrice\(job\)\)/);
+  assert.match(home, /APPLY_LINK_NO_REFUND_NOTICE/);
   assert.equal((home.match(/setApplyingJob\(job\)/g) ?? []).length, 1);
-  assert.equal((home.match(/startApply\(job\)/g) ?? []).length, 3);
+  assert.equal((home.match(/startApply\(job\)/g) ?? []).length, 4);
   assert.match(home, /isLinkApply\(job\) \? APPLY_LINK_SHORT_LABEL : '1-Clic'/);
   assert.ok(APPLY_LINK_SHORT_LABEL.length > 0);
 });
@@ -76,10 +91,11 @@ test('app : seul le site https est ouvert, et le retour propose le suivi', () =>
   assert.match(hook, /Tu as postulé \?/);
 });
 
-test('serveur : /cv ne débite pas une offre à lien', () => {
+test('serveur : /cv autorise les offres LINK (kit payant) et refuse les offres expirées (404)', () => {
   const src = read('app/api/mobile/stages/cv/route.ts');
-  assert.ok(src.indexOf("applyMethod === 'LINK'") > 0, 'contrôle présent');
-  assert.ok(src.indexOf("applyMethod === 'LINK'") < src.indexOf('chargeStageApplication(userId'), 'contrôle avant le débit');
+  assert.ok(!src.includes("if (job.applyMethod === 'LINK') throw"), 'plus de garde LINK dans /stages/cv');
+  assert.match(src, /Offre de stage indisponible ou expirée\./);
+  assert.match(src, /chargeStageApplication\(userId, job\)/);
 });
 
 test('serveur : le suivi sur le site est gratuit et réservé aux offres à lien', () => {

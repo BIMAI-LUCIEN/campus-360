@@ -273,3 +273,31 @@ export type OfficialCvData = {
   /** Extra sections (activities, certificates, achievements, custom). Absent on older CVs. */
   rubriques?: CvRubrique[];
 };
+
+export type StageKitReadyAnswers = {
+  presentation: string;
+  whyThisRole: string;
+  availability: string;
+  keySkills: string;
+};
+
+export type StageKitCustomQuestion = {
+  question: string;
+  answer: string;
+  createdAt: string;
+};
+
+export type StageApplicationKit = {
+  id: string;
+  userId: string;
+  jobId: string;
+  letter: string;
+  answers: {
+    ready?: StageKitReadyAnswers;
+    customQuestions: StageKitCustomQuestion[];
+  };
+  questionsUsed: number;
+  questionsRemaining: number;
+  createdAt: string;
+  updatedAt: string;
+};

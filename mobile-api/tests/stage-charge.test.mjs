@@ -113,3 +113,11 @@ test('échec d’envoi : crédits ou coins rendus (D28.4)', async () => {
   await refundApplicationOn(withCoins, 'u', 'stage-apply:j7');
   assert.equal(withCoins.state.balance, 1000);
 });
+
+test('offre LINK : débitée une seule fois par stage-apply:<jobId> même en régénérant le kit ou en passant en EMAIL', async () => {
+  const db = fakeDb({ balance: 1000 });
+  const firstGen = await chargeApplicationOn(db, 'u', 'stage-apply:link-job-1', 300, 1);
+  assert.deepEqual(firstGen, { charged: 300, creditsUsed: 0, balance: 700 });
+  const secondGen = await chargeApplicationOn(db, 'u', 'stage-apply:link-job-1', 300, 1);
+  assert.deepEqual(secondGen, { charged: 0, creditsUsed: 0, balance: 700 });
+});

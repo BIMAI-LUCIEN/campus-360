@@ -22,8 +22,10 @@ export const applyPriceLabel = (job: StageJob): string => {
 
 // One line shown on the offer card and on the detail screen.
 export const applyPriceLine = (job: StageJob, linkApply: boolean): string => {
-  if (linkApply) return "Candidature sur le site de l'offre : gratuite";
   const price = jobApplyPrice(job);
+  if (linkApply) {
+    return `Dossier IA : ${formatFcfa(price)} · Site direct : gratuit`;
+  }
   if (price === 0) return 'Candidature : gratuite';
   const credits = jobApplyCredits(job);
   return `Candidature : ${formatFcfa(price)} ou ${credits} crédit${credits > 1 ? 's' : ''} (${jobIsPaid(job) ? 'offre rémunérée' : 'offre non rémunérée'})`;

@@ -12,6 +12,24 @@ export class InsufficientFundsError extends Error {
   }
 }
 
+export const hasPaidApplicationOn = async (
+  client: ChargeClient,
+  userId: string,
+  reference: string,
+): Promise<boolean> => {
+  const paidWithCredits = await client.query(
+    `select 1 from public.app_credit_usages where user_id = $1 and reference_id = $2 and status = 'success' limit 1`,
+    [userId, reference],
+  );
+  if (paidWithCredits.rows[0]) return true;
+  const paidWithCoins = await client.query(
+    `select 1 from public.app_wallet_transactions
+      where user_id = $1 and reference_id = $2 and type = 'purchase' and status = 'success' limit 1`,
+    [userId, reference],
+  );
+  return Boolean(paidWithCoins.rows[0]);
+};
+
 export const chargeApplicationOn = async (
   client: ChargeClient,
   userId: string,
@@ -26,16 +44,7 @@ export const chargeApplicationOn = async (
   const balance = Number(wallet.rows[0]?.balance_coins ?? 0);
 
   // Sending again to the same offer (retry, other channel) is never charged twice.
-  const paidWithCredits = await client.query(
-    `select 1 from public.app_credit_usages where user_id = $1 and reference_id = $2 and status = 'success' limit 1`,
-    [userId, reference],
-  );
-  const paidWithCoins = await client.query(
-    `select 1 from public.app_wallet_transactions
-      where user_id = $1 and reference_id = $2 and type = 'purchase' and status = 'success' limit 1`,
-    [userId, reference],
-  );
-  if (paidWithCredits.rows[0] || paidWithCoins.rows[0]) return { charged: 0, creditsUsed: 0, balance };
+  if (await hasPaidApplicationOn(client, userId, reference)) return { charged: 0, creditsUsed: 0, balance };
 
   const grant = await client.query(
     `select id from public.app_credit_grants

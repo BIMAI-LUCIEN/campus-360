@@ -1211,3 +1211,62 @@ Le même composant sert à l'écran de suivi et à `ApplicationDetailModal.tsx`.
 - **Étudiant sans jeton push** : aucun jeton en production tant que Firebase n'est pas posé (plan.md 32.7). Le rappel arrive dans la cloche de l'app, pas sur l'écran du téléphone.
 - **Secrets du workflow mort** : à vérifier s'ils sont encore valides et à renouveler dans ce cas (action de l'utilisateur).
 - **Données personnelles** : l'e-mail de l'étudiant est déjà transmis au recruteur à la candidature ; la relance n'ajoute rien de nouveau.
+
+## 22. Cadrage validé : Kit de candidature pour les offres à postuler sur un site externe (2026-11-06, voie Bounded)
+
+### Constat (code relu le 2026-11-06)
+- Le scraper marque `LINK` une offre sans WhatsApp ni e-mail, avec seulement l'URL https de l'annonce (`scripts/agents/job_store.py:246`).
+- `src/features/stages/useApplyOnSite.ts` ouvre le site, demande « Tu as postulé ? » au retour et ajoute l'offre au suivi (`POST /api/mobile/stages/apply-on-site`, gratuit). Aucun CV adapté, aucune lettre, aucune relance (§21), aucun revenu.
+- Au 2026-11-02 : 34 offres en ligne sur 70 étaient `LINK`.
+- `/stages/cv` débite une fois par étudiant et par offre (référence `stage-apply:<jobId>`, `mobile-api/lib/stage-charge.ts`) et rembourse si l'IA échoue. Seule la garde `LINK` (422, `mobile-api/app/api/mobile/stages/cv/route.ts:33`) bloque le kit.
+
+### 2. Fonctionnalités
+**V1**
+1. **Kit de candidature payant** sur les offres `LINK` : CV adapté (PDF à télécharger ou partager), lettre à copier, 4 réponses prêtes à copier (présentation en 3 lignes, pourquoi ce poste, disponibilité, compétences clés), et jusqu'à 5 questions du formulaire collées par l'étudiant, auxquelles l'IA répond à partir du profil.
+2. **Voie gratuite conservée** : « Postuler directement sur le site », comme aujourd'hui.
+3. **Dossier rouvrable** depuis la carte de suivi pour recopier une réponse.
+
+**V1.5 (à la main)** : l'admin ajoute un e-mail vérifié à une offre `LINK` dans l'onglet « À valider ». L'offre passe en `EMAIL` : candidature en un clic et relance deviennent possibles.
+
+**V2**
+- Recherche automatique du contact RH (agent d'enrichissement) : seulement si l'ajout manuel sert souvent. Coût Treg à vérifier, risque de mauvaise adresse.
+- Remplissage automatique des formulaires externes : rejeté (sites tous différents, captchas, fragile).
+
+**Rejeté** : masquer les offres `LINK` (catalogue divisé par deux) ; kit obligatoire avant d'ouvrir le site (vécu comme un péage sur une offre publique) ; kit sans questions collées (les formulaires posent presque toujours des questions ouvertes).
+
+### 3. Parcours
+1. Carte d'offre `LINK` : bouton principal « Préparer mon dossier · 300 FCFA » (ou 500), lien secondaire « Postuler directement sur le site ».
+2. `AiApplyModal` en mode « site » : modèle → génération → aperçu → écran « Ton dossier » (PDF, copier lettre et réponses, coller une question, « Ouvrir le site de l'offre »).
+3. Retour dans l'app : « Tu as postulé ? » → suivi (existant).
+
+```
+Carte LINK ─┬─ Préparer mon dossier ─> génération ─> Ton dossier ─> Ouvrir le site ─> « Tu as postulé ? » ─> suivi
+            └─ Postuler sur le site (gratuit) ──────────────────────> Ouvrir le site ─> « Tu as postulé ? » ─> suivi
+```
+
+### 4. Modèle économique
+- **Même grille que la candidature** : 300 FCFA (offre non rémunérée), 500 FCFA (rémunérée ou emploi), ou 1 / 2 crédits de pack. Aucune nouvelle constante de prix.
+- Débit unique par étudiant et par offre (`stage-apply:<jobId>`). Remboursé si la génération échoue.
+- Si l'offre passe en `EMAIL` (V1.5), l'étudiant qui a déjà le kit envoie sans repayer : la même référence est réutilisée.
+- Pas de remboursement si le site de l'offre ferme après l'achat : le dossier a été livré. Écrit avant l'achat.
+- **À vérifier au plan** : coût IA réel d'un kit (jusqu'à 9 appels), mesuré sur les appels actuels de `AiApplyModal`, pour confirmer la marge à 300 FCFA.
+
+### 6. Architecture
+1. Lever la garde `LINK` dans `/stages/cv`. `/apply` et `/dispatch` refusent toujours les offres `LINK`.
+2. Nouvelle route `POST /api/mobile/stages/kit/answers` : 4 réponses fixes et questions collées. 402 si le kit de l'offre n'est pas payé. Compteur de 5 questions côté serveur, 500 caractères par question, `enforceAiQuota`. Contrôle des chiffres repris de `cv-fill` (module 34).
+3. Migration `0032` : table `stage_application_kits` (`user_id`, `job_id`, lettre, réponses en jsonb, `questions_used`, dates), unique sur (`user_id`, `job_id`). Le CV est régénéré depuis le profil, comme aujourd'hui.
+4. App : mode « site » dans `AiApplyModal.tsx`, « Ouvrir le site » via `useApplyOnSite.openOnSite`, deux boutons sur la carte `LINK` (`StagesScreen.tsx` et Accueil), accès au dossier depuis la carte de suivi.
+5. V1.5 : champ e-mail sur une offre `LINK` dans l'admin, qui passe `apply_method` à `EMAIL`. Route admin à identifier au plan.
+
+Rejeté : kit stocké seulement dans le téléphone (compteur contournable, dossier perdu au changement d'appareil).
+
+### 8. Risques
+- **Site fermé ou URL changée après l'achat** : « Lien indisponible » (déjà géré), kit conservé, pas de remboursement.
+- **Offre expirée** : bouton kit masqué.
+- **Coût IA par kit** : à mesurer avant livraison.
+- **Questions collées détournées en chatbot gratuit** : 5 par kit, 500 caractères, plafond de 60 requêtes IA par jour.
+- **Réponses inventées** : l'IA répond seulement avec le profil, et les chiffres sont contrôlés.
+- **Données personnelles** : rien ne sort de Campus 360. L'étudiant colle lui-même ses réponses sur le site tiers.
+
+### Prochaine étape
+`/plan-task` pour découper ce cadrage en tâches.

@@ -27,7 +27,15 @@ import {
 import { type StudentProfile } from '../../features/auth/betterAuth';
 import { fetchStageJobs, fetchStudentApplications, peekStageJobs, peekStudentApplications } from '../../features/stages/stagesApi';
 import { AiApplyModal, type ApplicationProfilePatch } from '../../features/stages/AiApplyModal';
-import { APPLY_LINK_SHORT_LABEL, isLinkApply } from '../../features/stages/applyTarget';
+import {
+  APPLY_LINK_LABEL,
+  APPLY_LINK_NO_REFUND_NOTICE,
+  APPLY_LINK_SHORT_LABEL,
+  formatKitButtonLabel,
+  isLinkApply,
+  isOfferExpired,
+} from '../../features/stages/applyTarget';
+import { jobApplyPrice } from '../../features/stages/applyPrice';
 import { useApplyOnSite } from '../../features/stages/useApplyOnSite';
 import type { StageApplication, StageJob, Transaction } from '../../types';
 import {
@@ -95,7 +103,7 @@ export function HomeScreen({
 
   // Same rule as the Stages screen: an offer without recipient is applied to on its website.
   const startApply = (job: StageJob) => {
-    if (isLinkApply(job)) {
+    if (isLinkApply(job) && isOfferExpired(job)) {
       openOnSite(job);
       return;
     }
@@ -424,16 +432,46 @@ export function HomeScreen({
                     <Text style={styles.stipendText}>
                       {job.stipend || 'Indemnité de stage'}
                     </Text>
-                    <Pressable
-                      style={({ pressed }) => [styles.applyBtn, pressed && { opacity: 0.88 }]}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        startApply(job);
-                      }}
-                    >
-                      <Text style={styles.applyBtnText}>{isLinkApply(job) ? APPLY_LINK_SHORT_LABEL : 'Postuler'}</Text>
-                    </Pressable>
+                    {isLinkApply(job) ? (
+                      <View style={styles.homeLinkActionsCol}>
+                        {!isOfferExpired(job) && (
+                          <Pressable
+                            style={({ pressed }) => [styles.applyBtn, pressed && { opacity: 0.88 }]}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              startApply(job);
+                            }}
+                          >
+                            <Text style={styles.applyBtnText}>
+                              {formatKitButtonLabel(jobApplyPrice(job))}
+                            </Text>
+                          </Pressable>
+                        )}
+                        <Pressable
+                          style={styles.homeDirectSiteBtn}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            openOnSite(job);
+                          }}
+                        >
+                          <Text style={styles.homeDirectSiteText}>{APPLY_LINK_LABEL}</Text>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <Pressable
+                        style={({ pressed }) => [styles.applyBtn, pressed && { opacity: 0.88 }]}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          startApply(job);
+                        }}
+                      >
+                        <Text style={styles.applyBtnText}>Postuler</Text>
+                      </Pressable>
+                    )}
                   </View>
+                  {isLinkApply(job) && !isOfferExpired(job) && (
+                    <Text style={styles.homeNoRefundText}>{APPLY_LINK_NO_REFUND_NOTICE}</Text>
+                  )}
                 </Pressable>
               ))}
             </View>
@@ -952,6 +990,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: stitchColors.white,
+  },
+  homeLinkActionsCol: {
+    alignItems: 'flex-end',
+    gap: 5,
+    flexShrink: 1,
+  },
+  homeDirectSiteBtn: {
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+  },
+  homeDirectSiteText: {
+    fontFamily: stitchTypography.bodySm.fontFamily,
+    fontSize: 11,
+    fontWeight: '700',
+    color: stitchColors.primary,
+    textDecorationLine: 'underline',
+  },
+  homeNoRefundText: {
+    fontFamily: stitchTypography.bodySm.fontFamily,
+    fontSize: 10.5,
+    color: stitchColors.inkMuted,
+    marginTop: 6,
+    lineHeight: 14,
   },
 
   // États chargement & vide

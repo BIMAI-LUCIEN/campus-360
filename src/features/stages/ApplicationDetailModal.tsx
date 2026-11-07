@@ -73,6 +73,9 @@ import { exportOfficialCvToPdf } from './pdfExportService';
 import { missingCvFields } from './cvHtml';
 
 import { ApplicationFollowup } from './ApplicationFollowup';
+import { ApplyKitPanel } from './ApplyKitPanel';
+import { fetchStageKit } from './stagesApi';
+import type { StageApplicationKit } from '../../types';
 
 import { isLinkApply } from './applyTarget';
 import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from './contactTargets';
@@ -87,6 +90,7 @@ interface ApplicationDetailModalProps {
   application: StageApplication | null;
 
   studentName?: string;
+  initialTab?: 'cv' | 'letter' | 'company' | 'kit';
 
   onClose: () => void;
 
@@ -168,6 +172,7 @@ export function ApplicationDetailModal({
   application,
 
   studentName = '',
+  initialTab,
 
   onClose,
 
@@ -179,7 +184,8 @@ export function ApplicationDetailModal({
 
 }: ApplicationDetailModalProps) {
 
-  const [activeTab, setActiveTab] = useState<'cv' | 'letter' | 'company'>('cv');
+  const [activeTab, setActiveTab] = useState<'cv' | 'letter' | 'company' | 'kit'>('cv');
+  const [existingKit, setExistingKit] = useState<StageApplicationKit | null>(null);
 
   const [copied, setCopied] = useState(false);
 
@@ -205,11 +211,19 @@ export function ApplicationDetailModal({
 
       // Applied on the offer's website: no CV nor letter here, only the follow-up.
 
-      setActiveTab(isLinkApply(application.job) ? 'company' : 'cv');
-
+      setActiveTab(initialTab ?? (isLinkApply(application.job) ? 'company' : 'cv'));
+      setExistingKit(null);
+      if (isLinkApply(application.job) && application.jobId) {
+        void fetchStageKit(application.jobId)
+          .then((res) => {
+            const kit = res.ok ? res.kit : null;
+            setExistingKit(kit);
+            if (initialTab === 'kit' && kit) setActiveTab('kit');
+          })
+          .catch(() => setExistingKit(null));
+      }
     }
-
-  }, [application]);
+  }, [application, initialTab]);
 
 
 
@@ -582,6 +596,19 @@ export function ApplicationDetailModal({
             </>
 
             )}
+            {isLinkApply(job) && existingKit && (
+              <Pressable
+                testID="tab-detail-kit"
+                style={[styles.tabBtn, activeTab === 'kit' && styles.tabBtnActive]}
+                onPress={() => setActiveTab('kit')}
+              >
+                <FileText size={14} color={activeTab === 'kit' ? stitchColors.white : stitchColors.inkSubtle} />
+                <Text style={[styles.tabBtnText, activeTab === 'kit' && styles.tabBtnTextActive]}>
+                  Voir mon dossier
+                </Text>
+              </Pressable>
+            )}
+
 
 
 
@@ -770,6 +797,17 @@ export function ApplicationDetailModal({
             {activeTab === 'company' && (
 
               <View style={styles.tabContent}>
+
+                {isLinkApply(job) && existingKit && (
+                  <Pressable
+                    testID="btn-detail-open-kit"
+                    style={({ pressed }) => [styles.primaryActionBtn, { marginBottom: 12 }, pressed && { opacity: 0.85 }]}
+                    onPress={() => setActiveTab('kit')}
+                  >
+                    <FileText size={14} color={stitchColors.white} />
+                    <Text style={styles.primaryActionBtnText}>Voir mon dossier</Text>
+                  </Pressable>
+                )}
 
                 <ApplicationFollowup
                   application={application}
@@ -1047,6 +1085,28 @@ export function ApplicationDetailModal({
               </View>
 
             )}
+            {activeTab === 'kit' && job && existingKit && (
+              <View style={styles.tabContent}>
+                <ApplyKitPanel
+                  job={job}
+                  letterText={existingKit.letter || letterText}
+                  studentContext={{
+                    fullName: studentName || 'Étudiant',
+                    university: '',
+                    major: '',
+                    educationLevel: '',
+                    skills: [],
+                  }}
+                  downloadingPdf={downloadingPdf}
+                  onDownloadPdf={handleDownloadPdf}
+                  onOpenSite={(targetJob) => {
+                    if (targetJob.sourceUrl) void Linking.openURL(targetJob.sourceUrl);
+                  }}
+                  readFirst={true}
+                />
+              </View>
+            )}
+
 
           </ScrollView>
 

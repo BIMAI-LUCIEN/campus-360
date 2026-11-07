@@ -88,6 +88,36 @@ const filledCvSchema = z.object({
 
 export type FilledCv = z.infer<typeof filledCvSchema>;
 
+export const buildKitCoverLetter = (input: CvFillRequest, studentName?: string): string => {
+  const companyName = input.job.company?.trim() || "l'entreprise";
+  const levelMajor = [input.student.educationLevel, input.student.major].filter(Boolean).join(' en ') || 'mon cursus universitaire';
+  const skillsList = (input.student.skills ?? []).filter(Boolean).slice(0, 4).join(', ') || 'mes compétences académiques et pratiques';
+  const reqsList = (input.job.requirements ?? []).filter(Boolean).slice(0, 3).join(', ');
+  const fullName = (input.student.fullName || studentName || '').trim() || '[Ton nom]';
+  const reqLine = reqsList
+    ? `Votre recherche de profils maîtrisant ${reqsList} correspond étroitement à mon parcours académique et à mes réalisations pratiques.`
+    : `Les missions décrites dans votre annonce correspondent étroitement à mon parcours académique et à mes réalisations pratiques.`;
+
+  return `À l'attention du Responsable des Recrutements,
+${companyName}
+
+Objet : Candidature pour le poste de ${input.job.title}
+
+Madame, Monsieur,
+
+Actuellement en ${levelMajor}${input.student.university ? ` (${input.student.university})` : ''}, c'est avec un vif intérêt que je vous adresse ma candidature pour l'opportunité de « ${input.job.title} » au sein de ${companyName}.
+
+${reqLine} Au cours de ma formation, j'ai notamment consolidé mes acquis en ${skillsList}, ce qui me permet d'être rapidement opérationnel(le) et rigoureux(se) dans les tâches confiées.
+
+Rejoindre ${companyName} représente pour moi l'opportunité d'apporter mon sérieux et mon engagement tout en contribuant concrètement à vos activités.
+
+Je reste à votre entière disposition pour tout échange ou entretien.
+
+Veuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.
+
+${fullName}`.trim();
+};
+
 const fold = (value: string): string =>
   value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 

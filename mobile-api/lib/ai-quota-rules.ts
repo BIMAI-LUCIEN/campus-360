@@ -28,6 +28,7 @@ export const AI_ROUTE_LIMITS = {
   'cv-import': { max: 5, windowMs: 600_000 },
   'external-offer': { max: 10, windowMs: 600_000 },
   'offer-read': { max: 10, windowMs: 600_000 },
+  'kit-answers': { max: 20, windowMs: 600_000 },
   // Student PDF contributions (D27.1): 30 per hour, still capped at 30 PDF a day.
   'pdf-intake': { max: 30, windowMs: 3_600_000 },
 } as const;
