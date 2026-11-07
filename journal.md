@@ -4,6 +4,14 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 
 ---
 
+**2026-11-07 · Tâche 35.12 · vps-deploy · `2016b97` · Livraison du Module 35 (Kit de candidature pour les offres `LINK`)**
+
+- **Production & OTA :** commit `2016b97` poussé sur `origin/main` ; VPS `/opt/campus-360` synchronisé (`last-good-sha` = `2016b97249cac705212d38ca72088d9acee74682`, run GitHub Actions `42351430086` « Deploy to VPS » réussi) ; migration `0032_stage_application_kits.sql` appliquée sur la base de production (30/30 migrations enregistrées dans `schema_migrations`) ; build `campus360-mobile-api` (`.next/prerender-manifest.json` et `.next/required-server-files.json` présents) et redémarrage PM2 (`pm2 save`) ; OTA EAS Update publiée sur `production` (run `42351430110` « Publish OTA update (EAS Update) » réussi).
+- **Preuve :** `https://api.campus360b.site/api/health` → 200 `{"status":"ok","db":"connected"}` ; `https://admin.campus360b.site` → 200 ; `https://campus360b.site` → 200 ; `POST https://api.campus360b.site/api/mobile/stages/kit/answers` sans session → 401 ; `GET https://api.campus360b.site/api/mobile/stages/kit?jobId=...` sans session → 401 ; PM2 `online` sur les 3 services (`campus360-mobile-api`, `campus360-recruiter-web`, `campus360-landing-site`).
+- **Points ouverts :** workflow GitHub Actions « Deploy Mobile API to Vercel » toujours en échec (non utilisé en production, l'API est servie par le VPS sur `api.campus360b.site`).
+
+---
+
 **2026-11-06 · hors plan · aucun skill · commit « feat(landing): pages légales » · Conformité données personnelles et cookies (site public)**
 
 - **Confidentialité réécrite** (`landing-site/app/confidentialite/page.tsx`) : base légale (loi n° 2024/017 du 23/12/2024, loi n° 2010/012, RGPD pour l'UE), données réelles, finalités et bases, IA, destinataires (entreprises à qui l'étudiant postule), sous-traitants réels (SasPay au lieu de Notch Pay, Contabo, Gemini), transferts hors Cameroun, durées, sécurité et violation, droits avec délai de 30 jours, mineurs, cookies.

@@ -1692,6 +1692,10 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 ## 13. Journal des mises à jour
 
+- **2026-11-07** `/vps-deploy` — **Déploiement en production sur le VPS et OTA du commit `2016b97` (Module 35 : Kit de candidature pour les offres `LINK`, Tâche 35.12 🔒) :**
+  - Synchronisation `/opt/campus-360` sur `2016b97` (`last-good-sha` mis à jour), migration `0032_stage_application_kits.sql` appliquée en production (30/30 dans `schema_migrations`), compilation Next.js de `campus360-mobile-api` et redémarrage PM2 (`pm2 save`), OTA EAS Update publiée sur `production`.
+  - Sondes publiques vérifiées : `https://api.campus360b.site/api/health` 🟢 HTTP 200 `connected`, `https://admin.campus360b.site` 🟢 HTTP 200, `https://campus360b.site` 🟢 HTTP 200, `POST /api/mobile/stages/kit/answers` sans session → 401, `GET /api/mobile/stages/kit` sans session → 401.
+
 - **2026-11-06** `/execute` — **Module 35 (Kit de candidature pour les offres `LINK`, tâches 35.1 à 35.11) :** migration `0032_stage_application_kits.sql` (écrite, à appliquer en 35.12 🔒), `lib/stage-kits-core.ts`, `lib/stage-kits.ts`, `lib/stage-kit-answers.ts`, routes `GET /api/mobile/stages/kit` et `POST /api/mobile/stages/kit/answers`, garde `LINK` levée dans `POST /api/mobile/stages/cv` (avec sauvegarde de la lettre du kit et refus 404 si offre expirée), composant `ApplyKitPanel.tsx`, deux boutons sur les cartes `LINK` (`StagesScreen.tsx`, `HomeScreen.tsx`) et réouverture depuis le suivi (`ApplicationsTimelineScreen.tsx`, `ApplicationDetailModal.tsx`).
 
 - **2026-11-02** — Offres « sur le site » (`LINK`) : `useApplyOnSite`, route `stages/apply-on-site`, `direct-reach` supprimée, `/stages/cv` en 422, pas de relance ni de rappel, https exigé en admin et au scraping. Migration `0031` : plus d'adresses inventées pour une entreprise sans contact.
