@@ -64,7 +64,8 @@
         "EXPO_PUBLIC_AUTH_URL": "http://localhost:3002",
         "EXPO_PUBLIC_AI_PROXY_URL": "http://localhost:3002/api/ai/pdf-chat",
         "EXPO_PUBLIC_AUTH_WEB_URL": "http://localhost:3001",
-        "EXPO_PUBLIC_ADMIN_URL": "http://localhost:3001"
+        "EXPO_PUBLIC_ADMIN_URL": "http://localhost:3001",
+        "EXPO_PUBLIC_FILES_URL": "http://localhost:3002"
       }
     },
     {
