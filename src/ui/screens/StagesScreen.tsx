@@ -222,7 +222,7 @@ const KIND_FILTERS: { label: string; value: 'Tous' | 'stage' | 'emploi' }[] = [
   { label: 'Emplois', value: 'emploi' },
 ];
 
-export function StagesScreen({
+function StagesScreenBase({
   studentProfile,
   onSelectJob,
   onOpenWallet,
@@ -409,29 +409,17 @@ export function StagesScreen({
     onFocusHandled?.();
   }, [focusJobId, jobs]);
 
-  const enrichedJobs = useMemo(() => {
-    return jobs.map((job) => {
-      const match = analyzeJobMatch(job, studentProfile);
-      return {
-        ...job,
-        matchScore: match.score,
-        matchHeadline: match.headline,
-        matchBadgeColor: match.badgeColor,
-        matchReasons: match.matchedPoints,
-        matchingSkills: match.keyStrengths.length > 0 ? match.keyStrengths : job.matchingSkills,
-      };
-    });
-  }, [jobs, studentProfile]);
-
+  // `jobs` already carries the match fields (computed in stagesApi with the same profile):
+  // recomputing them on every render made each tap re-score the whole list.
   // One clock reading per render, shared by every card's "added X ago" label.
   const listNow = new Date();
 
   const displayedJobs = useMemo(() => {
     if (showTopThreeOnly) {
-      return [...enrichedJobs].sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)).slice(0, 3);
+      return [...jobs].sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)).slice(0, 3);
     }
-    return enrichedJobs;
-  }, [enrichedJobs, showTopThreeOnly]);
+    return jobs;
+  }, [jobs, showTopThreeOnly]);
 
   const detailMatch = useMemo(() => {
     return selectedDetailJob ? analyzeJobMatch(selectedDetailJob, studentProfile) : null;
@@ -2336,3 +2324,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+// Memoized: the tab container re-renders on every navigation tap, the list must not re-render with it.
+export const StagesScreen = React.memo(StagesScreenBase);

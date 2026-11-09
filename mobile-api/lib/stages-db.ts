@@ -154,6 +154,9 @@ const JOB_SELECT = `
     join public.stage_companies c on c.id = j.company_id
 `;
 
+// Échappe les jokers LIKE pour qu'une recherche "100%" ou "c_d" soit prise au pied de la lettre.
+const escapeLike = (value: string) => value.replace(/[\\%_]/g, (char) => `\\${char}`);
+
 export const listStageJobs = async (params: { query?: string; sector?: string; kind?: string }) => {
   const conditions = [`j.expires_at > now()`, `c.status != 'SUSPENDED'`, `j.status = 'published'`];
   const values: string[] = [];
@@ -162,12 +165,22 @@ export const listStageJobs = async (params: { query?: string; sector?: string; k
     values.push(params.kind);
     conditions.push(`j.kind = $${values.length}`);
   }
-  if (params.sector && params.sector !== 'Tous') {
-    values.push(`%${params.sector}%`);
-    conditions.push(`(c.industry ilike $${values.length} or j.title ilike $${values.length})`);
+  // `sector` = mots-clés séparés par "|" (ex. "informatique|data"), chacun cherché en sous-chaîne.
+  const sectorKeywords = (params.sector ?? '')
+    .split('|')
+    .map((k) => k.trim())
+    .filter((k) => k && k !== 'Tous')
+    .slice(0, 20);
+  if (sectorKeywords.length > 0) {
+    const alternatives = sectorKeywords.map((keyword) => {
+      values.push(`%${escapeLike(keyword)}%`);
+      const p = `$${values.length}`;
+      return `c.industry ilike ${p} or j.title ilike ${p} or array_to_string(j.requirements, ' ') ilike ${p}`;
+    });
+    conditions.push(`(${alternatives.join(' or ')})`);
   }
   if (params.query?.trim()) {
-    values.push(`%${params.query.trim()}%`);
+    values.push(`%${escapeLike(params.query.trim())}%`);
     conditions.push(`(j.title ilike $${values.length} or j.description ilike $${values.length} or c.name ilike $${values.length} or array_to_string(j.requirements, ' ') ilike $${values.length})`);
   }
   const result = await databasePool.query<StageJobRow>(

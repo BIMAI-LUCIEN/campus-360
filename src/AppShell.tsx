@@ -183,6 +183,18 @@ const OTP_RESEND_COOLDOWN_SECONDS = 60;
 
 type AppSection = 'stages' | 'applications' | 'resources' | 'account' | 'home' | 'explore' | 'library' | 'documents' | 'premium';
 
+// Onglets principaux : une fois ouverts, ils restent montés (masqués) pour que le retour soit instantané
+// et que la saisie, la liste et le scroll ne soient pas perdus ni rechargés.
+const KEEP_ALIVE_SECTIONS: AppSection[] = ['home', 'stages', 'explore', 'library', 'resources'];
+
+// Callback stable (identité constante) qui appelle toujours la dernière version de `fn`.
+// Permet de passer des props stables à un composant mémoïsé sans figer son comportement.
+function useLatestCallback<A extends unknown[], R>(fn: (...args: A) => R) {
+  const ref = React.useRef(fn);
+  ref.current = fn;
+  return React.useCallback((...args: A) => ref.current(...args), []);
+}
+
 const onboardingSlides = [
   { title: 'Trouve le bon PDF', text: 'Recherche par université, filière, matière ou niveau.' },
   { title: 'Lecture libre', text: 'Lis tous les PDF gratuitement. L’IA te donne 3 actions par jour, puis le Pass Révision.' },
@@ -397,6 +409,20 @@ export function AppShell() {
   const [serverUnread, setServerUnread] = React.useState<number | null>(null);
   // Offer to open in the stages screen (tap on a « nouveau stage » notification).
   const [focusJobId, setFocusJobId] = React.useState<string | null>(null);
+  // Stable object: StagesScreen re-scores its list whenever this identity changes.
+  const stagesStudentProfile = React.useMemo(
+    () => ({
+      // Real values only: these feed the CV / application sent to recruiters.
+      fullName: studentProfile?.name || '',
+      email: studentProfile?.email || '',
+      phoneWhatsapp: studentProfile?.whatsappPhone || studentProfile?.phone,
+      major: studentProfile?.faculty || '',
+      educationLevel: studentProfile?.level || '',
+      skills: studentProfile?.skills ?? [],
+      tokens: iaCredits,
+    }),
+    [studentProfile, iaCredits],
+  );
   // Why this phone gets no push (shown in the notification settings), or null.
   const [pushIssue, setPushIssue] = React.useState<string | null>(null);
 
@@ -1083,6 +1109,27 @@ export function AppShell() {
     if (section === 'premium') { setActiveSection('account'); setRechargeVisible(true); return; }
     setActiveSection(section);
   };
+  // Stable handlers for memoized screens (must stay above the early returns below).
+  const openSectionStable = useLatestCallback(openSection);
+  const openAccountStable = React.useCallback(() => openSectionStable('account'), [openSectionStable]);
+  const clearFocusJobStable = React.useCallback(() => setFocusJobId(null), []);
+  const applyProfilePatchStable = useLatestCallback(applyApplicationProfilePatch);
+
+  // Main tabs stay mounted once opened; the others mount on demand.
+  const [visitedSections, setVisitedSections] = React.useState<AppSection[]>(['home']);
+  React.useEffect(() => {
+    if (!KEEP_ALIVE_SECTIONS.includes(activeSection)) return;
+    setVisitedSections((prev) => (prev.includes(activeSection) ? prev : [...prev, activeSection]));
+  }, [activeSection]);
+  const isSectionRendered = (section: AppSection) =>
+    activeSection === section || (KEEP_ALIVE_SECTIONS.includes(section) && visitedSections.includes(section));
+  const hiddenIfInactive = (section: AppSection) => (activeSection === section ? undefined : styles.sectionHidden);
+
+  // Each tab starts at the top: the scroll position belongs to the previous screen.
+  const contentScrollRef = React.useRef<ScrollView>(null);
+  React.useEffect(() => {
+    contentScrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [activeSection]);
 
   // Opens the screen a push notification is about (data.type set by mobile-api sendPushToUser).
   const openFromNotification = (data: unknown) => {
@@ -1273,6 +1320,7 @@ export function AppShell() {
 
             {/* Content */}
             <ScrollView
+              ref={contentScrollRef}
               style={{ flex: 1 }}
               contentContainerStyle={[
                 styles.scrollContent,
@@ -1287,23 +1335,16 @@ export function AppShell() {
                 />
               }
             >
-              {activeSection === 'stages' && (
-                <StagesScreen
-                  focusJobId={focusJobId}
-                  onFocusHandled={() => setFocusJobId(null)}
-                  studentProfile={{
-                    // Real values only: these feed the CV / application sent to recruiters.
-                    fullName: studentProfile?.name || '',
-                    email: studentProfile?.email || '',
-                    phoneWhatsapp: studentProfile?.whatsappPhone || studentProfile?.phone,
-                    major: studentProfile?.faculty || '',
-                    educationLevel: studentProfile?.level || '',
-                    skills: studentProfile?.skills ?? [],
-                    tokens: iaCredits,
-                  }}
-                  onOpenWallet={() => openSection('account')}
-                  onProfileSaved={applyApplicationProfilePatch}
-                />
+              {isSectionRendered('stages') && (
+                <View style={hiddenIfInactive('stages')}>
+                  <StagesScreen
+                    focusJobId={focusJobId}
+                    onFocusHandled={clearFocusJobStable}
+                    studentProfile={stagesStudentProfile}
+                    onOpenWallet={openAccountStable}
+                    onProfileSaved={applyProfilePatchStable}
+                  />
+                </View>
               )}
 
               {activeSection === 'applications' && (
@@ -1314,7 +1355,8 @@ export function AppShell() {
                 />
               )}
 
-              {activeSection === 'resources' && (
+              {isSectionRendered('resources') && (
+                <View style={hiddenIfInactive('resources')}>
                 <ResourcesScreen
                   documents={pdfDocuments}
                   packs={pdfPacks}
@@ -1334,9 +1376,11 @@ export function AppShell() {
                   onSharePdfs={() => setShareVisible(true)}
                   onOpenContributions={() => setContributionsVisible(true)}
                 />
+                </View>
               )}
 
-              {activeSection === 'home' && (
+              {isSectionRendered('home') && (
+                <View style={hiddenIfInactive('home')}>
                 <HomeScreen
                   studentProfile={studentProfile}
                   studentName={studentProfile?.name}
@@ -1359,9 +1403,11 @@ export function AppShell() {
                   onResources={() => openSection('resources')}
                   onProfile={() => openSection('account')}
                 />
+                </View>
               )}
 
-              {activeSection === 'explore' && (
+              {isSectionRendered('explore') && (
+                <View style={hiddenIfInactive('explore')}>
                 <ExploreScreen
                   documents={pdfDocuments}
                   packs={pdfPacks}
@@ -1374,9 +1420,11 @@ export function AppShell() {
                   purchasingPackId={purchasingPackId}
                   onRefresh={() => refreshDocuments()}
                 />
+                </View>
               )}
 
-              {activeSection === 'library' && (
+              {isSectionRendered('library') && (
+                <View style={hiddenIfInactive('library')}>
                 <LibraryScreen
                   ownedDocuments={ownedLibrary}
                   onOpenDocument={setReadingDocument}
@@ -1384,6 +1432,7 @@ export function AppShell() {
                   onSharePdfs={() => setShareVisible(true)}
                   onOpenContributions={() => setContributionsVisible(true)}
                 />
+                </View>
               )}
 
               {activeSection === 'documents' && (
@@ -1848,6 +1897,7 @@ export function AppShell() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: stitchColors.surface },
   appShell: { flex: 1, backgroundColor: stitchColors.background },
+  sectionHidden: { display: 'none' },
   scrollContent: { width: '100%', maxWidth: 1040, alignSelf: 'center', paddingBottom: 160 },
   scrollContentCompact: { paddingBottom: 116 },
   // Same white + logo as the native splash, so the opening looks like a single screen.

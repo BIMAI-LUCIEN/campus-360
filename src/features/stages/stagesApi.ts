@@ -104,10 +104,28 @@ const STAGE_JOBS_TTL_MS = 5 * 60 * 1000;
 const stageJobsCache = new Map<string, { at: number; jobs: StageJob[] }>();
 const stageJobsInFlight = new Map<string, Promise<StageJob[]>>();
 
+// Libellés des chips secteur -> mots-clés cherchés dans l'entreprise, le titre et les compétences.
+// Les libellés eux-mêmes (« Tech & IA ») ne figurent jamais tels quels dans les données.
+export const SECTOR_KEYWORDS: Record<string, string[]> = {
+  'Tech & IA': ['informatique', 'développeur', 'developpeur', 'logiciel', 'software', 'data', 'intelligence artificielle', 'machine learning', 'cyber', 'réseau', 'web', 'numérique'],
+  'Finance & Audit': ['finance', 'audit', 'comptab', 'banque', 'assurance', 'contrôle de gestion', 'fiscal'],
+  'Design UI/UX': ['design', 'ux', 'ui/ux', 'graphi', 'interface', 'maquette'],
+  'BTP & Génie Civil': ['btp', 'génie civil', 'genie civil', 'construction', 'bâtiment', 'batiment', 'chantier', 'architecte'],
+  'Marketing & Com': ['marketing', 'communication', 'publicité', 'community', 'réseaux sociaux', 'relations presse'],
+  'Logistique': ['logisti', 'transport', 'supply', 'approvisionnement', 'entrepôt'],
+  'Droit': ['droit', 'juridique', 'juriste', 'avocat'],
+  'Santé': ['santé', 'sante', 'médical', 'medical', 'pharma', 'clinique', 'hôpital', 'hopital'],
+};
+
+/** Mots-clés d'un secteur ('Tous' ou inconnu : []). */
+export const sectorKeywords = (sector?: string): string[] =>
+  sector && sector !== 'Tous' ? (SECTOR_KEYWORDS[sector] ?? [sector.toLowerCase()]) : [];
+
 const stageJobsSuffix = (params?: StageJobsParams) => {
   const search = new URLSearchParams();
   if (params?.query?.trim()) search.set('q', params.query.trim());
-  if (params?.sector && params.sector !== 'Tous') search.set('sector', params.sector);
+  const keywords = sectorKeywords(params?.sector);
+  if (keywords.length > 0) search.set('sector', keywords.join('|'));
   if (params?.kind === 'stage' || params?.kind === 'emploi') search.set('kind', params.kind);
   return search.toString() ? `?${search.toString()}` : '';
 };
@@ -174,15 +192,13 @@ function rankStageJobs(source: StageJob[], params?: StageJobsParams): StageJob[]
     );
   }
 
-  // Filtrage local par secteur
-  if (params?.sector && params.sector !== 'Tous') {
-    const s = params.sector.toLowerCase().trim();
-    jobsList = jobsList.filter(
-      (job) =>
-        job.company?.industry.toLowerCase().includes(s) ||
-        job.title.toLowerCase().includes(s) ||
-        job.requirements.some((r) => r.toLowerCase().includes(s))
-    );
+  // Filtrage local par secteur (mêmes mots-clés que le serveur)
+  const keywords = sectorKeywords(params?.sector);
+  if (keywords.length > 0) {
+    jobsList = jobsList.filter((job) => {
+      const haystack = [job.company?.industry ?? '', job.title, ...job.requirements].join(' ').toLowerCase();
+      return keywords.some((k) => haystack.includes(k));
+    });
   }
 
   // Filtrage local stage / emploi
