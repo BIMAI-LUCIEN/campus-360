@@ -50,7 +50,7 @@
 
 
 
-1. Identité et services · 2. Commandes vérifiées · 3. Carte des zones fonctionnelles · 4. Flux principaux · 5. Données (tables, migrations) · 6. Index des routes API · 7. Conventions et garde-fous · 8. Fichiers jumeaux et copies divergentes · 9. Variables d'environnement · 10. Pièges connus et dette · 11. Sécurité · 12. Déploiement et vérifications · 13. Journal des mises à jour
+1. Identité et services · 2. Commandes vérifiées · 3. Carte des zones fonctionnelles (3.1 à 3.8) · 4. Flux principaux · 5. Données (tables, migrations) · 6. Index des routes API · 7. Conventions et garde-fous · 8. Fichiers jumeaux et copies divergentes · 9. Variables d'environnement · 10. Pièges connus et dette · 11. Sécurité · 12. Déploiement et vérifications · 13. Journal des mises à jour
 
 
 
@@ -620,6 +620,23 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
+### 3.8 Contributions PDF et anti-doublon (Module 27)
+
+- **But :** l'admin importe des PDF en lot et l'étudiant partage les siens (`Partager des PDF`) ; chaque fichier est vérifié (vrai PDF, 20 Mo max), comparé au catalogue et aux envois actifs, résumé par l'IA, puis publié par l'admin. Une contribution étudiante publiée crédite 50 coins une seule fois.
+- **Flux :** app `SharePdfsModal` → `POST /api/mobile/contributions` (un PDF par requête, `batchId` commun au lot, case de droits obligatoire) → `recordIntake` → statut `duplicate` / `probable_duplicate` / `pending_review` / `rejected`. Admin `ContributionsReview` → relais `recruiter-web /api/pdf/intake/*` (session admin) → `mobile-api /api/admin/pdf-intake*` (secret de service) → `publishUpload` (document + crédit en une transaction) ou `rejectUpload` (motif obligatoire).
+- **Fichiers clés :**
+  - `mobile-api/lib/pdf-dedup.ts` : `sha256`, `normalizeText`, `textFingerprint`, `minhashSignature`, `similarity`, `classifyDuplicate` (seuils 0,9 doublon, 0,7 probable, cosinus 0,95).
+  - `mobile-api/lib/pdf-intake.ts` : `analyzePdf` (signature PDF, texte vide ou scanné, IA sur les 5 premières pages, `detectLocalFlags` ISBN et données personnelles).
+  - `mobile-api/lib/contributions-db.ts` : `findDuplicates`, `countUploads`, `recordIntake`, `getUpload`, `listUploadsForUser`, `listUploadsForAdmin`, `isUploadOwner`, `updateUploadSheet`, `reanalyzeUpload` (`MAX_AI_ATTEMPTS`).
+  - `mobile-api/lib/contributions-rules.ts` : `MAX_PER_BATCH` 10, `MAX_PER_DAY` 30, `checkBatchAllowance`, `isUuid`, `sanitizeSheetPatch`, `sanitizeFileName`, `EDITABLE_STATUSES`.
+  - `mobile-api/lib/contribution-publish.ts` : `publishUpload` (idempotent : `alreadyPublished`, crédit via `contribution_rewards` en `on conflict do nothing`), `rejectUpload`, `PublishError` ; `CONTRIBUTION_REWARD_COINS` lu dans `lib/pricing.ts`.
+  - `mobile-api/lib/file-validation.ts` : `MAX_SOURCE_BYTES` (20 Mo) ; `lib/ai-quota.ts` : `enforcePdfIntakeQuota` (étudiants seulement, pas l'import admin).
+  - `recruiter-web/app/api/pdf/intake/[[...path]]/route.ts` : relais GET/POST/PATCH, préfixe `pdf-intake` via `forwardToMobileApi`.
+  - `recruiter-web/app/admin/pdf/BatchImport.tsx`, `ContributionsReview.tsx`, `intakeApi.ts` : onglets « Import en lot » et « Contributions étudiantes » (À valider, En analyse, Publiés, Refusés).
+  - `src/features/pdf/contributionsApi.ts` (`pickPdfs`, `uploadContribution` en XHR vers `filesBaseUrl`, `listContributions`, `updateContributionSheet`), `SharePdfsModal.tsx`, `MyContributionsScreen.tsx`, `ContributionStatus.tsx` (libellés, dont « Publié · +50 coins ») ; ouverts depuis `src/AppShell.tsx`.
+- **Tests :** `mobile-api/tests/pdf-dedup.test.mjs`, `pdf-intake.test.mjs`, `contributions.test.mjs`, `contribution-publish.test.mjs` (le titre du premier test dit encore « 10 coins », la valeur testée est `CONTRIBUTION_REWARD_COINS`).
+- **Vérifié le 2026-11-09 (27.8) :** faux PDF → `rejected` sans fichier ni IA ; 21 Mo → 413 ; envoi d'un autre → 404 ; routes admin sans secret → 401 ; double clic « Publier » → une requête, rejeu → `alreadyPublished`, un seul crédit de 50.
+
 ---
 
 
@@ -835,6 +852,9 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 | `user`, `session`, `account`, `verification` | Better Auth | Better Auth |
+| `pdf_uploads` | Envois PDF (admin et étudiants) : statut, fiche IA `ai_sheet`, empreintes, `duplicate_of_upload` / `duplicate_of_document`, `batch_id`, motif de refus | `lib/contributions-db.ts`, `lib/contribution-publish.ts` |
+| `contribution_rewards` | Un crédit par envoi publié (clé `upload_id`), garde anti double crédit | `lib/contribution-publish.ts` |
+| `documents` (colonnes 0023) | `file_sha256` (unique), `text_fingerprint`, `minhash`, `embedding`, `source` (`admin` / `student`), `contributor_id` | `publishUpload` |
 
 
 
@@ -853,6 +873,8 @@ Santé production : non revérifiée dans ce scan (voir §12).
 - **Appliquées sur Supabase :** `0009_document_kind.sql` (`kind`, `always_free` sur `documents`), `0010_wallet_transactions_hardening.sql` (`pack_type`, contraintes CHECK, index unique `reference_id`), `0011_scraped_reports_status.sql` (`WITHDRAWN` sur `stage_app_status`, `status` sur `scraped_stage_reports`), `0012_account_deletion.sql` (anonymisation transactions, FK `ON DELETE SET NULL`, journal `app_account_deletions`).
 
 - **Écrite, non appliquée :** `0014_scrape_runs_and_expiry.sql` (module 25 : `stage_scrape_runs`, statut `expired`, index `created_at`). Accord requis avant application sur la base partagée.
+
+- **Module 27 :** `0023_pdf_dedup_contributions.sql` (tables `pdf_uploads`, `contribution_rewards`, colonnes d'empreinte de `documents`, type de transaction `contribution_reward`) appliquée. Dernière migration présente : `0032_stage_application_kits.sql`.
 
 - **Prochaines migrations prévues :** `0013_account_deletion_trigger.sql` (ou archivage réservé).
 
@@ -1098,11 +1120,14 @@ Méthodes relevées dans le code. Toutes les routes `mobile/*` exigent une sessi
 
 
 
+- **Contributions (Module 27) :** `GET`/`POST mobile/contributions` (liste de l'étudiant, envoi d'un PDF : multipart `file`, `batchId`, `rightsDeclared`, rate limit 20/min, quota PDF IA), `PATCH mobile/contributions/[id]` (fiche corrigée tant que l'envoi attend ; envoi d'un autre → 404). `GET`/`POST admin/pdf-intake` et `PATCH admin/pdf-intake/[id]` (`edit`, `publish` avec `force`, `reject`, `reanalyze`) : secret de service (`requireAdminService`), 401 sinon.
+
 ### `recruiter-web` (`app/api/`, 45 routes)
 
 
 
 - **Admin :** `admin/analytics`, `admin/applications`, `admin/companies`, `admin/overview`, `admin/payments`, `admin/stages`, `admin/users`.
+- **Relais Module 27 :** `pdf/intake/[[...path]]` (GET, POST, PATCH) → `mobile-api /api/admin/pdf-intake*`, session admin exigée.
 
 
 
@@ -1453,6 +1478,10 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 ## 10. Pièges connus et dette
 
+- **Empreintes lisibles par la clé anon (constaté le 2026-11-09) :** l'app lit `documents` par l'API REST Supabase avec la clé publique ; `file_sha256`, `text_fingerprint`, `minhash`, `embedding` et `contributor_id` y sont sélectionnables (HTTP 200). Aucune valeur exposée tant qu'aucune contribution n'est publiée et visible ; correctif prévu en Tâche 27.9 (droits par colonne), migration à appliquer sur accord.
+- **`expo-web-local` sans `EXPO_PUBLIC_FILES_URL` :** `filesBaseUrl` (`src/features/auth/betterAuth.ts`) retombe sur `files.campus360b.site` quand `EXPO_PUBLIC_AUTH_URL` vaut l'API locale ; `.claude/launch.json` pose `http://localhost:3002`.
+- **PDF du catalogue Cloudinary :** non téléchargeables avec les clés locales (401 direct, 404 API `download`) ; à vérifier en production.
+
 
 
 
@@ -1691,6 +1720,8 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 
 ## 13. Journal des mises à jour
+
+- **2026-11-09** `/code-analyzer-context` zone — **Contributions PDF (Module 27) :** §3.8 créée, lignes `pdf_uploads`, `contribution_rewards`, colonnes 0023 de `documents` (§5), routes contributions et `admin/pdf-intake*` et relais `pdf/intake/*` (§6), pièges clé anon, `EXPO_PUBLIC_FILES_URL` et Cloudinary (§10). Vérifié contre le code au commit `88dd76d`.
 
 - **2026-11-07** `/vps-deploy` — **Déploiement en production sur le VPS et OTA du commit `2016b97` (Module 35 : Kit de candidature pour les offres `LINK`, Tâche 35.12 🔒) :**
   - Synchronisation `/opt/campus-360` sur `2016b97` (`last-good-sha` mis à jour), migration `0032_stage_application_kits.sql` appliquée en production (30/30 dans `schema_migrations`), compilation Next.js de `campus360-mobile-api` et redémarrage PM2 (`pm2 save`), OTA EAS Update publiée sur `production`.
