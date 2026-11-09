@@ -719,7 +719,7 @@ export function AppShell() {
   };
 
   syncAccountRef.current = () => void syncStudentAccount(studentSession ?? undefined);
-  const syncStudentAccount = async (_session?: StudentSession) => {
+  const syncStudentAccount = async (_session?: StudentSession): Promise<boolean> => {
     setSyncingAccount(true);
     try {
       const account = await getStudentAccount();
@@ -754,8 +754,10 @@ export function AppShell() {
           date: new Date(row.created_at).toLocaleDateString('fr-CM', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
         })),
       );
+      return true;
     } catch (err) {
       console.warn('[AppShell] syncStudentAccount offline fallback:', err);
+      return false;
     } finally { setSyncingAccount(false); }
   };
 
@@ -897,12 +899,16 @@ export function AppShell() {
   const completeAuthenticatedSession = async (session: StudentSession, isNewAccount: boolean) => {
     setStudentSession(session);
     // The name is stored at sign-up; studies are collected by the onboarding right after.
-    await syncStudentAccount(session);
+    const synced = await syncStudentAccount(session);
     setAuthOtp('');
     setAuthNotice('');
     setAuthVisible(false);
     setActiveSection('home');
-    if (!isNewAccount) AppAlert.alert('Connecté', 'Ton wallet est synchronisé.');
+    if (!synced) {
+      AppAlert.alert('Connecté', "Ton solde n'a pas pu être chargé. Touche « Synchroniser le compte » dans ton profil.");
+    } else if (!isNewAccount) {
+      AppAlert.alert('Connecté', 'Ton wallet est synchronisé.');
+    }
   };
 
   const resendAuthOtp = async () => {

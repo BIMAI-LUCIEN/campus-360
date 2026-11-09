@@ -187,7 +187,12 @@ export const requireMobileUser = async (
   // in the URL would end up in logs and browser history.
   const headers = request.headers;
 
-  let session = await auth.api.getSession({ headers }).catch(() => null);
+  let backendFailed = false;
+  let session = await auth.api.getSession({ headers }).catch((err) => {
+    console.warn('[mobile-access] getSession failed:', err);
+    backendFailed = true;
+    return null;
+  });
 
   // Resilient fallback: if getSession didn't resolve, check Authorization Bearer header or Cookie in session table
   if (!session?.user) {
@@ -232,11 +237,19 @@ export const requireMobileUser = async (
         }
       } catch (err) {
         console.warn('[mobile-access] Direct DB session fallback check error:', err);
+        backendFailed = true;
       }
     }
   }
 
   if (!session?.user) {
+    // A database outage must not look like a logout: the client would drop a valid session.
+    if (backendFailed) {
+      return {
+        user: null,
+        response: NextResponse.json({ error: 'Service temporairement indisponible.' }, { status: 503 }),
+      };
+    }
     return {
       user: null,
       response: NextResponse.json({ error: 'Session requise.' }, { status: 401 }),

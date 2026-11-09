@@ -829,6 +829,9 @@ function StagesScreenBase({
 
                     <Pressable
                       testID="btn-detail-favorite"
+                      accessibilityRole="button"
+                      accessibilityLabel={favorites[selectedDetailJob.id] ? "Retirer des favoris" : "Ajouter aux favoris"}
+                      accessibilityState={{ selected: !!favorites[selectedDetailJob.id] }}
                       style={styles.detailCircleBtn}
                       onPress={() => toggleFavorite(selectedDetailJob.id)}
                     >

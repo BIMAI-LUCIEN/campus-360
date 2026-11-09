@@ -316,8 +316,17 @@ export const authClient = createAuthClient({
   ],
 });
 
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  INVALID_EMAIL_OR_PASSWORD: 'E-mail ou mot de passe incorrect.',
+  INVALID_EMAIL: 'Adresse e-mail invalide.',
+  USER_ALREADY_EXISTS: 'Un compte existe déjà avec cet e-mail.',
+  PASSWORD_TOO_SHORT: 'Mot de passe trop court.',
+};
+
 const errorMessage = (error: { message?: string; code?: string } | null | undefined) =>
-  error?.message || error?.code || 'Connexion impossible.';
+  (error?.code && AUTH_ERROR_MESSAGES[error.code])
+  || (error?.message === 'Invalid email or password' ? AUTH_ERROR_MESSAGES.INVALID_EMAIL_OR_PASSWORD : '')
+  || error?.message || error?.code || 'Connexion impossible.';
 
 /** Thrown when the account exists but its email must first be confirmed with an OTP. */
 export class EmailVerificationRequiredError extends Error {
@@ -524,7 +533,7 @@ export const changeStudentPassword = async (currentPassword: string, newPassword
 };
 
 export const getAuthCapabilities = async (): Promise<AuthCapabilities> =>
-  (await fetch(`${authBaseUrl}/api/mobile/auth-capabilities`)).json() as Promise<AuthCapabilities>;
+  (await fetch(`${mobileApiBaseUrl}/api/mobile/auth-capabilities`)).json() as Promise<AuthCapabilities>;
 
 export const deleteStudentAccount = async (): Promise<void> => {
   await mobileApiFetch('/api/mobile/account', {
@@ -582,13 +591,28 @@ export const getAuthHeaders = async (): Promise<Record<string, string>> => {
 };
 
 // Like authFetchRaw, against an explicit backend. Multipart bodies keep their own content type.
+// Reads give up after this delay so screens show an error and a retry instead of an endless spinner.
+// Writes and AI generations are left without a limit: they can legitimately take longer.
+const READ_TIMEOUT_MS = 20_000;
+
 export const authFetchRawAt = async (baseUrl: string, path: string, init: RequestInit = {}) => {
   const isMultipart = typeof FormData !== 'undefined' && init.body instanceof FormData;
-  return fetch(`${baseUrl}${path}`, {
-    ...init,
-    headers: await buildAuthHeaders(init.headers, !isMultipart),
-    credentials: 'include',
-  });
+  const isRead = !init.method || init.method.toUpperCase() === 'GET';
+  const controller = isRead && !init.signal && typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), READ_TIMEOUT_MS) : null;
+  try {
+    return await fetch(`${baseUrl}${path}`, {
+      ...init,
+      ...(controller ? { signal: controller.signal } : {}),
+      headers: await buildAuthHeaders(init.headers, !isMultipart),
+      credentials: 'include',
+    });
+  } catch (error) {
+    if (controller?.signal.aborted) throw new Error('Le serveur met trop de temps à répondre. Réessaie dans un instant.');
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 };
 
 export const baseUrlFor = (path: string): string => {

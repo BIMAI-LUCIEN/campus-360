@@ -929,7 +929,7 @@ export function TransactionRow({
         <Text style={styles.txDate}>{date}</Text>
       </View>
       <Text style={[styles.txAmount, { color: isPositive ? stitchColors.emerald : stitchColors.ink }]}>
-        {isPositive ? '+' : '−'}{formatCoins(Math.abs(amount))}
+        {isPositive ? '+' : amount < 0 ? '−' : ''}{formatCoins(Math.abs(amount))}
       </Text>
     </View>
   );
