@@ -65,6 +65,8 @@ export interface InitiatePaymentRequest {
   amount: number;
   operator: MobileMoneyOperator;
   phone: string;
+  /** Same id for every retry of one top-up: the server never pushes the debit twice. */
+  requestId?: string;
 }
 
 export interface InitiatePaymentResponse {
@@ -96,7 +98,9 @@ export async function initiateMobileMoneyPayment(
   }
   const data = (await res.json().catch(() => ({}))) as Partial<InitiatePaymentResponse> & { error?: string };
   if (!res.ok || !data.reference) {
-    throw new Error(data.error || 'Paiement impossible pour le moment. Réessaie.');
+    const error = new Error(data.error || 'Paiement impossible pour le moment. Réessaie.') as Error & { status?: number };
+    error.status = res.status;
+    throw error;
   }
   return data as InitiatePaymentResponse;
 }

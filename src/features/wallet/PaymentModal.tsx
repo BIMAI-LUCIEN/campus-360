@@ -31,6 +31,7 @@ import {
   pollPaymentStatus,
 } from './walletApi';
 import { stitchColors } from '../../theme/stitch';
+import { newPurchaseId } from './offersApi';
 import { OPERATOR_LABELS, operatorMismatchMessage, parseCameroonMobile } from './cameroonPhone';
 
 /** Code USSD Orange Money Cameroun pour valider un débit en attente. */
@@ -79,6 +80,17 @@ export function PaymentModal({
     if (parsed.ok) setOperator(parsed.operator);
   };
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // One id per top-up intention (pack + operator + number). A retry after a lost
+  // response or a server crash reuses it, so the operator never receives two debits.
+  const pendingRequest = useRef<{ key: string; id: string } | null>(null);
+  const initiatingRef = useRef(false);
+  const requestIdFor = (key: string) => {
+    if (pendingRequest.current?.key !== key) pendingRequest.current = { key, id: newPurchaseId() };
+    return pendingRequest.current.id;
+  };
+  const forgetRequest = () => {
+    pendingRequest.current = null;
+  };
 
   const stopPolling = () => {
     if (pollRef.current) {
@@ -120,6 +132,8 @@ export function PaymentModal({
       return;
     }
 
+    if (initiatingRef.current) return;
+    initiatingRef.current = true;
     setNoticeMessage(null);
     setPaymentUrl(null);
     setCurrentRef(null);
@@ -131,6 +145,7 @@ export function PaymentModal({
         amount: selectedPack.priceFcfa,
         operator,
         phone: parsed.e164,
+        requestId: requestIdFor(`${selectedPack.id}|${operator}|${parsed.e164}`),
       });
 
       setLoading(false);
@@ -156,6 +171,7 @@ export function PaymentModal({
           const statusRes = await pollPaymentStatus(response.reference);
           const status = statusRes.status;
           if (status === 'success') {
+            forgetRequest();
             stopPolling();
             setWaitingUssd(false);
             setSuccess(true);
@@ -163,6 +179,7 @@ export function PaymentModal({
               void WebBrowser.dismissBrowser();
             } catch {}
           } else if (status === 'failed') {
+            forgetRequest();
             stopPolling();
             setWaitingUssd(false);
             try {
@@ -193,7 +210,13 @@ export function PaymentModal({
       }, 3000);
     } catch (error) {
       setLoading(false);
+      // A clear refusal (insufficient balance, wrong number...) ends this attempt; a network
+      // error or a 5xx keeps the id so the retry lands on the same transaction.
+      const status = (error as { status?: number } | null)?.status;
+      if (status && status >= 400 && status < 500) forgetRequest();
       setNoticeMessage(error instanceof Error ? error.message : 'Paiement impossible pour le moment. Réessaie.');
+    } finally {
+      initiatingRef.current = false;
     }
   };
 

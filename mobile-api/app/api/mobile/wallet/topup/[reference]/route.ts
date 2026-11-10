@@ -4,7 +4,7 @@ import { databasePool } from '@/lib/database';
 import { sendTopUpReceipt } from '@/lib/automations';
 import { corsPreflight, MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { isMockAllowed } from '@/lib/payment-rules';
-import { getSaspayBaseUrl } from '@/lib/payments';
+import { describeMobileMoneyFailure, getSaspayBaseUrl } from '@/lib/payments';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
 
 export const runtime = 'nodejs';
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const saspayApiKey = process.env.SASPAY_API_KEY?.trim();
 
       const storedFailure: string =
-        transaction.failure_message || 'La transaction a été rejetée ou a expiré.';
+        describeMobileMoneyFailure(transaction.failure_message) || 'La transaction a été rejetée ou a expiré.';
       const isLocallyFailed = transaction.status === 'failed';
       const failedResponse = (message: string) =>
         withCors(NextResponse.json({ status: 'failed', failureMessage: message }), request);
@@ -173,10 +173,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
             : withCors(NextResponse.json({ status: 'pending' }), request);
         }
 
-        const statusData = (await statusRes.json()) as {
+        const statusData = (await statusRes.json().catch(() => ({}))) as {
           status?: string;
           amount?: number | string;
-          data?: { status?: string; amount?: number | string };
+          failure_message?: string;
+          failure_reason?: string;
+          data?: {
+            status?: string;
+            amount?: number | string;
+            failure_message?: string;
+            failure_reason?: string;
+            gateway_message?: string;
+          };
         };
         const rawStatus = String(statusData.data?.status || statusData.status || '').toUpperCase();
 
@@ -191,6 +199,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
         } else if (rawStatus === 'FAILED' || rawStatus === 'CANCELLED') {
           providerStatus = 'failed';
           providerPaid = false;
+          const reason =
+            statusData.data?.failure_message ||
+            statusData.data?.failure_reason ||
+            statusData.data?.gateway_message ||
+            statusData.failure_message ||
+            statusData.failure_reason;
+          failureMessage = describeMobileMoneyFailure(reason) || failureMessage;
         } else {
           providerStatus = 'pending';
         }

@@ -95,6 +95,22 @@ export const readSoftpayResponse = async (res: Response): Promise<SoftpayResult>
   };
 };
 
+/**
+ * Motif lisible d'un refus Mobile Money. Les opérateurs et SasPay écrivent souvent en
+ * anglais (« Insufficient balance », « LOW_BALANCE », « NOT_ENOUGH_FUNDS ») : on le dit
+ * clairement en français pour que l'étudiant sache qu'il doit recharger son compte.
+ */
+export const describeMobileMoneyFailure = (raw: string | null | undefined, operator?: PaymentOperator): string => {
+  const text = (raw || '').trim();
+  if (/insuffi|not[\s_-]*enough|low[\s_-]*balance|balance[\s_-]*too[\s_-]*low|fonds|solde/i.test(text)) {
+    const wallet = operator === 'orange' ? 'Orange Money' : operator === 'mtn' ? 'MTN MoMo' : 'Mobile Money';
+    return `Solde ${wallet} insuffisant. Recharge ton compte ${wallet} puis réessaie.`;
+  }
+  return text.slice(0, 200);
+};
+
+const isBalanceMessage = (message: string) => /^Solde .* insuffisant/.test(message);
+
 /** Découpe un nom complet en prénom / nom pour le champ `customer` de SasPay (softpay). */
 export const splitCustomerName = (fullName?: string) => {
   const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
@@ -112,6 +128,8 @@ export interface InitiatePaymentParams {
   operator: PaymentOperator;
   packType: PaymentPackType;
   currency?: 'XAF';
+  /** One id per intention to top up: a retry with the same id never pushes a second debit. */
+  requestId?: string;
 }
 
 export interface PaymentInitiationResult {
@@ -176,13 +194,63 @@ export async function initiateMobileMoneyPayment(
   let paymentUrl: string | undefined;
   let testMode = false;
 
-  // Insert pending row before contacting payment gateway (atomic & tracked)
-  await pool.query(
+  const requestId = params.requestId?.trim() || null;
+  const operatorLabel = effectiveOperator === 'orange' ? 'Orange Money' : 'MTN MoMo';
+
+  // Same requestId already seen (double tap, retry after a lost response or a server
+  // crash): answer with that transaction, never call the operator a second time.
+  const replay = async (): Promise<PaymentInitiationResult | null> => {
+    if (!requestId) return null;
+    const existing = await pool.query(
+      `select reference_id, status, pack_type, failure_message
+         from public.app_wallet_transactions
+        where user_id = $1 and idempotency_key = $2
+        limit 1`,
+      [params.studentId, requestId],
+    );
+    const row = existing.rows?.[0];
+    if (!row) return null;
+    if (row.pack_type !== params.packType) {
+      throw new MobileApiError('Cette demande de recharge a déjà servi pour un autre montant.', 409);
+    }
+    if (row.status === 'failed') {
+      throw new MobileApiError(
+        describeMobileMoneyFailure(row.failure_message, effectiveOperator) ||
+          "L'opérateur a refusé le paiement. Vérifie ton solde et réessaie.",
+        402,
+      );
+    }
+    return {
+      reference: String(row.reference_id),
+      status: 'pending',
+      directDebitPrompt: true,
+      message:
+        row.status === 'success'
+          ? 'Ce paiement est déjà confirmé : ton solde a été crédité.'
+          : `Paiement déjà en cours : valide le débit de ${amount} ${currency} avec ton code secret ${operatorLabel} sur le ${formattedPhone}.`,
+      mock: !hasProviderKey,
+      testMode: Boolean(saspayApiKey?.startsWith('sk_test_')),
+    };
+  };
+
+  const replayed = await replay();
+  if (replayed) return replayed;
+
+  // Insert pending row before contacting payment gateway (atomic & tracked).
+  // The unique (user_id, idempotency_key) index settles two concurrent requests: one row wins.
+  const inserted = await pool.query(
     `insert into public.app_wallet_transactions (
-       user_id, type, pack_type, amount_coins, reference_id, status
-     ) values ($1, 'topup', $2, $3, $4, 'pending')`,
-    [params.studentId, params.packType, amount, reference],
+       user_id, type, pack_type, amount_coins, reference_id, status, idempotency_key
+     ) values ($1, 'topup', $2, $3, $4, 'pending', $5)
+     on conflict do nothing
+     returning id`,
+    [params.studentId, params.packType, amount, reference, requestId],
   );
+  if (requestId && inserted?.rowCount === 0) {
+    const raced = await replay();
+    if (raced) return raced;
+    throw new MobileApiError('Paiement déjà en cours. Patiente quelques secondes.', 409);
+  }
 
   if (saspayApiKey) {
     const baseUrl = getSaspayBaseUrl();
@@ -218,13 +286,18 @@ export async function initiateMobileMoneyPayment(
       });
 
       if (!initRes.ok) {
-        const providerMessage = await readSaspayError(initRes, 'Softpay Error');
+        const providerMessage = describeMobileMoneyFailure(
+          await readSaspayError(initRes, 'Softpay Error'),
+          effectiveOperator,
+        );
         await pool.query(
           `update public.app_wallet_transactions set status = 'failed', failure_message = $2 where reference_id = $1`,
           [reference, providerMessage || null],
         );
         throw new MobileApiError(
-          providerMessage
+          isBalanceMessage(providerMessage)
+            ? providerMessage
+            : providerMessage
             ? `Paiement refusé par l'opérateur : ${providerMessage}`
             : "L'opérateur n'a pas répondu. Réessaie.",
           502,
@@ -237,12 +310,16 @@ export async function initiateMobileMoneyPayment(
 
       if (softpay.status === 'FAILED' || softpay.status === 'CANCELLED') {
         const failureMessage =
-          softpay.failureMessage || "L'opérateur a refusé le paiement. Vérifie ton solde et réessaie.";
+          describeMobileMoneyFailure(softpay.failureMessage, effectiveOperator) ||
+          "L'opérateur a refusé le paiement. Vérifie ton solde et réessaie.";
         await pool.query(
           `update public.app_wallet_transactions set status = 'failed', failure_message = $2 where reference_id = $1`,
           [reference, failureMessage],
         );
-        throw new MobileApiError(`Paiement refusé par l'opérateur : ${failureMessage}`, 402);
+        throw new MobileApiError(
+          isBalanceMessage(failureMessage) ? failureMessage : `Paiement refusé par l'opérateur : ${failureMessage}`,
+          402,
+        );
       }
 
       const gatewayRef = softpay.id;
@@ -463,21 +540,23 @@ export async function processSaspayWebhook(
         eventPayload.data?.message ||
         eventPayload.message ||
         'La transaction a été rejetée ou a expiré.';
+      const readableFailure =
+        describeMobileMoneyFailure(String(failureMessage)) || 'La transaction a été rejetée ou a expiré.';
 
       await client.query(
         `update public.app_wallet_transactions set status = 'failed', failure_message = $2 where id = $1`,
-        [tx.id, failureMessage],
+        [tx.id, readableFailure],
       );
       await client.query('commit');
       await notifyAdmin('Paiement Mobile Money échoué', {
         Référence: reference,
         Statut: status,
         Événement: event,
-        Motif: failureMessage,
+        Motif: String(failureMessage),
       }).catch(() => {});
       return {
         status: 200,
-        body: { ok: true, status: 'failed', failureMessage },
+        body: { ok: true, status: 'failed', failureMessage: readableFailure },
       };
     }
 

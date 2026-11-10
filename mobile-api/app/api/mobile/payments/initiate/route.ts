@@ -28,6 +28,11 @@ const initiateSchema = z
       .max(20, 'Numéro de téléphone trop long')
       .regex(/^[+0-9 ()\-]+$/, 'Format de numéro invalide.'),
     currency: z.literal('XAF').default('XAF'),
+    requestId: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9-]{8,64}$/, 'Identifiant de demande invalide.')
+      .optional(),
   });
 
 export async function POST(request: NextRequest) {
@@ -54,6 +59,7 @@ export async function POST(request: NextRequest) {
       operator: validated.operator,
       packType: validated.packType,
       currency: validated.currency,
+      requestId: validated.requestId,
     });
 
     return withCors(

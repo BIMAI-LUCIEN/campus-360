@@ -382,12 +382,74 @@ test('Softpay accepté mais FAILED (réponse enveloppée dans data) : 402 avec l
         { studentId: 'u1', phone: '670123456', operator: 'mtn', packType: 'recharge_1000' },
         { pool, fetch },
       ),
-      (error) => error.status === 402 && /Solde insuffisant/.test(error.message),
+      (error) => error.status === 402 && /Solde MTN MoMo insuffisant/.test(error.message),
     );
     const failedUpdate = queries.find((q) => /set status = 'failed', failure_message/.test(q.sql));
     assert.ok(failedUpdate, 'transaction marquée failed avec motif');
-    assert.equal(failedUpdate.params[1], 'Solde insuffisant');
+    assert.match(failedUpdate.params[1], /^Solde MTN MoMo insuffisant/);
   } finally {
     process.env.SASPAY_API_KEY = oldSaspayKey;
+  }
+});
+
+test('describeMobileMoneyFailure : un solde trop bas est dit clairement en français', async () => {
+  const { describeMobileMoneyFailure } = await loadTsWithPackages('lib/payments.ts', PAYMENT_DEPS);
+  assert.match(describeMobileMoneyFailure('Insufficient balance', 'mtn'), /^Solde MTN MoMo insuffisant/);
+  assert.match(describeMobileMoneyFailure('NOT_ENOUGH_FUNDS', 'orange'), /^Solde Orange Money insuffisant/);
+  assert.match(describeMobileMoneyFailure('LOW_BALANCE'), /^Solde Mobile Money insuffisant/);
+  assert.equal(describeMobileMoneyFailure('Timeout'), 'Timeout');
+  assert.equal(describeMobileMoneyFailure(null), '');
+});
+
+test('Recharge rejouée avec le même requestId : aucun second appel SasPay', async () => {
+  const rows = [];
+  const pool = {
+    query: async (sql, params) => {
+      if (/^\s*select reference_id/.test(sql)) {
+        const row = rows.find((r) => r.user_id === params[0] && r.idempotency_key === params[1]);
+        return { rowCount: row ? 1 : 0, rows: row ? [row] : [] };
+      }
+      if (/insert into public.app_wallet_transactions/.test(sql)) {
+        if (params[4] && rows.some((r) => r.user_id === params[0] && r.idempotency_key === params[4])) {
+          return { rowCount: 0, rows: [] };
+        }
+        rows.push({ user_id: params[0], pack_type: params[1], reference_id: params[3], status: 'pending', idempotency_key: params[4] });
+        return { rowCount: 1, rows: [{ id: 'tx1' }] };
+      }
+      if (/set reference_id = \$1 where reference_id = \$2/.test(sql)) {
+        const row = rows.find((r) => r.reference_id === params[1]);
+        if (row) row.reference_id = params[0];
+      }
+      return { rowCount: 1, rows: [] };
+    },
+  };
+  let calls = 0;
+  const fetch = async () => {
+    calls += 1;
+    return new Response(JSON.stringify({ id: 'pay_once', status: 'PENDING', checkout_url: '' }), { status: 201 });
+  };
+  const paymentsModule = await loadTsWithPackages('lib/payments.ts', PAYMENT_DEPS);
+  const oldKey = process.env.SASPAY_API_KEY;
+  process.env.SASPAY_API_KEY = 'sk_test_dummy';
+  try {
+    const input = { studentId: 'u1', phone: '670123456', operator: 'mtn', packType: 'recharge_1000', requestId: 'req-12345678' };
+    const first = await paymentsModule.initiateMobileMoneyPayment(input, { pool, fetch });
+    const second = await paymentsModule.initiateMobileMoneyPayment(input, { pool, fetch });
+    assert.equal(calls, 1, 'un seul push envoyé à l’opérateur');
+    assert.equal(first.reference, 'pay_once');
+    assert.equal(second.reference, 'pay_once');
+    await assert.rejects(
+      paymentsModule.initiateMobileMoneyPayment({ ...input, packType: 'recharge_2000' }, { pool, fetch }),
+      (error) => error.status === 409,
+    );
+    rows[0].status = 'failed';
+    rows[0].failure_message = 'Insufficient balance';
+    await assert.rejects(
+      paymentsModule.initiateMobileMoneyPayment(input, { pool, fetch }),
+      (error) => error.status === 402 && /Solde MTN MoMo insuffisant/.test(error.message),
+    );
+    assert.equal(calls, 1);
+  } finally {
+    process.env.SASPAY_API_KEY = oldKey;
   }
 });
