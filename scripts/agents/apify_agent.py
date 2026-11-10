@@ -12,6 +12,15 @@ from config import APIFY_API_TOKEN, USER_AGENTS
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("ApifyScraperAgent")
 
+def _iso_from_ms(value) -> str:
+    """Facebook search gives the post time in milliseconds since 1970."""
+    try:
+        from datetime import datetime, timezone
+        return datetime.fromtimestamp(int(value) / 1000, tz=timezone.utc).isoformat()
+    except (TypeError, ValueError, OSError):
+        return ""
+
+
 class ApifyScraperAgent:
     def __init__(self, api_token: str = None):
         self.api_token = api_token or APIFY_API_TOKEN or os.getenv("APIFY_API_TOKEN", "")
@@ -32,24 +41,22 @@ class ApifyScraperAgent:
         logger.info(f"🌐 Lancement du scraping LinkedIn Cloud via Apify (requête: '{query}', max: {limit})...")
         
         # Test des endpoints d'Actors Apify LinkedIn (curious_coder/clockworks/apify)
-        actors = ["clockworks~linkedin-post-scraper", "apify~linkedin-post-scraper"]
-        
-        for actor_id in actors:
-            url = f"https://api.apify.com/v2/acts/{actor_id}/run-sync-get-dataset-items?token={self.api_token}&timeout=120"
-            payload = {
-                "queries": [query],
-                "searchQueries": [query],
-                "urls": [f"https://www.linkedin.com/search/results/content/?keywords={query}"],
-                "maxPosts": limit,
-                "deepScrape": True
-            }
+        # harvestapi~linkedin-post-search: keyword search, posts of the last week, 0.002 $ per post (tested 2026-11-10).
+        attempts = [
+            ("harvestapi~linkedin-post-search", {"searchQueries": [query], "maxPosts": limit, "postedLimit": "week", "sortBy": "date"}),
+        ]
+
+        for actor_id, payload in attempts:
+            url = f"https://api.apify.com/v2/acts/{actor_id}/run-sync-get-dataset-items?token={self.api_token}&timeout=150"
 
             try:
-                resp = self.session.post(url, json=payload, timeout=130)
+                resp = self.session.post(url, json=payload, timeout=170)
                 if resp.status_code in [200, 201]:
                     raw_items = resp.json()
                     if raw_items and isinstance(raw_items, list):
                         return self._parse_linkedin_items(raw_items)
+                else:
+                    logger.error(f"Erreur HTTP Apify LinkedIn ({resp.status_code}) : {resp.text[:300]}")
             except Exception as e:
                 logger.debug(f"Essai actor {actor_id} LinkedIn non concluant : {e}")
 
@@ -66,22 +73,21 @@ class ApifyScraperAgent:
 
         logger.info(f"🌐 Lancement du scraping Facebook Cloud via Apify (requête: '{query}', max: {limit})...")
 
-        actor_id = "apify~facebook-posts-scraper"
-        url = f"https://api.apify.com/v2/acts/{actor_id}/run-sync-get-dataset-items?token={self.api_token}&timeout=120"
+        # scraper_one~facebook-posts-search: real keyword search, latest posts first, 0.005 $ per post (tested 2026-11-10).
+        # The former apify~facebook-posts-scraper only reads given pages and returned 1 post per search.
+        actor_id = "scraper_one~facebook-posts-search"
+        url = f"https://api.apify.com/v2/acts/{actor_id}/run-sync-get-dataset-items?token={self.api_token}&timeout=150"
 
-        payload = {
-            "startUrls": [{"url": f"https://www.facebook.com/search/posts?q={query}"}],
-            "searchTerms": [query],
-            "maxPosts": limit,
-            "resultsType": "posts"
-        }
+        payload = {"query": query, "resultsCount": limit, "searchType": "latest"}
 
         try:
-            resp = self.session.post(url, json=payload, timeout=130)
+            resp = self.session.post(url, json=payload, timeout=170)
             if resp.status_code in [200, 201]:
                 raw_items = resp.json()
                 if raw_items and isinstance(raw_items, list):
                     return self._parse_facebook_items(raw_items)
+            else:
+                logger.error(f"Erreur HTTP Apify Facebook ({resp.status_code}) : {resp.text[:300]}")
         except Exception as e:
             logger.error(f"❌ Exception lors du scraping Apify Facebook : {e}")
 
@@ -122,12 +128,16 @@ class ApifyScraperAgent:
     def _parse_linkedin_items(self, raw_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         results = []
         for item in raw_items:
-            post_url = item.get("postUrl") or item.get("url") or item.get("link") or ""
-            text = item.get("text") or item.get("postText") or item.get("title") or ""
-            
+            post_url = item.get("linkedinUrl") or item.get("postUrl") or item.get("url") or item.get("link") or ""
+            text = item.get("content") or item.get("text") or item.get("postText") or item.get("title") or ""
+            if not text.strip():
+                continue
+
             # Extraction des images / flyers du post
             images = []
-            if item.get("images") and isinstance(item["images"], list):
+            if item.get("postImages") and isinstance(item["postImages"], list):
+                images = [m.get("url") for m in item["postImages"] if isinstance(m, dict) and m.get("url")]
+            elif item.get("images") and isinstance(item["images"], list):
                 images = item["images"]
             elif item.get("media") and isinstance(item["media"], list):
                 images = [m.get("url") for m in item["media"] if isinstance(m, dict) and m.get("url")]
@@ -144,8 +154,8 @@ class ApifyScraperAgent:
                 "description": text,
                 "flyer_url": primary_image,
                 "images": images,
-                "author": item.get("authorName") or item.get("author") or "Inconnu",
-                "pub_date": item.get("publishedAt") or item.get("time") or ""
+                "author": (item["author"].get("name") if isinstance(item.get("author"), dict) else item.get("authorName") or item.get("author")) or "Inconnu",
+                "pub_date": (item["postedAt"].get("date") if isinstance(item.get("postedAt"), dict) else item.get("publishedAt") or item.get("time")) or ""
             })
         logger.info(f"✅ Apify LinkedIn : {len(results)} posts extraits ({sum(1 for r in results if r['flyer_url'])} avec images).")
         return results
@@ -154,10 +164,14 @@ class ApifyScraperAgent:
         results = []
         for item in raw_items:
             post_url = item.get("url") or item.get("postUrl") or ""
-            text = item.get("text") or item.get("message") or ""
-            
+            text = item.get("postText") or item.get("text") or item.get("message") or ""
+            if not text.strip():
+                continue
+
             images = []
-            if item.get("media") and isinstance(item["media"], list):
+            if item.get("attachments") and isinstance(item["attachments"], list):
+                images = [a.get("url") for a in item["attachments"] if isinstance(a, dict) and a.get("type") == "photo" and a.get("url")]
+            elif item.get("media") and isinstance(item["media"], list):
                 for m in item["media"]:
                     if isinstance(m, dict) and m.get("thumbnail"):
                         images.append(m["thumbnail"])
@@ -176,8 +190,9 @@ class ApifyScraperAgent:
                 "description": text,
                 "flyer_url": primary_image,
                 "images": images,
-                "author": item.get("user", {}).get("name") if isinstance(item.get("user"), dict) else item.get("author", "Inconnu"),
-                "pub_date": item.get("time") or item.get("date") or ""
+                "author": (item["author"].get("name") if isinstance(item.get("author"), dict)
+                           else item["user"].get("name") if isinstance(item.get("user"), dict) else item.get("author")) or "Inconnu",
+                "pub_date": _iso_from_ms(item.get("timestamp")) or item.get("time") or item.get("date") or ""
             })
         logger.info(f"✅ Apify Facebook : {len(results)} posts extraits ({sum(1 for r in results if r['flyer_url'])} avec images).")
         return results

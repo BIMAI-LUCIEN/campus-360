@@ -119,8 +119,10 @@ class ScraperOrchestrator:
                     self.treg_linkedin_agent.fetch_details(li_items)
                 elif "LINKEDIN" in platforms and not self.treg_linkedin_agent.is_configured():
                     logger.info("LinkedIn : Treg non configuré, passage aux sources de secours.")
-                if not li_items and self.apify_agent.is_configured():
-                    li_items = self.apify_agent.scrape_linkedin_posts(query=_search_terms("stage", query, city_suffix, "Cameroun"), limit=limit_per_platform)
+                # Apify LinkedIn posts ("offre de stage", "nous recrutons") come on top of Treg job ads:
+                # recruiters in Cameroon often post instead of opening a job ad. Paid, so real runs only.
+                if self.apify_agent.is_configured() and (self.treg_linkedin_agent.live or not li_items):
+                    li_items.extend(self.apify_agent.scrape_linkedin_posts(query=_search_terms("offre de stage", query, city_suffix, "Cameroun"), limit=limit_per_platform))
                 if not li_items:
                     li_items = self.linkedin_agent.search_linkedin_reports(query=_search_terms("rapport de stage", query, city_suffix), max_results=limit_per_platform)
                 collected_items.extend(li_items)
@@ -208,6 +210,12 @@ class ScraperOrchestrator:
                     # Offline runs (tests, --from-fixture) never touch the network.
                     if preloaded_items is None:
                         self._enrich_with_full_page(item)
+                    # An undecoded Google News link leads to a press article, not to the offer:
+                    # the student could not apply there, so the offer is not stored.
+                    if self._REDIRECT_URL.match(item.get("url") or ""):
+                        statuses["rejected"] = statuses.get("rejected", 0) + 1
+                        logger.info("   -> rejected : lien Google News non décodé, pas de page où postuler")
+                        continue
                     result = process_offer(item, store, existing, checker=self.company_checker)
                     statuses[result["status"]] = statuses.get(result["status"], 0) + 1
                     if result["status"] in ("published", "pending_review"):
