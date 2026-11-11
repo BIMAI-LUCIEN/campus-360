@@ -77,6 +77,27 @@ const LAYOUT_RISK: Record<AtsTemplate, { gravite: Gravite; message: string } | n
 
 const TODO = /a completer/;
 
+/**
+ * Eliminating requirements of the offer found by the jury (module 36): one the
+ * CV does not show is blocking, so the ATS filters the CV out (note 4 at most).
+ */
+export const applyEliminatingCriteria = (
+  ats: AtsResult,
+  criteres: { exigence: string; present: boolean }[],
+): AtsResult => {
+  const missing = criteres.filter((c) => !c.present);
+  if (!missing.length) return ats;
+  return {
+    ...ats,
+    verdict: 'FILTRÉ',
+    note: Math.min(ats.note, 4),
+    problemes: [
+      ...missing.map((c) => ({ gravite: 'bloquant' as const, message: `Critère de l’offre que le CV ne montre pas : « ${c.exigence} ».` })),
+      ...ats.problemes,
+    ],
+  };
+};
+
 export const evaluateAts = (
   cv: OfficialCv,
   options: { template: AtsTemplate; requirements?: string[] },
@@ -89,7 +110,7 @@ export const evaluateAts = (
   if (!p.email.trim() && !p.telephone.trim()) add('bloquant', 'Aucun moyen de te contacter (ni e-mail ni téléphone).');
   else if (!p.email.trim()) add('majeur', 'E-mail absent.');
   else if (!p.telephone.trim()) add('majeur', 'Téléphone absent.');
-  if (!p.adresse?.trim()) add('mineur', 'Ville absente : les recruteurs filtrent souvent par lieu.');
+  if (!p.ville?.trim()) add('mineur', 'Ville absente : les recruteurs filtrent souvent par lieu.');
   if (!cv.titrePoste.trim()) add('majeur', 'Pas de titre de poste en haut du CV.');
   if (!cv.experiences.length) add('majeur', 'Aucune expérience, stage ou projet dans la rubrique Expérience professionnelle.');
   if (!cv.formations.length) add('majeur', 'Rubrique Formation vide.');

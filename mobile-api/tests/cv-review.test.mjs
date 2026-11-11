@@ -4,7 +4,7 @@ import test from 'node:test';
 
 import { loadTsWithPackages } from './helpers/load-ts.mjs';
 
-const review = await loadTsWithPackages('lib/cv-review.ts');
+const review = await loadTsWithPackages('lib/cv-review.ts', ['lib/stage-charge-core.ts']);
 const read = (file) => fs.readFileSync(file, 'utf8');
 
 // In-memory wallet: transactions and credits, like app_wallet_transactions / app_wallets.
@@ -66,4 +66,29 @@ test('garde de source : session avant tout, corps strict, facturation avant l’
   const lib = read('lib/cv-review.ts');
   assert.match(lib, /pg_advisory_xact_lock/);
   assert.match(lib, /reference_id like 'cv-%' and reference_id not like 'cv-review%'/);
+});
+
+test('36.6 : « jusqu’à Z/7 » compte les juges dont le potentiel atteint 7, et les 3 questions qui rapportent le plus', () => {
+  const juges = ['recruteur', 'manager', 'concurrent', 'patron', 'expert', 'sceptique']
+    .map((id, i) => ({ id, note: 5, potentiel: i < 3 ? 7 : 5, verdict: 'REJETÉ', raisons: [] }));
+  const questionsDetail = [{ question: 'a', juges: [], gain: 6 }, { question: 'b', juges: [], gain: 2 }, { question: 'c', juges: [], gain: 0 }, { question: 'd', juges: [], gain: 1 }];
+  const pot = review.juryPotential({ verdict: 'PASSE LE FILTRE' }, { juges, questionsDetail });
+  assert.equal(pot.score, 4);
+  assert.deepEqual(pot.questions, [1, 2, 4]);
+  assert.equal(review.juryPotential({ verdict: 'FILTRÉ' }, { juges, questionsDetail: [] }).score, 3);
+  assert.match(read('app/api/mobile/documents/cv-review/route.ts'), /potentiel: juryPotential\(ats, jury\)/);
+});
+
+test('36.9 : une candidature payée (stage-apply) donne droit à une relecture gratuite de son CV ; non payée, non', async () => {
+  const paid = new Set(['credit:u1:stage-apply:job-9']);
+  const query = async (sql, params) => {
+    const [userId, ref] = params;
+    if (/app_credit_usages/.test(sql)) return { rows: paid.has(`credit:${userId}:${ref}`) ? [{ x: 1 }] : [] };
+    if (/type = 'purchase'/.test(sql)) return { rows: [] };
+    return { rows: [] };
+  };
+  const deps = review.sqlReviewBillingDeps(query);
+  assert.equal(await deps.ownsCvGeneration('u1', 'stage-apply:job-9'), true);
+  assert.equal(await deps.ownsCvGeneration('u1', 'stage-apply:job-10'), false);
+  assert.equal(await deps.ownsCvGeneration('u2', 'stage-apply:job-9'), false);
 });

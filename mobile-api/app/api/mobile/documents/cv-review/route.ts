@@ -3,9 +3,9 @@ import { z } from 'zod';
 
 import { enforceAiQuota } from '@/lib/ai-quota';
 import { careerOfferSchema } from '@/lib/career-context';
-import { evaluateAts } from '@/lib/cv-ats';
+import { applyEliminatingCriteria, evaluateAts } from '@/lib/cv-ats';
 import { buildCvJuryMessages, parseCvJury } from '@/lib/cv-jury';
-import { decideReviewBilling, juryScore, ReviewBillingError, settleReview, sqlReviewBillingDeps } from '@/lib/cv-review';
+import { decideReviewBilling, juryScore, ReviewBillingError, settleReview, sqlReviewBillingDeps, juryPotential } from '@/lib/cv-review';
 import { cvToText, officialCvSchema } from '@/lib/cv-schema';
 import { databasePool } from '@/lib/database';
 import { aiCost } from '@/lib/free-launch';
@@ -47,7 +47,10 @@ export async function POST(request: NextRequest) {
     await enforceAiQuota(request, { userId, route: 'cv-review' });
 
     const usableOffer = offer && offer.title.trim().length >= 2 ? offer : null;
-    const ats = evaluateAts(cv, { template, requirements: usableOffer?.requirements });
+    const atsFromCode = evaluateAts(cv, { template, requirements: usableOffer?.requirements });
+    const offerText = usableOffer
+      ? [usableOffer.title, usableOffer.company, usableOffer.location, usableOffer.duration, ...usableOffer.requirements, usableOffer.description].filter(Boolean).join('\n')
+      : '';
     const cvText = cvToText(cv);
     const messages = buildCvJuryMessages(cvText, usableOffer && {
       title: usableOffer.title,
@@ -59,11 +62,12 @@ export async function POST(request: NextRequest) {
     let jury = null;
     for (const model of CV_MODELS) {
       const raw = await callLlm(messages, { temperature: 0.2, maxTokens: 5000, title: 'Campus 360 Jury CV', models: [model], timeoutMs: 60_000 });
-      jury = parseCvJury(raw, cvText);
+      jury = parseCvJury(raw, cvText, offerText);
       if (jury) break;
       console.warn(`[cv-review] ${model}: jury answer unreadable (${raw ? `${raw.length} chars` : 'empty'})`);
     }
     if (!jury) throw new MobileApiError("Le jury n'a pas pu relire ton CV. Aucun crédit débité, réessaie.", 502);
+    const ats = applyEliminatingCriteria(atsFromCode, jury.criteres);
 
     const client = await databasePool.connect();
     let billing;
@@ -76,6 +80,7 @@ export async function POST(request: NextRequest) {
     return withCors(NextResponse.json({
       score: juryScore(ats, jury),
       total: 7,
+      potentiel: juryPotential(ats, jury),
       ats,
       jury,
       ...billing,

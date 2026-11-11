@@ -66,3 +66,30 @@ test('cvToText garde l’ordre de lecture et les rubriques', () => {
   assert.match(text, /juin 2025 – août 2025/);
   assert.match(text, /Certificats\n- PIX/);
 });
+
+test('36.1 : le schéma reprend adresse en ville, refuse un lien non https ; l’ATS lit la ville', () => {
+  const parsed = cv();
+  assert.equal(parsed.detailsPersonnels.ville, 'Douala');
+  assert.equal('adresse' in parsed.detailsPersonnels, false);
+  const bad = schema.officialCvSchema.safeParse({ ...parsed, detailsPersonnels: { ...parsed.detailsPersonnels, liens: ['javascript:alert(1)'] } });
+  assert.equal(bad.success, false);
+  const ok = cv({ detailsPersonnels: { nom: 'Ndi', prenom: 'Awa', email: 'a@b.cm', telephone: '1', ville: 'Douala', liens: ['https://linkedin.com/in/awa'], disponibilite: 'Juin 2026' } });
+  const text = schema.cvToText(ok);
+  assert.ok(text.includes('https://linkedin.com/in/awa') && text.includes('Disponibilité : Juin 2026'));
+  const noCity = cv({ detailsPersonnels: { nom: 'Ndi', prenom: 'Awa', email: 'a@b.cm', telephone: '1' } });
+  assert.ok(ats.evaluateAts(noCity, { template: 'ats' }).problemes.some((p) => /Ville absente/.test(p.message)));
+  assert.ok(!ats.evaluateAts(parsed, { template: 'ats' }).problemes.some((p) => /Ville absente/.test(p.message)));
+});
+
+test('36.5 : un critère éliminatoire absent rend l’ATS « Filtré » ; présent ou aucun : rien ne change', () => {
+  const base = ats.evaluateAts(cv(), { template: 'ats', requirements: ['Excel', 'Sage'] });
+  assert.equal(base.verdict, 'PASSE LE FILTRE');
+  const filtered = ats.applyEliminatingCriteria(base, [{ exigence: 'Bac+3 exigé', present: false }, { exigence: 'Permis B', present: true }]);
+  assert.equal(filtered.verdict, 'FILTRÉ');
+  assert.ok(filtered.note <= 4);
+  assert.equal(filtered.problemes[0].gravite, 'bloquant');
+  assert.match(filtered.problemes[0].message, /Bac\+3 exigé/);
+  assert.ok(!filtered.problemes.some((p) => /Permis B/.test(p.message)));
+  assert.deepEqual(ats.applyEliminatingCriteria(base, [{ exigence: 'Permis B', present: true }]), base);
+  assert.deepEqual(ats.applyEliminatingCriteria(base, []), base);
+});

@@ -15,15 +15,23 @@ export const officialCvSchema = z.object({
   titrePoste: text(200).default(''),
   photoUrl: z.string().max(3_000_000).optional(),
   profil: text(1500).optional(),
-  detailsPersonnels: z.object({
+  // `adresse` is the former name of `ville` (older CVs of the library): moved into it.
+  detailsPersonnels: z.preprocess((v) => {
+    if (!v || typeof v !== 'object') return v;
+    const { adresse, ...rest } = v as Record<string, unknown>;
+    return { ...rest, ville: rest.ville || adresse || undefined };
+  }, z.object({
     nom: text(120).default(''),
     prenom: text(120).default(''),
     nationalite: text(80).optional(),
     age: text(40).optional(),
     email: text(200).default(''),
     telephone: text(60).default(''),
-    adresse: text(200).optional(),
-  }),
+    ville: text(200).optional(),
+    // https only, like safeLink in src/features/stages/cvHtml.ts.
+    liens: z.array(z.string().trim().max(200).regex(/^https:\/\/[^\s"'<>]+\.[^\s"'<>]+$/i)).max(3).optional(),
+    disponibilite: text(200).optional(),
+  })),
   experiences: z.array(z.object({
     poste: text(200).default(''),
     entreprise: text(200).default(''),
@@ -52,6 +60,7 @@ export const officialCvSchema = z.object({
     titre: text(120),
     items: z.array(text(400)).max(15),
   })).max(10).optional(),
+  formationEnPremier: z.boolean().optional(),
 });
 
 export type OfficialCv = z.infer<typeof officialCvSchema>;
@@ -74,18 +83,24 @@ export const printedPeriode = (item: { periode?: string; debut?: string; fin?: s
 /** The CV as plain text, in reading order: what a reader or a parser sees. */
 export const cvToText = (cv: OfficialCv): string => {
   const p = cv.detailsPersonnels;
-  const lines = [
-    [p.prenom, p.nom].filter(Boolean).join(' '),
-    cv.titrePoste,
-    [p.email, p.telephone, p.adresse, p.nationalite, p.age].filter(Boolean).join(' | '),
-    cv.profil ? `Profil\n${cv.profil}` : '',
+  const experience = [
     'Expérience professionnelle',
     ...cv.experiences.map((e) => [
       [e.poste, e.entreprise, e.ville, printedPeriode(e)].filter(Boolean).join(' — '),
       ...e.missions.map((m) => `- ${m}`),
     ].join('\n')),
+  ];
+  const formation = [
     'Formation',
     ...cv.formations.map((f) => [f.diplome, f.etablissement, f.ville, printedPeriode(f)].filter(Boolean).join(' — ')),
+  ];
+  const lines = [
+    [p.prenom, p.nom].filter(Boolean).join(' '),
+    cv.titrePoste,
+    [p.email, p.telephone, p.ville, ...(p.liens ?? []), p.nationalite, p.age].filter(Boolean).join(' | '),
+    p.disponibilite ? `Disponibilité : ${p.disponibilite}` : '',
+    cv.profil ? `Profil\n${cv.profil}` : '',
+    ...(cv.formationEnPremier ? [...formation, ...experience] : [...experience, ...formation]),
     'Compétences',
     ...cv.competences.professionnelles.map((s) => `- ${s}`),
     cv.competences.habilitesRelationnelles.length ? `Qualités : ${cv.competences.habilitesRelationnelles.join(', ')}` : '',

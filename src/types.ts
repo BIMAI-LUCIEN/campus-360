@@ -206,7 +206,14 @@ export type CvPersonalDetails = {
   age?: string;
   email: string;
   telephone: string;
+  /** City shown on the CV. */
+  ville?: string;
+  /** Former name of `ville`: older CVs are read with it moved into `ville` (normalizeCv). */
   adresse?: string;
+  /** LinkedIn, portfolio: https links only. */
+  liens?: string[];
+  /** Start date, length and rhythm of the internship, mobility: short free text. */
+  disponibilite?: string;
 };
 
 /**
@@ -272,6 +279,8 @@ export type OfficialCvData = {
   loisirs: string[];
   /** Extra sections (activities, certificates, achievements, custom). Absent on older CVs. */
   rubriques?: CvRubrique[];
+  /** Education printed before experience (no experience related to the offer). */
+  formationEnPremier?: boolean;
 };
 
 export type StageKitReadyAnswers = {

@@ -193,3 +193,56 @@ test('34.5 : question sans réponse ignorée, aucune réponse = texte vide', () 
   assert.equal(m.numbersGrounded('Licence 3, 2025', 'Licence 3 en 2025'), true);
   assert.equal(m.numbersGrounded('Licence 3', '+35 % de ventes'), false);
 });
+
+test('36.3 : le prompt impose verbe + périmètre + résultat, l’emplacement à compléter et le libellé de l’offre', () => {
+  const [system] = m.buildCvFillMessages(input('Stage chez Boulangerie Le Palmier'));
+  assert.match(system.content, /verbe d’action au passé \+ ce qui a été fait \+ périmètre/);
+  assert.match(system.content, /\[À COMPLÉTER : /);
+  assert.match(system.content, /libellé exact de l’offre/);
+  assert.match(system.content, /"formationEnPremier"/);
+});
+
+test('36.3 : emplacement à compléter gardé, chiffre inventé retiré, libellé de l’offre gardé, exigence non citée absente', () => {
+  const req = m.cvFillRequestSchema.parse({
+    jobId: 'j', job: { title: 'Stage comptable', requirements: ['Microsoft Excel', 'SAP'] },
+    student: { skills: ['Excel'] },
+    notes: 'Stage chez Boulangerie Le Palmier : saisie des factures fournisseurs et rapprochements bancaires.',
+  });
+  const cv = m.parseCvFill(answer({
+    experiences: [{
+      poste: 'Stagiaire comptable', entreprise: 'Boulangerie Le Palmier',
+      missions: [
+        'Saisi les factures fournisseurs [À COMPLÉTER : nombre de factures par mois]',
+        'Réalisé les rapprochements bancaires de 3 comptes',
+        'Saisi les factures [À COMPLÉTER : nombre] [À COMPLÉTER : durée]',
+        'Saisi les factures [À COMPLÉTER : environ 200 par mois]',
+      ],
+    }],
+    competences: { professionnelles: ['Microsoft Excel', 'SAP'] },
+    formationEnPremier: false,
+  }), req);
+  const missions = cv.experiences[0].missions;
+  assert.equal(missions[0], 'Saisi les factures fournisseurs [À COMPLÉTER : nombre de factures par mois]');
+  assert.ok(!missions.some((x) => x.includes('3 comptes')), 'chiffre inventé retiré');
+  assert.equal(missions[1], 'Saisi les factures [À COMPLÉTER : nombre]', 'un seul emplacement par mission');
+  assert.equal(missions[2], 'Saisi les factures', 'emplacement chiffré retiré');
+  assert.deepEqual(cv.competences.professionnelles, ['Microsoft Excel']);
+  assert.equal(cv.formationEnPremier, false);
+});
+
+test('36.3 : sans expérience gardée, la formation passe en premier (gabarits classique et ATS)', () => {
+  const cv = m.parseCvFill(answer({ experiences: [], formationEnPremier: false }), input(''));
+  assert.equal(cv.formationEnPremier, true);
+  const base = {
+    titrePoste: 'Stage', detailsPersonnels: { nom: 'N', prenom: 'A', email: 'a@b.cm', telephone: '1' },
+    experiences: [{ poste: 'Vendeur', entreprise: 'Marché', ville: '', periode: '', missions: [] }],
+    formations: [{ diplome: 'Licence 3', etablissement: 'UD', ville: '', periode: '' }],
+    competences: { professionnelles: [], habilitesRelationnelles: [], logiciels: [] }, langues: [], loisirs: [],
+  };
+  for (const template of ['classic', 'ats']) {
+    const first = cvHtml.generateOfficialCvHtml({ ...base, formationEnPremier: true }, template);
+    assert.ok(first.indexOf('Formation</') < first.indexOf('Expérience professionnelle</'), template);
+    const usual = cvHtml.generateOfficialCvHtml(base, template);
+    assert.ok(usual.indexOf('Expérience professionnelle</') < usual.indexOf('Formation</'), template);
+  }
+});

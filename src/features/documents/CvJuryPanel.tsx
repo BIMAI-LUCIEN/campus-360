@@ -5,12 +5,26 @@ import { mergeAiCv, type CvTemplateId } from '../stages/cvHtml';
 import { stitchColors } from '../../theme/stitch';
 import type { OfficialCvData } from '../../types';
 import type { CareerOffer } from './careerContextApi';
-import { correctCvWithJury, JuryApiError, offerFromTitle, reviewCv, type CvReview, type Gravite } from './cvJuryApi';
+import { correctCvWithJury, judgeSnapshot, JuryApiError, offerFromTitle, reviewCv, type CvReview, type Gravite } from './cvJuryApi';
 
 const GRAVITE_LABEL: Record<Gravite, string> = { bloquant: 'Bloquant', majeur: 'Majeur', mineur: 'Mineur' };
 const KEYWORD_LABEL = { exact: 'présent', autre_forme: 'autre forme', absent: 'absent' } as const;
 // ATS problems that a one-column layout removes.
 const LAYOUT_PROBLEM = /colonnes|tableau|Frise/;
+
+/** "1, 2 et 4" */
+const joinNumbers = (n: number[]): string => (n.length <= 1 ? n.join('') : `${n.slice(0, -1).join(', ')} et ${n[n.length - 1]}`);
+
+/** « X/7 avant, Y/7 maintenant, jusqu’à Z/7 si tu réponds aux questions N, N et N. » */
+export const juryFinalLine = (review: CvReview): string | null => {
+  if (!review.potentiel) return null;
+  const now = `${review.score}/${review.total} maintenant`;
+  const parts = [review.avant ? `${review.avant.score}/${review.total} avant` : '', now].filter(Boolean).join(', ');
+  const { score, questions } = review.potentiel;
+  if (score <= review.score || !questions.length) return `${parts.charAt(0).toUpperCase()}${parts.slice(1)}.`;
+  const which = questions.length === 1 ? `à la question ${questions[0]}` : `aux questions ${joinNumbers(questions)}`;
+  return `${parts.charAt(0).toUpperCase()}${parts.slice(1)}, jusqu’à ${score}/${review.total} si tu réponds ${which}.`;
+};
 
 type Props = {
   cv: OfficialCvData;
@@ -48,13 +62,15 @@ export function CvJuryPanel({ cv, template, offer, sourceGenerationId, review, p
     });
   };
 
-  const run = async (target: OfficialCvData, source: string | undefined, before?: number) => {
+  const run = async (target: OfficialCvData, source: string | undefined, before?: CvReview) => {
     setError(null);
     setBusy('Le jury lit ton CV… (20 à 40 secondes)');
     try {
       const result = await reviewCv({ cv: target, template, offer, sourceGenerationId: source });
       onCreditsChange?.(result.remainingCredits);
-      onReviewed(result.review, before);
+      // The verdict before the correction travels with the new one: the table survives a reload.
+      const next: CvReview = before ? { ...result.review, avant: { score: before.score, juges: judgeSnapshot(before) } } : result.review;
+      onReviewed(next, before?.score);
     } catch (e) {
       fail(e);
     } finally {
@@ -74,7 +90,7 @@ export function CvJuryPanel({ cv, template, offer, sourceGenerationId, review, p
       if (fixed.remainingCredits !== undefined) onCreditsChange?.(fixed.remainingCredits);
       const merged = mergeAiCv(cv, fixed.cv);
       onCorrected(merged, fixed.generationId);
-      await run(merged, fixed.generationId, review.score);
+      await run(merged, fixed.generationId, review);
     } catch (e) {
       fail(e);
       setBusy(null);
@@ -94,6 +110,7 @@ export function CvJuryPanel({ cv, template, offer, sourceGenerationId, review, p
             <Text testID="jury-before-after" style={styles.beforeAfter}>Avant correction : {previousScore}/7 · maintenant : {review.score}/7</Text>
           ) : null}
           {!offer && review.jury.posteVise ? <Text style={styles.hint}>Sans offre, poste visé supposé : {review.jury.posteVise}</Text> : null}
+          {juryFinalLine(review) ? <Text testID="jury-final-line" style={styles.finalLine}>{juryFinalLine(review)}</Text> : null}
         </View>
       ) : (
         <Text style={styles.body}>
@@ -121,6 +138,31 @@ export function CvJuryPanel({ cv, template, offer, sourceGenerationId, review, p
           {!error.noCredits && !busy ? (
             <Pressable onPress={() => run(cv, sourceGenerationId)}><Text style={styles.link}>Réessayer</Text></Pressable>
           ) : null}
+        </View>
+      ) : null}
+
+      {review?.avant ? (
+        <View style={styles.card} testID="jury-before-after-table">
+          <Text style={styles.judgeName}>Avant / après correction</Text>
+          <View style={[styles.tableRow, styles.tableHead]}>
+            <Text style={[styles.cellName, styles.headText]}>Juge</Text>
+            <Text style={[styles.cell, styles.headText]}>Avant</Text>
+            <Text style={[styles.cell, styles.headText]}>Après</Text>
+            <Text style={[styles.cell, styles.headText]}>Potentiel</Text>
+          </View>
+          {judgeSnapshot(review).map((after) => {
+            const before = review.avant?.juges.find((b) => b.id === after.id);
+            const potential = review.jury.juges.find((j) => j.id === after.id)?.potentiel;
+            return (
+              <View key={after.id} style={styles.tableRow} testID={`jury-row-${after.id}`}>
+                <Text style={styles.cellName} numberOfLines={2}>{after.nom}</Text>
+                <Text style={[styles.cell, before?.verdict === 'RETENU' ? styles.okText : styles.koText]}>{before ? `${before.note}/10` : '—'}</Text>
+                <Text style={[styles.cell, after.verdict === 'RETENU' ? styles.okText : styles.koText]}>{after.note}/10</Text>
+                <Text style={styles.cell}>{potential !== undefined && potential > after.note ? `~${potential}` : '—'}</Text>
+              </View>
+            );
+          })}
+          <Text style={styles.hint}>Le potentiel est une estimation si tu réponds aux questions ; il ne compte pas dans le score.</Text>
         </View>
       ) : null}
 
@@ -152,6 +194,9 @@ export function CvJuryPanel({ cv, template, offer, sourceGenerationId, review, p
                 <Text style={styles.judgeName}>{j.nom}</Text>
                 <Text style={[styles.badge, j.verdict === 'RETENU' ? styles.ok : styles.ko]}>{j.verdict === 'RETENU' ? 'Retenu' : 'Rejeté'} · {j.note}/10</Text>
               </View>
+              {j.potentiel !== undefined && j.potentiel > j.note ? (
+                <Text style={styles.hint}>Potentiel si tu réponds aux questions : ~{j.potentiel}/10</Text>
+              ) : null}
               {j.raisons.map((r, i) => (
                 <Text key={i} style={styles.line}>{r.citation ? <Text style={styles.quote}>« {r.citation} » : </Text> : null}{r.raison}</Text>
               ))}
@@ -173,10 +218,10 @@ export function CvJuryPanel({ cv, template, offer, sourceGenerationId, review, p
           {review.jury.questions.length ? (
             <View style={styles.card} testID="jury-questions">
               <Text style={styles.judgeName}>Questions pour toi</Text>
-              <Text style={styles.hint}>Réponds seulement ce qui est vrai : l’IA n’ajoute à ton CV que ce que tu écris ici.</Text>
+              <Text style={styles.hint}>Réponds seulement ce qui est vrai : l’IA n’ajoute à ton CV que ce que tu écris ici. Les premières rapportent le plus.</Text>
               {review.jury.questions.map((q, i) => (
                 <View key={i} style={styles.question}>
-                  <Text style={styles.body}>{q}</Text>
+                  <Text style={styles.body}>{i + 1}. {q}</Text>
                   <TextInput
                     testID={`jury-question-${i}`}
                     style={styles.input}
@@ -207,6 +252,12 @@ const styles = StyleSheet.create({
   score: { fontSize: 34, fontWeight: '800', color: stitchColors.primary },
   scoreText: { fontSize: 14, color: stitchColors.ink, fontWeight: '600' },
   beforeAfter: { fontSize: 13, color: stitchColors.ink },
+  finalLine: { fontSize: 13, color: stitchColors.ink, fontWeight: '600', textAlign: 'center', marginTop: 4 },
+  tableRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: stitchColors.surfaceContainerHigh },
+  tableHead: { borderBottomWidth: 1 },
+  headText: { fontWeight: '700', color: stitchColors.inkMuted, fontSize: 12 },
+  cellName: { flex: 2, fontSize: 13, color: stitchColors.ink },
+  cell: { flex: 1, fontSize: 13, color: stitchColors.ink, textAlign: 'center' },
   body: { fontSize: 14, color: stitchColors.ink, lineHeight: 20 },
   hint: { fontSize: 12, color: stitchColors.inkMuted, lineHeight: 17 },
   busy: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },

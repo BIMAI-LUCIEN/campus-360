@@ -90,3 +90,46 @@ test('erreurs triées par gravité, gravité inconnue écartée', () => {
   assert.deepEqual(r.erreurs.map((e) => e.gravite), ['bloquant', 'mineur']);
   assert.deepEqual(r.erreurs[0].juges, ['manager']);
 });
+
+test('36.5 : critères éliminatoires cités de l’offre ; preuve absente du CV = critère absent', () => {
+  const offerText = 'Stage comptable\nBac+3 en comptabilité exigé\nPermis B souhaité\nAnglais courant';
+  const [system] = jury.buildCvJuryMessages(cvText, { title: 'Stage comptable', description: offerText });
+  assert.match(system.content, /"criteres"/);
+  const r = jury.parseCvJury(answer({
+    criteres: [
+      { type: 'diplome', exigence: 'Bac+3 en comptabilité exigé', preuve: '' },
+      { type: 'permis', exigence: 'Permis B souhaité', preuve: 'Permis B' },
+      { type: 'langue', exigence: 'Anglais courant', preuve: 'Saisie des factures' },
+      { type: 'lieu', exigence: 'Basé à Kribi', preuve: '' },
+      { type: 'salaire', exigence: 'Anglais courant', preuve: '' },
+    ],
+  }), cvText, offerText);
+  assert.deepEqual(r.criteres.map((c) => [c.type, c.present]), [['diplome', false], ['permis', false], ['langue', true]]);
+  assert.equal(r.criteres[1].preuve, '', 'preuve inventée effacée');
+  // Without an offer, no criterion is kept.
+  assert.deepEqual(jury.parseCvJury(answer({ criteres: [{ type: 'diplome', exigence: 'Bac+3', preuve: '' }] }), cvText).criteres, []);
+  // An older answer without the field still reads.
+  assert.deepEqual(jury.parseCvJury(answer(), cvText, offerText).criteres, []);
+});
+
+test('36.6 : potentiel borné à la note, questions triées par gain, ancien format lu', () => {
+  const juges = jury.JUDGES.map((j) => ({ ...judge(j.id, 5), potentiel: j.id === 'concurrent' ? 8 : j.id === 'patron' ? 3 : j.id === 'expert' ? 12 : 7 }));
+  const r = jury.parseCvJury(answer({
+    juges,
+    questions: [
+      { question: 'As-tu un lien LinkedIn ?', juges: ['recruteur'] },
+      { question: 'Combien de factures par mois ?', juges: ['concurrent', 'manager', 'inconnu'] },
+      'Question à l’ancienne, sans juge ?',
+    ],
+  }), cvText);
+  const byId = Object.fromEntries(r.juges.map((j) => [j.id, j]));
+  assert.equal(byId.concurrent.potentiel, 8);
+  assert.equal(byId.patron.potentiel, 5, 'sous la note : relevé à la note');
+  assert.equal(byId.expert.potentiel, 5, 'hors bornes : ignoré');
+  assert.deepEqual(r.questions, ['Combien de factures par mois ?', 'As-tu un lien LinkedIn ?', 'Question à l’ancienne, sans juge ?']);
+  assert.deepEqual(r.questionsDetail.map((q) => q.gain), [5, 2, 0]);
+  assert.deepEqual(r.questionsDetail[0].juges, ['concurrent', 'manager']);
+  const old = jury.parseCvJury(answer(), cvText);
+  assert.ok(old.juges.every((j) => j.potentiel === j.note), 'sans potentiel : la note');
+  assert.deepEqual(old.questions, ['Combien de factures saisissais-tu par mois ?']);
+});

@@ -56,10 +56,28 @@ import { OffersModal } from '../wallet/OffersModal';
 import { applyPriceLabel, jobApplyCredits, jobApplyPrice, jobIsPaid } from './applyPrice';
 import { saveCvToLibrary } from './cvLibrary';
 import { CvEditor } from './CvEditor';
+import { CvJuryPanel } from '../documents/CvJuryPanel';
+import type { CvReview } from '../documents/cvJuryApi';
+import type { CareerOffer } from '../documents/careerContextApi';
 import { CvBackgroundScreen } from '../profile/CvBackgroundScreen';
 import { cvBackgroundFilledCount, fetchCvBackground } from '../profile/cvBackgroundApi';
 import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from './contactTargets';
 import { AppAlert } from '../../ui/AppAlert';
+
+/** The offer the jury judges against: the job itself. */
+const jobAsOffer = (job: StageJob | null): CareerOffer | null =>
+  job
+    ? {
+      kind: 'stage',
+      title: job.title,
+      company: job.company?.name ?? '',
+      location: job.location ?? '',
+      duration: job.duration ?? '',
+      description: (job.description || '').slice(0, 6000),
+      requirements: (job.requirements ?? []).slice(0, 20),
+      deadline: '',
+    }
+    : null;
 
 interface AiApplyModalProps {
   visible: boolean;
@@ -109,7 +127,11 @@ export function AiApplyModal({
   const progressTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [progressMsg, setProgressMsg] = useState("Analyse de l'offre et correspondance des compétences...");
   const [result, setResult] = useState<GeneratedApplicationResult | null>(null);
-  const [activePreviewTab, setActivePreviewTab] = useState<'letter' | 'cv' | 'match'>('letter');
+  const [activePreviewTab, setActivePreviewTab] = useState<'letter' | 'cv' | 'match' | 'jury'>('letter');
+  // Jury before sending (decision 34.16): optional, never blocks the application.
+  const [cvReview, setCvReview] = useState<CvReview | undefined>(undefined);
+  const [cvPreviousScore, setCvPreviousScore] = useState<number | undefined>(undefined);
+  const [cvSourceGeneration, setCvSourceGeneration] = useState<string | undefined>(undefined);
   const [isEditing, setIsEditing] = useState(false);
   const [editableLetter, setEditableLetter] = useState('');
   const [editableCv, setEditableCv] = useState('');
@@ -275,6 +297,10 @@ export function AiApplyModal({
       const officialCv = res.officialCv ? mergeAiCv(res.officialCv, aiCv) : undefined;
       const cvText = officialCv ? buildCvText(officialCv) : res.cvText;
       setResult({ ...res, officialCv, cvText });
+      setCvReview(undefined);
+      setCvPreviousScore(undefined);
+      // The paid application (stages/cv) brings one free review of its CV.
+      setCvSourceGeneration(aiCv ? `stage-apply:${job.id}` : undefined);
       if (officialCv) {
         // Keep this CV in the library, whatever happens to the application afterwards.
         void saveCvToLibrary({
@@ -283,6 +309,7 @@ export function AiApplyModal({
           jobTitle: job.title,
           company: job.company?.name ?? '',
           officialCv,
+          ...(aiCv ? { sourceGenerationId: `stage-apply:${job.id}` } : {}),
         }).catch(() => {});
       }
       setEditableLetter(res.letterText);
@@ -853,6 +880,22 @@ export function AiApplyModal({
                       </Text>
                     </Pressable>
 
+                    {result.officialCv ? (
+                      <Pressable
+                        testID="tab-jury"
+                        style={[styles.tabBtn, activePreviewTab === 'jury' && styles.tabBtnActive]}
+                        onPress={() => { setIsEditing(false); setActivePreviewTab('jury'); }}
+                      >
+                        <ShieldCheck
+                          size={14}
+                          color={activePreviewTab === 'jury' ? stitchColors.white : stitchColors.inkSubtle}
+                        />
+                        <Text style={[styles.tabBtnText, activePreviewTab === 'jury' && styles.tabBtnTextActive]}>
+                          {cvReview ? `Jury ${cvReview.score}/7` : 'Jury'}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+
                     <Pressable
                       testID="tab-match"
                       style={[styles.tabBtn, activePreviewTab === 'match' && styles.tabBtnActive]}
@@ -873,7 +916,7 @@ export function AiApplyModal({
                     </Pressable>
                   </View>
 
-                  {activePreviewTab !== 'match' && (
+                  {activePreviewTab !== 'match' && activePreviewTab !== 'jury' && (
                     <Pressable
                       style={[styles.editToggleBtn, isEditing && styles.editToggleBtnActive]}
                       onPress={() => setIsEditing(!isEditing)}
@@ -921,7 +964,36 @@ export function AiApplyModal({
                   contentContainerStyle={styles.previewScrollContent}
                   showsVerticalScrollIndicator={true}
                 >
-                  {activePreviewTab === 'match' && matchAnalysis ? (
+                  {activePreviewTab === 'jury' && result.officialCv ? (
+                    <View testID="apply-jury">
+                      <Text style={styles.cvAiNotice}>
+                        Facultatif : le jury relit ton CV avant l’envoi. Tu peux corriger ou envoyer quand même.
+                      </Text>
+                      <CvJuryPanel
+                        cv={result.officialCv}
+                        template={cvTemplate}
+                        offer={jobAsOffer(job)}
+                        sourceGenerationId={cvSourceGeneration}
+                        review={cvReview}
+                        previousScore={cvPreviousScore}
+                        student={{
+                          fullName: currentProfile.fullName || undefined,
+                          university: currentProfile.university || undefined,
+                          major: currentProfile.major || undefined,
+                          educationLevel: currentProfile.educationLevel || undefined,
+                          skills: currentProfile.skills,
+                        }}
+                        onReviewed={(next, before) => { setCvReview(next); setCvPreviousScore(before); }}
+                        onCorrected={(officialCv, generation) => {
+                          // The corrected CV is the one sent; the application is not charged again.
+                          setResult((current) => (current ? { ...current, officialCv } : current));
+                          setEditableCv(buildCvText(officialCv));
+                          setCvSourceGeneration(generation);
+                        }}
+                        onSwitchToAts={() => { setCvTemplate('ats'); setActivePreviewTab('cv'); }}
+                      />
+                    </View>
+                  ) : activePreviewTab === 'match' && matchAnalysis ? (
                     <View style={styles.matchTabCard}>
                       <View style={styles.matchHeaderScore}>
                         <Text style={styles.matchScoreBig}>{matchAnalysis.score}%</Text>

@@ -26,6 +26,9 @@ const requestSchema = z.object({
   // to the jury questions. Both are the student's material for the grounding check.
   currentCv: officialCvSchema.optional(),
   answers: z.array(z.object({ question: z.string().trim().max(300), reponse: z.string().trim().max(600) })).max(8).optional(),
+  // Answers to the questions asked before the CV is written (documents/cv-precisions):
+  // the student's own words, like the jury answers.
+  precisions: z.array(z.object({ question: z.string().trim().max(300), reponse: z.string().trim().max(600) })).max(10).optional(),
   // One id per generation: retrying the same one is never charged twice.
   generationId: z.string().trim().min(8).max(200),
 });
@@ -74,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     const parsed = requestSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) throw new MobileApiError('Données du CV invalides.', 400);
-    const { offer, background, student, notes, generationId, currentCv, answers } = parsed.data;
+    const { offer, background, student, notes, generationId, currentCv, answers, precisions } = parsed.data;
     if (offer.title.length < 2) throw new MobileApiError("L'intitulé du poste manque dans cette offre.", 422);
     if (!isLlmConfigured()) throw new MobileApiError("L'IA n'est pas disponible pour le moment.", 503);
 
@@ -90,6 +93,7 @@ export async function POST(request: NextRequest) {
       reference,
       currentCv ? `CV actuel de l’étudiant :\n${cvToText(currentCv)}` : '',
       answers?.length ? `Réponses de l’étudiant aux questions du jury :\n${juryAnswersText(answers)}` : '',
+      precisions?.length ? `Précisions données par l’étudiant :\n${juryAnswersText(precisions)}` : '',
       notes,
     ].filter(Boolean).join('\n\n').slice(0, 12000));
 

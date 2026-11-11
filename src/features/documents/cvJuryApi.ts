@@ -1,5 +1,5 @@
 import { authFetchRaw } from '../auth/betterAuth';
-import type { CvStyle, CvTemplateId } from '../stages/cvHtml';
+import { normalizeCv, type CvStyle, type CvTemplateId } from '../stages/cvHtml';
 import type { OfficialCvData } from '../../types';
 import type { CareerOffer } from './careerContextApi';
 
@@ -7,10 +7,24 @@ import type { CareerOffer } from './careerContextApi';
 
 export type Gravite = 'bloquant' | 'majeur' | 'mineur';
 
+export type JuryJudgeVerdict = {
+  id: string;
+  nom: string;
+  verdict: 'RETENU' | 'REJETÉ';
+  note: number;
+  /** Estimated note if the student answers the questions (absent on older reviews). */
+  potentiel?: number;
+  raisons: { citation: string; raison: string }[];
+};
+
 export type CvReview = {
   score: number;
   total: number;
   at: string;
+  /** "Up to Z/7 if you answer questions N, N, N" (absent on older reviews). */
+  potentiel?: { score: number; questions: number[] };
+  /** The review before the last correction, judge by judge (kept in "Mes CV"). */
+  avant?: { score: number; juges: JudgeSnapshot[] };
   ats: {
     verdict: 'PASSE LE FILTRE' | 'FILTRÉ';
     note: number;
@@ -20,11 +34,26 @@ export type CvReview = {
   };
   jury: {
     posteVise: string;
-    juges: { id: string; nom: string; verdict: 'RETENU' | 'REJETÉ'; note: number; raisons: { citation: string; raison: string }[] }[];
+    juges: JuryJudgeVerdict[];
     erreurs: { gravite: Gravite; citation: string; juges: string[]; correction: string }[];
+    /** Sorted by gain, highest first. */
     questions: string[];
+    questionsDetail?: { question: string; juges: string[]; gain: number }[];
+    criteres?: { type: string; exigence: string; present: boolean; preuve: string }[];
   };
 };
+
+/** One judge before and after a correction, for the before / after table. */
+export type JudgeSnapshot = { id: string; nom: string; note: number; verdict: string };
+
+/** The 7 judges of a review (the ATS first), as kept to compare after a correction. */
+export const judgeSnapshot = (review: CvReview): JudgeSnapshot[] => [
+  { id: 'ats', nom: 'Le logiciel de tri (ATS)', note: review.ats.note, verdict: review.ats.verdict === 'PASSE LE FILTRE' ? 'RETENU' : 'REJETÉ' },
+  ...review.jury.juges.map((j) => ({ id: j.id, nom: j.nom, note: j.note, verdict: j.verdict })),
+];
+
+export type PrecisionTarget = 'experience' | 'disponibilite' | 'langue' | 'ville' | 'lien' | 'autre';
+export type PrecisionQuestion = { id: string; cible: PrecisionTarget; question: string; appui: string };
 
 /** Error with the HTTP status, so the screen can tell "no credits" from a failure. */
 export class JuryApiError extends Error {
@@ -48,9 +77,10 @@ const post = async <T,>(path: string, body: unknown): Promise<T> => {
 const newId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 // The photo (an inline image of several hundred KB) is never read by the jury
-// or the correction: it stays on the phone.
+// or the correction: it stays on the phone. A link still being typed (not https
+// yet) is left out: the server refuses anything but https.
 const withoutPhoto = (cv: OfficialCvData): OfficialCvData => {
-  const { photoUrl: _photo, ...rest } = cv;
+  const { photoUrl: _photo, ...rest } = normalizeCv(cv);
   return rest;
 };
 
@@ -72,8 +102,8 @@ export async function reviewCv(input: {
       ...(input.sourceGenerationId ? { sourceGenerationId: input.sourceGenerationId } : {}),
     },
   );
-  const { free, creditsUsed, remainingCredits, score, total, ats, jury } = data;
-  return { review: { score, total, ats, jury, at: new Date().toISOString() }, free, creditsUsed, remainingCredits };
+  const { free, creditsUsed, remainingCredits, score, total, ats, jury, potentiel } = data;
+  return { review: { score, total, ats, jury, ...(potentiel ? { potentiel } : {}), at: new Date().toISOString() }, free, creditsUsed, remainingCredits };
 }
 
 /** Rewrites the CV with the student's answers to the jury (a cv-fill generation). */
@@ -93,6 +123,39 @@ export async function correctCvWithJury(input: {
   });
   return { cv: data.cv, generationId, remainingCredits: data.remainingCredits };
 }
+
+/** Questions asked before the CV is written: free, a fixed list when the AI cannot help. */
+export async function fetchPrecisions(input: { offer: CareerOffer; background?: unknown; notes?: string }): Promise<{ questions: PrecisionQuestion[]; fallback: boolean }> {
+  const data = await post<{ questions: PrecisionQuestion[]; fallback: boolean }>('/api/mobile/documents/cv-precisions', {
+    offer: input.offer,
+    background: input.background ?? null,
+    notes: input.notes?.trim() || undefined,
+  });
+  return { questions: Array.isArray(data.questions) ? data.questions : [], fallback: Boolean(data.fallback) };
+}
+
+/**
+ * Answers about the city, a link or the availability are the student's own
+ * contact details: written into the CV header as typed (a link only if https).
+ */
+export const applyPrecisionContacts = (
+  cv: OfficialCvData,
+  questions: PrecisionQuestion[],
+  answers: Record<string, string>,
+): OfficialCvData => {
+  const details = { ...cv.detailsPersonnels };
+  for (const q of questions) {
+    const answer = (answers[q.id] || '').trim();
+    if (!answer) continue;
+    if (q.cible === 'ville') details.ville = answer.slice(0, 120);
+    if (q.cible === 'disponibilite') details.disponibilite = answer.slice(0, 200);
+    if (q.cible === 'lien') {
+      const links = (answer.match(/https:\/\/[^\s"'<>]+/gi) ?? []).map((l) => l.replace(/[.,;)]+$/, ''));
+      if (links.length) details.liens = [...new Set([...(details.liens ?? []), ...links])].slice(0, 3);
+    }
+  }
+  return normalizeCv({ ...cv, detailsPersonnels: details });
+};
 
 export async function suggestMissions(poste: string): Promise<string[]> {
   const data = await post<{ items: string[] }>('/api/mobile/documents/cv-suggest', { poste });

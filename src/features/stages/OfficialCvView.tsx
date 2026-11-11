@@ -55,7 +55,7 @@ export function OfficialCvView({ cv }: OfficialCvViewProps) {
             <Text style={styles.officialCvLabel}>Tél : </Text>{todo(cv.detailsPersonnels.telephone)}
           </Text>
           <Text style={styles.officialCvField}>
-            <Text style={styles.officialCvLabel}>Adresse : </Text>{todo(cv.detailsPersonnels.adresse)}
+            <Text style={styles.officialCvLabel}>Ville : </Text>{todo(cv.detailsPersonnels.ville || cv.detailsPersonnels.adresse)}
           </Text>
         </View>
       </View>

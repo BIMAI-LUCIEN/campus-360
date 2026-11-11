@@ -1,5 +1,5 @@
 import type { OfficialCvData } from '../../types';
-import type { CvStyle, CvTemplateId } from './cvHtml';
+import { normalizeCv, type CvStyle, type CvTemplateId } from './cvHtml';
 import type { CareerOffer } from '../documents/careerContextApi';
 import type { CvReview } from '../documents/cvJuryApi';
 import { readJsonFile, writeJsonFile } from '../documents/localJsonStore';
@@ -34,7 +34,8 @@ export type NewSavedCv = Omit<SavedCv, 'id' | 'createdAt'>;
 
 export async function loadCvLibrary(): Promise<SavedCv[]> {
   const list = await readJsonFile<SavedCv[]>(CV_LIBRARY_KEY);
-  return Array.isArray(list) ? list : [];
+  // Older CVs carry `adresse`: read as `ville`, nothing lost.
+  return Array.isArray(list) ? list.map((saved) => (saved?.officialCv ? { ...saved, officialCv: normalizeCv(saved.officialCv) } : saved)) : [];
 }
 
 export async function saveCvToLibrary(entry: NewSavedCv): Promise<SavedCv> {

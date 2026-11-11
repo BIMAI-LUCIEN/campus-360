@@ -84,6 +84,7 @@ const filledCvSchema = z.object({
   })),
   langues: objList(z.object({ langue: str(40), niveau: str(40) }), 6),
   loisirs: strList(6, 60),
+  formationEnPremier: z.preprocess((v) => v === true, z.boolean()),
 });
 
 export type FilledCv = z.infer<typeof filledCvSchema>;
@@ -145,6 +146,18 @@ export const mentioned = (source: string, value: string, share = 0): boolean => 
 
 const SKILL_SHARE = 0.5;
 
+// "[À COMPLÉTER : nombre de factures]": a visible gap the student fills, never a fact.
+const TODO_SLOT = /\s*\[\s*[àa]\s+compl[ée]ter\b[^\]]*\]/gi;
+export const withoutTodo = (value: string): string => value.replace(TODO_SLOT, '').trim();
+/** One gap at most, kept short, with no number in it (a number would read as a fact). */
+const tidyTodo = (mission: string): string => {
+  let kept = 0;
+  return mission.replace(TODO_SLOT, (slot) => {
+    kept += 1;
+    return kept === 1 && slot.length <= 90 && !/\d/.test(slot) ? slot : '';
+  }).trim();
+};
+
 // Every number the model writes (volumes, %, years) must come from the student:
 // `mentioned` skips short words, so "500 factures" would otherwise pass on "factures".
 const numbersOf = (value: string): string[] => (value.match(/\d+(?:[.,]\d+)?/g) ?? []).map((n) => n.replace(',', '.'));
@@ -174,13 +187,15 @@ export const buildCvFillMessages = (input: CvFillRequest): LlmMessage[] => {
     '- Tu peux reformuler, corriger l’orthographe, structurer les notes en expériences et missions, et classer les compétences de la plus utile à la moins utile pour l’offre.',
     '- "titrePoste" : un titre court adapté à l’offre (ex. « Stagiaire assistant comptable »).',
     '- "profil" : 2 à 3 phrases à la première personne, sobres, qui relient le parcours réel de l’étudiant à l’offre, sans lui prêter une compétence ou une qualité qu’il ne cite pas. Pas de formules creuses (« passionné », « dynamique et motivé », « dans un monde en constante évolution »).',
-    '- Missions : seulement les tâches que l’étudiant décrit, avec ses mots ou un verbe d’action, une ligne chacune, au plus 4 par expérience. N’en ajoute pas.',
-    '- Compétences : seulement celles déclarées par l’étudiant ou décrites dans ses notes, reformulées au besoin. N’ajoute jamais une exigence de l’offre que l’étudiant ne cite pas. Garde toutes ses compétences déclarées.',
+    '- Missions : seulement les tâches que l’étudiant décrit, au plus 4 par expérience, une ligne chacune. N’en ajoute pas. Chaque mission suit la forme : verbe d’action au passé + ce qui a été fait + périmètre (volume, durée, équipe, outil) + résultat, avec seulement ce que l’étudiant a dit.',
+    '- Quand le périmètre ou le résultat chiffré d’une mission manque, termine la mission par un emplacement visible entre crochets, au plus un par mission : « [À COMPLÉTER : nombre de factures saisies par mois] ». Jamais un chiffre plausible, jamais « environ ».',
+    '- Compétences : seulement celles déclarées par l’étudiant ou décrites dans ses notes. Quand l’une d’elles est la même chose qu’une exigence de l’offre écrite autrement (« Excel » pour « Microsoft Excel »), écris-la avec le libellé exact de l’offre. N’ajoute jamais une exigence de l’offre que l’étudiant ne cite pas. Garde toutes ses compétences déclarées.',
+    '- "formationEnPremier" : true seulement si aucune expérience de l’étudiant n’a de lien avec le poste visé (la formation passe alors avant l’expérience), sinon false.',
     '- "habilitesRelationnelles" : seulement les qualités humaines que l’étudiant cite lui-même, sinon tableau vide.',
     '- Langues : "niveau" seulement s’il est écrit par l’étudiant, sinon chaîne vide.',
     '- "logiciels" : seulement les outils cités par l’étudiant, regroupés par catégorie.',
     'Format exact :',
-    '{"titrePoste":"","profil":"","experiences":[{"poste":"","entreprise":"","ville":"","periode":"","missions":[""]}],"formations":[{"diplome":"","etablissement":"","ville":"","periode":""}],"competences":{"professionnelles":[""],"habilitesRelationnelles":[""],"logiciels":[{"categorie":"","items":[""]}]},"langues":[{"langue":"","niveau":""}],"loisirs":[""]}',
+    '{"titrePoste":"","profil":"","experiences":[{"poste":"","entreprise":"","ville":"","periode":"","missions":[""]}],"formations":[{"diplome":"","etablissement":"","ville":"","periode":""}],"competences":{"professionnelles":[""],"habilitesRelationnelles":[""],"logiciels":[{"categorie":"","items":[""]}]},"langues":[{"langue":"","niveau":""}],"loisirs":[""],"formationEnPremier":false}',
   ].join('\n');
   const user = [
     'OFFRE',
@@ -228,7 +243,7 @@ export const parseCvFill = (raw: string | null, input: CvFillRequest): FilledCv 
   const source = cvFillSource(input);
   const notes = input.notes ?? '';
 
-  return {
+  const result = {
     ...cv,
     titrePoste: numbersGrounded(source, cv.titrePoste) ? cv.titrePoste : '',
     profil: groundedSummary(source, cv.profil),
@@ -240,7 +255,10 @@ export const parseCvFill = (raw: string | null, input: CvFillRequest): FilledCv 
         .map((e) => ({
           ...e,
           periode: numbersGrounded(source, e.periode) ? e.periode : '',
-          missions: e.missions.filter((mission) => mentioned(notes, mission, SKILL_SHARE) && numbersGrounded(source, mission)),
+          // The gap is checked apart: its words ("nombre de factures") are not the student's.
+          missions: e.missions
+            .map(tidyTodo)
+            .filter((mission) => withoutTodo(mission) && mentioned(notes, withoutTodo(mission), SKILL_SHARE) && numbersGrounded(source, withoutTodo(mission))),
         }))
       : [],
     formations: cv.formations.filter((f) => f.diplome && (!f.etablissement || mentioned(source, f.etablissement))),
@@ -262,4 +280,6 @@ export const parseCvFill = (raw: string | null, input: CvFillRequest): FilledCv 
         .filter((log) => log.items.length > 0),
     },
   };
+  // No experience left: the education leads, whatever the model said.
+  return { ...result, formationEnPremier: result.formationEnPremier || result.experiences.length === 0 };
 };

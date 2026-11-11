@@ -33,10 +33,13 @@ export const buildCvJuryMessages = (cvText: string, offer: JuryOffer | null): Ll
     '- Chaque raison cite le CV mot pour mot dans "citation" (un extrait exact, court). Si la raison porte sur un manque, laisse "citation" vide et dis précisément ce qui manque.',
     '- Jamais de raison générique qui irait à n’importe quel CV.',
     '- N’invente aucun fait sur l’étudiant. Une information qui manque (un chiffre, un outil de l’offre, une date) devient une question simple dans "questions", posée à l’étudiant en le tutoyant.',
+    '- "potentiel" de chaque juge : la note (entier sur 10) qu’il donnerait si l’étudiant répondait favorablement à toutes les questions qui le concernent ; jamais sous sa note.',
+    '- Chaque question indique dans "juges" les évaluateurs dont la note monterait avec la réponse.',
     '- "erreurs" : la liste fusionnée des défauts, sans doublon, chacun avec sa gravité ("bloquant" : fait rejeter à lui seul ; "majeur" : fait perdre face à un autre candidat ; "mineur" : finition), les juges qui l’ont relevé et la correction proposée.',
     'Tu réponds uniquement par un objet JSON valide, sans markdown ni commentaire, au format exact :',
-    '{"posteVise":"","juges":[{"id":"recruteur","note":0,"raisons":[{"citation":"","raison":""}]}],"erreurs":[{"gravite":"majeur","citation":"","juges":["recruteur"],"correction":""}],"questions":[""]}',
+    '{"posteVise":"","juges":[{"id":"recruteur","note":0,"potentiel":0,"raisons":[{"citation":"","raison":""}]}],"erreurs":[{"gravite":"majeur","citation":"","juges":["recruteur"],"correction":""}],"questions":[{"question":"","juges":["recruteur"]}],"criteres":[{"type":"diplome","exigence":"","preuve":""}]}',
     `Les six "id" attendus : ${JUDGE_IDS.join(', ')}. Trois raisons par juge.`,
+    offer ? '"criteres" : les critères éliminatoires de l’offre seulement (diplôme ou niveau d’études, années d’expérience, langue avec niveau, permis, disponibilité ou durée, lieu). Pour chacun : "type" (diplome, experience, langue, permis, disponibilite, lieu), "exigence" = l’extrait exact de l’offre qui l’exige, "preuve" = l’extrait exact du CV qui le montre, ou vide si le CV ne le montre pas. Liste vide si l’offre n’exige rien de tel ; 6 au plus.' : 'Aucune offre : "criteres" est une liste vide.',
     'Sois bref : une citation fait au plus 12 mots, une raison au plus 25 mots, une correction au plus 25 mots ; 8 erreurs et 6 questions au plus.',
   ].join('\n');
   const user = [
@@ -71,7 +74,14 @@ const rawJurySchema = z.object({
     correction: str(400),
   }).passthrough())),
   questions: z.preprocess((v) => (Array.isArray(v) ? v : []), z.array(z.unknown())),
+  criteres: z.preprocess((v) => (Array.isArray(v) ? v : []), z.array(z.unknown())),
 });
+
+export const CRITERE_TYPES = ['diplome', 'experience', 'langue', 'permis', 'disponibilite', 'lieu'] as const;
+export type CritereType = (typeof CRITERE_TYPES)[number];
+
+/** An eliminating requirement of the offer, and whether the CV shows it. */
+export type JuryCritere = { type: CritereType; exigence: string; present: boolean; preuve: string };
 
 export type Gravite = 'bloquant' | 'majeur' | 'mineur';
 
@@ -80,14 +90,23 @@ export type JuryJudge = {
   nom: string;
   verdict: 'RETENU' | 'REJETÉ';
   note: number;
+  /** Estimated note if the student answers the questions; never below `note`, never in the score. */
+  potentiel: number;
   raisons: { citation: string; raison: string }[];
 };
+
+/** A question, the judges it concerns and the points it may bring (sum of their potential gains). */
+export type JuryQuestion = { question: string; juges: JudgeId[]; gain: number };
 
 export type JuryResult = {
   posteVise: string;
   juges: JuryJudge[];
   erreurs: { gravite: Gravite; citation: string; juges: JudgeId[]; correction: string }[];
+  /** Sorted by gain, highest first: what the student should answer first. */
   questions: string[];
+  questionsDetail: JuryQuestion[];
+  /** Eliminating requirements of the offer (empty without an offer). */
+  criteres: JuryCritere[];
   /** Reasons removed because their quote is not in the CV. */
   citationsRetirees: number;
 };
@@ -103,8 +122,12 @@ export const quoteInCv = (cvText: string, citation: string): boolean => {
 
 const GRAVITES: Gravite[] = ['bloquant', 'majeur', 'mineur'];
 
+/** The potential is an estimate: missing or invalid → the note; below the note → the note. */
+const potentialOf = (value: unknown, note: number): number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 10 ? Math.max(value, note) : note;
+
 /** Reads the model answer. Null when it is not JSON or a judge is missing or invalid. */
-export const parseCvJury = (raw: string | null, cvText: string): JuryResult | null => {
+export const parseCvJury = (raw: string | null, cvText: string, offerText = ''): JuryResult | null => {
   if (!raw) return null;
   const start = raw.indexOf('{');
   const end = raw.lastIndexOf('}');
@@ -150,15 +173,48 @@ export const parseCvJury = (raw: string | null, cvText: string): JuryResult | nu
       nom: def.nom,
       note: finalNote,
       verdict: finalNote >= 7 ? 'RETENU' : 'REJETÉ',
+      potentiel: potentialOf(found.potentiel, finalNote),
       raisons: grounded(found.raisons.filter((r) => r.raison)).slice(0, 3).map(({ citation, raison }) => ({ citation, raison })),
     });
   }
 
-  const questions = [...new Set(data.questions
-    .filter((q): q is string => typeof q === 'string')
-    .map((q) => q.trim().slice(0, 300))
-    .filter(Boolean))]
-    .slice(0, 8);
+  // Older answers give plain strings; newer ones {question, juges}.
+  const gainOf = (ids: JudgeId[]): number => ids.reduce((sum, id) => {
+    const j = juges.find((x) => x.id === id);
+    return sum + (j ? j.potentiel - j.note : 0);
+  }, 0);
+  const seenQuestions = new Set<string>();
+  const questionsDetail: JuryQuestion[] = [];
+  for (const item of data.questions) {
+    const rawQuestion = typeof item === 'string' ? item : item && typeof item === 'object' ? (item as Record<string, unknown>).question : null;
+    if (typeof rawQuestion !== 'string') continue;
+    const question = rawQuestion.trim().slice(0, 300);
+    if (!question || seenQuestions.has(question)) continue;
+    seenQuestions.add(question);
+    const rawIds = item && typeof item === 'object' && Array.isArray((item as Record<string, unknown>).juges) ? (item as { juges: unknown[] }).juges : [];
+    const ids = [...new Set(rawIds.filter((id): id is JudgeId => JUDGE_IDS.includes(id as JudgeId)))];
+    questionsDetail.push({ question, juges: ids, gain: gainOf(ids) });
+    if (questionsDetail.length >= 8) break;
+  }
+  // Stable sort: equal gains keep the order the jury gave.
+  questionsDetail.sort((a, b) => b.gain - a.gain);
+  const questions = questionsDetail.map((q) => q.question);
 
-  return { posteVise: data.posteVise, juges, erreurs, questions, citationsRetirees };
+  // A requirement must be quoted from the offer, and its proof from the CV:
+  // a proof the CV does not contain counts as missing, never as shown.
+  const criteres: JuryCritere[] = [];
+  for (const item of data.criteres) {
+    if (!offerText || !item || typeof item !== 'object') continue;
+    const { type, exigence, preuve } = item as Record<string, unknown>;
+    if (!CRITERE_TYPES.includes(type as CritereType) || typeof exigence !== 'string') continue;
+    const need = exigence.trim().slice(0, 200);
+    if (!quoteInCv(offerText, need)) continue;
+    const proof = typeof preuve === 'string' ? preuve.trim().slice(0, 200) : '';
+    const present = Boolean(proof) && quoteInCv(cvText, proof);
+    if (criteres.some((c) => c.exigence.toLowerCase() === need.toLowerCase())) continue;
+    criteres.push({ type: type as CritereType, exigence: need, present, preuve: present ? proof : '' });
+    if (criteres.length >= 6) break;
+  }
+
+  return { posteVise: data.posteVise, juges, erreurs, questions, questionsDetail, criteres, citationsRetirees };
 };

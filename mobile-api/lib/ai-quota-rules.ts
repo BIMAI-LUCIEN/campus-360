@@ -24,6 +24,7 @@ export const AI_ROUTE_LIMITS = {
   'cv-fill': { max: 10, windowMs: 600_000 },
   'cv-review': { max: 10, windowMs: 600_000 },
   'cv-suggest': { max: 30, windowMs: 600_000 },
+  'cv-precisions': { max: 20, windowMs: 600_000 },
   workshop: { max: 10, windowMs: 600_000 },
   'cv-import': { max: 5, windowMs: 600_000 },
   'external-offer': { max: 10, windowMs: 600_000 },

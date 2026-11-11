@@ -17,12 +17,13 @@ import { AppAlert } from '../../ui/AppAlert';
 import type { OfficialCvData } from '../../types';
 import { careerOfferLabel, readOfferFromFile, readOfferFromImages, readOfferFromText, type CareerOffer } from './careerContextApi';
 import { CvJuryPanel } from './CvJuryPanel';
-import type { CvReview } from './cvJuryApi';
+import { CvPrecisions } from './CvPrecisions';
+import { applyPrecisionContacts, fetchPrecisions, type CvReview, type PrecisionQuestion } from './cvJuryApi';
 
 // Same as mobile-api aiCost('careerDoc').
 const CV_CREDITS = 2;
 
-type Step = 'form' | 'generating' | 'preview';
+type Step = 'form' | 'precisions' | 'generating' | 'preview';
 
 /**
  * CV for an offer seen outside the app, built like an application: skills,
@@ -68,6 +69,11 @@ export function CvBuilderModal({
   const [review, setReview] = React.useState<CvReview | undefined>(undefined);
   const [previousScore, setPreviousScore] = React.useState<number | undefined>(undefined);
   const [cvStyle, setCvStyle] = React.useState<CvStyle>({});
+  const [precisionQuestions, setPrecisionQuestions] = React.useState<PrecisionQuestion[]>([]);
+  const [precisionAnswers, setPrecisionAnswers] = React.useState<Record<string, string>>({});
+  const [precisionLoading, setPrecisionLoading] = React.useState(false);
+  const [precisionError, setPrecisionError] = React.useState<string | null>(null);
+  const [precisionFallback, setPrecisionFallback] = React.useState(false);
   const isLetter = kind === 'lettre_motivation';
   // A spontaneous letter has no offer: the student then says who it is for.
   const canGenerate = Boolean(offer) || (isLetter && notes.trim().length > 0);
@@ -88,6 +94,10 @@ export function CvBuilderModal({
     setReview(undefined);
     setPreviousScore(undefined);
     setCvStyle({});
+    setPrecisionQuestions([]);
+    setPrecisionAnswers({});
+    setPrecisionError(null);
+    setPrecisionFallback(false);
     void fetchCvBackground()
       .then((r) => setHasSavedBackground(r.saved && cvBackgroundFilledCount(r.background) > 0))
       .catch(() => setHasSavedBackground(false));
@@ -176,8 +186,40 @@ export function CvBuilderModal({
     onLetterReady?.(doc.id);
   };
 
-  const generate = async () => {
+  // CV only: a few questions first (free), so the CV carries numbers and results.
+  const loadPrecisions = async () => {
+    if (!offer) return;
+    setPrecisionLoading(true);
+    setPrecisionError(null);
+    try {
+      const result = await fetchPrecisions({ offer, background, notes });
+      setPrecisionQuestions(result.questions);
+      setPrecisionFallback(result.fallback);
+    } catch (error) {
+      setPrecisionError(error instanceof Error ? error.message : 'Questions indisponibles.');
+    } finally {
+      setPrecisionLoading(false);
+    }
+  };
+
+  const askPrecisions = () => {
     if (!canGenerate) return;
+    if (isLetter) {
+      void generate(false);
+      return;
+    }
+    setStep('precisions');
+    if (!precisionQuestions.length) void loadPrecisions();
+  };
+
+  const generate = async (withPrecisions: boolean) => {
+    if (!canGenerate) return;
+    const precisions = withPrecisions
+      ? precisionQuestions
+        .map((q) => ({ question: q.question.slice(0, 300), reponse: (precisionAnswers[q.id] || '').trim().slice(0, 600) }))
+        .filter((a) => a.reponse)
+        .slice(0, 10)
+      : [];
     setStep('generating');
     try {
       if (isLetter) {
@@ -199,13 +241,15 @@ export function CvBuilderModal({
             skills: skillList(),
           },
           notes: notes.trim() || undefined,
+          precisions: precisions.length ? precisions : undefined,
           generationId,
         }),
       });
       const data = (await res.json()) as { cv: Partial<OfficialCvData>; remainingCredits?: number };
       setSourceGenerationId(generationId);
       if (data.remainingCredits !== undefined) onCreditsChange(data.remainingCredits);
-      const merged = mergeAiCv(baseCv, data.cv);
+      const withContacts = withPrecisions ? applyPrecisionContacts(baseCv, precisionQuestions, precisionAnswers) : baseCv;
+      const merged = mergeAiCv(withContacts, data.cv);
       setCv(merged);
       setStep('preview');
       // Kept at once: the CV is paid, closing the screen must not lose it.
@@ -215,7 +259,7 @@ export function CvBuilderModal({
         onLibraryChange(saved);
       }
     } catch (error) {
-      setStep('form');
+      setStep(isLetter ? 'form' : 'precisions');
       AppAlert.alert(isLetter ? 'Lettre' : 'CV', error instanceof Error ? error.message : 'Génération impossible.');
     }
   };
@@ -261,7 +305,7 @@ export function CvBuilderModal({
   const hasReference = Boolean(background) || hasSavedBackground;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={step === 'preview' ? finish : onClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={step === 'preview' ? finish : step === 'precisions' ? () => setStep('form') : onClose}>
       <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.sheet}>
           <View style={styles.header}>
@@ -377,7 +421,7 @@ export function CvBuilderModal({
               <Pressable
                 testID="cv-builder-generate"
                 style={[styles.primary, (!canGenerate || Boolean(busy)) && styles.disabled]}
-                onPress={generate}
+                onPress={askPrecisions}
                 disabled={!canGenerate || Boolean(busy)}
               >
                 <Text style={styles.primaryText}>
@@ -385,6 +429,20 @@ export function CvBuilderModal({
                 </Text>
               </Pressable>
             </ScrollView>
+          ) : null}
+
+          {step === 'precisions' ? (
+            <CvPrecisions
+              questions={precisionQuestions}
+              answers={precisionAnswers}
+              onChangeAnswer={(id, value) => setPrecisionAnswers((prev) => ({ ...prev, [id]: value }))}
+              loading={precisionLoading}
+              error={precisionError}
+              fallback={precisionFallback}
+              onRetry={() => void loadPrecisions()}
+              onSkip={() => void generate(false)}
+              onSubmit={() => void generate(true)}
+            />
           ) : null}
 
           {step === 'preview' && cv ? (

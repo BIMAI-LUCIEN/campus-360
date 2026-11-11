@@ -2,12 +2,13 @@
 
 > **Progression globale :** 110/161 tâches validées (68%) — Module 25 (scraping des offres) : 13/18 ; Module 24 (galerie de modèles de rapports) : 8/13 ; Module 23 (préparation V1) : 0/26 ; Module 20 : 16/16 validées ; Module 21 : 9/9 validées ; Module 19 : 10 en cours ; hors Module 19 : 3 en cours, 2 ouvertes  
 > **Couverture MVP :** 100% des fonctionnalités du cadrage `contexte.md` (Template CV Officiel, Ingestion n8n, Mobile Money, Onboarding Express, Suivi J+7, Expédition Automatisée WhatsApp/Email via Evolution API & N8N, Éditeur de documents §13, Style du document & rédaction §14)  
-> **Dernière mise à jour :** 2026-11-06 par /execute (module 35)
+> **Dernière mise à jour :** 2026-11-11 par /plan-task (module 36)
 
 ---
 ## Reprise
+- **Module 36 (rédaction du CV alignée sur le jury) :** exécuté le 2026-11-11 (`/execute --all`) : 36.1 à 36.8 et 36.10 `[X]`, 36.9 `[!]` (code et tests faits, parcours navigateur non joué : candidature payée sur une vraie offre), 36.11 `[ ]` 🔒 (commit, push, OTA sur accord). mobile-api 493 pass / 0 fail / 17 skip, typecheck app et API 0, `lint:colors` 143. Rien n'est commité. Prochaine : 36.11.
 - **Module 35 (kit de candidature pour les offres `LINK`) :** livré le 2026-11-06 (`2016b97`, plan `b923e7e`) : 35.1 à 35.12 `[X]`, migration `0032` appliquée en production, OTA publiée. Coût IA d'un kit mesuré (35.5) : ≈ 0,94 FCFA pour 7 appels. Recontrôlé le 2026-11-08 (`/plan-check`) : `api/health` 200, `POST /stages/kit/answers` et `GET /stages/kit` sans session → 401. Pas d'entrée de livraison dans `journal.md` (preuves seulement dans la ligne de 35.12).
-- **Module 34 (jury CV et éditeur enrichi) :** 34.1 à 34.14 `[X]` le 2026-11-06 (typecheck app et API 0, `lint:colors` 143, mobile-api 459 pass / 0 fail / 20 skip avant les derniers correctifs du jury, parcours réel Edge 375 px). Vérifié le 2026-11-06 (`/test-and-verify`, tableau dans `journal.md`) : 🟢 sauf import d'un vrai PDF LinkedIn et PDF stylé téléchargé (🟠) ; cv-fill rendu robuste aux réponses coupées. 34.15 livrée le 2026-11-06 (`2076322`, VPS et OTA). Reste : parcours sur téléphone avec l'OTA, import d'un vrai PDF LinkedIn, PDF stylé téléchargé ; décision ouverte 34.16 (jury dans la candidature). Décision ouverte : jury dans la candidature (34.16 proposée, non validée). Rien n'est commité ; le dépôt contient aussi des changements `landing-site/` d'une autre session.
+- **Module 34 (jury CV et éditeur enrichi) :** 34.1 à 34.14 `[X]` le 2026-11-06 (typecheck app et API 0, `lint:colors` 143, mobile-api 459 pass / 0 fail / 20 skip avant les derniers correctifs du jury, parcours réel Edge 375 px). Vérifié le 2026-11-06 (`/test-and-verify`, tableau dans `journal.md`) : 🟢 sauf import d'un vrai PDF LinkedIn et PDF stylé téléchargé (🟠) ; cv-fill rendu robuste aux réponses coupées. 34.15 livrée le 2026-11-06 (`2076322`, VPS et OTA). Reste : parcours sur téléphone avec l'OTA, import d'un vrai PDF LinkedIn, PDF stylé téléchargé ; 34.16 tranchée le 2026-11-11 (tâche 36.9). Rien n'est commité ; le dépôt contient aussi des changements `landing-site/` d'une autre session.
 - **Offres « sur le site » et débordements (hors plan) :** livrés le 2026-11-03 (`2abf55a`, VPS et OTA, migration `0031` appliquée, 0 ligne touchée). Reste : un parcours réel sur téléphone Android, jusqu'à l'écriture de `apply-on-site` (détail dans `journal.md`).
 - **Module 33 (relance recruteur et suivi) :** livré le 2026-11-02 (commit `58d7d1a`, VPS et OTA, migration 0029 appliquée). 33.1 annulée ; 33.3 à 33.12 `[X]` ; 33.13 `[~]` ; 33.2, 33.14, 33.15, 33.16 `[!]` 🔒. Cron des rappels installé le 2026-11-02, premier passage le 2026-11-03 à 9 h, à contrôler dans `/var/log/campus-followups.log`. Suite : relance réelle vers une adresse de test (33.2, 33.16), parcours réel 33.15.
 - **Module 32 (alertes de nouveaux stages) :** 32.1 à 32.5 `[X]` le 2026-11-01 (tsc app/mobile-api 0, mobile-api 379 pass / 0 fail) ; 32.6 cron au déploiement ; 32.7 🔒 Firebase/FCM pour le push Android.
@@ -3469,7 +3470,7 @@ Source : demande du 2026-11-06 (skill `jury-cv` à intégrer, analyse de cv.fr).
 - Modèle par défaut : `classic` reste le modèle par défaut. Le modèle ATS une colonne s'ajoute à la liste ; quand le juge ATS signale le risque des deux colonnes, le panneau du jury propose « Passer en version ATS » (34.8, 34.13).
 
 **À demander à l'utilisateur :**
-- Le jury doit-il aussi apparaître dans le parcours de candidature (`AiApplyModal`), avant l'envoi ? Hors du cadrage actuel.
+- ~~Le jury doit-il aussi apparaître dans le parcours de candidature ?~~ Tranché le 2026-11-11 : oui, tâche 36.9.
 
 
 ## 🧾 MODULE 35 : Kit de candidature pour les offres à postuler sur un site externe
@@ -3558,6 +3559,76 @@ Source : `contexte.md` §22 (cadrage validé le 2026-11-06).
   - **DoD :** `/deploy-and-push` : `api/health` 200, `0032` présente dans `schema_migrations` en production, `POST /stages/kit/answers` sans session → 401.
 
 **À demander à l'utilisateur :** aucune décision produit ouverte. Seuil à confirmer après 35.5 si la marge d'un kit est négative.
+
+## ✍️ MODULE 36 : Aligner la rédaction du CV sur le jury
+
+Source : demande du 2026-11-11 (écarts entre le parcours de rédaction et le jury du module 34 ; skill `jury-cv`). Pas de section dans `contexte.md`. Constat : la génération (`cv-fill`) ne recueille ni ne produit ce que le jury sanctionne (chiffres, périmètre, résultat, disponibilité, niveau de langue, ville, lien), d'où des CV d'étudiant notés 0/7 avant comme après correction (`journal.md`, 2026-11-06).
+
+**Décisions déjà prises :**
+- Rien n'est inventé (règle du module 34) : un chiffre absent devient `[À COMPLÉTER : …]` ou une question, jamais une valeur.
+- `buildCvFillMessages` sert aussi `POST /stages/cv` (candidature payante) : toute règle ajoutée au prompt s'applique aux deux parcours et se teste sur les deux.
+- Les anciens CV de la bibliothèque (`cvLibrary`) s'ouvrent sans perte : les nouveaux champs sont facultatifs.
+- Le CV et son verdict restent en local : aucune migration prévue dans ce module.
+- Âge, nationalité, photo (2026-11-11) : aucun avertissement dans l'éditeur, champs gardés tels quels (usage courant au Cameroun).
+- Ville (2026-11-11) : `adresse` est renommée `ville`, pas de champ en plus ; les anciens CV sont repris à la lecture.
+- Critères éliminatoires (2026-11-11) : repérés par l'IA. Ils sont demandés dans l'appel du jury qui existe déjà, donc sans appel ni tarif en plus ; le contrôle des citations du module 34 s'y applique.
+- Précisions (2026-11-11) : questions rédigées par l'IA à partir du CV de référence et de l'offre (appel en plus), avec une liste fixe en repli si l'IA échoue.
+- Tarif des précisions (2026-11-11) : gratuites, sous le quota IA journalier (60 requêtes par 24 h), modèle léger, comme `cv-suggest` ; cache par CV de référence et offre (même demande → pas de nouvel appel IA).
+- Jury dans la candidature, 34.16 (2026-11-11) : oui, facultatif et jamais bloquant, inclus dans le prix (première relecture gratuite, suivantes 2 crédits), livré après 36.10 pour ne pas afficher 0/7 sur un CV payé ; coût d'un appel du jury mesuré en 36.10.
+
+### Lot A : données et règles
+- [X] **Tâche 36.1 : Nouveaux champs du CV (ville, liens, disponibilité)** — fait le 2026-11-11 : `normalizeCv` (cvHtml) reprend `adresse` en `ville` à la lecture (`cvLibrary`, `mergeAiCv`, rendu) ; schéma API idem (preprocess) ; liens https seulement (`safeLink`), imprimés sans `https://` ; 5 modèles.
+  - **Fichiers :** `src/types.ts`, `mobile-api/lib/cv-schema.ts`, `mobile-api/lib/cv-fill.ts`, `src/features/stages/cvHtml.ts`, `src/features/stages/cvLibrary.ts`, `mobile-api/lib/cv-ats.ts`, `mobile-api/tests/cv-fill.test.mjs`, `mobile-api/tests/cv-html.test.mjs`
+  - **Action :** `detailsPersonnels.adresse` devient `ville` (décision du 2026-11-11) et `detailsPersonnels` gagne `liens` (LinkedIn, portfolio : URL https seulement) et `disponibilite` (date, durée et rythme du stage, mobilité, en texte court). `cvToText` les écrit dans l'en-tête, les 5 modèles les impriment (échappés), et un ancien CV sans ces champs rend comme avant. Un ancien CV avec `adresse` s'ouvre avec cette valeur dans `ville` (lecture de `cvLibrary`, `mergeAiCv` et schéma zod de l'API), sans perte ; l'ATS (`cv-ats.ts`) lit `ville`. Le libellé imprimé et celui de l'éditeur deviennent « Ville ».
+  - **DoD :** `npm run typecheck` et `cd mobile-api && npm run typecheck` code 0 ; `node --test tests/cv-fill.test.mjs tests/cv-html.test.mjs` passe, dont : ancien CV sans les champs, ancien CV avec `adresse` rendu avec sa valeur en ville, lien `javascript:` refusé, ville imprimée dans les 5 modèles.
+- [X] **Tâche 36.2 : Nouveaux champs dans l'éditeur** — fait : champs Ville, Liens (une ligne par lien, lignes brutes pendant la saisie, filtrées par `normalizeCv` à l'envoi) et Disponibilité ; vérifié à 375 px (lien saisi visible dans l'aperçu).
+  - **Fichiers :** `src/features/stages/CvEditor.tsx`, `src/features/stages/CvEditorExtras.tsx`
+  - **Action :** l'onglet « Corriger » saisit ville, liens et disponibilité. Âge, nationalité et photo restent tels quels, sans avertissement (décision du 2026-11-11). Couleurs issues de `stitch.ts`.
+  - **DoD :** typecheck code 0, `npm run lint:colors` sans hausse ; dans `expo-web-local` à 375 px, une ville et un lien saisis apparaissent dans l'aperçu.
+
+### Lot B : services et API
+- [X] **Tâche 36.3 : Règles de rédaction du jury dans `cv-fill`** — fait : forme verbe + périmètre + résultat, un `[À COMPLÉTER]` par mission au plus (sans chiffre), libellé exact de l'offre, `formationEnPremier` (forcé sans expérience gardée) rendu par les modèles classique et ATS seulement (les 3 modèles à colonnes gardent leur ordre).
+  - **Fichiers :** `mobile-api/lib/cv-fill.ts`, `mobile-api/tests/cv-fill.test.mjs`
+  - **Action :** le prompt écrit chaque mission sous la forme verbe d'action + ce qui a été fait + périmètre + résultat, avec `[À COMPLÉTER : …]` quand le périmètre ou le chiffre manque. Une compétence prouvée par les notes reprend le libellé exact de l'offre ; une exigence non citée reste absente. Le contrôle des chiffres (`numbersGrounded`) laisse passer les emplacements `[À COMPLÉTER]` et refuse toujours un chiffre inventé. La formation passe avant l'expérience quand l'étudiant n'a aucune expérience liée à l'offre (champ d'ordre ou règle de rendu, à trancher en `/plan-detail`).
+  - **DoD :** `node --test tests/cv-fill.test.mjs` passe sur réponses figées : emplacement gardé, chiffre inventé retiré, libellé de l'offre repris pour une compétence citée sous une autre forme, exigence non citée absente ; les tests de `stages/cv` passent toujours.
+- [X] **Tâche 36.4 : Questions de précision rédigées par l'IA, réponses dans `cv-fill`** — fait : route `documents/cv-precisions` (quota `cv-precisions` 20/10 min), cache 7 jours par CV de référence + offre, liste fixe de repli ; réponses `precisions` dans `cv-fill`.
+  - **Fichiers :** `mobile-api/lib/cv-precisions.ts` (nouveau), `mobile-api/app/api/mobile/documents/cv-precisions/route.ts` (nouveau), `mobile-api/tests/cv-precisions.test.mjs` (nouveau), `mobile-api/lib/cv-fill.ts`, `mobile-api/app/api/mobile/documents/cv-fill/route.ts`, `mobile-api/tests/cv-fill.test.mjs`
+  - **Action :** une route authentifiée, sous le quota IA journalier, lit le CV de référence (ou les notes) et l'offre, et renvoie au plus 8 questions courtes en tutoiement : chiffres, périmètre et résultat des expériences qui en manquent, disponibilité, niveaux de langue, ville, lien. Chaque question est rattachée à une expérience ou à un champ ; une question qui ne cite aucun élément réel du CV ni de l'offre est retirée, et une réponse illisible renvoie la liste fixe de repli (mêmes thèmes). `cv-fill` accepte ensuite les réponses, bornées, comme mots de l'étudiant pour le contrôle d'ancrage (comme `juryAnswersText`) ; une réponse vide ne change rien. Gratuit sous le quota, modèle léger, et cache par CV de référence et offre : la même demande ne rappelle pas l'IA.
+  - **DoD :** `node --test tests/cv-precisions.test.mjs tests/cv-fill.test.mjs` passe : sans session 401, plus de 8 questions coupées à 8, réponse IA illisible → liste de repli, chiffre donné en réponse présent dans la mission, réponse trop longue → 400, second appel identique servi par le cache sans appel IA.
+- [X] **Tâche 36.5 : Critères éliminatoires repérés par l'IA** — fait : `criteres` dans l'appel du jury, `applyEliminatingCriteria` (cv-ats) dans `cv-review`. Écart constaté : le jury a jugé « Anglais courant » montré par « Langues : Anglais » (sans niveau) ; le contrôle vérifie que la preuve existe, pas qu'elle suffit.
+  - **Fichiers :** `mobile-api/lib/cv-jury.ts`, `mobile-api/lib/cv-ats.ts`, `mobile-api/lib/cv-review.ts`, `mobile-api/tests/cv-jury.test.mjs`, `mobile-api/tests/cv-ats.test.mjs`
+  - **Action :** l'appel IA déjà fait par le jury (`buildCvJuryMessages`) rend en plus les critères éliminatoires de l'offre (diplôme ou niveau, années d'expérience, langue avec niveau, permis, disponibilité ou durée), chacun avec sa citation de l'offre et, s'il est montré, sa citation du CV. Une citation absente de l'offre retire le critère ; une citation du CV absente du CV le classe « absent ». `cv-review` ajoute chaque critère absent aux problèmes de l'ATS en bloquant, ce qui le fait passer à « Filtré ». Sans offre ou sans critère, le verdict ATS ne change pas.
+  - **DoD :** `node --test tests/cv-jury.test.mjs tests/cv-ats.test.mjs` passe sur réponses figées : « Bac+3 exigé » sans formation citée → bloquant et ATS « Filtré », permis cité dans le CV → aucun problème, critère dont la citation n'est pas dans l'offre → ignoré, sans offre → même note qu'avant.
+- [X] **Tâche 36.6 : Potentiel par juge et questions classées par gain** — fait : `potentiel` par juge, `questionsDetail` triées par gain, `juryPotential` (Z/7 et 3 questions) dans la réponse de `cv-review`.
+  - **Fichiers :** `mobile-api/lib/cv-jury.ts`, `mobile-api/lib/cv-review.ts`, `mobile-api/tests/cv-jury.test.mjs`
+  - **Action :** chaque juge rend en plus un potentiel (note estimée si l'étudiant répond, entier 0..10, jamais sous sa note) et chaque question les juges qu'elle concerne. Les questions sont triées par gain total de potentiel. Le potentiel est affiché comme une estimation et ne compte jamais dans le score X/7.
+  - **DoD :** `node --test tests/cv-jury.test.mjs` passe : potentiel sous la note relevé à la note, potentiel hors bornes ignoré, questions triées par gain, ancien format sans potentiel toujours lu.
+
+### Lot C : interface (application)
+- [X] **Tâche 36.7 : Étape « Précisions » avant la génération** — fait : `CvPrecisions.tsx`, étape `precisions` de `CvBuilderModal` ; ville, lien et disponibilité répondus écrits dans l'en-tête (`applyPrecisionContacts`).
+  - **Fichiers :** `src/features/documents/CvBuilderModal.tsx`, `src/features/documents/CvPrecisions.tsx` (nouveau), `src/features/documents/cvJuryApi.ts`
+  - **Action :** après l'offre et avant « Générer », une étape courte affiche les questions rédigées par l'IA (36.4) à partir du CV de référence et de l'offre, avec un champ de réponse chacune. Tout est facultatif et l'étape peut être passée. Les réponses partent dans `cv-fill` (36.4). Chargement, erreur réessayable (avec « Passer »), quota atteint et cas sans CV de référence gérés.
+  - **DoD :** typecheck code 0, `lint:colors` sans hausse ; dans `expo-web-local` à 375 px, un chiffre saisi à cette étape apparaît dans une mission du CV généré, et « Passer » génère comme avant.
+- [X] **Tâche 36.8 : Second passage complet dans le panneau du jury** — fait : `review.avant` (7 juges avant correction) gardé dans « Mes CV », tableau avant / après / potentiel, phrase finale `juryFinalLine`, questions numérotées. Corrigé en route : `reviewCv` perdait `potentiel`.
+  - **Fichiers :** `src/features/documents/CvJuryPanel.tsx`, `src/features/documents/cvJuryApi.ts`, `src/features/stages/cvLibrary.ts`
+  - **Action :** après correction, un tableau par juge montre note et verdict avant, note et verdict après, et le potentiel « ~8 ». Une phrase finale dit « X/7 avant, Y/7 maintenant, jusqu'à Z/7 si tu réponds aux questions N, N et N ». Les questions s'affichent dans l'ordre du gain. Le verdict précédent par juge est gardé dans la bibliothèque avec le CV.
+  - **DoD :** dans `expo-web-local` à 375 px, après « Corriger avec le jury », le tableau des 7 juges et la phrase finale s'affichent et restent après rechargement.
+- [!] **Tâche 36.9 : Jury dans la candidature** — à exécuter après 36.10 (décision 34.16 du 2026-11-11) — code fait le 2026-11-11 (onglet « Jury » de `AiApplyModal`, aussi en mode site/kit `LINK` ; relecture gratuite pour `stage-apply:<jobId>` payée, `cv-review.ts`) ; tests et typecheck verts. Parcours navigateur non joué : il faut payer une candidature sur une vraie offre.
+  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`, `src/features/stages/ApplyKitPanel.tsx`, `src/features/documents/CvJuryPanel.tsx`, `mobile-api/lib/cv-review.ts`, `mobile-api/tests/cv-review.test.mjs`
+  - **Action :** avant l'envoi d'une candidature (et dans le kit `LINK`), l'étudiant peut faire juger le CV adapté à l'offre. La relecture est incluse dans le prix de la candidature : première relecture gratuite rattachée à la génération de `stages/cv` (même règle que `cv-review-free:<génération>`), les suivantes à 2 crédits IA. Le jury ne bloque jamais : « Corriger » ou « Envoyer quand même ». Une correction met à jour le CV envoyé, sans nouveau débit de la candidature.
+  - **DoD :** `node --test tests/cv-review.test.mjs` passe : génération `stages/cv` → première relecture gratuite, seconde débitée ; dans `expo-web-local` à 375 px, le score s'affiche avant l'envoi, « Envoyer quand même » envoie sans relecture, une correction change le CV envoyé, un seul débit `stage-apply:<jobId>` en base.
+
+### Lot D : câblage et validation
+- [X] **Tâche 36.10 : Parcours complet** — fait le 2026-11-11 : voir `journal.md` (tableau de verdict, coût du jury ≈ 0,96 FCFA).
+  - **Fichiers :** aucun, sauf correctifs ; captures dans `.agent/screenshots/m36/`
+  - **Action :** `/test-and-verify` avec le compte de test : CV de référence importé, précisions données, CV généré pour une offre à critères éliminatoires, jury, réponses, correction, tableau avant / après ; même offre via `stages/cv`. Comparer le score au 0/7 du module 34 sur le même profil. Mesurer le coût réel d'un appel du jury (tokens et FCFA, comme en 35.5) avant de lancer 36.9.
+  - **DoD :** tableau de verdict dans `journal.md` ; `cd mobile-api && npm test` sans échec ; typecheck app et API 0 ; aucune erreur console.
+- [ ] **Tâche 36.11 : Mise en production** 🔒
+  - **Fichiers :** aucun
+  - **Action :** commit, push (déploiement VPS automatique), OTA, après accord explicite.
+  - **DoD :** `/deploy-and-push` : `api/health` 200, `documents/cv-fill` et `cv-review` sans session → 401 en production.
+
+**À demander à l'utilisateur :** aucune décision produit ouverte.
 
 ## Journal d'exécution
 **[2026-11-07] Module 35 (Tâche 35.12 🔒) validé — Livraison en production sur le VPS & OTA** (vps-deploy) — commit `2016b97` poussé sur `origin/main` ; `/opt/campus-360` synchronisé sur `2016b97` ; migration `0032_stage_application_kits.sql` appliquée sur la base de production (30/30 dans `schema_migrations`) ; `campus360-mobile-api` compilé et redémarré sous PM2 (`pm2 save`) ; OTA EAS Update publiée sur `production` (run `42351430110` success) ; sondes publiques : `https://api.campus360b.site/api/health` 🟢 HTTP 200 `connected`, `https://admin.campus360b.site` 🟢 HTTP 200, `https://campus360b.site` 🟢 HTTP 200, `POST /api/mobile/stages/kit/answers` sans session → 401, `GET /api/mobile/stages/kit` sans session → 401.

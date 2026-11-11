@@ -8,6 +8,8 @@ import { DateRangeFields, MissionSuggestions, RubriquesEditor } from './CvEditor
 // Field-by-field editor for the generated CV: every change goes straight into
 // the OfficialCvData that the preview, the PDF and the sent application use.
 
+const LINE_BREAK = '\n';
+
 type Props = {
   cv: OfficialCvData;
   onChange: (cv: OfficialCvData) => void;
@@ -36,7 +38,22 @@ export function CvEditor({ cv, onChange }: Props) {
         </View>
         <Field label="E-mail" value={details.email} onChangeText={(email) => patch({ detailsPersonnels: { ...details, email } })} />
         <Field label="Téléphone" value={details.telephone} onChangeText={(telephone) => patch({ detailsPersonnels: { ...details, telephone } })} />
-        <Field label="Adresse" value={details.adresse ?? ''} onChangeText={(adresse) => patch({ detailsPersonnels: { ...details, adresse } })} />
+        <Field label="Ville" value={details.ville ?? details.adresse ?? ''} onChangeText={(ville) => patch({ detailsPersonnels: { ...details, adresse: undefined, ville } })} placeholder="Douala" />
+        {/* Raw lines while typing; normalizeCv keeps the https ones for the preview and the API. */}
+        <Field
+          label="Liens (LinkedIn, portfolio)"
+          value={(details.liens ?? []).join(LINE_BREAK)}
+          onChangeText={(v) => patch({ detailsPersonnels: { ...details, liens: v.split(LINE_BREAK).slice(0, 3) } })}
+          placeholder="https://linkedin.com/in/ton-profil"
+          hint="Un lien par ligne, qui commence par https:// (3 au plus)."
+          multiline
+        />
+        <Field
+          label="Disponibilité"
+          value={details.disponibilite ?? ''}
+          onChangeText={(disponibilite) => patch({ detailsPersonnels: { ...details, disponibilite } })}
+          placeholder="Dès juin 2026, 3 mois, temps plein, mobile à Yaoundé"
+        />
         <View style={fieldStyles.row}>
           <View style={fieldStyles.half}>
             <Field label="Nationalité" value={details.nationalite ?? ''} onChangeText={(nationalite) => patch({ detailsPersonnels: { ...details, nationalite } })} />

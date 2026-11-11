@@ -179,3 +179,33 @@ test('34.13 : réglages couleur, police, interligne appliqués ; aucun réglage 
   for (const { id } of m.CV_TEMPLATES) assert.match(m.generateOfficialCvHtml(cv, id, { accent: 'bordeaux' }), /#9F1239/, id);
   assert.ok(!m.generateOfficialCvHtml(cv, 'classic', { accent: 'x" onload="y' }).includes('onload'), 'accent inconnu ignoré');
 });
+
+test('36.1 : ville, liens et disponibilité imprimés dans les 5 modèles ; ancien CV avec adresse repris en ville', () => {
+  for (const template of ['classic', 'prestige', 'ingenieur', 'etudiant', 'ats']) {
+    const cv = emptyCv();
+    cv.detailsPersonnels = {
+      nom: 'Ndi', prenom: 'Awa', email: 'awa@exemple.cm', telephone: '237600000000',
+      ville: 'Douala', liens: ['https://www.linkedin.com/in/awa-ndi/', 'javascript:alert(1)'], disponibilite: 'Dès juin 2026, 3 mois',
+    };
+    const html = m.generateOfficialCvHtml(cv, template);
+    assert.ok(html.includes('Douala'), template);
+    assert.ok(html.includes('linkedin.com/in/awa-ndi'), template);
+    assert.ok(html.includes('Dès juin 2026, 3 mois'), template);
+    assert.ok(!html.includes('javascript:'), template);
+    const old = emptyCv();
+    old.detailsPersonnels = { nom: 'Ndi', prenom: 'Awa', email: 'a@b.cm', telephone: '1', adresse: 'Yaoundé, Bastos' };
+    assert.ok(m.generateOfficialCvHtml(old, template).includes('Yaoundé, Bastos'), `${template} ancien CV`);
+  }
+  const normalized = m.normalizeCv({ ...emptyCv(), detailsPersonnels: { nom: 'N', prenom: 'A', email: '', telephone: '', adresse: 'Douala' } });
+  assert.equal(normalized.detailsPersonnels.ville, 'Douala');
+  assert.equal('adresse' in normalized.detailsPersonnels, false);
+  assert.equal(m.safeLink('http://exemple.cm'), null);
+  assert.equal(m.safeLink('https://exemple.cm/a"b'), null);
+  // An older CV without the new fields renders as before (no empty "Ville" label).
+  const plain = m.generateOfficialCvHtml({ ...emptyCv(), detailsPersonnels: { nom: 'N', prenom: 'A', email: 'a@b.cm', telephone: '1' } });
+  assert.ok(!plain.includes('Ville :') && !plain.includes('Liens :'));
+  // mergeAiCv keeps the contact block of the base CV, normalized.
+  const merged = m.mergeAiCv(old2(), { titrePoste: 'Stagiaire' });
+  assert.equal(merged.detailsPersonnels.ville, 'Bafoussam');
+  function old2() { return { ...emptyCv(), detailsPersonnels: { nom: 'N', prenom: 'A', email: '', telephone: '', adresse: 'Bafoussam' } }; }
+});
