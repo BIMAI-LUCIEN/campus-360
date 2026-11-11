@@ -6,7 +6,7 @@
 
 ---
 ## Reprise
-- **Module 36 (rédaction du CV alignée sur le jury) :** exécuté le 2026-11-11 (`/execute --all`) : 36.1 à 36.8 et 36.10 `[X]`, 36.9 `[!]` (code et tests faits, parcours navigateur non joué : candidature payée sur une vraie offre), 36.11 `[ ]` 🔒 (commit, push, OTA sur accord). mobile-api 493 pass / 0 fail / 17 skip, typecheck app et API 0, `lint:colors` 143. Rien n'est commité. Prochaine : 36.11.
+- **Module 36 (rédaction du CV alignée sur le jury) :** exécuté le 2026-11-11 (`/execute --all`) : 36.1 à 36.8 et 36.10 `[X]`, 36.9 `[!]` (code et tests faits, parcours navigateur non joué : candidature payée sur une vraie offre), 36.11 `[X]` livrée (`2bd21d2`, VPS et OTA). mobile-api 493 pass / 0 fail / 17 skip, typecheck app et API 0, `lint:colors` 143. Reste : parcours navigateur de 36.9 (candidature payée).
 - **Module 35 (kit de candidature pour les offres `LINK`) :** livré le 2026-11-06 (`2016b97`, plan `b923e7e`) : 35.1 à 35.12 `[X]`, migration `0032` appliquée en production, OTA publiée. Coût IA d'un kit mesuré (35.5) : ≈ 0,94 FCFA pour 7 appels. Recontrôlé le 2026-11-08 (`/plan-check`) : `api/health` 200, `POST /stages/kit/answers` et `GET /stages/kit` sans session → 401. Pas d'entrée de livraison dans `journal.md` (preuves seulement dans la ligne de 35.12).
 - **Module 34 (jury CV et éditeur enrichi) :** 34.1 à 34.14 `[X]` le 2026-11-06 (typecheck app et API 0, `lint:colors` 143, mobile-api 459 pass / 0 fail / 20 skip avant les derniers correctifs du jury, parcours réel Edge 375 px). Vérifié le 2026-11-06 (`/test-and-verify`, tableau dans `journal.md`) : 🟢 sauf import d'un vrai PDF LinkedIn et PDF stylé téléchargé (🟠) ; cv-fill rendu robuste aux réponses coupées. 34.15 livrée le 2026-11-06 (`2076322`, VPS et OTA). Reste : parcours sur téléphone avec l'OTA, import d'un vrai PDF LinkedIn, PDF stylé téléchargé ; 34.16 tranchée le 2026-11-11 (tâche 36.9). Rien n'est commité ; le dépôt contient aussi des changements `landing-site/` d'une autre session.
 - **Offres « sur le site » et débordements (hors plan) :** livrés le 2026-11-03 (`2abf55a`, VPS et OTA, migration `0031` appliquée, 0 ligne touchée). Reste : un parcours réel sur téléphone Android, jusqu'à l'écriture de `apply-on-site` (détail dans `journal.md`).
@@ -3623,7 +3623,7 @@ Source : demande du 2026-11-11 (écarts entre le parcours de rédaction et le ju
   - **Fichiers :** aucun, sauf correctifs ; captures dans `.agent/screenshots/m36/`
   - **Action :** `/test-and-verify` avec le compte de test : CV de référence importé, précisions données, CV généré pour une offre à critères éliminatoires, jury, réponses, correction, tableau avant / après ; même offre via `stages/cv`. Comparer le score au 0/7 du module 34 sur le même profil. Mesurer le coût réel d'un appel du jury (tokens et FCFA, comme en 35.5) avant de lancer 36.9.
   - **DoD :** tableau de verdict dans `journal.md` ; `cd mobile-api && npm test` sans échec ; typecheck app et API 0 ; aucune erreur console.
-- [ ] **Tâche 36.11 : Mise en production** 🔒
+- [X] **Tâche 36.11 : Mise en production** 🔒 — livrée le 2026-11-11 : commit `2bd21d2` poussé, Deploy to VPS et OTA EAS réussis ; `api/health` 200, admin et landing 200, `cv-precisions`, `cv-review` et `cv-fill` sans session → 401 en production. Vercel en échec comme aux pushs précédents.
   - **Fichiers :** aucun
   - **Action :** commit, push (déploiement VPS automatique), OTA, après accord explicite.
   - **DoD :** `/deploy-and-push` : `api/health` 200, `documents/cv-fill` et `cv-review` sans session → 401 en production.
