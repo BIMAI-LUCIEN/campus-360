@@ -16,6 +16,7 @@ import {
   type StudyKind,
   type StudyResult,
 } from '@/lib/pdf-study';
+import { outputTokensFor, modelRequestOptions, DRAFTING_MODELS } from '@/lib/llm';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -42,7 +43,7 @@ type DocumentRow = {
 const ACTION_OF: Record<StudyKind, AiActionKind> = { summary: 'summary', plan: 'sheet', quiz: 'quiz' };
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const CANDIDATE_MODELS = ['openai/gpt-4o-mini', 'google/gemini-2.5-flash-lite', 'minimax/minimax-01'];
+const CANDIDATE_MODELS = DRAFTING_MODELS;
 // Under this, the PDF is a scan or nearly empty: the metadata alone is used if it says enough.
 const MIN_COURSE_CHARS = 300;
 
@@ -68,7 +69,7 @@ const callModel = async (messages: { role: string; content: string }[], kind: St
           'HTTP-Referer': process.env.BETTER_AUTH_URL ?? 'https://api.campus360b.site',
           'X-OpenRouter-Title': 'Campus 360 Revision',
         },
-        body: JSON.stringify({ model, messages, temperature: kind === 'quiz' ? 0.8 : 0.3, max_tokens: 3000 }),
+        body: JSON.stringify({ model, messages, temperature: kind === 'quiz' ? 0.8 : 0.3, max_tokens: outputTokensFor(model, 3000), ...modelRequestOptions(model) }),
         signal: AbortSignal.timeout(60_000),
       });
       if (!response.ok) {

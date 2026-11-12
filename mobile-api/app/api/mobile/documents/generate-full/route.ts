@@ -9,7 +9,7 @@ import { corsPreflight, requireMobileUser, mobileErrorResponse, MobileApiError, 
 import { sendPushToUser } from '@/lib/push';
 import { isStudyField, outlineFor } from '@/lib/document-outlines';
 import { escapeHtml, normalizeHeadings } from '@/lib/document-render';
-import { llmRewrite } from '@/lib/llm';
+import { llmRewrite, outputTokensFor, modelRequestOptions, DRAFTING_MODELS } from '@/lib/llm';
 import { HTML_FORMAT_RULE, polishAiTics, stripRepeatedTitle, studentVoiceRules } from '@/lib/writing-rules';
 import { listDocumentFiles } from '@/lib/document-files-db';
 import { retrieveSourcesContext, SOURCES_GROUNDING_RULES } from '@/lib/source-context';
@@ -27,11 +27,7 @@ const GENERATION_CONCURRENCY = 3;
 // Chunks retrieved per section and per group (student documents, references).
 const SECTION_CHUNKS = 6;
 
-const CANDIDATE_MODELS = [
-  'openai/gpt-4o-mini',
-  'google/gemini-2.5-flash-lite',
-  'minimax/minimax-01',
-];
+const CANDIDATE_MODELS = DRAFTING_MODELS;
 
 export async function OPTIONS(request: NextRequest) {
   return corsPreflight(request);
@@ -418,7 +414,8 @@ export async function POST(request: NextRequest) {
                   { role: 'user', content: userPrompt },
                 ],
                 temperature: 0.4,
-                max_tokens: 2800,
+                max_tokens: outputTokensFor(model, 2800),
+                ...modelRequestOptions(model),
               }),
             });
 

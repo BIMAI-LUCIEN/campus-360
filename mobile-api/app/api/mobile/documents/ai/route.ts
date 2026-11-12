@@ -7,18 +7,14 @@ import { z } from 'zod';
 import { databasePool } from '@/lib/database';
 import { corsPreflight, requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
 import { normalizeHeadings } from '@/lib/document-render';
-import { llmRewrite } from '@/lib/llm';
+import { llmRewrite, outputTokensFor, modelRequestOptions, DRAFTING_MODELS } from '@/lib/llm';
 import { HTML_FORMAT_RULE, polishAiTics, stripRepeatedTitle, studentVoiceRules } from '@/lib/writing-rules';
 
 export const runtime = 'nodejs';
 
 const MAX_BODY_BYTES = 64 * 1024;
 
-const CANDIDATE_MODELS = [
-  'openai/gpt-4o-mini',
-  'google/gemini-2.5-flash-lite',
-  'minimax/minimax-01',
-];
+const CANDIDATE_MODELS = DRAFTING_MODELS;
 
 const aiPromptSchema = z
   .object({
@@ -165,7 +161,8 @@ export async function POST(request: NextRequest) {
               { role: 'user', content: userPrompt },
             ],
             temperature: 0.5,
-            max_tokens: 2000,
+            max_tokens: outputTokensFor(model, 2000),
+            ...modelRequestOptions(model),
           }),
           signal: AbortSignal.timeout(60_000),
         });

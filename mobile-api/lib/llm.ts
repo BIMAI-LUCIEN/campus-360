@@ -1,23 +1,55 @@
 // Minimal OpenRouter client for the drafting routes: tries the preferred model
 // then the fallbacks, returns the first non-empty answer or null.
 
+// Every AI feature runs on Claude Haiku 5.5 first; the others are fallbacks.
+export const PRIMARY_MODEL = 'anthropic/claude-haiku-5.5';
+
 export const DRAFTING_MODELS = [
+  PRIMARY_MODEL,
   'openai/gpt-4o-mini',
   'google/gemini-2.5-flash-lite',
   'minimax/minimax-01',
 ];
 
 // Models that read images (flyers, screenshots); the drafting list does not all do.
-export const VISION_MODELS = ['openai/gpt-4o-mini', 'google/gemini-2.5-flash'];
+export const VISION_MODELS = [PRIMARY_MODEL, 'openai/gpt-4o-mini', 'google/gemini-2.5-flash'];
 
-// CV, letter and offer reading run on Claude Haiku first. Every model here reads
-// images too, so the list also serves the offer photos.
-export const CV_MODELS = ['anthropic/claude-haiku-5.5', 'openai/gpt-4o-mini', 'google/gemini-2.5-flash'];
+// CV, letter and offer reading. Every model here reads images too, so the list
+// also serves the offer photos.
+export const CV_MODELS = [PRIMARY_MODEL, 'openai/gpt-4o-mini', 'google/gemini-2.5-flash'];
 
-// Claude models think by default on OpenRouter and can spend the whole token
-// budget on it, leaving an empty answer: these short tasks do without.
+// The preferred model (OPENROUTER_MODEL, else Haiku) followed by the fallbacks.
+export const modelsToTry = (fallbacks: string[] = DRAFTING_MODELS): string[] =>
+  Array.from(new Set([process.env.OPENROUTER_MODEL || PRIMARY_MODEL, ...fallbacks]));
+
+type ReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+const EFFORTS: ReasoningEffort[] = ['low', 'medium', 'high', 'xhigh', 'max'];
+
+// Claude reasoning effort, `high` unless OPENROUTER_REASONING_EFFORT says otherwise.
+// Measured on a 250-word report section (2026-11-12): high 8.6 s, xhigh 18 s, max 60 s.
+export const reasoningEffort = (): ReasoningEffort => {
+  const value = process.env.OPENROUTER_REASONING_EFFORT?.trim().toLowerCase() as ReasoningEffort | undefined;
+  return value && EFFORTS.includes(value) ? value : 'high';
+};
+
+// Thinking tokens come out of max_tokens on OpenRouter: without headroom a Claude
+// model can spend the whole budget thinking and return an empty answer.
+const THINKING_HEADROOM: Record<ReasoningEffort, number> = {
+  low: 2_000,
+  medium: 3_000,
+  high: 6_000,
+  xhigh: 16_000,
+  max: 32_000,
+};
+
+const isClaude = (model: string) => model.startsWith('anthropic/');
+
 export const modelRequestOptions = (model: string): Record<string, unknown> =>
-  model.startsWith('anthropic/') ? { reasoning: { enabled: false } } : {};
+  isClaude(model) ? { reasoning: { effort: reasoningEffort() } } : {};
+
+/** max_tokens for a request whose visible answer needs `answerTokens`. */
+export const outputTokensFor = (model: string, answerTokens: number): number =>
+  isClaude(model) ? answerTokens + THINKING_HEADROOM[reasoningEffort()] : answerTokens;
 
 export type LlmContentPart =
   | { type: 'text'; text: string }
@@ -39,7 +71,7 @@ export const isLlmConfigured = (): boolean => Boolean(process.env.OPENROUTER_API
 export const callLlm = async (messages: LlmMessage[], options: LlmOptions = {}): Promise<string | null> => {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return null;
-  const models = options.models ?? Array.from(new Set([process.env.OPENROUTER_MODEL || DRAFTING_MODELS[0], ...DRAFTING_MODELS]));
+  const models = options.models ?? modelsToTry();
   for (const model of models) {
     try {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -54,7 +86,7 @@ export const callLlm = async (messages: LlmMessage[], options: LlmOptions = {}):
           model,
           messages,
           temperature: options.temperature ?? 0.5,
-          max_tokens: options.maxTokens ?? 1500,
+          max_tokens: outputTokensFor(model, options.maxTokens ?? 1500),
           ...modelRequestOptions(model),
         }),
         signal: AbortSignal.timeout(options.timeoutMs ?? 60_000),

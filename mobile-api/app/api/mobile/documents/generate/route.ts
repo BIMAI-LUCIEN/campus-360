@@ -8,7 +8,7 @@ import { careerContextText, careerOfferSchema } from '@/lib/career-context';
 import { cvBackgroundSchema } from '@/lib/cv-background';
 import { getCvBackground } from '@/lib/cv-background-db';
 import { databasePool } from '@/lib/database';
-import { CV_MODELS, modelRequestOptions } from '@/lib/llm';
+import { CV_MODELS, modelRequestOptions, outputTokensFor } from '@/lib/llm';
 import { getDocumentById } from '@/lib/documents-db';
 import { corsPreflight, requireMobileUser, mobileErrorResponse, MobileApiError, withCors } from '@/lib/mobile-access';
 
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
                 { role: 'user', content: userPrompt },
               ],
               temperature: 0.45,
-              max_tokens: 2800,
+              max_tokens: outputTokensFor(model, 2800),
               ...modelRequestOptions(model),
             }),
           });

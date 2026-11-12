@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { corsPreflight, requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
 import { SVG_DIAGRAMS, ACADEMIC_TABLE_SAMPLE } from '@/lib/academic-stage-template';
+import { PRIMARY_MODEL, modelRequestOptions, outputTokensFor } from '@/lib/llm';
 
 export const runtime = 'nodejs';
 
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
               'X-Title': 'Campus 360 AI Diagram Generator',
             },
             body: JSON.stringify({
-              model: 'openai/gpt-4o-mini',
+              model: PRIMARY_MODEL,
               messages: [
                 {
                   role: 'system',
@@ -71,6 +72,8 @@ export async function POST(request: NextRequest) {
                 },
               ],
               temperature: 0.3,
+              max_tokens: outputTokensFor(PRIMARY_MODEL, 4000),
+              ...modelRequestOptions(PRIMARY_MODEL),
             }),
           });
 

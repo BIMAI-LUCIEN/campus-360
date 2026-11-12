@@ -418,7 +418,7 @@ Santé production : non revérifiée dans ce scan (voir §12).
 
 
 
-  - `mobile-api/lib/llm.ts` — client IA OpenRouter.
+  - `mobile-api/lib/llm.ts` — client IA OpenRouter. Claude Haiku 5.5 (`PRIMARY_MODEL`) en tête de toutes les listes (`DRAFTING_MODELS`, `VISION_MODELS`, `CV_MODELS`, aussi `lib/pdf-zone.ts`), effort `high` (`reasoningEffort()`, variable `OPENROUTER_REASONING_EFFORT`), marge de réflexion ajoutée à `max_tokens` par `outputTokensFor()` : toute route qui appelle OpenRouter elle-même doit passer `outputTokensFor(model, n)` et `...modelRequestOptions(model)`, sinon Haiku peut rendre une réponse vide.
 
 
 
@@ -1359,7 +1359,8 @@ Méthodes relevées dans le code. Toutes les routes `mobile/*` exigent une sessi
 
 
 
-| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | Modèles IA | Oui | Erreur à l'usage |
+| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | Modèles IA (`OPENROUTER_MODEL` défaut `anthropic/claude-haiku-5.5` ; jamais un modèle `:free`) | Oui | Erreur à l'usage |
+| `OPENROUTER_REASONING_EFFORT` | Effort de réflexion Claude : `low`, `medium`, `high` (défaut), `xhigh`, `max`. `max` = ~60 s par section, à éviter en interactif | Non | `high` |
 
 
 
@@ -1533,6 +1534,10 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 
 12. **Documents de référence périmés :** `README.md` et `PROJECT.md` décrivent encore Supabase Auth et `admin-app/` (qui n'existe plus). Les corrections du `CLAUDE.md` priment.
+
+
+
+13. **Tests navigateur en local :** (a) la connexion web passe par `EXPO_PUBLIC_AUTH_WEB_URL`, donc recruiter-web doit tourner sur 3001 en plus de mobile-api sur 3002 ; (b) l'éditeur est une iframe `srcDoc` sandboxée (origine `null`, `EditorSurface.tsx`) : Chrome y bloque toute ressource `localhost` (Local Network Access), donc les images insérées s'affichent cassées dans l'éditeur en local seulement (l'export PDF les contient, la prod sur `files.campus360b.site` n'est pas touchée) ; (c) les sélecteurs web d'Expo créent un `<input type=file>` caché à la volée : un agent qui clique le bouton puis vise un input avec `file_upload` dépose son fichier dans un input mort (document-picker ne le retire pas après annulation). Pour automatiser, intercepter le `click` de l'input et lui fournir les fichiers avant `change`.
 
 
 
@@ -1721,6 +1726,8 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
 
 ## 13. Journal des mises à jour
 
+- **2026-11-12** IA — Haiku 5.5 en modèle principal partout, effort `high`, marge de réflexion `outputTokensFor` (§3.3, §9). L'ancien `OPENROUTER_MODEL` (`meta-llama/llama-3.3-70b-instruct:free`) répondait 404.
+- **2026-11-11** test navigateur rapport de stage — export PDF/DOCX : délai dédié de 120 s (`EXPORT_TIMEOUT_MS`, `fetchExport` dans `DocumentEditorScreen.tsx`) au lieu des 20 s de lecture de `authFetchRawAt` ; piège 13 (§10) sur les tests navigateur locaux.
 - **2026-11-09** `/code-analyzer-context` zone — **Contributions PDF (Module 27) :** §3.8 créée, lignes `pdf_uploads`, `contribution_rewards`, colonnes 0023 de `documents` (§5), routes contributions et `admin/pdf-intake*` et relais `pdf/intake/*` (§6), pièges clé anon, `EXPO_PUBLIC_FILES_URL` et Cloudinary (§10). Vérifié contre le code au commit `88dd76d`.
 
 - **2026-11-07** `/vps-deploy` — **Déploiement en production sur le VPS et OTA du commit `2016b97` (Module 35 : Kit de candidature pour les offres `LINK`, Tâche 35.12 🔒) :**

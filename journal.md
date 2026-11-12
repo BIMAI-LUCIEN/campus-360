@@ -4,6 +4,24 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 
 ---
 
+**2026-11-12 · hors plan · aucun skill · non commité · Claude Haiku 5.5 en modèle IA principal, effort high**
+
+- **Fait :** `mobile-api/lib/llm.ts` : `PRIMARY_MODEL` = `anthropic/claude-haiku-5.5` en tête de `DRAFTING_MODELS`, `VISION_MODELS`, `CV_MODELS` ; `modelsToTry()` ; effort `high` par défaut (`OPENROUTER_REASONING_EFFORT`) ; `outputTokensFor()` ajoute la marge de réflexion à `max_tokens`. Routes branchées : `ai/pdf-chat`, `ai/pdf-study`, `documents/ai`, `documents/ai/diagram` (était fixé sur gpt-4o-mini), `documents/generate`, `documents/generate-full`, `documents/onboard-chat`, `documents/[id]/chat`, `lib/pdf-zone.ts`. `.env.local` : `OPENROUTER_MODEL=anthropic/claude-haiku-5.5` (l'ancien Llama `:free` répondait 404). Test `career-context.test.mjs` mis à jour.
+- **Mesure (section de 250 mots, OpenRouter) :** max + 1 500 tokens → réponse vide ; max + 16 000 → 60 s, 0,0079 $ ; xhigh → 18 s, 0,0025 $ ; high → 8,6 s, 0,0009 $ ; medium → 6,6 s. D'où `high` par défaut.
+- **Preuve :** `npx tsc --noEmit` code 0 ; `npm test` 501 réussis, 0 échec, 11 ignorés ; « Demande à l'IA » dans l'éditeur web local → `POST /api/mobile/documents/ai 200 in 17600ms`, aucune bascule de modèle dans les logs.
+- **Points ouverts :** `OPENROUTER_MODEL` à corriger aussi dans `mobile-api/.env.local` du VPS au déploiement ; extracteur de page de garde (`generate-full`, appel JSON) laissé sur gpt-4o-mini.
+
+---
+
+**2026-11-11 · hors plan · aucun skill · non commité · Test navigateur d'un rapport de stage et délai d'export**
+
+- **Fait :** `src/features/documents/DocumentEditorScreen.tsx` : les exports PDF et DOCX passent par `fetchExport` avec un délai de 120 s (`EXPORT_TIMEOUT_MS`). Avant, `authFetchRawAt` les coupait à 20 s comme une lecture (« Le serveur met trop de temps à répondre ») alors que le rendu Puppeteer dure 20 à 23 s en local.
+- **Preuve :** `npx tsc --noEmit` code 0 ; export PDF depuis l'app web locale, réponse serveur `200 in 22654ms` reçue par l'app (PDF de 221 904 octets, 1 image) ; avant le correctif, le même export à 19,8 s finissait en `net::ERR_ABORTED`.
+- **Vérifié sans bug :** fichier de référence ajouté depuis Sources (compteur 4 → 5), image envoyée, rattachée et insérée en « Figure 1.1 ». Les échecs du test par agent venaient de l'automatisation (input fichier mort) et du blocage `localhost` dans l'iframe de l'éditeur (§10 piège 13 de contexte-code.md).
+- **Points ouverts :** crédits IA affichés 5 pour 4 restants ; « Corrige les fautes » ne lit pas la section ; 1er clic « + Section » sans effet ; Entrée n'envoie pas dans le cadrage ; modèle de repli `meta-llama/llama-3.3-70b-instruct:free` retiré d'OpenRouter (404 dans les logs).
+
+---
+
 **2026-11-07 · Tâche 35.12 · vps-deploy · `2016b97` · Livraison du Module 35 (Kit de candidature pour les offres `LINK`)**
 
 - **Production & OTA :** commit `2016b97` poussé sur `origin/main` ; VPS `/opt/campus-360` synchronisé (`last-good-sha` = `2016b97249cac705212d38ca72088d9acee74682`, run GitHub Actions `42351430086` « Deploy to VPS » réussi) ; migration `0032_stage_application_kits.sql` appliquée sur la base de production (30/30 migrations enregistrées dans `schema_migrations`) ; build `campus360-mobile-api` (`.next/prerender-manifest.json` et `.next/required-server-files.json` présents) et redémarrage PM2 (`pm2 save`) ; OTA EAS Update publiée sur `production` (run `42351430110` « Publish OTA update (EAS Update) » réussi).

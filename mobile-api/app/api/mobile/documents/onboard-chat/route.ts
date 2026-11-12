@@ -5,16 +5,12 @@ import { z } from 'zod';
 import { careerContextText, careerOfferSchema } from '@/lib/career-context';
 import { cvBackgroundSchema } from '@/lib/cv-background';
 import { getCvBackground } from '@/lib/cv-background-db';
-import { CV_MODELS, modelRequestOptions } from '@/lib/llm';
+import { CV_MODELS, modelRequestOptions, outputTokensFor, DRAFTING_MODELS } from '@/lib/llm';
 import { corsPreflight, requireMobileUser, mobileErrorResponse, withCors } from '@/lib/mobile-access';
 
 export const runtime = 'nodejs';
 
-const CANDIDATE_MODELS = [
-  'openai/gpt-4o-mini',
-  'google/gemini-2.5-flash-lite',
-  'minimax/minimax-01',
-];
+const CANDIDATE_MODELS = DRAFTING_MODELS;
 
 export async function OPTIONS(request: NextRequest) {
   return corsPreflight(request);
@@ -150,7 +146,7 @@ export async function POST(request: NextRequest) {
               ...formattedMessages,
             ],
             temperature: 0.6,
-            max_tokens: 800,
+            max_tokens: outputTokensFor(model, 800),
             ...modelRequestOptions(model),
           }),
         });

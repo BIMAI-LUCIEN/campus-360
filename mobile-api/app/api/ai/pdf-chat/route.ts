@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { databasePool } from '@/lib/database';
 import { corsPreflight, MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { enforceRateLimit, rateLimitFailedResponse } from '@/lib/route-rate-limit';
+import { outputTokensFor, modelRequestOptions, DRAFTING_MODELS } from '@/lib/llm';
 
 const bodySchema = z
   .object({
@@ -39,11 +40,7 @@ const bodySchema = z
   .passthrough();
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const CANDIDATE_MODELS = [
-  'openai/gpt-4o-mini',
-  'google/gemini-2.5-flash-lite',
-  'minimax/minimax-01',
-];
+const CANDIDATE_MODELS = DRAFTING_MODELS;
 
 export const runtime = 'nodejs';
 
@@ -157,7 +154,8 @@ export async function POST(request: NextRequest) {
             model,
             messages: conversation,
             temperature: 0.4,
-            max_tokens: 1500,
+            max_tokens: outputTokensFor(model, 1500),
+            ...modelRequestOptions(model),
           }),
           signal: AbortSignal.timeout(60_000),
         });

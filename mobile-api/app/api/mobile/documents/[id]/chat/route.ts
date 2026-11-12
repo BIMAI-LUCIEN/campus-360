@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { getDocumentById, getDocumentSections } from '@/lib/documents-db';
 import { mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
-import { llmRewrite } from '@/lib/llm';
+import { llmRewrite, outputTokensFor, modelRequestOptions, DRAFTING_MODELS } from '@/lib/llm';
 import { enforceRateLimit } from '@/lib/route-rate-limit';
 import { markCited, retrieveSourcesContext, stripHtml, type Citation } from '@/lib/source-context';
 import { sanitizeHtml, stripCodeFence } from '@/lib/sanitize-html';
@@ -12,11 +12,7 @@ import { HTML_FORMAT_RULE, polishAiTics, stripRepeatedTitle, studentVoiceRules }
 
 export const runtime = 'nodejs';
 
-const CANDIDATE_MODELS = [
-  'openai/gpt-4o-mini',
-  'google/gemini-2.5-flash-lite',
-  'minimax/minimax-01',
-];
+const CANDIDATE_MODELS = DRAFTING_MODELS;
 
 // Per group: the student's own documents and the references are searched separately.
 const RETRIEVED_CHUNKS = 6;
@@ -161,7 +157,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
             model,
             messages: [{ role: 'system', content: systemPrompt }, ...formattedMessages],
             temperature: sourcesContext ? 0.3 : 0.5,
-            max_tokens: 1500,
+            max_tokens: outputTokensFor(model, 1500),
+            ...modelRequestOptions(model),
           }),
         });
 
