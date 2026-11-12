@@ -37,6 +37,9 @@ import {
 import { stitchColors } from '../../theme/stitch';
 import { AppAlert } from '../../ui/AppAlert';
 
+// PDF rendering (Puppeteer) of a long report can take well over the 20 s read timeout.
+const EXPORT_TIMEOUT_MS = 120_000;
+
 type Document = {
   id: string;
   title: string;
@@ -392,13 +395,28 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
     );
   };
 
+  // Exports render a whole document server-side (Puppeteer for PDF), often past the
+  // 20 s read timeout of authFetch: give them their own, longer limit.
+  const fetchExport = async (format: 'pdf' | 'docx') => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), EXPORT_TIMEOUT_MS);
+    try {
+      return await authFetch(`/api/mobile/documents/${documentId}/export/${format}`, { signal: controller.signal });
+    } catch (error) {
+      if (controller.signal.aborted) throw new Error('L’export prend trop de temps. Réessaie dans un instant.');
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
   // Export PDF
   const handleExportPdf = async () => {
     if (!report || sections.length === 0) return;
 
     setExporting(true);
     try {
-      const response = await authFetch(`/api/mobile/documents/${documentId}/export/pdf`);
+      const response = await fetchExport('pdf');
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         throw new Error(payload.error || 'Erreur lors de la génération du PDF.');
@@ -437,7 +455,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
 
     setExporting(true);
     try {
-      const response = await authFetch(`/api/mobile/documents/${documentId}/export/docx`);
+      const response = await fetchExport('docx');
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         throw new Error(payload.error || "Erreur lors de l'export Word.");
