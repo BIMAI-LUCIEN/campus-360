@@ -4,6 +4,15 @@ Une entrée par action de tout skill qui agit (`date · tâche · skill · commi
 
 ---
 
+**2026-11-12 · hors plan · deploy-and-push · `922bfb7` · Livraison : Haiku 5.5 effort high et délai d'export**
+
+- **Commits :** `a2391f6` fix(documents) délai de 120 s pour les exports PDF et Word ; `922bfb7` feat(ia) Claude Haiku 5.5 en modèle principal, effort high. Poussés sur `origin/main`.
+- **Production :** `OPENROUTER_MODEL` passé de `openai/gpt-4o-mini` à `anthropic/claude-haiku-5.5` dans `/opt/campus-360/mobile-api/.env.local` (sauvegarde `.env.local.bak-20261112-043859`) ; runs `43149653669` Deploy to VPS ✅, `43149653745` OTA EAS ✅, Design guard ✅, Vercel mobile-api ❌ (non utilisé).
+- **Preuve :** VPS sur `922bfb7`, PM2 `online` ×3 ; `https://api.campus360b.site/api/health` 200 `db connected` ; admin 200 ; landing 200 ; `POST /api/mobile/documents/ai` sans session 401 ; 14 fichiers du build citent `anthropic/claude-haiku-5.5` ; appel OpenRouter depuis le VPS avec la clé et le modèle de production → `anthropic/claude-haiku-5.5` répond.
+- **Points ouverts :** parcours IA réel sur l'app de production avec une session étudiante non joué.
+
+---
+
 **2026-11-12 · hors plan · aucun skill · non commité · Claude Haiku 5.5 en modèle IA principal, effort high**
 
 - **Fait :** `mobile-api/lib/llm.ts` : `PRIMARY_MODEL` = `anthropic/claude-haiku-5.5` en tête de `DRAFTING_MODELS`, `VISION_MODELS`, `CV_MODELS` ; `modelsToTry()` ; effort `high` par défaut (`OPENROUTER_REASONING_EFFORT`) ; `outputTokensFor()` ajoute la marge de réflexion à `max_tokens`. Routes branchées : `ai/pdf-chat`, `ai/pdf-study`, `documents/ai`, `documents/ai/diagram` (était fixé sur gpt-4o-mini), `documents/generate`, `documents/generate-full`, `documents/onboard-chat`, `documents/[id]/chat`, `lib/pdf-zone.ts`. `.env.local` : `OPENROUTER_MODEL=anthropic/claude-haiku-5.5` (l'ancien Llama `:free` répondait 404). Test `career-context.test.mjs` mis à jour.
