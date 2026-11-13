@@ -115,6 +115,7 @@ import { OPERATOR_LABELS, operatorMismatchMessage, parseCameroonMobile } from '.
 import { ORANGE_MONEY_APPROVAL_USSD } from './features/wallet/PaymentModal';
 import { fetchOffers } from './features/wallet/offersApi';
 import { AppAlert, AppAlertHost } from './ui/AppAlert';
+import { KeyboardSafeView, useKeyboardOpen } from './ui/KeyboardSafeView';
 
 const logo = require('../assets/icon.png');
 const ONBOARDING_COMPLETED_KEY = 'campus360_onboarding_completed_permanent';
@@ -215,13 +216,18 @@ Notifications.setNotificationHandler({
 // (the recharge sheet is taller than a 640 px phone with its phone field focused).
 function ModalCard({ children }: { children: React.ReactNode }) {
   return (
-    <KeyboardAvoidingView style={styles.modalBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardSafeView style={styles.modalBackdrop}>
       <View style={[styles.modalCard, glassCard.light, styles.modalCardBounded]}>
-        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           {children}
         </ScrollView>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardSafeView>
   );
 }
 
@@ -284,6 +290,7 @@ export function AppShell() {
   const { width } = useWindowDimensions();
   const compactScreen = width < 390;
   const narrowScreen = width < 460;
+  const keyboardOpen = useKeyboardOpen();
 
   // ── State (copied verbatim from App.tsx) ────────────────────────────────
   const [toast, setToast] = React.useState<ToastMessage | null>(null);
@@ -1325,15 +1332,18 @@ export function AppShell() {
             )}
 
             {/* Content */}
-            <ScrollView
-              ref={contentScrollRef}
-              style={{ flex: 1 }}
-              contentContainerStyle={[
-                styles.scrollContent,
-                compactScreen && styles.scrollContentCompact,
-              ]}
-              showsVerticalScrollIndicator={false}
-              refreshControl={
+            <KeyboardSafeView style={{ flex: 1 }}>
+              <ScrollView
+                ref={contentScrollRef}
+                style={{ flex: 1 }}
+                keyboardShouldPersistTaps="handled"
+                automaticallyAdjustKeyboardInsets
+                contentContainerStyle={[
+                  styles.scrollContent,
+                  compactScreen && styles.scrollContentCompact,
+                ]}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
                 <RefreshControl
                   refreshing={refreshing}
                   onRefresh={handlePullToRefresh}
@@ -1500,7 +1510,8 @@ export function AppShell() {
                   externalTab={activeSection === 'explore' ? 'packs' : 'library'}
                 />
               ) : null}
-            </ScrollView>
+              </ScrollView>
+            </KeyboardSafeView>
 
             <SimplePdfReaderModal
               document={readingDocument}
@@ -1535,10 +1546,12 @@ export function AppShell() {
             />
 
             {/* BottomNav */}
-            <BottomNav
-              activeSection={activeSection}
-              onPress={(key) => openSection(key as AppSection)}
-            />
+            {!keyboardOpen && (
+              <BottomNav
+                activeSection={activeSection}
+                onPress={(key) => openSection(key as AppSection)}
+              />
+            )}
           </View>
         )}
 

@@ -35,6 +35,7 @@ import {
   cleanPhoneNumber,
 } from './whatsappService';
 import { AppAlert } from '../../ui/AppAlert';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 
 export interface WhatsAppPairingModalProps {
   visible: boolean;
@@ -235,7 +236,7 @@ export function WhatsAppPairingModal({
       onRequestClose={handleClose}
       testID="whatsapp-pairing-modal"
     >
-      <View style={styles.backdrop}>
+      <KeyboardSafeView style={styles.backdrop}>
         <View style={styles.sheetContainer}>
           {/* Header */}
           <View style={styles.headerRow}>
@@ -500,7 +501,7 @@ export function WhatsAppPairingModal({
             )}
           </ScrollView>
         </View>
-      </View>
+      </KeyboardSafeView>
     </Modal>
   );
 }

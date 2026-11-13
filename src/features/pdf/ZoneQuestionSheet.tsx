@@ -4,6 +4,7 @@ import { MessageSquare, RotateCcw, Send, X } from 'lucide-react-native';
 import { FormattedMarkdown } from '../../components/FormattedMarkdown';
 import type { CampusDocument } from '../../types';
 import { stitchColors } from '../../theme/stitch';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 import { askPdfAssistant, PassRequiredError, type PdfAssistantMessage, type PdfZone } from './pdfAssistant';
 
 const SHORTCUTS = ['Explique', 'Résous pas à pas', 'Donne un exemple similaire'];
@@ -62,7 +63,7 @@ export function ZoneQuestionSheet({ document, zone, onClose, onContinue, onAllow
   };
 
   return (
-    <View style={styles.sheet}>
+    <KeyboardSafeView style={styles.sheet}>
       <View style={styles.header}>
         <Image source={{ uri: zone.image }} style={styles.thumbnail} resizeMode="contain" />
         <View style={styles.headerText}>
@@ -141,7 +142,7 @@ export function ZoneQuestionSheet({ document, zone, onClose, onContinue, onAllow
           <Send size={16} color={stitchColors.white} />
         </Pressable>
       </View>
-    </View>
+    </KeyboardSafeView>
   );
 }
 

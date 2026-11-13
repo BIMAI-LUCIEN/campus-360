@@ -23,6 +23,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { mobileApiFetch as authFetch } from '../auth/betterAuth';
 import { EditorAiChat } from './EditorAiChat';
 import { DocumentSourcesPanel } from './DocumentSourcesModal';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 import { DocumentImagesModal, type InsertFigurePayload } from './DocumentImagesModal';
 import { listDocumentImages, resolveFileUrls, type DocumentFile } from './documentFilesApi';
 import { buildPreviewHtml, buildWysiwygHtml } from './editorTemplate';
@@ -711,9 +712,8 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
       {/* ── Workspace Area (Native Cover vs Native TOC vs Word-like WYSIWYG) */}
       {/* All three tabs stay mounted (hidden when inactive) so the editor keeps
           its cursor, the chat its conversation and the sources their state. */}
-      <KeyboardAvoidingView
+      <KeyboardSafeView
         style={[styles.workspace, editorTab !== 'document' && styles.hidden]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {isCoverSection ? (
           /* ── 1. NATIVE COVER PAGE FORM ──────────────────────────────── */
@@ -849,17 +849,16 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
             </View>
           </View>
         )}
-      </KeyboardAvoidingView>
+      </KeyboardSafeView>
 
       {/* ── Sources tab ─────────────────────────────────────────────── */}
-      <View style={[styles.workspace, editorTab !== 'sources' && styles.hidden]}>
+      <KeyboardSafeView style={[styles.workspace, editorTab !== 'sources' && styles.hidden]}>
         <DocumentSourcesPanel documentId={documentId} onSelectionChange={setSelectedSources} />
-      </View>
+      </KeyboardSafeView>
 
       {/* ── Assistant tab ───────────────────────────────────────────── */}
-      <KeyboardAvoidingView
+      <KeyboardSafeView
         style={[styles.workspace, editorTab !== 'assistant' && styles.hidden]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <EditorAiChat
           documentId={documentId}
@@ -870,7 +869,7 @@ export function DocumentEditorScreen({ documentId, onClose }: DocumentEditorScre
           onReplaceSection={isCoverSection || isTocSection ? undefined : replaceSectionContent}
           onOpenSources={() => setEditorTab('sources')}
         />
-      </KeyboardAvoidingView>
+      </KeyboardSafeView>
 
       {/* ── Editor tabs: Document | Sources | Assistant ─────────────── */}
       <View style={styles.editorTabBar}>

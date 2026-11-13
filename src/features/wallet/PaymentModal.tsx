@@ -33,6 +33,7 @@ import {
 import { stitchColors } from '../../theme/stitch';
 import { newPurchaseId } from './offersApi';
 import { OPERATOR_LABELS, operatorMismatchMessage, parseCameroonMobile } from './cameroonPhone';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 
 /** Code USSD Orange Money Cameroun pour valider un débit en attente. */
 export const ORANGE_MONEY_APPROVAL_USSD = '#150*50#';
@@ -254,7 +255,7 @@ export function PaymentModal({
       transparent
       onRequestClose={handleResetAndClose}
     >
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+      <KeyboardSafeView style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.headerRow}>
@@ -441,7 +442,7 @@ export function PaymentModal({
             </ScrollView>
           )}
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardSafeView>
     </Modal>
   );
 }

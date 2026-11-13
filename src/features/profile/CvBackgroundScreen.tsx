@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FileUp, X, ClipboardPaste } from 'lucide-react-native';
 
 import { AppAlert } from '../../ui/AppAlert';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 import { stitchColors, stitchRadius } from '../../theme/stitch';
 import {
   emptyCvBackground,
@@ -95,7 +96,7 @@ export function CvBackgroundScreen({ visible, onClose, onSaved }: Props) {
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="fullScreen">
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardSafeView style={styles.flex}>
           <View style={styles.header}>
             <View style={styles.flex}>
               <Text style={styles.title}>Mon parcours</Text>
@@ -270,7 +271,7 @@ export function CvBackgroundScreen({ visible, onClose, onSaved }: Props) {
               {saving ? <ActivityIndicator color={stitchColors.white} /> : <Text style={styles.primaryBtnText}>Enregistrer mon parcours</Text>}
             </Pressable>
           </View>
-        </KeyboardAvoidingView>
+        </KeyboardSafeView>
       </SafeAreaView>
     </Modal>
   );

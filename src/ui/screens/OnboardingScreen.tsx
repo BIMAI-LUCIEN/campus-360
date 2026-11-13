@@ -20,6 +20,7 @@ import {
 } from '../../features/onboarding/academicCatalog';
 import { fontFamilies, stitchColors } from '../../theme/stitch';
 import { SelectWithOther } from '../SelectWithOther';
+import { KeyboardSafeView } from '../KeyboardSafeView';
 
 export interface OnboardingData {
   university: string;
@@ -118,7 +119,7 @@ export function OnboardingScreen({
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
+    <KeyboardSafeView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <View style={styles.brandBadge}>
@@ -137,7 +138,7 @@ export function OnboardingScreen({
         <Text style={styles.stepLabel}>Étape {step} sur 3</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         {step === 1 ? (
           <Text style={styles.greeting}>{firstName ? `Bienvenue, ${firstName} !` : 'Bienvenue !'}</Text>
         ) : null}
@@ -252,7 +253,7 @@ export function OnboardingScreen({
           <ArrowRight size={18} color={stitchColors.surface} />
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardSafeView>
   );
 }
 

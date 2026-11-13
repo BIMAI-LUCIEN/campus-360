@@ -55,6 +55,7 @@ import {
 import type { StageApplication, AppStatus, OfficialCvData } from '../../types';
 
 import { fontFamilies, stitchColors } from '../../theme/stitch';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 
 import { OfficialCvView } from './OfficialCvView';
 
@@ -471,7 +472,7 @@ export function ApplicationDetailModal({
 
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
 
-      <View style={styles.overlay}>
+      <KeyboardSafeView style={styles.overlay}>
 
         <View style={styles.container}>
 
@@ -1126,7 +1127,7 @@ export function ApplicationDetailModal({
 
         </View>
 
-      </View>
+      </KeyboardSafeView>
 
     </Modal>
 

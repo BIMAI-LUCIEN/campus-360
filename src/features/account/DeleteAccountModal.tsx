@@ -15,6 +15,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Trash2, X } from 'l
 import { deleteStudentAccount } from '../auth/betterAuth';
 import { stitchColors, stitchRadius, stitchSpacing } from '../../theme/stitch';
 import { AppAlert } from '../../ui/AppAlert';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 
 interface DeleteAccountModalProps {
   visible: boolean;
@@ -61,7 +62,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.backdrop}>
+      <KeyboardSafeView style={styles.backdrop}>
         <View style={styles.card}>
           {/* Header */}
           <View style={styles.header}>
@@ -191,7 +192,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
             </View>
           )}
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardSafeView>
     </Modal>
   );
 };

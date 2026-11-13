@@ -13,6 +13,7 @@ import {
 import { CornerDownLeft, Image as ImageIcon, ImagePlus, RotateCcw, Trash2, X } from 'lucide-react-native';
 
 import { stitchColors } from '../../theme/stitch';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 import {
   attachImageToDocument,
   deleteDocumentFile,
@@ -155,7 +156,7 @@ export function DocumentImagesModal({ visible, onClose, documentId, onInsertFigu
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
+      <KeyboardSafeView style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
             <View style={styles.headerIcon}>
@@ -286,7 +287,7 @@ export function DocumentImagesModal({ visible, onClose, documentId, onInsertFigu
             )}
           </ScrollView>
         </View>
-      </View>
+      </KeyboardSafeView>
     </Modal>
   );
 }

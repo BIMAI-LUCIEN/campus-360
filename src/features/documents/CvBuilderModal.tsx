@@ -13,6 +13,7 @@ import { saveCvToLibrary, updateCvInLibrary, type SavedCv } from '../stages/cvLi
 import { MAX_OFFER_IMAGES, pickOfferImages } from '../stages/externalOfferApi';
 import { exportOfficialCvPdf } from '../stages/pdfExportService';
 import { stitchColors } from '../../theme/stitch';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 import { AppAlert } from '../../ui/AppAlert';
 import type { OfficialCvData } from '../../types';
 import { careerOfferLabel, readOfferFromFile, readOfferFromImages, readOfferFromText, type CareerOffer } from './careerContextApi';
@@ -306,7 +307,7 @@ export function CvBuilderModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={step === 'preview' ? finish : step === 'precisions' ? () => setStep('form') : onClose}>
-      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardSafeView style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>{step === 'preview' ? 'Ton CV adapté' : isLetter ? 'Créer une lettre de motivation' : 'Créer un CV pour une offre'}</Text>
@@ -500,7 +501,7 @@ export function CvBuilderModal({
             </>
           ) : null}
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardSafeView>
     </Modal>
   );
 }

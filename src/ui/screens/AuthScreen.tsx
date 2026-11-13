@@ -22,6 +22,7 @@ import {
 } from 'lucide-react-native';
 import { legalLinks } from '../../config/legalLinks';
 import { publicEnv } from '../../config/env';
+import { KeyboardSafeView } from '../KeyboardSafeView';
 import {
   GlassCard,
   GlassInput,
@@ -111,8 +112,7 @@ export function AuthScreen({
   const showPasswordInput = mode === 'sign-in' || mode === 'sign-up' || mode === 'new-password';
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <KeyboardSafeView
       keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
       style={styles.container}
     >
@@ -120,6 +120,7 @@ export function AuthScreen({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
         <View style={styles.cardWrap}>
           <GlassCard style={styles.authCard}>
@@ -407,7 +408,7 @@ export function AuthScreen({
           </GlassCard>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardSafeView>
   );
 }
 

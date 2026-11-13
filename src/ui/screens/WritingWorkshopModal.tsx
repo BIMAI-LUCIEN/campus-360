@@ -22,6 +22,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { stitchColors } from '../../theme/stitch';
 import { AppAlert } from '../AppAlert';
+import { KeyboardSafeView } from '../KeyboardSafeView';
 import { authFetch } from '../../features/auth/betterAuth';
 import { copyToClipboard } from '../../features/whatsapp/whatsappService';
 import type { ScrapedStageReport } from '../../types';
@@ -178,7 +179,7 @@ export function WritingWorkshopModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <KeyboardSafeView style={styles.overlay}>
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
@@ -387,7 +388,7 @@ export function WritingWorkshopModal({
             </View>
           )}
         </View>
-      </View>
+      </KeyboardSafeView>
     </Modal>
   );
 }

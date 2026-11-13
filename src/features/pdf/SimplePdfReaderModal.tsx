@@ -29,6 +29,7 @@ import { authWebBaseUrl, mobileApiBaseUrl } from '../auth/betterAuth';
 import { createSignedPdfUrl, recordPdfAnalyticsEvent } from './pdfApi';
 import { askPdfAssistant, PassRequiredError, type PdfAssistantMessage, type PdfZone } from './pdfAssistant';
 import { ZoneQuestionSheet } from './ZoneQuestionSheet';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 import { PdfStudyPanel } from './PdfStudyPanel';
 import { OffersModal } from '../wallet/OffersModal';
 import { loadPdfChatHistory, savePdfChatHistory, clearPdfChatHistory } from './chatHistoryStorage';
@@ -505,9 +506,8 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
 
           {/* ── TAB 5: CHAT IA ASSISTANT ── */}
           {activeTool === 'assistant' ? (
-            <KeyboardAvoidingView
+            <KeyboardSafeView
               style={styles.chatContainer}
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
               <View style={styles.chatHeader}>
                 <View style={styles.chatAvatar}>
@@ -638,7 +638,7 @@ export function SimplePdfReaderModal({ document, accessToken, onClose }: SimpleP
                   <Send size={16} color={stitchColors.white} />
                 </Pressable>
               </View>
-            </KeyboardAvoidingView>
+            </KeyboardSafeView>
           ) : null}
         </View>
         {activeTool === 'pdf' ? (

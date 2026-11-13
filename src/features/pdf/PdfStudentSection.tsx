@@ -23,6 +23,7 @@ import type { CampusDocument, CampusPdfPack } from '../../types';
 import { createSignedPdfUrl, recordPdfAnalyticsEvent } from './pdfApi';
 import { askPdfAssistant, type PdfAssistantMessage } from './pdfAssistant';
 import { PdfStudyPanel } from './PdfStudyPanel';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 import { loadPdfChatHistory, savePdfChatHistory, clearPdfChatHistory } from './chatHistoryStorage';
 import { FormattedMarkdown } from '../../components/FormattedMarkdown';
 import { FileText, Sparkles, Calendar, HelpCircle, MessageSquare, Lock, RotateCcw } from 'lucide-react-native';
@@ -1247,7 +1248,7 @@ export function PdfStudentSection({
                   )}
                 </View>
               ) : activeTool === 'assistant' ? (
-                <KeyboardAvoidingView style={{ flex: 1, backgroundColor: $.paper }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                <KeyboardSafeView style={{ flex: 1, backgroundColor: $.paper }}>
                   {/* AI header */}
                   <View style={styles.aiHeader}>
                     <View style={[styles.aiHeaderIcon, { backgroundColor: $.cream, borderColor: $.line, borderWidth: 1 }]}>
@@ -1373,7 +1374,7 @@ export function PdfStudentSection({
                       <Text style={styles.aiSendButtonText}>↑</Text>
                     </Pressable>
                   </View>
-                </KeyboardAvoidingView>
+                </KeyboardSafeView>
               ) : (
                 <ScrollView style={styles.readerBody} showsVerticalScrollIndicator={false}>
                   <View style={styles.readerBodyContainer}>

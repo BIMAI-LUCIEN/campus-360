@@ -15,6 +15,7 @@ import { Check, MessageCircle, Plus, X } from 'lucide-react-native';
 import { FACULTY_NAMES, LEVELS, MAX_SKILLS, suggestedSkillsFor } from '../onboarding/academicCatalog';
 import { fontFamilies, stitchColors } from '../../theme/stitch';
 import { SelectWithOther } from '../../ui/SelectWithOther';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 
 export interface StudentProfileExpressData {
   fullName: string;
@@ -119,7 +120,7 @@ export function StudentProfileExpressModal({
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
+      <KeyboardSafeView style={styles.overlay}>
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>Avant ta candidature</Text>
@@ -197,7 +198,7 @@ export function StudentProfileExpressModal({
             <Text style={styles.ctaText}>Enregistrer et continuer</Text>
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardSafeView>
     </Modal>
   );
 }

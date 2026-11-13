@@ -18,6 +18,7 @@ import { FileText, Mail, Briefcase, GraduationCap, Sparkles, Edit3, Download, Tr
 import { authBaseUrl, authFetch, authClient, type StudentProfile } from '../auth/betterAuth';
 import { stitchColors, stitchShadows, stitchRadius, fontFamilies } from '../../theme/stitch';
 import { GradientText } from '../../ui/GlassComponents';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 import { DocGenChat, type CareerContext, type GenAttachment } from './DocGenChat';
 import { CvBuilderModal } from './CvBuilderModal';
 import { CvJuryPanel } from './CvJuryPanel';
@@ -949,8 +950,7 @@ export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScr
         onRequestClose={resetForm}
         statusBarTranslucent
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <KeyboardSafeView
           style={{ flex: 1 }}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
         >
@@ -1110,7 +1110,7 @@ export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScr
               </ScrollView>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </KeyboardSafeView>
       </Modal>
 
       <CvBuilderModal

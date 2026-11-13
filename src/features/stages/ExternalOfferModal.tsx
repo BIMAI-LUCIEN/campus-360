@@ -16,6 +16,7 @@ import { ImagePlus, X } from 'lucide-react-native';
 
 import type { StageJob } from '../../types';
 import { fontFamilies, stitchColors, stitchComponents } from '../../theme/stitch';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 import { MAX_OFFER_IMAGES, importExternalOffer, pickOfferImages, type OfferImage } from './externalOfferApi';
 
 export interface ExternalOfferModalProps {
@@ -69,7 +70,7 @@ export function ExternalOfferModal({ visible, onClose, onOfferReady }: ExternalO
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={stitchComponents.modalBackdrop}>
+      <KeyboardSafeView style={stitchComponents.modalBackdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>Une offre vue ailleurs</Text>
@@ -148,7 +149,7 @@ export function ExternalOfferModal({ visible, onClose, onOfferReady }: ExternalO
             )}
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardSafeView>
     </Modal>
   );
 }

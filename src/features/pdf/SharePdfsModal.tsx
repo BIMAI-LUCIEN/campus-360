@@ -3,6 +3,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, Text
 import { Check, FileText, Square, Upload, X } from 'lucide-react-native';
 
 import { SecondaryButton, SiennaButton } from '../../ui/GlassComponents';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 import { fontFamilies, stitchColors, stitchRadius, stitchSpacing } from '../../theme/stitch';
 import { ContributionStatusChip } from './ContributionStatus';
 import {
@@ -76,7 +77,7 @@ export function SharePdfsModal({ visible, onClose, onOpenContributions, onOpenDo
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
-      <View style={styles.overlay}>
+      <KeyboardSafeView style={styles.overlay}>
         <View style={styles.sheet}>
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
@@ -128,7 +129,7 @@ export function SharePdfsModal({ visible, onClose, onOpenContributions, onOpenDo
             )}
           </ScrollView>
         </View>
-      </View>
+      </KeyboardSafeView>
     </Modal>
   );
 }

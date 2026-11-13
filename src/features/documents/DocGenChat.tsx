@@ -16,6 +16,7 @@ import * as SecureStore from 'expo-secure-store';
 import { authFetch } from '../auth/betterAuth';
 import { stitchColors } from '../../theme/stitch';
 import { AppAlert } from '../../ui/AppAlert';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 import { pickSourceFromPhone, SOURCE_ROLE_LABEL, type PickedFile, type SourceRole } from './documentFilesApi';
 import { careerOfferLabel, readOfferFromFile, readOfferFromImages, readOfferFromText, type CareerOffer } from './careerContextApi';
 import {
@@ -326,8 +327,7 @@ export function DocGenChat({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        <KeyboardSafeView
           style={styles.sheet}
         >
           <View style={styles.header}>
@@ -589,7 +589,7 @@ export function DocGenChat({
               <Send size={18} color={stitchColors.white} />
             </Pressable>
           </View>
-        </KeyboardAvoidingView>
+        </KeyboardSafeView>
       </View>
     </Modal>
   );

@@ -3,6 +3,7 @@ import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View, Keyboard
 import { Check, ChevronDown, PenLine, Search, X } from 'lucide-react-native';
 
 import { fontFamilies, stitchColors } from '../theme/stitch';
+import { KeyboardSafeView } from './KeyboardSafeView';
 
 const OTHER_LABEL = 'Autre…';
 
@@ -86,7 +87,7 @@ export function SelectWithOther({
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <KeyboardSafeView style={{ flex: 1 }}>
         <Pressable style={styles.backdrop} onPress={close}>
           <View style={styles.sheet} onStartShouldSetResponder={() => true}>
             <View style={styles.sheetHeader}>
@@ -163,7 +164,7 @@ export function SelectWithOther({
             )}
           </View>
         </Pressable>
-        </KeyboardAvoidingView>
+        </KeyboardSafeView>
       </Modal>
     </View>
   );

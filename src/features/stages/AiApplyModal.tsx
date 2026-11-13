@@ -63,6 +63,7 @@ import { CvBackgroundScreen } from '../profile/CvBackgroundScreen';
 import { cvBackgroundFilledCount, fetchCvBackground } from '../profile/cvBackgroundApi';
 import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from './contactTargets';
 import { AppAlert } from '../../ui/AppAlert';
+import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 
 /** The offer the jury judges against: the job itself. */
 const jobAsOffer = (job: StageJob | null): CareerOffer | null =>
@@ -655,7 +656,7 @@ export function AiApplyModal({
   return (
     <>
       <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-        <View style={styles.overlay}>
+        <KeyboardSafeView style={styles.overlay}>
           <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
@@ -1385,7 +1386,7 @@ export function AiApplyModal({
               </View>
             )}
           </View>
-        </View>
+        </KeyboardSafeView>
       </Modal>
 
       {/* Modal Express si profil incomplet */}
