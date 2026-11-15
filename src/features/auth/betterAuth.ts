@@ -681,7 +681,9 @@ export const updateStudentProfile = async (input: StudentProfileUpdateInput): Pr
     const payload = (await res.json().catch(() => null)) as { error?: string } | null;
     throw new Error(payload?.error || `Erreur serveur (${res.status}).`);
   }
-  return (await res.json()) as StudentProfile;
+  const updated = (await res.json()) as StudentProfile;
+  await authStorage.setItemAsync('campus-bordes_user', JSON.stringify(updated)).catch(() => {});
+  return updated;
 };
 
 /** Ends the onboarding server-side: stores skills for job alerts and triggers the welcome message. */

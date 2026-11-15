@@ -105,6 +105,7 @@ import { SimplePdfReaderModal } from './features/pdf/SimplePdfReaderModal';
 import { SharePdfsModal } from './features/pdf/SharePdfsModal';
 import { MyContributionsScreen } from './features/pdf/MyContributionsScreen';
 import { ProfileScreen } from './ui/screens/ProfileScreen';
+import { EditProfileModal } from './features/profile/EditProfileModal';
 import { AuthScreen } from './ui/screens/AuthScreen';
 import { DocumentsScreen } from './features/documents/DocumentsScreen';
 import { StagesScreen } from './ui/screens/StagesScreen';
@@ -316,6 +317,7 @@ export function AppShell() {
   const [notificationsSettingsVisible, setNotificationsSettingsVisible] = React.useState(false);
   const [editingDocumentId, setEditingDocumentId] = React.useState<string | null>(null);
   const [securitySettingsVisible, setSecuritySettingsVisible] = React.useState(false);
+  const [editProfileVisible, setEditProfileVisible] = React.useState(false);
   const [deleteAccountVisible, setDeleteAccountVisible] = React.useState(false);
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
@@ -1466,6 +1468,7 @@ export function AppShell() {
                   transactions={transactions}
                   purchasedDocumentsCount={ownedLibrary.length}
                   syncingAccount={syncingAccount}
+                  onEditProfile={() => setEditProfileVisible(true)}
                   onOpenNotificationsSettings={() => {
                     Notifications.getPermissionsAsync()
                       .then((perm) => setNotifPermission(perm.granted ? 'granted' : 'denied'))
@@ -1768,6 +1771,16 @@ export function AppShell() {
             </Pressable>
           </Pressable>
         </Modal>
+
+        <EditProfileModal
+          visible={editProfileVisible}
+          profile={studentProfile}
+          onClose={() => setEditProfileVisible(false)}
+          onSaved={(updated) => {
+            setStudentProfile(updated);
+            showToast('Informations mises à jour.', 'success');
+          }}
+        />
 
         {/* Notifications Settings */}
         <Modal transparent animationType="slide" visible={notificationsSettingsVisible} onRequestClose={() => setNotificationsSettingsVisible(false)}>

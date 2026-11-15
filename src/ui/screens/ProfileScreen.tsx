@@ -27,6 +27,7 @@ import {
   Sparkles,
   Trash2,
   TrendingUp,
+  User,
   type LucideIcon,
 } from 'lucide-react-native';
 import { TransactionRow } from '../GlassComponents';
@@ -65,6 +66,7 @@ interface ProfileScreenProps {
   transactions: Transaction[];
   purchasedDocumentsCount: number;
   syncingAccount: boolean;
+  onEditProfile: () => void;
   onOpenNotificationsSettings: () => void;
   onOpenSecuritySettings: () => void;
   onOpenSupport: () => void;
@@ -142,6 +144,7 @@ export function ProfileScreen({
   transactions,
   purchasedDocumentsCount,
   syncingAccount,
+  onEditProfile,
   onOpenNotificationsSettings,
   onOpenSecuritySettings,
   onOpenSupport,
@@ -219,6 +222,14 @@ export function ProfileScreen({
   const settingsRows: MenuRow[] = [
     // Liaison du compte WhatsApp (Evolution API) retirée de l'UI en attendant l'API officielle
     // WhatsApp Cloud. Pour la réintégrer : features/whatsapp/WhatsAppPairingModal.tsx + whatsappService.ts.
+    {
+      key: 'edit-profile',
+      label: 'Mes informations personnelles',
+      Icon: User,
+      iconBg: 'rgba(124, 58, 237, 0.1)',
+      iconColor: stitchColors.primary,
+      onPress: onEditProfile,
+    },
     {
       key: 'security',
       label: 'Sécurité & mot de passe',
