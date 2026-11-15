@@ -142,12 +142,7 @@ class ScraperOrchestrator:
                 logger.error(f"Erreur Agent Facebook : {e}")
 
         if "TIKTOK" in collect_platforms:
-            try:
-                if self.apify_agent.is_configured():
-                    tt_items = self.apify_agent.scrape_tiktok_posts(query=_search_terms("stage", query, city_suffix, "Cameroun"), limit=limit_per_platform)
-                    collected_items.extend(tt_items)
-            except Exception as e:
-                logger.error(f"Erreur Agent TikTok : {e}")
+            logger.info("Collecte TikTok désactivée (sources vidéo non vérifiables écartées).")
 
         if "ACADEMIC_WEB" in collect_platforms:
             try:

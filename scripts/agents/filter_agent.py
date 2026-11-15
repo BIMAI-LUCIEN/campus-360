@@ -34,6 +34,19 @@ CONTACT_PATTERNS = [
     r"[\w.+-]+@[\w-]+\.[\w.]+", r"(\+?237)?\s*6[\d\s]{8,}", r"https?://", r"postuler", r"candidature",
     r"envoy(er|ez)\s*(votre\s*)?(cv|dossier)", r"whatsapp",
 ]
+# Video-only social posts (TikTok, Reels, Shorts) cannot be verified without full transcription.
+VIDEO_PLATFORMS = {"TIKTOK"}
+VIDEO_URL_PATTERNS = [
+    r"(?:^|//|\.)tiktok\.com(?:/|$|\?)",
+    r"(?:^|//|\.)vm\.tiktok\.com(?:/|$|\?)",
+    r"(?:^|//|\.)vt\.tiktok\.com(?:/|$|\?)",
+    r"facebook\.com/.*/reels?/",
+    r"facebook\.com/reel/",
+    r"(?:^|//|\.)fb\.watch(?:/|$|\?)",
+    r"instagram\.com/reels?/",
+    r"youtube\.com/shorts/",
+    r"(?:^|//|\.)youtu\.be(?:/|$|\?)",
+]
 
 
 def _matches(patterns: list, text: str) -> bool:
@@ -54,8 +67,26 @@ def _has_past_year_only(text: str, today: date) -> bool:
     return bool(years) and max(years) < today.year
 
 
-def filter_post(title: str, text: str, company: str = None, today: date = None, has_contact: bool = False) -> tuple:
+def is_video_source(source_url: str = "", platform: str = "") -> bool:
+    """True when the item originates from TikTok or a video-only URL (Reels, Shorts, fb.watch)."""
+    if (platform or "").strip().upper() in VIDEO_PLATFORMS:
+        return True
+    url = (source_url or "").strip()
+    return bool(url and _matches(VIDEO_URL_PATTERNS, url))
+
+
+def filter_post(
+    title: str,
+    text: str,
+    company: str = None,
+    today: date = None,
+    has_contact: bool = False,
+    source_url: str = "",
+    platform: str = "",
+) -> tuple:
     """has_contact: the collector already found a link, email or WhatsApp number for this post."""
+    if is_video_source(source_url=source_url, platform=platform):
+        return False, "source vidéo non vérifiable"
     today = today or date.today()
     # NFKC turns the decorative bold letters of social posts back into plain letters.
     full = unicodedata.normalize("NFKC", f"{title or ''}\n{text or ''}")

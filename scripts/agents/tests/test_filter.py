@@ -76,6 +76,28 @@ class FilterPostTests(unittest.TestCase):
         ok, reason = filter_post("Offre d'emploi Digital Manager", text, "StarTimes", today=TODAY)
         self.assertEqual((ok, reason), (False, "annonce datée d'une année passée"))
 
+    def test_video_sources_rejected(self):
+        text = "SANLAM ALLIANZ Cameroun recrute deux stagiaires RH à Douala." + LONG
+        for url, platform in [
+            ("https://www.tiktok.com/@user/video/7400000000000", "FACEBOOK"),
+            ("https://vm.tiktok.com/ZMabcdef/", ""),
+            ("https://www.facebook.com/reel/1234567890", "FACEBOOK"),
+            ("https://fb.watch/abc123/", "FACEBOOK"),
+            ("https://www.instagram.com/reel/C12345/", ""),
+            ("https://www.youtube.com/shorts/dQw4w9WgXcQ", ""),
+            ("https://example.com/post", "TIKTOK"),
+        ]:
+            with self.subTest(url=url, platform=platform):
+                ok, reason = filter_post(
+                    "Recrutement stagiaire",
+                    text,
+                    "SANLAM ALLIANZ",
+                    today=TODAY,
+                    source_url=url,
+                    platform=platform,
+                )
+                self.assertEqual((ok, reason), (False, "source vidéo non vérifiable"))
+
 
 if __name__ == "__main__":
     unittest.main()

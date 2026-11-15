@@ -62,7 +62,14 @@ def evaluate(item: dict, existing: list) -> dict:
     """Runs the 4 agents on a collected item. Returns {stage, decision, extraction}."""
     title, text = item.get("title", ""), item.get("snippet", "")
     has_contact = any(item.get(key) for key in ("url", "contact_email", "contact_whatsapp"))
-    ok, reason = filter_post(title, text, item.get("company"), has_contact=has_contact)
+    ok, reason = filter_post(
+        title,
+        text,
+        item.get("company"),
+        has_contact=has_contact,
+        source_url=item.get("url", ""),
+        platform=item.get("platform", ""),
+    )
     if not ok:
         return {"stage": "filter", "decision": {"status": "rejected", "kind": None, "confidence": 0.0, "reason": reason}}
     if item.get("kind_hint") in ("stage", "emploi"):

@@ -3674,3 +3674,37 @@ Source : demande du 2026-11-11 (écarts entre le parcours de rédaction et le ju
 **[2026-10-15] Tâche 23.9 validée** (execute) — fichiers : mobile-api/lib/free-launch.ts, recruiter-web/lib/free-launch.ts, routes generate/generate-full/account, mobile-access.ts, recruiter-web/lib/access.ts, src/config/launch.ts, DocumentsScreen, WritingWorkshopModal, .env.example — validation : npm test 0 échec, tsc ×3, lint:colors 192 — sécurité : env validée, throw en prod si mode absent.
 La plus récente en haut.
 - **[2026-10-15] Lot A (tâches 23.1 à 23.6) validé sauf vérification visuelle** (execute) — fichiers : `mobile-api/lib/{stages-errors,db-errors,dispatch-target}.ts` (nouveaux), `stages-db.ts`, routes `stages*`, `health`, `whatsapp/instance`, `ai/pdf-chat`, `mobile-access.ts`, `evolution-api.ts` ; app : `applicationsCache.ts`, `contactTargets.ts`, `cvHtml.ts`, `paymentStatus.ts` (nouveaux), `stagesApi.ts`, `AiApplyModal.tsx`, `StagesScreen.tsx`, `ApplicationsTimelineScreen.tsx`, `ApplicationDetailModal.tsx`, `DocumentsScreen.tsx`, `OfficialCvView.tsx`, `pdfExportService.ts`, `walletApi.ts`, `PaymentModal.tsx`, `pdfApi.ts`, `pdfAssistant.ts`, `SimplePdfReaderModal.tsx`, `whatsappService.ts`, `AppShell.tsx`, `env.ts`, `types.ts` — validation : `npm test` 111 tests, 0 échec, 5 ignorés ; `tsc` 0 (app et mobile-api) ; `lint:colors` 192 (référence abaissée de 193) ; `curl /api/health` base injoignable → 503 — sécurité : HTML des PDF échappé, URL de photo filtrée, plus d'envoi vers des numéros codés en dur, plus de crédit sans paiement — non vérifié : parcours visuels dans l'app connectée (identifiants requis, règle §6 du guide) — `contexte-code.md` : absent (à créer avec `/code-analyzer-context`).
+
+
+---
+
+## 🧹 MODULE 37 : Suppression des sources vidéo (TikTok & consorts) et nettoyage en base
+
+**Cadrage :** [contexte.md §23](contexte.md) (voie Bounded, validé le 2026-11-15).
+**Décisions actées :** coupure totale des sources vidéo (pas de transcription), rejet déterministe des URLs vidéo dans `filter_agent.py`, suppression nette des offres TikTok/vidéo déjà en base (Option A, avec `--dry-run` préalable).
+
+### Lot 1 — Blocage des sources vidéo dans le scraping
+
+- [X] **37.1 — Désactiver la collecte TikTok dans l'orchestrateur et l'agent Apify**
+  - **Fichiers :** `scripts/agents/orchestrator.py`, `scripts/agents/apify_agent.py`, `scripts/agents/config.py`
+  - **Action :** Retirer la branche `if "TIKTOK" in collect_platforms` dans `orchestrator.py`, faire retourner `[]` à `ApifyAgent.scrape_tiktok_posts` sans appel HTTP dans `apify_agent.py`, et s'assurer que `DEFAULT_PLATFORMS` dans `config.py` n'inclut aucune source vidéo.
+  - **DoD :** `PYTHONUTF8=1 python -m unittest discover -s scripts/agents/tests -p "test_*.py"` passe sans erreur et aucun appel Apify TikTok n'est émis même si `"TIKTOK"` est passé en paramètre.
+
+- [X] **37.2 — Bloquer toute URL ou plateforme vidéo dans le filtre déterministe**
+  - **Fichiers :** `scripts/agents/filter_agent.py`, `scripts/agents/offer_pipeline.py`, `scripts/agents/tests/test_filter.py`
+  - **Action :** Ajouter les paramètres optionnels `source_url: str = ""` et `platform: str = ""` à `filter_post(...)` dans `filter_agent.py` et rejeter immédiatement (`"source vidéo non vérifiable"`) toute plateforme `TIKTOK` ou URL contenant `tiktok.com`, `vm.tiktok.com`, `/reel/`, `/reels/`, `fb.watch`, `youtube.com/shorts`, `youtu.be`, `instagram.com/reel`. Transmettre `item.get("url")` et `item.get("platform")` depuis `offer_pipeline.py` et couvrir ces cas dans `test_filter.py`.
+  - **DoD :** `PYTHONUTF8=1 python -m unittest discover -s scripts/agents/tests -p "test_*.py"` passe à 100 % avec les nouveaux tests de rejet vidéo.
+
+### Lot 2 — Nettoyage des offres TikTok / vidéo existantes en base
+
+- [X] **37.3 — Créer le script de nettoyage idempotent des offres vidéo en base**
+  - **Fichiers :** `scripts/agents/cleanup_video_offers.py` (nouveau), `scripts/agents/tests/test_cleanup_video_offers.py` (nouveau)
+  - **Action :** Créer un script Python qui cible dans `stage_jobs` toutes les offres dont `source_platform = 'TIKTOK'` ou `source_url` correspond à un domaine/chemin vidéo (`tiktok.com`, `vm.tiktok.com`, `/reel/`, `/reels/`, `fb.watch`, `youtube.com/shorts`, `youtu.be`), et vérifie les références éventuelles dans `stage_applications` / `stage_application_kits`. En mode `--dry-run` (défaut), affiche le décompte et la liste des offres ciblées ; en mode `--apply`, supprime dans une transaction.
+  - **DoD :** Les tests unitaires de `test_cleanup_video_offers.py` passent et `python scripts/agents/cleanup_video_offers.py --dry-run` affiche le décompte exact sans modifier la base.
+
+- [X] **37.4 — 🔒 Exécuter le nettoyage sur la base cible et vérifier**
+  - **Fichiers :** aucun fichier modifié (opération base + journal)
+  - **Action :** Lancer `cleanup_video_offers.py --dry-run` sur la base cible, confirmer l'absence de blocage FK (ou valider le traitement des candidatures liées avec l'utilisateur), puis exécuter `--apply` et recontrôler.
+  - **DoD :** `python scripts/agents/cleanup_video_offers.py --dry-run` retourne `0` offre vidéo restante dans `stage_jobs`.
+
+**Reprise :** Module 37 terminé (`37.1` à `37.4` validées). Pensez à déployer le code Python sur le VPS si le planificateur y tourne.

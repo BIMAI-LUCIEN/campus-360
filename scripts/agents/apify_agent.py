@@ -95,34 +95,10 @@ class ApifyScraperAgent:
 
     def scrape_tiktok_posts(self, query: str = "stage Cameroun Bafoussam Buea Garoua Douala Yaounde", limit: int = 10) -> List[Dict[str, Any]]:
         """
-        Exécute l'Actor Apify TikTok Scraper pour extraire les vidéos, textes et miniatures (flyers/couvertures) sur TikTok.
+        Désactivé : les vidéos TikTok ne sont pas des offres vérifiables (pas de transcription fiable).
+        Retourne toujours une liste vide sans appel Apify.
         """
-        if not self.is_configured():
-            logger.warning("⚠️ APIFY_API_TOKEN non configuré pour TikTok.")
-            return []
-
-        logger.info(f"🎵 Lancement du scraping TikTok Cloud via Apify (requête: '{query}', max: {limit})...")
-
-        actor_id = "clockworks~free-tiktok-scraper"
-        url = f"https://api.apify.com/v2/acts/{actor_id}/run-sync-get-dataset-items?token={self.api_token}&timeout=120"
-
-        payload = {
-            "searchQueries": [query],
-            "resultsPerPage": limit,
-            "searchType": "video"
-        }
-
-        try:
-            resp = self.session.post(url, json=payload, timeout=130)
-            if resp.status_code in [200, 201]:
-                raw_items = resp.json()
-                if raw_items and isinstance(raw_items, list):
-                    return self._parse_tiktok_items(raw_items)
-            else:
-                logger.error(f"❌ Erreur HTTP Apify TikTok ({resp.status_code}) : {resp.text[:300]}")
-        except Exception as e:
-            logger.error(f"❌ Exception lors du scraping Apify TikTok : {e}")
-
+        logger.info("⛔ Scraping TikTok désactivé (sources vidéo exclues).")
         return []
 
     def _parse_linkedin_items(self, raw_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

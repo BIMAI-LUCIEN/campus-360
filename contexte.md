@@ -1270,3 +1270,26 @@ Rejeté : kit stocké seulement dans le téléphone (compteur contournable, doss
 
 ### Prochaine étape
 `/plan-task` pour découper ce cadrage en tâches.
+
+
+---
+
+## 23. Cadrage validé : Suppression des sources vidéo (TikTok & consorts) et nettoyage en base (2026-11-15, voie Bounded)
+
+### 1. Problème et cible
+- **Constat :** `apify_agent.py` (`scrape_tiktok_posts`) ne récupère que la légende (`text`) et la miniature (`cover_url`), sans transcription audio ni lecture du texte incrusté dans la vidéo. Les vidéos contenant des mots-clés génériques (`#stage`, `#emploi`, `#cameroun`) entrent dans le pipeline et polluent `stage_jobs` avec du bruit (conseils, humour, contenu sans offre réelle).
+- **Décision :** Retirer définitivement TikTok et toutes les sources vidéo (Reels, Shorts, `fb.watch`, etc.) du scraping, et supprimer les offres TikTok/vidéo déjà présentes en base.
+
+### 2. Périmètre du blocage et nettoyage
+- **Collecte (`scripts/agents/`) :** Suppression de la collecte TikTok dans `orchestrator.py` et désactivation de `scrape_tiktok_posts` dans `apify_agent.py`.
+- **Filtre déterministe (`filter_agent.py`) :** Rejet immédiat sans appel IA de toute plateforme `TIKTOK` ou URL vidéo (`tiktok.com`, `vm.tiktok.com`, `/reel/`, `/reels/`, `fb.watch`, `youtube.com/shorts`, `youtu.be`, `instagram.com/reel`) quelle que soit la source (Facebook, Google, etc.).
+- **Nettoyage base (`stage_jobs`) :** Option A retenue — suppression nette de toutes les offres TikTok/vidéo déjà en base via un script dédié avec `--dry-run` par défaut puis `--apply` transactionnel.
+
+### 6. Architecture retenue
+- `orchestrator.py` + `apify_agent.py` : aucune requête Apify TikTok émise.
+- `filter_agent.filter_post(..., source_url, platform)` appelé par `offer_pipeline.py` : bloque les URLs vidéo avant tout appel LLM (`classifier_agent`, `extractor_agent`, `verifier_agent`).
+- `scripts/agents/cleanup_video_offers.py` : script autonome idempotent (`--dry-run` / `--apply`) pour purger `stage_jobs` en vérifiant d'abord les éventuelles clés étrangères (`stage_applications`, etc.).
+
+### 8. Risques
+- **Clés étrangères en base :** une offre TikTok pourrait être référencée par une candidature (`stage_applications`) ou un kit (`stage_application_kits`). Le `--dry-run` doit inspecter les tables liées avant toute suppression définitive.
+- **Reels Facebook remontés par `apify_agent.scrape_facebook_posts` :** couverts par le filtre d'URL dans `filter_agent.py`.
