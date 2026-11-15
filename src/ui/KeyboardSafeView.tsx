@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Dimensions,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -46,7 +47,9 @@ export function useKeyboardOpen(): boolean {
 
 /**
  * Cross-platform keyboard-avoiding container:
- * - iOS & Android (including Expo SDK 54 edge-to-edge): KeyboardAvoidingView with behavior="padding".
+ * - iOS: KeyboardAvoidingView with behavior="padding".
+ * - Android: measures actual overlap via Keyboard.addListener('keyboardDidShow') + measureInWindow
+ *   (works reliably inside Modals and Expo SDK 54 edge-to-edge without double-padding if adjustResize is active).
  * - Mobile Web: tracks window.visualViewport inset and adds paddingBottom when virtual keyboard opens.
  */
 export function KeyboardSafeView({
@@ -57,6 +60,10 @@ export function KeyboardSafeView({
   ...rest
 }: KeyboardAvoidingViewProps) {
   const [webInset, setWebInset] = useState(0);
+  const [androidInset, setAndroidInset] = useState(0);
+  const androidViewRef = useRef<View>(null);
+  const keyboardOpenRef = useRef(false);
+  const maxWindowHeightRef = useRef(Dimensions.get('window').height);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -76,12 +83,81 @@ export function KeyboardSafeView({
     };
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const dimSub = Dimensions.addEventListener('change', ({ window: win }) => {
+      if (!keyboardOpenRef.current && win.height > 0) {
+        maxWindowHeightRef.current = win.height;
+      }
+    });
+
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      keyboardOpenRef.current = true;
+      const kbHeight = e.endCoordinates?.height ?? 0;
+      if (kbHeight <= 0) return;
+
+      const currentWinHeight = Dimensions.get('window').height;
+      if (currentWinHeight > maxWindowHeightRef.current) {
+        maxWindowHeightRef.current = currentWinHeight;
+      }
+      const windowShrink = Math.max(0, maxWindowHeightRef.current - currentWinHeight);
+      const effectiveKbHeight = Math.max(0, kbHeight - windowShrink);
+      if (effectiveKbHeight <= 0) {
+        setAndroidInset(0);
+        return;
+      }
+
+      if (androidViewRef.current?.measureInWindow) {
+        androidViewRef.current.measureInWindow((_x, y, _w, h) => {
+          if (h <= 0) {
+            setAndroidInset(Math.max(0, effectiveKbHeight - keyboardVerticalOffset));
+            return;
+          }
+          const gapFromBottom = Math.max(0, currentWinHeight - (y + h));
+          const overlap = Math.max(0, Math.round(effectiveKbHeight - gapFromBottom));
+          setAndroidInset(overlap);
+        });
+      } else {
+        setAndroidInset(Math.max(0, effectiveKbHeight - keyboardVerticalOffset));
+      }
+    });
+
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      keyboardOpenRef.current = false;
+      setAndroidInset(0);
+      const winH = Dimensions.get('window').height;
+      if (winH > 0) maxWindowHeightRef.current = winH;
+    });
+
+    return () => {
+      dimSub.remove();
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardVerticalOffset]);
+
   if (Platform.OS === 'web') {
     const flat = StyleSheet.flatten(style) || {};
     const basePad = typeof flat.paddingBottom === 'number' ? flat.paddingBottom : 0;
     return (
       <View
         style={[style, webInset > 0 ? { paddingBottom: basePad + webInset } : null]}
+        {...rest}
+      >
+        {children}
+      </View>
+    );
+  }
+
+  if (Platform.OS === 'android') {
+    const flat = StyleSheet.flatten(style) || {};
+    const basePad = typeof flat.paddingBottom === 'number' ? flat.paddingBottom : 0;
+    return (
+      <View
+        ref={androidViewRef}
+        collapsable={false}
+        style={[style, androidInset > 0 ? { paddingBottom: basePad + androidInset } : null]}
         {...rest}
       >
         {children}
