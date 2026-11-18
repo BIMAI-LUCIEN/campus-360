@@ -78,3 +78,7 @@ jobs:
             --branch production \
             --message "$MESSAGE" \
             --non-interactive
+          npx --yes eas-cli@latest update \
+            --branch preview \
+            --message "$MESSAGE" \
+            --non-interactive
