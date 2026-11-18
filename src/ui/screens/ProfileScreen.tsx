@@ -33,7 +33,7 @@ import {
 import { TransactionRow } from '../GlassComponents';
 import { CvBackgroundScreen } from '../../features/profile/CvBackgroundScreen';
 import { OffersModal } from '../../features/wallet/OffersModal';
-import { fetchStudentApplications } from '../../features/stages/stagesApi';
+import { fetchStudentApplications, peekStudentApplications } from '../../features/stages/stagesApi';
 import type { StudentProfile } from '../../features/auth/betterAuth';
 import type { Transaction } from '../../types';
 import {
@@ -137,7 +137,7 @@ function MenuCardGroup({ title, rows }: { title: string; rows: MenuRow[] }) {
   );
 }
 
-export function ProfileScreen({
+function ProfileScreenBase({
   studentProfile,
   balance = 0,
   iaCredits = 0,
@@ -164,8 +164,15 @@ export function ProfileScreen({
   const subline = studentProfile?.university || '';
 
   // Real count from the same source as the applications timeline (no placeholder number).
-  const [applicationsCount, setApplicationsCount] = React.useState<number | null>(null);
+  const [applicationsCount, setApplicationsCount] = React.useState<number | null>(
+    () => peekStudentApplications()?.length ?? null,
+  );
   React.useEffect(() => {
+    const cached = peekStudentApplications();
+    if (cached !== null) {
+      setApplicationsCount(cached.length);
+      return;
+    }
     let active = true;
     fetchStudentApplications()
       .then((apps) => { if (active) setApplicationsCount(apps.length); })
@@ -364,7 +371,7 @@ export function ProfileScreen({
               </View>
             )}
             <View style={{ flex: 1, paddingLeft: 14 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={styles.nameBadgeRow}>
                 <Text style={styles.studentName} numberOfLines={1}>
                   {studentProfile?.name || 'Ton nom [à compléter]'}
                 </Text>
@@ -392,7 +399,7 @@ export function ProfileScreen({
               onPress={onApplications}
             >
               <Text style={styles.statNumber}>{applicationsCount ?? '–'}</Text>
-              <Text style={styles.statLabel}>Candidatures</Text>
+              <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>Candidatures</Text>
             </Pressable>
 
             <Pressable
@@ -400,7 +407,7 @@ export function ProfileScreen({
               onPress={onDocuments}
             >
               <Text style={styles.statNumber}>CV</Text>
-              <Text style={styles.statLabel}>Officiel RH</Text>
+              <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>Officiel RH</Text>
             </Pressable>
 
             <Pressable
@@ -408,7 +415,7 @@ export function ProfileScreen({
               onPress={onLibrary}
             >
               <Text style={styles.statNumber}>{purchasedDocumentsCount}</Text>
-              <Text style={styles.statLabel}>PDF enregistrés</Text>
+              <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>PDF enregistrés</Text>
             </Pressable>
           </View>
         </View>
@@ -422,9 +429,9 @@ export function ProfileScreen({
             style={styles.neobankCard}
           >
             <View style={styles.neobankTopRow}>
-              <View>
+              <View style={{ flex: 1, minWidth: 120, paddingRight: 8 }}>
                 <Text style={styles.neobankLabel}>CAMPUS 360 PAY</Text>
-                <Text style={styles.neobankHolder}>{studentProfile?.name || 'Ajoute ton nom'}</Text>
+                <Text style={styles.neobankHolder} numberOfLines={1}>{studentProfile?.name || 'Ajoute ton nom'}</Text>
               </View>
               <View style={styles.neobankIaPill}>
                 <Sparkles size={11} color={stitchColors.white} strokeWidth={2.4} />
@@ -475,11 +482,11 @@ export function ProfileScreen({
         )}
 
         {/* Espace bas pour laisser respirer au-dessus de la BottomNav */}
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
-      <CvBackgroundScreen visible={backgroundOpen} onClose={() => setBackgroundOpen(false)} />
-      <OffersModal visible={offersOpen} onClose={() => setOffersOpen(false)} onPurchased={() => onSync?.()} />
+      {backgroundOpen && <CvBackgroundScreen visible={backgroundOpen} onClose={() => setBackgroundOpen(false)} />}
+      {offersOpen && <OffersModal visible={offersOpen} onClose={() => setOffersOpen(false)} onPurchased={() => onSync?.()} />}
     </>
   );
 }
@@ -493,6 +500,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: stitchSpacing.containerMargin,
     paddingTop: Platform.OS === 'ios' ? 20 : 16,
     paddingBottom: 40,
+    width: '100%',
+    maxWidth: 1040,
+    alignSelf: 'center',
   },
 
   // 1. Header
@@ -545,7 +555,17 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#EDE9FE',
   },
+  nameBadgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
   studentName: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 110,
     fontFamily: stitchTypography.displayHero.fontFamily,
     fontSize: 16.5,
     fontWeight: '700',
@@ -626,8 +646,10 @@ const styles = StyleSheet.create({
   },
   neobankTopRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: 8,
     marginBottom: 14,
   },
   neobankLabel: {
@@ -682,13 +704,16 @@ const styles = StyleSheet.create({
   },
   neobankBottomRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.18)',
   },
   neobankHint: {
+    flexShrink: 1,
     fontFamily: fontFamilies.outfit,
     fontSize: 11,
     fontWeight: '600',
@@ -799,3 +824,5 @@ const styles = StyleSheet.create({
     color: stitchColors.primary,
   },
 });
+
+export const ProfileScreen = React.memo(ProfileScreenBase);

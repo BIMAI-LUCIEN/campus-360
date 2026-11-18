@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   Pressable,
   TextInput,
   ActivityIndicator,
@@ -57,7 +58,7 @@ interface ScrapedReportsViewProps {
   onUseStructure?: (report: ScrapedStageReport) => void;
 }
 
-export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) {
+function ScrapedReportsViewBase({ onUseStructure }: ScrapedReportsViewProps) {
   const [reports, setReports] = useState<ScrapedStageReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -105,20 +106,23 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
     }
   };
 
-  const filteredReports = reports.filter((r) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase().trim();
-    return (
-      (r.title || '').toLowerCase().includes(q) ||
-      (r.school || '').toLowerCase().includes(q) ||
-      (r.company || '').toLowerCase().includes(q) ||
-      (r.abstract || '').toLowerCase().includes(q)
-    );
-  });
+  const filteredReports = useMemo(
+    () =>
+      reports.filter((r) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase().trim();
+        return (
+          (r.title || '').toLowerCase().includes(q) ||
+          (r.school || '').toLowerCase().includes(q) ||
+          (r.company || '').toLowerCase().includes(q) ||
+          (r.abstract || '').toLowerCase().includes(q)
+        );
+      }),
+    [reports, searchQuery],
+  );
 
-  return (
-    <View style={styles.container}>
-      {/* Search Header */}
+  const renderHeader = useCallback(
+    () => (
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
           <Search size={16} color={stitchColors.inkSubtle} style={{ marginRight: 8 }} />
@@ -158,153 +162,180 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
           })}
         </ScrollView>
       </View>
+    ),
+    [searchQuery, activeField],
+  );
 
-      {/* Reports List: the screen scrolls in AppShell, no nested scroll here. */}
-      <View style={styles.scrollContent}>
-        {loading ? (
-          <View style={styles.centerBox}>
-            <ActivityIndicator size="large" color={stitchColors.secondary} />
-            <Text style={styles.loadingText}>Récupération des rapports de référence...</Text>
-          </View>
-        ) : loadError ? (
-          <View style={styles.centerBox}>
-            <BookOpen size={36} color={stitchColors.inkMuted} />
-            <Text style={styles.emptyTitle}>Rapports indisponibles</Text>
-            <Text style={styles.emptySubtitle}>Impossible de charger les rapports pour le moment.</Text>
-            <Pressable style={[styles.openDocBtn, { marginTop: 14 }]} onPress={loadReports}>
-              <RefreshCw size={13} color={stitchColors.white} />
-              <Text style={styles.openDocBtnText}>Réessayer</Text>
-            </Pressable>
-          </View>
-        ) : filteredReports.length === 0 ? (
-          <View style={styles.centerBox}>
-            <BookOpen size={36} color={stitchColors.inkMuted} />
-            <Text style={styles.emptyTitle}>Pas encore d'exemplaire vérifié</Text>
-            <Text style={styles.emptySubtitle}>
-              Seuls les vrais rapports (PDF, Word) vérifiés sont affichés ici. Essaie un autre domaine ou d'autres mots-clés.
-            </Text>
-          </View>
-        ) : (
-          filteredReports.map((item) => {
-            const isExpanded = expandedReportId === item.id;
-            const toc = Array.isArray(item.table_of_contents) ? item.table_of_contents : [];
-
-            return (
-              <View key={item.id} style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.cardHeader}>
-                  <View style={styles.badgeRow}>
-                    <View style={styles.platformBadge}>
-                      <Text style={styles.platformBadgeText}>{item.source_platform}</Text>
-                    </View>
-                    <View style={styles.levelBadge}>
-                      <Text style={styles.levelBadgeText}>{item.level || 'Licence'}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.qualityBadge}>
-                    <Award size={12} color={stitchColors.warningDeep} />
-                    <Text style={styles.qualityText}>{item.quality_score}% Qualité</Text>
-                  </View>
-                </View>
-
-                {/* Title */}
-                <Text style={styles.reportTitle} numberOfLines={3}>{item.title}</Text>
-
-                {/* Meta Entities */}
-                <View style={styles.metaRow}>
-                  {present(item.school) ? (
-                    <View style={styles.metaItem}>
-                      <GraduationCap size={13} color={stitchColors.secondary} />
-                      <Text style={styles.metaText} numberOfLines={1}>
-                        {item.school}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {present(item.company) ? (
-                    <View style={styles.metaItem}>
-                      <Building2 size={13} color={stitchColors.emeraldDeep} />
-                      <Text style={styles.metaText} numberOfLines={1}>
-                        {item.company}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-
-                {/* Abstract */}
-                {item.abstract ? (
-                  <Text style={styles.abstractText} numberOfLines={isExpanded ? 10 : 2}>
-                    {item.abstract}
-                  </Text>
-                ) : null}
-
-                {/* Expandable Table of Contents */}
-                {toc.length > 0 && (
-                  <View style={styles.tocSection}>
-                    <Pressable
-                      style={styles.tocToggle}
-                      onPress={() => setExpandedReportId(isExpanded ? null : item.id)}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Layers size={13} color={stitchColors.secondary} />
-                        <Text style={styles.tocToggleText}>
-                          Sommaire & Plan Académique ({toc.length} sections)
-                        </Text>
-                      </View>
-                      {isExpanded ? (
-                        <ChevronUp size={16} color={stitchColors.inkSubtle} />
-                      ) : (
-                        <ChevronDown size={16} color={stitchColors.inkSubtle} />
-                      )}
-                    </Pressable>
-
-                    {isExpanded && (
-                      <View style={styles.tocList}>
-                        {toc.map((sec, idx) => (
-                          <View key={idx} style={styles.tocItem}>
-                            <View style={styles.tocDot} />
-                            <Text style={styles.tocItemText}>{sec}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                )}
-
-                {/* Actions Footer */}
-                <View style={styles.cardActions}>
-                  {item.file_url ? (
-                    <Pressable
-                      style={styles.openDocBtn}
-                      onPress={() => handleOpenSource(item.file_url)}
-                    >
-                      <ExternalLink size={13} color={stitchColors.white} />
-                      <Text style={styles.openDocBtnText}>Ouvrir l'exemplaire</Text>
-                    </Pressable>
-                  ) : null}
-
-                  <Pressable
-                    style={styles.coachBtn}
-                    onPress={() => setDefenseTargetReport(item)}
-                  >
-                    <Presentation size={13} color={stitchColors.soleilInk} />
-                    <Text style={styles.coachBtnText}>Coach Soutenance</Text>
-                  </Pressable>
-
-                  {onUseStructure && (
-                    <Pressable
-                      style={styles.useStructureBtn}
-                      onPress={() => onUseStructure(item)}
-                    >
-                      <Sparkles size={13} color={stitchColors.primary} />
-                      <Text style={styles.useStructureBtnText}>Utiliser ce plan</Text>
-                    </Pressable>
-                  )}
-                </View>
-              </View>
-            );
-          })
-        )}
+  const renderEmpty = useCallback(() => {
+    if (loading) {
+      return (
+        <View style={styles.centerBox}>
+          <ActivityIndicator size="large" color={stitchColors.secondary} />
+          <Text style={styles.loadingText}>Récupération des rapports de référence...</Text>
+        </View>
+      );
+    }
+    if (loadError) {
+      return (
+        <View style={styles.centerBox}>
+          <BookOpen size={36} color={stitchColors.inkMuted} />
+          <Text style={styles.emptyTitle}>Rapports indisponibles</Text>
+          <Text style={styles.emptySubtitle}>Impossible de charger les rapports pour le moment.</Text>
+          <Pressable style={[styles.openDocBtn, { marginTop: 14 }]} onPress={loadReports}>
+            <RefreshCw size={13} color={stitchColors.white} />
+            <Text style={styles.openDocBtnText}>Réessayer</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.centerBox}>
+        <BookOpen size={36} color={stitchColors.inkMuted} />
+        <Text style={styles.emptyTitle}>Pas encore d'exemplaire vérifié</Text>
+        <Text style={styles.emptySubtitle}>
+          Seuls les vrais rapports (PDF, Word) vérifiés sont affichés ici. Essaie un autre domaine ou d'autres mots-clés.
+        </Text>
       </View>
+    );
+  }, [loading, loadError]);
+
+  const renderReport = useCallback(
+    ({ item }: { item: ScrapedStageReport }) => {
+      const isExpanded = expandedReportId === item.id;
+      const toc = Array.isArray(item.table_of_contents) ? item.table_of_contents : [];
+
+      return (
+        <View style={styles.card}>
+          {/* Header Row */}
+          <View style={styles.cardHeader}>
+            <View style={styles.badgeRow}>
+              <View style={styles.platformBadge}>
+                <Text style={styles.platformBadgeText}>{item.source_platform}</Text>
+              </View>
+              <View style={styles.levelBadge}>
+                <Text style={styles.levelBadgeText}>{item.level || 'Licence'}</Text>
+              </View>
+            </View>
+            <View style={styles.qualityBadge}>
+              <Award size={12} color={stitchColors.warningDeep} />
+              <Text style={styles.qualityText}>{item.quality_score}% Qualité</Text>
+            </View>
+          </View>
+
+          {/* Title */}
+          <Text style={styles.reportTitle} numberOfLines={3}>{item.title}</Text>
+
+          {/* Meta Entities */}
+          <View style={styles.metaRow}>
+            {present(item.school) ? (
+              <View style={styles.metaItem}>
+                <GraduationCap size={13} color={stitchColors.secondary} />
+                <Text style={styles.metaText} numberOfLines={1}>
+                  {item.school}
+                </Text>
+              </View>
+            ) : null}
+            {present(item.company) ? (
+              <View style={styles.metaItem}>
+                <Building2 size={13} color={stitchColors.emeraldDeep} />
+                <Text style={styles.metaText} numberOfLines={1}>
+                  {item.company}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+          {/* Abstract */}
+          {item.abstract ? (
+            <Text style={styles.abstractText} numberOfLines={isExpanded ? 10 : 2}>
+              {item.abstract}
+            </Text>
+          ) : null}
+
+          {/* Expandable Table of Contents */}
+          {toc.length > 0 && (
+            <View style={styles.tocSection}>
+              <Pressable
+                style={styles.tocToggle}
+                onPress={() => setExpandedReportId(isExpanded ? null : item.id)}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Layers size={13} color={stitchColors.secondary} />
+                  <Text style={styles.tocToggleText}>
+                    Sommaire & Plan Académique ({toc.length} sections)
+                  </Text>
+                </View>
+                {isExpanded ? (
+                  <ChevronUp size={16} color={stitchColors.inkSubtle} />
+                ) : (
+                  <ChevronDown size={16} color={stitchColors.inkSubtle} />
+                )}
+              </Pressable>
+
+              {isExpanded && (
+                <View style={styles.tocList}>
+                  {toc.map((sec, idx) => (
+                    <View key={idx} style={styles.tocItem}>
+                      <View style={styles.tocDot} />
+                      <Text style={styles.tocItemText}>{sec}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Actions Footer */}
+          <View style={styles.cardActions}>
+            {item.file_url ? (
+              <Pressable
+                style={styles.openDocBtn}
+                onPress={() => handleOpenSource(item.file_url)}
+              >
+                <ExternalLink size={13} color={stitchColors.white} />
+                <Text style={styles.openDocBtnText}>Ouvrir l'exemplaire</Text>
+              </Pressable>
+            ) : null}
+
+            <Pressable
+              style={styles.coachBtn}
+              onPress={() => setDefenseTargetReport(item)}
+            >
+              <Presentation size={13} color={stitchColors.soleilInk} />
+              <Text style={styles.coachBtnText}>Coach Soutenance</Text>
+            </Pressable>
+
+            {onUseStructure && (
+              <Pressable
+                style={styles.useStructureBtn}
+                onPress={() => onUseStructure(item)}
+              >
+                <Sparkles size={13} color={stitchColors.primary} />
+                <Text style={styles.useStructureBtnText}>Utiliser ce plan</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      );
+    },
+    [expandedReportId, onUseStructure],
+  );
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={loading || loadError ? [] : filteredReports}
+        keyExtractor={(item) => item.id}
+        renderItem={renderReport}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        initialNumToRender={5}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+      />
 
       {/* Defense Coach Modal */}
       {defenseTargetReport && (
@@ -327,12 +358,12 @@ export function ScrapedReportsView({ onUseStructure }: ScrapedReportsViewProps) 
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     backgroundColor: stitchColors.background,
   },
   searchSection: {
-    paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 8,
+    paddingBottom: 4,
     backgroundColor: stitchColors.background,
   },
   searchBar: {
@@ -379,8 +410,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 120,
     gap: 14,
+    width: '100%',
+    maxWidth: 1040,
+    alignSelf: 'center',
   },
   centerBox: {
     paddingVertical: 60,
@@ -593,3 +628,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+export const ScrapedReportsView = React.memo(ScrapedReportsViewBase);

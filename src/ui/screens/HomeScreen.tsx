@@ -1,11 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,7 +27,13 @@ import {
 } from 'lucide-react-native';
 
 import { type StudentProfile } from '../../features/auth/betterAuth';
-import { fetchStageJobs, fetchStudentApplications, peekStageJobs, peekStudentApplications } from '../../features/stages/stagesApi';
+import {
+  fetchStageJobs,
+  fetchStudentApplications,
+  isStageJobsCacheFresh,
+  peekStageJobs,
+  peekStudentApplications,
+} from '../../features/stages/stagesApi';
 import { AiApplyModal, type ApplicationProfilePatch } from '../../features/stages/AiApplyModal';
 import {
   APPLY_LINK_LABEL,
@@ -79,7 +87,7 @@ const HOME_CATEGORIES: CategoryItem[] = [
   { id: 'droit', label: 'Droit & RH', icon: FileText, color: stitchColors.primary, bg: '#EEF2FF' },
 ];
 
-export function HomeScreen({
+function HomeScreenBase({
   studentProfile,
   studentName,
   studentSkills = [],
@@ -93,10 +101,16 @@ export function HomeScreen({
   onProfile: _onProfile,
   onProfileSaved,
 }: HomeScreenProps) {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
+  const isWide = width >= 720;
+  const carouselCardWidth = width < 500 ? Math.min(268, Math.max(222, Math.round(width * 0.68))) : 260;
+
   // Data already loaded in this session is shown at once when coming back to the tab.
   const [jobs, setJobs] = useState<StageJob[]>(() => peekStageJobs({ userSkills: studentSkills }) ?? []);
   const [_recentApp, setRecentApp] = useState<StageApplication | null>(() => peekStudentApplications()?.[0] ?? null);
-  const [loading, setLoading] = useState(() => peekStageJobs() === null);
+  const [loading, setLoading] = useState(() => peekStageJobs({ userSkills: studentSkills }) === null);
+  const [refreshing, setRefreshing] = useState(false);
   const [applyingJob, setApplyingJob] = useState<StageJob | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const { openOnSite } = useApplyOnSite();
@@ -116,39 +130,48 @@ export function HomeScreen({
     return [];
   }, [studentSkills, studentProfile]);
 
-  useEffect(() => {
-    let active = true;
+  const skillsKey = effectiveSkills.join('|');
 
-    const loadData = async () => {
-      const cached = peekStageJobs({ userSkills: effectiveSkills });
-      if (cached) setJobs(cached);
-      setLoading(!cached);
-      try {
-        const [jobsRes, appsRes] = await Promise.allSettled([
-          fetchStageJobs({ userSkills: effectiveSkills }),
-          fetchStudentApplications(),
-        ]);
+  const loadData = useCallback(async (force = false) => {
+    const cached = peekStageJobs({ userSkills: effectiveSkills });
+    const cachedApps = peekStudentApplications();
+    if (cached) setJobs(cached);
+    if (cachedApps && cachedApps.length > 0) setRecentApp(cachedApps[0]);
+    setLoading(!cached);
 
-        if (active) {
-          if (jobsRes.status === 'fulfilled') {
-            setJobs(jobsRes.value);
-          }
-          if (appsRes.status === 'fulfilled' && appsRes.value.length > 0) {
-            setRecentApp(appsRes.value[0]);
-          }
-        }
-      } catch {
-        // Fallback géré par stagesApi
-      } finally {
-        if (active) setLoading(false);
+    if (!force && cached && isStageJobsCacheFresh({ userSkills: effectiveSkills }) && cachedApps !== null) {
+      setRefreshing(false);
+      return;
+    }
+
+    try {
+      const [jobsRes, appsRes] = await Promise.allSettled([
+        fetchStageJobs({ userSkills: effectiveSkills, force }),
+        !force && cachedApps !== null ? Promise.resolve(cachedApps) : fetchStudentApplications(),
+      ]);
+
+      if (jobsRes.status === 'fulfilled') {
+        setJobs(jobsRes.value);
       }
-    };
+      if (appsRes.status === 'fulfilled' && appsRes.value.length > 0) {
+        setRecentApp(appsRes.value[0]);
+      }
+    } catch {
+      // Fallback géré par stagesApi
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [skillsKey]);
 
-    void loadData();
-    return () => {
-      active = false;
-    };
-  }, [effectiveSkills.join('|')]);
+  useEffect(() => {
+    void loadData(false);
+  }, [loadData]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    void loadData(true);
+  }, [loadData]);
 
   // Same profile mapping as the Stages tab, so both screens show the same score.
   const matchProfile = useMemo(
@@ -186,6 +209,14 @@ export function HomeScreen({
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[stitchColors.primary]}
+            tintColor={stitchColors.primary}
+          />
+        }
       >
         {/* ── 1. Hero Banner Courbé Violet Royal ────────────────────────── */}
         <View style={styles.heroBannerWrap}>
@@ -235,35 +266,41 @@ export function HomeScreen({
         />
 
         {/* ── 4. Raccourcis Outils (Mon CV, Cours PDF, Candidatures) ────── */}
-        <View style={styles.quickToolsGrid}>
+        <View style={[styles.quickToolsGrid, isCompact && { gap: 8 }]}>
           <Pressable
-            style={({ pressed }) => [styles.quickToolCard, pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [styles.quickToolCard, isCompact && styles.quickToolCardCompact, pressed && { opacity: 0.85 }]}
             onPress={onDocuments}
           >
             <View style={[styles.quickToolIcon, { backgroundColor: '#F5F3FF' }]}>
               <FileText size={18} color={stitchColors.primary} strokeWidth={2} />
             </View>
-            <Text style={styles.quickToolLabel}>Mon CV Officiel</Text>
+            <Text style={styles.quickToolLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
+              Mon CV Officiel
+            </Text>
           </Pressable>
 
           <Pressable
-            style={({ pressed }) => [styles.quickToolCard, pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [styles.quickToolCard, isCompact && styles.quickToolCardCompact, pressed && { opacity: 0.85 }]}
             onPress={onResources}
           >
             <View style={[styles.quickToolIcon, { backgroundColor: '#EFF6FF' }]}>
               <BookOpen size={18} color="#2563EB" strokeWidth={2} />
             </View>
-            <Text style={styles.quickToolLabel}>Bibliothèque</Text>
+            <Text style={styles.quickToolLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
+              Bibliothèque
+            </Text>
           </Pressable>
 
           <Pressable
-            style={({ pressed }) => [styles.quickToolCard, pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [styles.quickToolCard, isCompact && styles.quickToolCardCompact, pressed && { opacity: 0.85 }]}
             onPress={onApplications}
           >
             <View style={[styles.quickToolIcon, { backgroundColor: '#ECFDF5' }]}>
               <CheckCircle2 size={18} color={stitchColors.emeraldDeep} strokeWidth={2} />
             </View>
-            <Text style={styles.quickToolLabel}>Candidatures</Text>
+            <Text style={styles.quickToolLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
+              Candidatures
+            </Text>
           </Pressable>
         </View>
 
@@ -300,7 +337,7 @@ export function HomeScreen({
               {recommendedJobs.map((job, index) => (
                 <Pressable
                   key={job.id}
-                  style={({ pressed }) => [styles.carouselCard, pressed && { opacity: 0.94 }]}
+                  style={({ pressed }) => [styles.carouselCard, { width: carouselCardWidth }, pressed && { opacity: 0.94 }]}
                   onPress={() => startApply(job)}
                 >
                   <View style={styles.carouselImageWrap}>
@@ -391,16 +428,16 @@ export function HomeScreen({
               <Text style={styles.emptyText}>Aucune offre disponible pour le moment.</Text>
             </View>
           ) : (
-            <View style={styles.jobsList}>
+            <View style={[styles.jobsList, isWide && styles.jobsListWide]}>
               {recommendedJobs.map((job) => (
                 <Pressable
                   key={job.id}
-                  style={({ pressed }) => [styles.jobCard, pressed && { opacity: 0.92 }]}
+                  style={({ pressed }) => [styles.jobCard, isWide && styles.jobCardWide, pressed && { opacity: 0.92 }]}
                   onPress={() => startApply(job)}
                 >
                   <View style={styles.jobCardHeader}>
                     <View style={{ flex: 1, paddingRight: 8 }}>
-                      <Text style={styles.jobTitle} numberOfLines={1}>
+                      <Text style={styles.jobTitle} numberOfLines={2}>
                         {job.title}
                       </Text>
                       <View style={styles.companyRow}>
@@ -420,29 +457,29 @@ export function HomeScreen({
                   <View style={styles.metaRow}>
                     <View style={styles.metaItem}>
                       <MapPin size={12} color={stitchColors.inkMuted} />
-                      <Text style={styles.metaText}>{job.location || 'Lieu à préciser'}</Text>
+                      <Text style={styles.metaText} numberOfLines={1}>{job.location || 'Lieu à préciser'}</Text>
                     </View>
                     <View style={styles.metaItem}>
                       <Clock size={12} color={stitchColors.inkMuted} />
-                      <Text style={styles.metaText}>{job.duration || 'Durée à préciser'}</Text>
+                      <Text style={styles.metaText} numberOfLines={1}>{job.duration || 'Durée à préciser'}</Text>
                     </View>
                   </View>
 
-                  <View style={styles.jobCardFooter}>
-                    <Text style={styles.stipendText}>
+                  <View style={[styles.jobCardFooter, isLinkApply(job) && styles.jobCardFooterStacked]}>
+                    <Text style={[styles.stipendText, !isLinkApply(job) && styles.stipendTextInline]}>
                       {job.stipend || 'Indemnité de stage'}
                     </Text>
                     {isLinkApply(job) ? (
                       <View style={styles.homeLinkActionsCol}>
                         {!isOfferExpired(job) && (
                           <Pressable
-                            style={({ pressed }) => [styles.applyBtn, pressed && { opacity: 0.88 }]}
+                            style={({ pressed }) => [styles.applyBtn, styles.applyBtnFull, pressed && { opacity: 0.88 }]}
                             onPress={(e) => {
                               e.stopPropagation();
                               startApply(job);
                             }}
                           >
-                            <Text style={styles.applyBtnText}>
+                            <Text style={styles.applyBtnText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
                               {formatKitButtonLabel(jobApplyPrice(job))}
                             </Text>
                           </Pressable>
@@ -459,7 +496,7 @@ export function HomeScreen({
                       </View>
                     ) : (
                       <Pressable
-                        style={({ pressed }) => [styles.applyBtn, pressed && { opacity: 0.88 }]}
+                        style={({ pressed }) => [styles.applyBtn, { flexShrink: 0 }, pressed && { opacity: 0.88 }]}
                         onPress={(e) => {
                           e.stopPropagation();
                           startApply(job);
@@ -479,7 +516,7 @@ export function HomeScreen({
         </View>
 
         {/* Espace bas pour laisser respirer au-dessus de la BottomNav */}
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* ── Modale de Candidature 1-Clic ─────────────────────────────── */}
@@ -517,6 +554,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 0,
+    width: '100%',
+    maxWidth: 1040,
+    alignSelf: 'center',
   },
 
   // 1. Hero Banner Courbé Violet
@@ -630,6 +670,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     ...stitchShadows.card,
+  },
+  quickToolCardCompact: {
+    paddingHorizontal: 4,
+    paddingVertical: 10,
   },
   quickToolIcon: {
     width: 38,
@@ -903,6 +947,11 @@ const styles = StyleSheet.create({
   jobsList: {
     gap: 12,
   },
+  jobsListWide: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+  },
   jobCard: {
     backgroundColor: stitchColors.white,
     borderWidth: 1,
@@ -910,6 +959,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 16,
     ...stitchShadows.card,
+  },
+  jobCardWide: {
+    width: '48.8%',
   },
   jobCardHeader: {
     flexDirection: 'row',
@@ -951,27 +1003,37 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 14,
+    rowGap: 6,
+    columnGap: 14,
     marginBottom: 12,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 1,
   },
   metaText: {
     fontFamily: stitchTypography.bodySm.fontFamily,
     fontSize: 11.5,
     color: stitchColors.inkMuted,
+    flexShrink: 1,
   },
   jobCardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: stitchColors.paperSoft,
+  },
+  jobCardFooterStacked: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
   },
   stipendText: {
     fontFamily: stitchTypography.labelMd.fontFamily,
@@ -979,22 +1041,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: stitchColors.emeraldDeep,
   },
+  stipendTextInline: {
+    flex: 1,
+    flexShrink: 1,
+  },
   applyBtn: {
     backgroundColor: stitchColors.primary,
     borderRadius: 10,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyBtnFull: {
+    width: '100%',
   },
   applyBtnText: {
     fontFamily: stitchTypography.labelMd.fontFamily,
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
     color: stitchColors.white,
+    textAlign: 'center',
   },
   homeLinkActionsCol: {
-    alignItems: 'flex-end',
-    gap: 5,
-    flexShrink: 1,
+    alignItems: 'center',
+    gap: 6,
+    width: '100%',
   },
   homeDirectSiteBtn: {
     paddingVertical: 3,
@@ -1036,3 +1108,5 @@ const styles = StyleSheet.create({
     color: stitchColors.inkMuted,
   },
 });
+
+export const HomeScreen = React.memo(HomeScreenBase);

@@ -260,7 +260,7 @@ export function OnboardingScreen({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: stitchColors.background },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 56 : 28,
+    paddingTop: 16,
     paddingHorizontal: 20,
     paddingBottom: 14,
     backgroundColor: stitchColors.surface,
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     borderBottomColor: stitchColors.glassBorder,
     gap: 10,
   },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 560, alignSelf: 'center' },
   brandBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -280,10 +280,10 @@ const styles = StyleSheet.create({
   },
   brandText: { fontFamily: fontFamilies.inter, fontSize: 11, fontWeight: '800', letterSpacing: 1.2, color: stitchColors.primary },
   skip: { fontFamily: fontFamilies.inter, fontSize: 14, fontWeight: '600', color: stitchColors.primary },
-  progressTrack: { height: 6, borderRadius: 3, backgroundColor: stitchColors.paperSoft, overflow: 'hidden' },
+  progressTrack: { height: 6, borderRadius: 3, backgroundColor: stitchColors.paperSoft, overflow: 'hidden', width: '100%', maxWidth: 560, alignSelf: 'center' },
   progressFill: { height: 6, borderRadius: 3, backgroundColor: stitchColors.primary },
-  stepLabel: { fontFamily: fontFamilies.inter, fontSize: 12, fontWeight: '600', color: stitchColors.inkMuted },
-  content: { padding: 20, gap: 16, paddingBottom: 40 },
+  stepLabel: { fontFamily: fontFamilies.inter, fontSize: 12, fontWeight: '600', color: stitchColors.inkMuted, width: '100%', maxWidth: 560, alignSelf: 'center' },
+  content: { padding: 20, gap: 16, paddingBottom: 40, width: '100%', maxWidth: 560, alignSelf: 'center' },
   greeting: { fontFamily: fontFamilies.outfit, fontSize: 24, fontWeight: '800', color: stitchColors.ink },
   card: {
     backgroundColor: stitchColors.surface,

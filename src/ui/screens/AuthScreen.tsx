@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import {
   Image,
-  KeyboardAvoidingView,
   Linking,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import {
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react-native';
 import { legalLinks } from '../../config/legalLinks';
 import { publicEnv } from '../../config/env';
-import { KeyboardSafeView } from '../KeyboardSafeView';
+import { KeyboardSafeView, useKeyboardOpen } from '../KeyboardSafeView';
 import {
   GlassCard,
   GlassInput,
@@ -92,6 +92,10 @@ export function AuthScreen({
   onClose,
 }: AuthScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const { width, height } = useWindowDimensions();
+  const isCompact = width < 380;
+  const isShort = height < 680;
+  const keyboardOpen = useKeyboardOpen();
 
   const title =
     mode === 'sign-up'
@@ -117,13 +121,22 @@ export function AuthScreen({
       style={styles.container}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, isCompact && styles.scrollContentCompact]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
+        {/* Flexible top/bottom spacers center the form vertically when there is room,
+            and collapse smoothly on short screens or when the keyboard opens. */}
+        <View style={keyboardOpen ? styles.spacerKeyboardTop : styles.spacerFlex} />
         <View style={styles.cardWrap}>
-          <GlassCard style={styles.authCard}>
+          <GlassCard
+            style={
+              isCompact
+                ? StyleSheet.flatten([styles.authCard, styles.authCardCompact])
+                : styles.authCard
+            }
+          >
             {onClose && (
               <Pressable
                 onPress={onClose}
@@ -138,11 +151,11 @@ export function AuthScreen({
             <Text style={styles.eyebrow}>ACCÈS ÉTUDIANT</Text>
 
             {/* Logo Emblem */}
-            <View style={styles.logoWrap}>
+            <View style={[styles.logoWrap, (isCompact || isShort) && styles.logoWrapCompact]}>
               {/* Orbite monogram — never enclosed in a shape (brand book). */}
               <Image
                 source={require('../../../assets/brand/logo-orbite.png')}
-                style={styles.logoMark}
+                style={[styles.logoMark, (isCompact || isShort) && styles.logoMarkCompact]}
                 resizeMode="contain"
                 accessibilityLabel="Logo Campus 360"
               />
@@ -153,7 +166,7 @@ export function AuthScreen({
             </View>
 
             {/* Title */}
-            <Text style={styles.cardTitle}>{title}</Text>
+            <Text style={[styles.cardTitle, isCompact && styles.cardTitleCompact]}>{title}</Text>
 
             {/* Mode toggle */}
             {(mode === 'sign-in' || mode === 'sign-up') && (
@@ -162,13 +175,15 @@ export function AuthScreen({
                   label="Connexion"
                   active={mode === 'sign-in'}
                   onPress={() => onModeChange('sign-in')}
-                  style={{ flex: 1, alignItems: 'center' }}
+                  containerStyle={{ flex: 1 }}
+                  style={{ width: '100%', alignItems: 'center' }}
                 />
                 <GlassPill
                   label="Inscription"
                   active={mode === 'sign-up'}
                   onPress={() => onModeChange('sign-up')}
-                  style={{ flex: 1, alignItems: 'center' }}
+                  containerStyle={{ flex: 1 }}
+                  style={{ width: '100%', alignItems: 'center' }}
                 />
               </View>
             )}
@@ -407,6 +422,7 @@ export function AuthScreen({
             )}
           </GlassCard>
         </View>
+        <View style={keyboardOpen ? styles.spacerKeyboardBottom : styles.spacerFlex} />
       </ScrollView>
     </KeyboardSafeView>
   );
@@ -419,12 +435,25 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'flex-start',
-    padding: stitchSpacing.containerMargin,
-    paddingTop: Platform.OS === 'ios' ? 44 : 20,
-    paddingBottom: 60,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  scrollContentCompact: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  spacerFlex: {
+    flex: 1,
+    minHeight: 16,
+  },
+  spacerKeyboardTop: {
+    height: 8,
+  },
+  spacerKeyboardBottom: {
+    height: 28,
   },
   cardWrap: {
+    width: '100%',
     alignItems: 'center',
   },
   closeModalBtn: {
@@ -453,6 +482,10 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 4,
   },
+  authCardCompact: {
+    padding: 18,
+    borderRadius: 20,
+  },
   eyebrow: {
     fontFamily: MONO,
     fontSize: 10.5,
@@ -466,10 +499,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  logoWrapCompact: {
+    marginBottom: 10,
+  },
   logoMark: {
     width: 60,
     height: 60,
     marginBottom: 10,
+  },
+  logoMarkCompact: {
+    width: 50,
+    height: 50,
+    marginBottom: 6,
   },
   // Logotype: "Campus" Sora 700 + "360" Sora 400 violet.
   logoTitle: {
@@ -498,6 +539,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     letterSpacing: -0.3,
+  },
+  cardTitleCompact: {
+    marginBottom: 12,
+    fontSize: 18.5,
   },
   modeToggle: {
     flexDirection: 'row',

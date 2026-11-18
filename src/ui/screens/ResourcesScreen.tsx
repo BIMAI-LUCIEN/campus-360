@@ -35,7 +35,7 @@ interface ResourcesScreenProps {
   onOpenContributions?: () => void;
 }
 
-export function ResourcesScreen({
+function ResourcesScreenBase({
   documents = [],
   packs = [],
   purchasedDocumentIds = [],
@@ -69,93 +69,104 @@ export function ResourcesScreen({
 
       {/* ── Refined Obsidian Violet Header ───────────────────────── */}
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 220 }}>
-            <View style={styles.titleBadgeRow}>
-              <GraduationCap size={18} color={stitchColors.secondary} />
-              <Text style={styles.title} numberOfLines={2}>Ressources Académiques</Text>
+        <View style={styles.headerInner}>
+          <View style={styles.titleRow}>
+            <View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 220 }}>
+              <View style={styles.titleBadgeRow}>
+                <GraduationCap size={18} color={stitchColors.secondary} />
+                <Text style={styles.title} numberOfLines={2}>Ressources Académiques</Text>
+              </View>
+              <Text style={styles.subtitle} numberOfLines={2}>
+                Annales d'examens, fiches de révision et rapports de référence
+              </Text>
             </View>
-            <Text style={styles.subtitle} numberOfLines={2}>
-              Annales d'examens, fiches de révision et rapports de référence
-            </Text>
+
+            <View style={styles.headerActions}>
+              <Pressable
+                style={styles.writingBtn}
+                onPress={() => {
+                  setTemplateReport(null);
+                  setWritingModalVisible(true);
+                }}
+              >
+                <FileText size={13} color={stitchColors.primary} />
+                <Text style={styles.writingBtnText}>Atelier IA</Text>
+              </Pressable>
+
+              {onOpenAssistant && (
+                <Pressable style={styles.assistantBtn} onPress={onOpenAssistant}>
+                  <Sparkles size={13} color={stitchColors.emeraldDeep} />
+                  <Text style={styles.assistantBtnText}>Chat IA</Text>
+                </Pressable>
+              )}
+            </View>
           </View>
 
-          <View style={styles.headerActions}>
+          {/* Modern Sub-Tab Pill Bar */}
+          <View style={styles.subTabBar}>
             <Pressable
-              style={styles.writingBtn}
-              onPress={() => {
-                setTemplateReport(null);
-                setWritingModalVisible(true);
-              }}
+              style={[styles.subTab, activeSubTab === 'catalogue' && styles.subTabActive]}
+              onPress={() => setActiveSubTab('catalogue')}
             >
-              <FileText size={13} color="#C4B5FD" />
-              <Text style={styles.writingBtnText}>Atelier IA</Text>
+              <Layers
+                size={14}
+                color={activeSubTab === 'catalogue' ? stitchColors.white : stitchColors.inkSubtle}
+              />
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.82}
+                style={[
+                  styles.subTabText,
+                  activeSubTab === 'catalogue' && styles.subTabTextActive,
+                ]}
+              >
+                {compact ? 'Épreuves' : `Épreuves (${documents.length})`}
+              </Text>
             </Pressable>
 
-            {onOpenAssistant && (
-              <Pressable style={styles.assistantBtn} onPress={onOpenAssistant}>
-                <Sparkles size={13} color={stitchColors.emeraldDeep} />
-                <Text style={styles.assistantBtnText}>Chat IA</Text>
-              </Pressable>
-            )}
+            <Pressable
+              style={[styles.subTab, activeSubTab === 'library' && styles.subTabActive]}
+              onPress={() => setActiveSubTab('library')}
+            >
+              <BookOpen
+                size={14}
+                color={activeSubTab === 'library' ? stitchColors.white : stitchColors.inkSubtle}
+              />
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.82}
+                style={[
+                  styles.subTabText,
+                  activeSubTab === 'library' && styles.subTabTextActive,
+                ]}
+              >
+                {compact ? `Biblio (${ownedCount})` : `Bibliothèque (${ownedCount})`}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.subTab, activeSubTab === 'reports' && styles.subTabActive]}
+              onPress={() => setActiveSubTab('reports')}
+            >
+              <FileText
+                size={14}
+                color={activeSubTab === 'reports' ? stitchColors.white : stitchColors.inkSubtle}
+              />
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.82}
+                style={[
+                  styles.subTabText,
+                  activeSubTab === 'reports' && styles.subTabTextActive,
+                ]}
+              >
+                {compact ? 'Rapports' : 'Rapports de Stage'}
+              </Text>
+            </Pressable>
           </View>
-        </View>
-
-        {/* Modern Sub-Tab Pill Bar */}
-        <View style={styles.subTabBar}>
-          <Pressable
-            style={[styles.subTab, activeSubTab === 'catalogue' && styles.subTabActive]}
-            onPress={() => setActiveSubTab('catalogue')}
-          >
-            <Layers
-              size={14}
-              color={activeSubTab === 'catalogue' ? stitchColors.white : stitchColors.inkSubtle}
-            />
-            <Text
-              style={[
-                styles.subTabText,
-                activeSubTab === 'catalogue' && styles.subTabTextActive,
-              ]}
-            >
-              {compact ? 'Épreuves' : `Épreuves (${documents.length})`}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.subTab, activeSubTab === 'library' && styles.subTabActive]}
-            onPress={() => setActiveSubTab('library')}
-          >
-            <BookOpen
-              size={14}
-              color={activeSubTab === 'library' ? stitchColors.white : stitchColors.inkSubtle}
-            />
-            <Text
-              style={[
-                styles.subTabText,
-                activeSubTab === 'library' && styles.subTabTextActive,
-              ]}
-            >
-              {compact ? `Biblio (${ownedCount})` : `Bibliothèque (${ownedCount})`}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.subTab, activeSubTab === 'reports' && styles.subTabActive]}
-            onPress={() => setActiveSubTab('reports')}
-          >
-            <FileText
-              size={14}
-              color={activeSubTab === 'reports' ? stitchColors.white : stitchColors.inkSubtle}
-            />
-            <Text
-              style={[
-                styles.subTabText,
-                activeSubTab === 'reports' && styles.subTabTextActive,
-              ]}
-            >
-              {compact ? 'Rapports' : 'Rapports de Stage'}
-            </Text>
-          </Pressable>
         </View>
       </View>
 
@@ -195,18 +206,21 @@ export function ResourcesScreen({
       </View>
 
       {/* Writing Workshop Modal */}
-      <WritingWorkshopModal
-        visible={writingModalVisible}
-        onClose={() => setWritingModalVisible(false)}
-        onOpenWallet={onOpenWallet}
-        templateReport={templateReport}
-      />
+      {writingModalVisible && (
+        <WritingWorkshopModal
+          visible={writingModalVisible}
+          onClose={() => setWritingModalVisible(false)}
+          onOpenWallet={onOpenWallet}
+          templateReport={templateReport}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     backgroundColor: stitchColors.background,
     overflow: 'hidden',
   },
@@ -228,6 +242,11 @@ const styles = StyleSheet.create({
     backgroundColor: stitchColors.white,
     borderBottomWidth: 1,
     borderBottomColor: stitchColors.paperSoft,
+  },
+  headerInner: {
+    width: '100%',
+    maxWidth: 1040,
+    alignSelf: 'center',
   },
   titleRow: {
     flexDirection: 'row',
@@ -329,5 +348,9 @@ const styles = StyleSheet.create({
     color: stitchColors.white,
     fontWeight: '700',
   },
-  body: {},
+  body: {
+    flex: 1,
+  },
 });
+
+export const ResourcesScreen = React.memo(ResourcesScreenBase);

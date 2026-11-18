@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DEFAULT_FIELD, fieldFromProfile, STUDY_FIELDS, STUDY_FIELD_LABELS, type StudyField } from './documentOutlines';
 import {
   StyleSheet,
@@ -6,12 +6,14 @@ import {
   Text,
   Pressable,
   ScrollView,
+  RefreshControl,
   ActivityIndicator,
   Modal,
   TextInput,
   Linking,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 
 import { FileText, Mail, Briefcase, GraduationCap, Sparkles, Edit3, Download, Trash2, Eye, X } from 'lucide-react-native';
@@ -74,6 +76,11 @@ type Document = {
   created_at: string;
   updated_at: string;
 };
+
+// Session cache so returning to the "Créer" tab renders instantly with zero loading flash.
+let cachedDocumentsList: Document[] | null = null;
+let cachedIaCreditsValue: number | null = null;
+let cachedSavedCvsList: SavedCv[] | null = null;
 
 type CreateStep = 'type-select' | 'form' | 'generating' | null;
 
@@ -141,9 +148,14 @@ const COMMON_SKILLS = [
   'Power BI', 'Réseaux sociaux',
 ];
 
-export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScreenProps) {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
+function DocumentsScreenBase({ onEditDocument, accountProfile }: DocumentsScreenProps) {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 370;
+  const isWide = width >= 720;
+
+  const [documents, setDocuments] = useState<Document[]>(() => cachedDocumentsList ?? []);
+  const [loading, setLoading] = useState(() => cachedDocumentsList === null);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
   // Create flow state
@@ -158,7 +170,7 @@ export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScr
   const [pickedTemplate, setPickedTemplate] = useState<TemplateCard | null>(null);
   const [galleryVisible, setGalleryVisible] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [iaCredits, setIaCredits] = useState<number | null>(null);
+  const [iaCredits, setIaCredits] = useState<number | null>(() => cachedIaCreditsValue);
   const [fetchedProfile, setStudentProfile] = useState<StudentProfile | null>(null);
   const studentProfile = fetchedProfile ?? accountProfile ?? null;
 
@@ -191,7 +203,7 @@ export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScr
   const [cvPhoto, setCvPhoto] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   // CV library: every CV generated for a job, plus the one being previewed.
-  const [savedCvs, setSavedCvs] = useState<SavedCv[]>([]);
+  const [savedCvs, setSavedCvs] = useState<SavedCv[]>(() => cachedSavedCvsList ?? []);
   const [selectedSavedCv, setSelectedSavedCv] = useState<SavedCv | null>(null);
   const [savedCvTab, setSavedCvTab] = useState<'preview' | 'jury'>('preview');
 
@@ -284,38 +296,54 @@ export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScr
   const isAcademicType = selectedType === 'stage' || selectedType === 'memoire';
 
   // ─── Fetch ────────────────────────────────────────────────────────────────────
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (!isRefresh && cachedDocumentsList === null) setLoading(true);
       setError('');
       const res = await authFetch('/api/mobile/documents');
-    if (!res.ok) throw new Error('Impossible de récupérer vos documents.');
+      if (!res.ok) throw new Error('Impossible de récupérer vos documents.');
       const data = await res.json();
-      setDocuments(data.documents || []);
+      const nextDocs = data.documents || [];
+      cachedDocumentsList = nextDocs;
+      setDocuments(nextDocs);
     } catch (err: any) {
-      setError(err.message || 'Erreur de connexion.');
+      if (cachedDocumentsList === null) {
+        setError(err.message || 'Erreur de connexion.');
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
 
-  const fetchIaCredits = async () => {
+  const fetchIaCredits = useCallback(async () => {
     try {
       const res = await authFetch('/api/mobile/account');
       if (res.ok) {
         const data = await res.json();
-        setIaCredits(data.wallet?.iaCredits ?? 0);
+        const nextCredits = data.wallet?.iaCredits ?? 0;
+        cachedIaCreditsValue = nextCredits;
+        setIaCredits(nextCredits);
         setStudentProfile(data.user ?? null);
       }
     } catch {}
-  };
+  }, []);
 
   useEffect(() => {
-    fetchDocuments();
-    fetchIaCredits();
+    void fetchDocuments();
+    void fetchIaCredits();
     fetchCvPhoto().then(setCvPhoto).catch(() => {});
-    loadCvLibrary().then(setSavedCvs).catch(() => {});
-  }, []);
+    loadCvLibrary().then((list) => {
+      cachedSavedCvsList = list;
+      setSavedCvs(list);
+    }).catch(() => {});
+  }, [fetchDocuments, fetchIaCredits]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    void fetchDocuments(true);
+    void fetchIaCredits();
+  }, [fetchDocuments, fetchIaCredits]);
 
   // A CV follows its own path (like an application), not the document editor.
   const chooseType = (key: string) => {
@@ -523,11 +551,24 @@ export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScr
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[stitchColors.primary]}
+          tintColor={stitchColors.primary}
+        />
+      }
+    >
       {/* Header — greeting + gradient question */}
       <View style={styles.header}>
         <Text style={styles.greeting}>Atelier de rédaction</Text>
-        <GradientText text="Qu'écris-tu aujourd'hui ?" size={26} weight="700" style={styles.headerQuestion} />
+        <GradientText text="Qu'écris-tu aujourd'hui ?" size={isCompact ? 21 : 26} weight="700" style={styles.headerQuestion} />
         {iaCredits !== null && iaCredits > 0 && (
           <View style={styles.creditsPill}>
             <Sparkles size={12} color={stitchColors.sienna} strokeWidth={2} />
@@ -543,7 +584,7 @@ export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScr
           {TYPE_TILES.map((tile) => (
             <Pressable
               key={tile.key}
-              style={({ pressed }) => [styles.tile, pressed && styles.tilePressed]}
+              style={({ pressed }) => [styles.tile, isWide && styles.tileWide, pressed && styles.tilePressed]}
               onPress={() => chooseType(tile.key)}
             >
               <View style={[styles.tileIcon, { backgroundColor: tile.tint }]}>
@@ -711,7 +752,7 @@ export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScr
       {error ? (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={fetchDocuments}>
+          <Pressable style={styles.retryButton} onPress={() => void fetchDocuments()}>
             <Text style={styles.retryText}>Réessayer</Text>
           </Pressable>
         </View>
@@ -778,6 +819,7 @@ export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScr
       )}
 
       {/* ─── SAVED CV PREVIEW ──────────────────────────────────────────── */}
+      {selectedSavedCv !== null && (
       <Modal
         visible={selectedSavedCv !== null}
         animationType="slide"
@@ -856,6 +898,7 @@ export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScr
           </View>
         </View>
       </Modal>
+      )}
 
       {/* ─── TYPE SELECTOR MODAL — Editorial poster series ─────────────── */}
       <Modal
@@ -1113,43 +1156,48 @@ export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScr
         </KeyboardSafeView>
       </Modal>
 
-      <CvBuilderModal
-        kind={builderKind}
-        onLetterReady={(id) => { fetchDocuments(); onEditDocument(id); }}
-        visible={cvBuilderVisible}
-        onClose={() => setCvBuilderVisible(false)}
-        baseCv={officialCvData}
-        profile={{
-          fullName: studentProfile?.name ?? '',
-          university: studentProfile?.university ?? '',
-          major: studentProfile?.faculty ?? '',
-          educationLevel: studentProfile?.level ?? '',
-          skills: studentProfile?.skills ?? [],
-        }}
-        freeLaunch={isFreeLaunch()}
-        onCreditsChange={setIaCredits}
-        onLibraryChange={(next) => setSavedCvs((prev) => (Array.isArray(next) ? next : [next, ...prev]))}
-      />
+      {cvBuilderVisible && (
+        <CvBuilderModal
+          kind={builderKind}
+          onLetterReady={(id) => { fetchDocuments(); onEditDocument(id); }}
+          visible={cvBuilderVisible}
+          onClose={() => setCvBuilderVisible(false)}
+          baseCv={officialCvData}
+          profile={{
+            fullName: studentProfile?.name ?? '',
+            university: studentProfile?.university ?? '',
+            major: studentProfile?.faculty ?? '',
+            educationLevel: studentProfile?.level ?? '',
+            skills: studentProfile?.skills ?? [],
+          }}
+          freeLaunch={isFreeLaunch()}
+          onCreditsChange={setIaCredits}
+          onLibraryChange={(next) => setSavedCvs((prev) => (Array.isArray(next) ? next : [next, ...prev]))}
+        />
+      )}
 
       {/* Guided onboarding chat → full document generation */}
-      <DocGenChat
-        visible={genChatVisible}
-        onClose={() => setGenChatVisible(false)}
-        documentType={selectedType ?? 'blank'}
-        generating={generatingFull}
-        onGenerate={handleGenerateFull}
-        sessionKey={`${selectedType ?? 'blank'}:${newTitle.trim()}`}
-        profileContext={studentProfile ? {
-          name: studentProfile.name ?? '',
-          email: studentProfile.email ?? '',
-          phone: studentProfile.phone ?? '',
-          university: studentProfile.university ?? '',
-          faculty: studentProfile.faculty ?? '',
-          level: studentProfile.level ?? '',
-        } : undefined}
-      />
+      {genChatVisible && (
+        <DocGenChat
+          visible={genChatVisible}
+          onClose={() => setGenChatVisible(false)}
+          documentType={selectedType ?? 'blank'}
+          generating={generatingFull}
+          onGenerate={handleGenerateFull}
+          sessionKey={`${selectedType ?? 'blank'}:${newTitle.trim()}`}
+          profileContext={studentProfile ? {
+            name: studentProfile.name ?? '',
+            email: studentProfile.email ?? '',
+            phone: studentProfile.phone ?? '',
+            university: studentProfile.university ?? '',
+            faculty: studentProfile.faculty ?? '',
+            level: studentProfile.level ?? '',
+          } : undefined}
+        />
+      )}
 
       {/* ── Modale Aperçu CV Officiel RH 2 Colonnes ─────────────────── */}
+      {cvPreviewVisible && (
       <Modal
         visible={cvPreviewVisible}
         animationType="slide"
@@ -1213,13 +1261,21 @@ export function DocumentsScreen({ onEditDocument, accountProfile }: DocumentsScr
           </View>
         </View>
       </Modal>
-    </View>
+      )}
+    </ScrollView>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: stitchColors.background, padding: 16 },
+  scroll: { flex: 1, backgroundColor: stitchColors.background },
+  container: {
+    padding: 16,
+    paddingBottom: 120,
+    width: '100%',
+    maxWidth: 1040,
+    alignSelf: 'center',
+  },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1246,7 +1302,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   headerQuestion: {
-    height: 34,
+    minHeight: 32,
   },
   creditsPill: {
     flexDirection: 'row',
@@ -1289,7 +1345,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   tile: {
-    width: '48%',
+    flexBasis: '47%',
+    flexGrow: 1,
     backgroundColor: stitchColors.background,
     borderRadius: 14,
     borderWidth: 1,
@@ -1297,6 +1354,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 14,
     gap: 10,
+  },
+  tileWide: {
+    flexBasis: '23%',
   },
   tilePressed: {
     backgroundColor: stitchColors.paperSoft,
@@ -1344,8 +1404,10 @@ const styles = StyleSheet.create({
   },
   cvShowcaseHeader: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
     marginBottom: 8,
   },
   cvShowcaseBadge: {
@@ -1511,7 +1573,7 @@ const styles = StyleSheet.create({
 
   // Choix du gabarit et photo du CV
   cvTemplateGallery: { marginTop: 12 },
-  cvPhotoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 },
+  cvPhotoRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginTop: 10 },
   cvPhotoBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1544,7 +1606,11 @@ const styles = StyleSheet.create({
     backgroundColor: stitchColors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    height: '88%',
     maxHeight: '92%',
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
   },
   officialCvModalHeader: {
@@ -1748,16 +1814,19 @@ const styles = StyleSheet.create({
 
   modalButtons: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 10,
     marginTop: 24,
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: stitchColors.ink,
   },
   modalButton: {
-    flex: 1,
-    height: 52,
+    flexGrow: 1,
+    flexBasis: 100,
+    minHeight: 50,
     borderRadius: 2,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1769,7 +1838,7 @@ const styles = StyleSheet.create({
   cancelBtnText: { color: stitchColors.ink, fontSize: 14, fontWeight: '700', fontFamily: SERIF },
   confirmBtn: { backgroundColor: stitchColors.surfaceContainerHigh },
   confirmBtnText: { color: stitchColors.white, fontSize: 14, fontWeight: '700', fontFamily: SERIF },
-  aiGenerateBtn: { backgroundColor: stitchColors.sienna, flex: 2 },
+  aiGenerateBtn: { backgroundColor: stitchColors.sienna, flexGrow: 2, flexBasis: 180 },
   aiGenerateBtnText: { color: stitchColors.white, fontSize: 14, fontWeight: '700', fontFamily: SERIF },
   buttonDisabled: { opacity: 0.5 },
 
@@ -1986,3 +2055,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+export const DocumentsScreen = React.memo(DocumentsScreenBase);

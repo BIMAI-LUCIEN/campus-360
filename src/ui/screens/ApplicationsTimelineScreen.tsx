@@ -633,53 +633,32 @@ export function ApplicationsTimelineScreen({ studentName, onBack, onOpenOffers }
 
 
       {/* Modal Dossier Complet Candidature (CV Officiel, Lettre, Suivi & Notes RH) */}
-
+      {Boolean(selectedApp) && (
       <ApplicationDetailModal
-
         visible={!!selectedApp}
-
         application={selectedApp}
-
         studentName={studentName}
         initialTab={selectedInitialTab}
-
         onClose={() => setSelectedApp(null)}
-
         onStatusUpdated={(appId, newStatus) => {
-
           setApplications((prev) =>
-
             prev.map((a) => (a.id === appId ? { ...a, status: newStatus } : a))
-
           );
-
           if (selectedApp && selectedApp.id === appId) {
-
             setSelectedApp({ ...selectedApp, status: newStatus });
-
           }
-
         }}
-
         onApplicationPatched={patchApplication}
-
         onNotesUpdated={(appId, notes) => {
-
           setApplications((prev) =>
-
             prev.map((a) => (a.id === appId ? { ...a, notes } : a))
-
           );
-
           if (selectedApp && selectedApp.id === appId) {
-
             setSelectedApp({ ...selectedApp, notes });
-
           }
-
         }}
-
       />
+      )}
 
     </View>
 
@@ -794,13 +773,12 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-
     padding: 16,
-
     gap: 14,
-
-    paddingBottom: 40,
-
+    paddingBottom: 120,
+    width: '100%',
+    maxWidth: 1040,
+    alignSelf: 'center',
   },
 
   duoCard: {
@@ -966,15 +944,12 @@ const styles = StyleSheet.create({
   },
 
   ticketTopRow: {
-
     flexDirection: 'row',
-
+    flexWrap: 'wrap',
     alignItems: 'center',
-
     justifyContent: 'space-between',
-
+    gap: 8,
     marginBottom: 8,
-
   },
 
   ticketRefBadge: {
@@ -1166,15 +1141,12 @@ const styles = StyleSheet.create({
 
 
   ticketCandidateSection: {
-
     flexDirection: 'row',
-
+    flexWrap: 'wrap',
     alignItems: 'center',
-
     justifyContent: 'space-between',
-
+    gap: 10,
     paddingVertical: 10,
-
   },
 
   ticketMetaCol: {
@@ -1266,19 +1238,14 @@ const styles = StyleSheet.create({
   },
 
   ticketFooter: {
-
     flexDirection: 'row',
-
+    flexWrap: 'wrap',
     alignItems: 'center',
-
     justifyContent: 'space-between',
-
+    gap: 8,
     paddingTop: 10,
-
     borderTopWidth: 0.5,
-
     borderTopColor: stitchColors.glassBorder,
-
   },
 
   changeStatusPill: {

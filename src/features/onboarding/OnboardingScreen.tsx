@@ -4,16 +4,14 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Dimensions,
   ScrollView,
   Animated,
   SafeAreaView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { stitchColors, brandGradient } from '../../theme/stitch';
-
-const { width } = Dimensions.get('window');
 
 // ─── Editorial palette — sourced from the shared theme, not duplicated ─────────
 const INK = stitchColors.ink;
@@ -161,24 +159,25 @@ const SLIDES: Slide[] = [
 ];
 
 // ─── Slide renderer ───────────────────────────────────────────────────────────
-function SlidePage({ slide }: { slide: Slide }) {
+function SlidePage({ slide, compact }: { slide: Slide; compact: boolean }) {
   return (
-    <View style={styles.slidePage}>
+    <View style={[styles.slidePage, compact && styles.slidePageCompact]}>
       <Text style={styles.folio}>{slide.folio}</Text>
       <Text style={styles.eyebrow}>{slide.eyebrow}</Text>
-      <Text style={styles.slideTitle}>{slide.title}</Text>
-      <Text style={styles.slideBody}>{slide.body}</Text>
+      <Text style={[styles.slideTitle, compact && styles.slideTitleCompact]}>{slide.title}</Text>
+      <Text style={[styles.slideBody, compact && styles.slideBodyCompact]}>{slide.body}</Text>
       <View style={styles.visualContainer}>{slide.visual}</View>
     </View>
   );
 }
 
 // ─── Progress dots as 1px ink rules ─────────────────────────────────────────
-function ProgressDots({ scrollX, total }: { scrollX: Animated.Value; total: number }) {
+function ProgressDots({ scrollX, total, pageWidth }: { scrollX: Animated.Value; total: number; pageWidth: number }) {
+  const safeWidth = Math.max(1, pageWidth);
   return (
     <View style={styles.dotsContainer}>
       {Array.from({ length: total }).map((_, i) => {
-        const inputRange = [(i - 1) * width, i * width, (i + 1) * width];
+        const inputRange = [(i - 1) * safeWidth, i * safeWidth, (i + 1) * safeWidth];
         const dotWidth = scrollX.interpolate({
           inputRange,
           outputRange: [6, 24, 6],
@@ -207,7 +206,10 @@ function ProgressDots({ scrollX, total }: { scrollX: Animated.Value; total: numb
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export function OnboardingScreen({ onFinish }: { onFinish: () => void }) {
+  const { width } = useWindowDimensions();
+  const compact = width < 380;
   const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollRef = useRef<ScrollView>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const scrollHandler = Animated.event(
@@ -215,13 +217,23 @@ export function OnboardingScreen({ onFinish }: { onFinish: () => void }) {
     {
       useNativeDriver: false,
       listener: (event: any) => {
-        const idx = Math.round(event.nativeEvent.contentOffset.x / width);
+        const idx = Math.round(event.nativeEvent.contentOffset.x / Math.max(1, width));
         setCurrentIndex(idx);
       },
     }
   );
 
   const isLast = currentIndex === SLIDES.length - 1;
+
+  const handlePrimaryPress = () => {
+    if (!isLast && scrollRef.current) {
+      const nextIdx = Math.min(SLIDES.length - 1, currentIndex + 1);
+      scrollRef.current.scrollTo({ x: nextIdx * width, animated: true });
+      setCurrentIndex(nextIdx);
+      return;
+    }
+    onFinish();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -241,6 +253,7 @@ export function OnboardingScreen({ onFinish }: { onFinish: () => void }) {
 
       {/* Slide view */}
       <Animated.ScrollView
+        ref={scrollRef as any}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -251,14 +264,14 @@ export function OnboardingScreen({ onFinish }: { onFinish: () => void }) {
         contentContainerStyle={styles.scrollContent}
       >
         {SLIDES.map((slide) => (
-          <View key={slide.eyebrow} style={styles.slideWrapper}>
-            <SlidePage slide={slide} />
+          <View key={slide.eyebrow} style={[styles.slideWrapper, { width }]}>
+            <SlidePage slide={slide} compact={compact} />
           </View>
         ))}
       </Animated.ScrollView>
 
       <View style={styles.bottomRule} />
-      <ProgressDots scrollX={scrollX} total={SLIDES.length} />
+      <ProgressDots scrollX={scrollX} total={SLIDES.length} pageWidth={width} />
 
       <View style={styles.counterRow}>
         <Text style={styles.counterText}>
@@ -267,7 +280,7 @@ export function OnboardingScreen({ onFinish }: { onFinish: () => void }) {
       </View>
 
       <View style={styles.footer}>
-        <Pressable style={{ width: '100%' }} onPress={onFinish}>
+        <Pressable style={{ width: '100%', maxWidth: 480 }} onPress={handlePrimaryPress}>
           <LinearGradient
             colors={brandGradient.colors}
             start={brandGradient.horizontal.start}
@@ -342,15 +355,21 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   slideWrapper: {
-    width,
+    alignItems: 'center',
   },
 
   // Slide content
   slidePage: {
     flex: 1,
+    width: '100%',
+    maxWidth: 520,
     paddingHorizontal: 32,
     paddingTop: 32,
     paddingBottom: 16,
+  },
+  slidePageCompact: {
+    paddingHorizontal: 22,
+    paddingTop: 20,
   },
   folio: {
     fontFamily: MONO,
@@ -378,6 +397,10 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
     marginBottom: 14,
   },
+  slideTitleCompact: {
+    fontSize: 30,
+    lineHeight: 35,
+  },
   slideBody: {
     fontFamily: SERIF,
     fontSize: 16,
@@ -386,6 +409,11 @@ const styles = StyleSheet.create({
     color: MUTED,
     lineHeight: 24,
     marginBottom: 32,
+  },
+  slideBodyCompact: {
+    fontSize: 14.5,
+    lineHeight: 21,
+    marginBottom: 20,
   },
   visualContainer: {
     flex: 1,

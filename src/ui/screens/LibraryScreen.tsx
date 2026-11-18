@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { FlatList, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { BookOpen, Upload } from 'lucide-react-native';
 import { DocumentGridCard, ScreenMasthead, EmptyState, SecondaryButton, SiennaButton } from '../GlassComponents';
 import type { CampusDocument } from '../../types';
@@ -15,7 +15,7 @@ interface LibraryScreenProps {
   onOpenContributions?: () => void;
 }
 
-export function LibraryScreen({
+function LibraryScreenBase({
   ownedDocuments,
   onOpenDocument,
   onExplore,
@@ -24,42 +24,78 @@ export function LibraryScreen({
   onOpenContributions,
 }: LibraryScreenProps) {
   const count = ownedDocuments.length;
+  const { width } = useWindowDimensions();
+  const numColumns = width >= 960 ? 4 : width >= 640 ? 3 : 2;
+  const horizontalPad = stitchSpacing.containerMargin;
+  const columnGap = 12;
+  const effectiveContainerWidth = Math.min(width, 1040);
+  const gridItemWidth = Math.max(
+    120,
+    Math.floor((effectiveContainerWidth - horizontalPad * 2 - columnGap * (numColumns - 1)) / numColumns),
+  );
+
+  const listHeader = useMemo(
+    () => (
+      <>
+        {!hideHeader && (
+          <View style={styles.headerPad}>
+            <ScreenMasthead
+              kicker="Ma Bibliothèque"
+              title="Mes lectures"
+              folio={`${count} PDF`}
+              subtitle={
+                count === 0
+                  ? 'Vos documents acquis vous attendront ici.'
+                  : `${count} document${count !== 1 ? 's' : ''} acqui${count !== 1 ? 's' : ''}, prêt${count !== 1 ? 's' : ''} à relire.`
+              }
+            />
+          </View>
+        )}
+
+        {/* Outside the header: also shown in the Resources tab (hideHeader). */}
+        {(onSharePdfs || onOpenContributions) && (
+          <View style={styles.actions}>
+            {onSharePdfs && (
+              <SiennaButton
+                label="Partager des PDF"
+                icon={<Upload size={16} color={stitchColors.paper} />}
+                onPress={onSharePdfs}
+                style={styles.actionButton}
+              />
+            )}
+            {onOpenContributions && (
+              <SecondaryButton label="Mes contributions" onPress={onOpenContributions} style={styles.actionButton} />
+            )}
+          </View>
+        )}
+      </>
+    ),
+    [hideHeader, count, onSharePdfs, onOpenContributions],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: CampusDocument }) => (
+      <View style={{ width: gridItemWidth, marginBottom: 12 }}>
+        <DocumentGridCard
+          title={item.title}
+          subtitle={item.subject}
+          isOwned
+          onPress={() => onOpenDocument(item)}
+        />
+      </View>
+    ),
+    [gridItemWidth, onOpenDocument],
+  );
 
   return (
-    <View style={styles.container}>
-      {!hideHeader && (
-        <View style={styles.headerPad}>
-          <ScreenMasthead
-            kicker="Ma Bibliothèque"
-            title="Mes lectures"
-            folio={`${count} PDF`}
-            subtitle={
-              count === 0
-                ? 'Vos documents acquis vous attendront ici.'
-                : `${count} document${count !== 1 ? 's' : ''} acqui${count !== 1 ? 's' : ''}, prêt${count !== 1 ? 's' : ''} à relire.`
-            }
-          />
-        </View>
-      )}
-
-      {/* Outside the header: also shown in the Resources tab (hideHeader). */}
-      {(onSharePdfs || onOpenContributions) && (
-        <View style={styles.actions}>
-          {onSharePdfs && (
-            <SiennaButton
-              label="Partager des PDF"
-              icon={<Upload size={16} color={stitchColors.paper} />}
-              onPress={onSharePdfs}
-              style={styles.actionButton}
-            />
-          )}
-          {onOpenContributions && (
-            <SecondaryButton label="Mes contributions" onPress={onOpenContributions} style={styles.actionButton} />
-          )}
-        </View>
-      )}
-
-      {count === 0 ? (
+    <FlatList
+      key={`library-grid-${numColumns}`}
+      data={ownedDocuments}
+      keyExtractor={(item) => item.id}
+      numColumns={numColumns}
+      renderItem={renderItem}
+      ListHeaderComponent={listHeader}
+      ListEmptyComponent={
         <EmptyState
           icon={<BookOpen size={26} color={stitchColors.inkSubtle} strokeWidth={1.5} />}
           title="Bibliothèque vide"
@@ -67,21 +103,16 @@ export function LibraryScreen({
           ctaLabel={onExplore ? 'Explorer le catalogue' : undefined}
           onCta={onExplore}
         />
-      ) : (
-        <View style={styles.gridContent}>
-          {ownedDocuments.map((item) => (
-            <View key={item.id} style={styles.gridItemWrapper}>
-              <DocumentGridCard
-                title={item.title}
-                subtitle={item.subject}
-                isOwned
-                onPress={() => onOpenDocument(item)}
-              />
-            </View>
-          ))}
-        </View>
-      )}
-    </View>
+      }
+      columnWrapperStyle={styles.gridRow}
+      style={styles.container}
+      contentContainerStyle={styles.listContent}
+      showsVerticalScrollIndicator={false}
+      initialNumToRender={8}
+      maxToRenderPerBatch={6}
+      windowSize={5}
+      removeClippedSubviews={Platform.OS === 'android'}
+    />
   );
 }
 
@@ -89,6 +120,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: stitchColors.background,
+  },
+  listContent: {
+    width: '100%',
+    maxWidth: 1040,
+    alignSelf: 'center',
+    paddingBottom: 120,
   },
   headerPad: {
     paddingHorizontal: stitchSpacing.containerMargin,
@@ -100,19 +137,17 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: stitchSpacing.containerMargin,
     paddingTop: stitchSpacing.stackSm,
+    paddingBottom: stitchSpacing.stackSm,
   },
   actionButton: {
     flexGrow: 1,
+    minWidth: 135,
   },
-  gridContent: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
+  gridRow: {
+    gap: 12,
     paddingHorizontal: stitchSpacing.containerMargin,
     paddingTop: stitchSpacing.stackSm,
-    paddingBottom: 24,
-  },
-  gridItemWrapper: {
-    width: '47.8%',
   },
 });
+
+export const LibraryScreen = React.memo(LibraryScreenBase);

@@ -2,27 +2,26 @@
 import React from 'react';
 import {
   StatusBar,
-  Image,
-  KeyboardAvoidingView,
   Linking,
   Modal,
   Platform,
   Pressable,
   ScrollView,
-  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
   ActivityIndicator,
-  Switch,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as Notifications from 'expo-notifications';
 import * as Updates from 'expo-updates';
 import * as WebBrowser from 'expo-web-browser';
-import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  SafeAreaProvider,
+  initialWindowMetrics,
+} from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import {
   Bell,
@@ -117,8 +116,8 @@ import { ORANGE_MONEY_APPROVAL_USSD } from './features/wallet/PaymentModal';
 import { fetchOffers } from './features/wallet/offersApi';
 import { AppAlert, AppAlertHost } from './ui/AppAlert';
 import { KeyboardSafeView, useKeyboardOpen } from './ui/KeyboardSafeView';
+import { BootSplash } from './ui/BootSplash';
 
-const logo = require('../assets/icon.png');
 const ONBOARDING_COMPLETED_KEY = 'campus360_onboarding_completed_permanent';
 const onboardingStorageKey = 'campus-bordes.onboarding-seen';
 const introSeenStorageKey = 'campus-bordes.intro-seen';
@@ -185,9 +184,10 @@ const OTP_RESEND_COOLDOWN_SECONDS = 60;
 
 type AppSection = 'stages' | 'applications' | 'resources' | 'account' | 'home' | 'explore' | 'library' | 'documents' | 'premium';
 
-// Onglets principaux : une fois ouverts, ils restent montés (masqués) pour que le retour soit instantané
-// et que la saisie, la liste et le scroll ne soient pas perdus ni rechargés.
-const KEEP_ALIVE_SECTIONS: AppSection[] = ['home', 'stages', 'explore', 'library', 'resources'];
+// Onglets principaux : une fois ouverts, ils restent montés dans leur propre calque pour que le
+// basculement soit instantané sans recalcul de mise en page ni rechargement réseau.
+const KEEP_ALIVE_SECTIONS: AppSection[] = ['home', 'stages', 'documents', 'resources', 'account'];
+const EMPTY_SKILLS: string[] = [];
 
 // Callback stable (identité constante) qui appelle toujours la dernière version de `fn`.
 // Permet de passer des props stables à un composant mémoïsé sans figer son comportement.
@@ -195,6 +195,26 @@ function useLatestCallback<A extends unknown[], R>(fn: (...args: A) => R) {
   const ref = React.useRef(fn);
   ref.current = fn;
   return React.useCallback((...args: A) => ref.current(...args), []);
+}
+
+function TabPane({ active, children }: { active: boolean; children: React.ReactNode }) {
+  if (Platform.OS === 'web') {
+    return (
+      <View style={[styles.tabPaneWeb, !active && styles.tabPaneHiddenWeb]}>
+        {children}
+      </View>
+    );
+  }
+  return (
+    <View
+      style={[styles.tabPaneNative, active ? styles.tabPaneVisible : styles.tabPaneHidden]}
+      pointerEvents={active ? 'auto' : 'none'}
+      accessibilityElementsHidden={!active}
+      importantForAccessibility={active ? 'yes' : 'no-hide-descendants'}
+    >
+      {children}
+    </View>
+  );
 }
 
 const onboardingSlides = [
@@ -278,6 +298,14 @@ function PrimaryButtonLocal({
 }
 
 export function AppShell() {
+  return (
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <AppShellInner />
+    </SafeAreaProvider>
+  );
+}
+
+function AppShellInner() {
   const [fontsLoaded, fontError] = useFonts({
     Sora_400Regular,
     Sora_600SemiBold,
@@ -288,9 +316,6 @@ export function AppShell() {
     Inter_600SemiBold,
   });
 
-  const { width } = useWindowDimensions();
-  const compactScreen = width < 390;
-  const narrowScreen = width < 460;
   const keyboardOpen = useKeyboardOpen();
 
   // ── State (copied verbatim from App.tsx) ────────────────────────────────
@@ -323,10 +348,10 @@ export function AppShell() {
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [updatingPassword, setUpdatingPassword] = React.useState(false);
-  const [refreshing, setRefreshing] = React.useState(false);
   // Real permission state of the phone; there are no per-topic preferences on the server.
   const [notifPermission, setNotifPermission] = React.useState<'granted' | 'denied' | 'unknown'>('unknown');
   const [fontTimeout, setFontTimeout] = React.useState(false);
+  const [splashDone, setSplashDone] = React.useState(false);
   React.useEffect(() => {
     const timer = setTimeout(() => setFontTimeout(true), 4000);
     return () => clearTimeout(timer);
@@ -566,7 +591,7 @@ export function AppShell() {
 
     const restoreSession = async () => {
       try {
-        const [isPermCompleted, isIntroSeen] = await Promise.all([
+        const [isPermCompleted, isIntroSeen, storedSession] = await Promise.all([
           getOnboardingCompletedPermanently(),
           Platform.OS === 'web'
             ? Promise.resolve(
@@ -577,43 +602,41 @@ export function AppShell() {
             : SecureStore.getItemAsync(introSeenStorageKey)
                 .then((v) => v === '1')
                 .catch(() => false),
+          loadStudentSession().catch(() => null),
         ]);
 
-        if (mounted) {
-          if (isPermCompleted) {
-            setIsOnboardingCompleted(true);
-            setOnboardingVisible(false);
-            setHasSeenOnboarding(true);
-          }
-          if (isIntroSeen) {
-            setHasSeenOnboarding(true);
-          }
+        if (!mounted) return;
+
+        if (isPermCompleted) {
+          setIsOnboardingCompleted(true);
+          setOnboardingVisible(false);
+          setHasSeenOnboarding(true);
+        }
+        if (isIntroSeen) {
+          setHasSeenOnboarding(true);
         }
 
-        const storedSession = await loadStudentSession();
         if (storedSession) {
-          if (mounted) {
-            setStudentSession(storedSession);
-            setStudentProfile({
-              id: storedSession.user.id,
-              name: storedSession.user.name || 'Étudiant',
-              role: storedSession.user.role || 'STUDENT',
-              email: storedSession.user.email,
-              phone: storedSession.user.phone,
-              whatsappPhone: storedSession.user.whatsappPhone,
-              university: storedSession.user.university,
-              faculty: storedSession.user.faculty,
-              level: storedSession.user.level,
-              skills: storedSession.user.skills,
-            });
-            if (storedSession.user.skills && storedSession.user.skills.length > 0) {
-              setIsOnboardingCompleted(true);
-              setOnboardingVisible(false);
-            }
-            setHasSeenOnboarding(true);
-            // Open the account at once; wallet and purchases refresh in the background.
-            setIsSessionRestoring(false);
+          setStudentSession(storedSession);
+          setStudentProfile({
+            id: storedSession.user.id,
+            name: storedSession.user.name || 'Étudiant',
+            role: storedSession.user.role || 'STUDENT',
+            email: storedSession.user.email,
+            phone: storedSession.user.phone,
+            whatsappPhone: storedSession.user.whatsappPhone,
+            university: storedSession.user.university,
+            faculty: storedSession.user.faculty,
+            level: storedSession.user.level,
+            skills: storedSession.user.skills,
+          });
+          if (storedSession.user.skills && storedSession.user.skills.length > 0) {
+            setIsOnboardingCompleted(true);
+            setOnboardingVisible(false);
           }
+          setHasSeenOnboarding(true);
+          // Open the account at once; wallet and purchases refresh in the background.
+          setIsSessionRestoring(false);
           void syncStudentAccount(storedSession);
         }
       } catch {
@@ -655,26 +678,6 @@ export function AppShell() {
     checkForUpdates();
   }, []);
 
-  // Load the persisted "intro already seen" flag once at launch so the pre-auth
-  // OnboardingScreen never reappears for a returning user (it used to reset to
-  // false on every launch because the flag lived only in component state).
-  React.useEffect(() => {
-    let mounted = true;
-    const loadIntroSeen = async () => {
-      try {
-        let seen = '0';
-        if (Platform.OS === 'web') {
-          seen = (typeof localStorage !== 'undefined' && localStorage.getItem(introSeenStorageKey)) || '0';
-        } else {
-          seen = (await SecureStore.getItemAsync(introSeenStorageKey)) || '0';
-        }
-        if (mounted && seen === '1') setHasSeenOnboarding(true);
-      } catch {}
-    };
-    loadIntroSeen();
-    return () => { mounted = false; };
-  }, []);
-
   // Anyone who has a session has, by definition, already passed the intro — mark
   // it seen (and persist) so it can never come back after the first connection.
   React.useEffect(() => {
@@ -693,6 +696,11 @@ export function AppShell() {
 
   React.useEffect(() => {
     if (!studentSession) { setOnboardingVisible(false); return; }
+    if (isOnboardingCompleted || (studentSession.user.skills && studentSession.user.skills.length > 0)) {
+      setIsOnboardingCompleted(true);
+      setOnboardingVisible(false);
+      return;
+    }
     let active = true;
     const checkOnboarding = async () => {
       try {
@@ -988,15 +996,6 @@ export function AppShell() {
     finally { setUpdatingPassword(false); }
   };
 
-  const handlePullToRefresh = async () => {
-    setRefreshing(true);
-    try {
-      if (studentSession) await syncStudentAccount(studentSession);
-      await refreshDocuments();
-    } catch {}
-    finally { setRefreshing(false); }
-  };
-
   // Model v2 (contexte.md §19): every PDF is free to read, there is nothing to buy.
   const buyDocument = (document: CampusDocument) => {
     setPurchasedDocuments((current) => (current.includes(document.id) ? current : [document.id, ...current]));
@@ -1109,7 +1108,10 @@ export function AppShell() {
   // ── Derived state ────────────────────────────────────────────────────────
   // 100 % wallet: a PDF is owned only when bought (individually or via a pack).
   const effectivePurchasedDocuments = purchasedDocuments;
-  const ownedLibrary = pdfDocuments.filter((d) => effectivePurchasedDocuments.includes(d.id));
+  const ownedLibrary = React.useMemo(
+    () => pdfDocuments.filter((d) => effectivePurchasedDocuments.includes(d.id)),
+    [pdfDocuments, effectivePurchasedDocuments],
+  );
   const openSection = (section: AppSection) => {
     if (section === 'home') { setActiveSection(section); setClientTab('packs'); return; }
     if (section === 'explore') { setActiveSection(section); setClientTab('catalog'); return; }
@@ -1126,9 +1128,61 @@ export function AppShell() {
   };
   // Stable handlers for memoized screens (must stay above the early returns below).
   const openSectionStable = useLatestCallback(openSection);
-  const openAccountStable = React.useCallback(() => openSectionStable('account'), [openSectionStable]);
+  const openNavSectionStable = React.useCallback((key: string) => openSectionStable(key as AppSection), [openSectionStable]);
+  const goStages = React.useCallback(() => openSectionStable('stages'), [openSectionStable]);
+  const goApplications = React.useCallback(() => openSectionStable('applications'), [openSectionStable]);
+  const goDocuments = React.useCallback(() => openSectionStable('documents'), [openSectionStable]);
+  const goResources = React.useCallback(() => openSectionStable('resources'), [openSectionStable]);
+  const goAccount = React.useCallback(() => openSectionStable('account'), [openSectionStable]);
+  const goPremium = React.useCallback(() => openSectionStable('premium'), [openSectionStable]);
+  const openRecharge = React.useCallback(() => setRechargeVisible(true), []);
+  const openShare = React.useCallback(() => setShareVisible(true), []);
+  const openContributions = React.useCallback(() => setContributionsVisible(true), []);
+  const openEditProfile = React.useCallback(() => setEditProfileVisible(true), []);
+  const openSecurity = React.useCallback(() => setSecuritySettingsVisible(true), []);
+  const openSupport = React.useCallback(() => setSupportModalVisible(true), []);
+  const openDeleteAccount = React.useCallback(() => setDeleteAccountVisible(true), []);
+  const openSignIn = React.useCallback(() => {
+    setAuthMode('sign-in');
+    setAuthNotice('');
+    setAuthVisible(true);
+  }, []);
+  const openNotifSettings = React.useCallback(() => {
+    Notifications.getPermissionsAsync()
+      .then((perm) => setNotifPermission(perm.granted ? 'granted' : 'denied'))
+      .catch(() => setNotifPermission('unknown'));
+    setNotificationsSettingsVisible(true);
+  }, []);
+  const openBellStable = useLatestCallback(() => {
+    setNotificationsVisible(true);
+    setNotificationsSeenAt(Date.now());
+    if (studentSession) {
+      void refreshInbox().then(() => markNotificationsRead()).then(() => setServerUnread(0));
+    }
+  });
+  const refreshDocsStable = useLatestCallback(() => refreshDocuments());
+  const syncAccountStable = useLatestCallback(() => syncStudentAccount(studentSession ?? undefined));
+  const buyDocumentStable = useLatestCallback(buyDocument);
+  const buyPackStable = useLatestCallback(buyPack);
+  const signOutStable = useLatestCallback(signOutStudent);
   const clearFocusJobStable = React.useCallback(() => setFocusJobId(null), []);
   const applyProfilePatchStable = useLatestCallback(applyApplicationProfilePatch);
+  const onSplashDone = React.useCallback(() => setSplashDone(true), []);
+  const locationNameStable = React.useMemo(
+    () =>
+      studentProfile?.university
+        ? [studentProfile.university, studentProfile.faculty].filter(Boolean).join(' • ')
+        : 'Campus 360',
+    [studentProfile?.university, studentProfile?.faculty],
+  );
+  const profileCompleteStable = Boolean(
+    studentProfile?.name &&
+      studentProfile?.university &&
+      studentProfile?.faculty &&
+      studentProfile?.level &&
+      studentProfile?.skills?.length,
+  );
+  const studentSkillsStable = studentProfile?.skills ?? EMPTY_SKILLS;
 
   // Main tabs stay mounted once opened; the others mount on demand.
   const [visitedSections, setVisitedSections] = React.useState<AppSection[]>(['home']);
@@ -1138,13 +1192,6 @@ export function AppShell() {
   }, [activeSection]);
   const isSectionRendered = (section: AppSection) =>
     activeSection === section || (KEEP_ALIVE_SECTIONS.includes(section) && visitedSections.includes(section));
-  const hiddenIfInactive = (section: AppSection) => (activeSection === section ? undefined : styles.sectionHidden);
-
-  // Each tab starts at the top: the scroll position belongs to the previous screen.
-  const contentScrollRef = React.useRef<ScrollView>(null);
-  React.useEffect(() => {
-    contentScrollRef.current?.scrollTo({ y: 0, animated: false });
-  }, [activeSection]);
 
   // Opens the screen a push notification is about (data.type set by mobile-api sendPushToUser).
   const openFromNotification = (data: unknown) => {
@@ -1161,7 +1208,6 @@ export function AppShell() {
     else if (type === 'wallet_topup') { openSection('account'); void syncStudentAccount(studentSession); }
     else if (type === 'purchase' || type === 'pack_purchase') { openSection('library'); void syncStudentAccount(studentSession); }
     else if (type === 'contribution_published') { setContributionsVisible(true); void syncStudentAccount(studentSession); }
-    else if (type === 'contribution_published') { setContributionsVisible(true); void syncStudentAccount(studentSession); }
     else if (type === 'document_generated') {
       const documentId = (data as { documentId?: unknown }).documentId;
       if (typeof documentId === 'string' && documentId) setEditingDocumentId(documentId);
@@ -1174,31 +1220,26 @@ export function AppShell() {
       notificationTapRef.current(pendingNotificationData.current);
     }
   }, [studentSession]);
-  const unreadNotifications =
-    serverUnread ?? notifications.filter((notif) => new Date(notif.receivedAt).getTime() > notificationsSeenAt).length;
+  const unreadNotifications = React.useMemo(
+    () => serverUnread ?? notifications.filter((notif) => new Date(notif.receivedAt).getTime() > notificationsSeenAt).length,
+    [serverUnread, notifications, notificationsSeenAt],
+  );
 
   // ── Render ────────────────────────────────────────────────────────────────
-  if (!fontsLoaded && !fontError && !fontTimeout) {
-    return (
-      <View style={styles.loadingScreen}>
-        <Image source={logo} style={styles.loadingLogo} />
-      </View>
-    );
-  }
+  const fontsReady = Boolean(fontsLoaded || fontError || fontTimeout);
+  const bootReady = fontsReady && !isSessionRestoring;
 
-  if (editingDocumentId) {
+  if (bootReady && editingDocumentId) {
     const { DocumentEditorScreen } = require('./features/documents/DocumentEditorScreen');
     return (
-      <SafeAreaProvider>
-        <SafeAreaView style={{ flex: 1, backgroundColor: stitchColors.background }}>
-          <StatusBar barStyle="dark-content" />
-          <DocumentEditorScreen
-            documentId={editingDocumentId}
-            onClose={() => setEditingDocumentId(null)}
-          />
-          <AppAlertHost />
-        </SafeAreaView>
-      </SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1, backgroundColor: stitchColors.background }}>
+        <StatusBar barStyle="dark-content" />
+        <DocumentEditorScreen
+          documentId={editingDocumentId}
+          onClose={() => setEditingDocumentId(null)}
+        />
+        <AppAlertHost />
+      </SafeAreaView>
     );
   }
 
@@ -1209,15 +1250,19 @@ export function AppShell() {
     : '';
 
   return (
-    <SafeAreaProvider>
+    <View style={styles.rootFull}>
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="dark-content" backgroundColor={stitchColors.surface} translucent={false} />
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor={splashDone ? stitchColors.surface : stitchColors.paper}
+          translucent={false}
+        />
 
         <Toast toast={toast} onDismiss={() => setToast(null)} />
         <AppAlertHost />
 
         {/* Update Banner */}
-        {updateAvailable && (
+        {bootReady && updateAvailable && (
           <View style={{ backgroundColor: stitchColors.surfaceContainerHigh, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ color: stitchColors.ink, fontSize: 14, fontWeight: '600', flex: 1 }}>Nouvelle version disponible !</Text>
             <Pressable onPress={handleDownloadUpdate} disabled={updateLoading} style={{ backgroundColor: stitchColors.paper, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
@@ -1226,11 +1271,9 @@ export function AppShell() {
           </View>
         )}
 
-        {/* Loading */}
-        {isSessionRestoring ? (
-          <View style={styles.loadingScreen}>
-            <Image source={logo} style={styles.loadingLogo} />
-          </View>
+        {/* Boot wait keeps white fallback behind animated BootSplash so zero flash occurs */}
+        {!bootReady ? (
+          <View style={styles.bootFallback} />
         ) : !hasSeenOnboarding ? (
           <IntroSliderScreen
             onFinish={() => {
@@ -1310,249 +1353,217 @@ export function AppShell() {
             {activeSection !== 'account' && (
               <TopBar
                 appName="Campus 360"
-                onBellPress={() => {
-                  setNotificationsVisible(true);
-                  setNotificationsSeenAt(Date.now());
-                  if (studentSession) {
-                    void refreshInbox().then(() => markNotificationsRead()).then(() => setServerUnread(0));
-                  }
-                }}
+                onBellPress={openBellStable}
                 hasUnread={unreadNotifications > 0}
                 unreadCount={unreadNotifications}
-                onAvatarPress={() => openSection('account')}
+                onAvatarPress={goAccount}
                 avatarInitials={initials}
-                locationName={
-                  studentProfile?.university
-                    ? [studentProfile.university, studentProfile.faculty].filter(Boolean).join(' • ')
-                    : 'Campus 360'
-                }
-                onLocationPress={() => openSection('account')}
+                locationName={locationNameStable}
+                onLocationPress={goAccount}
                 iaCredits={iaCredits}
-                onWalletPress={() => openSection('account')}
-                onSearchPress={() => openSection('stages')}
+                onWalletPress={goAccount}
+                onSearchPress={goStages}
               />
             )}
 
-            {/* Content */}
-            <KeyboardSafeView style={{ flex: 1 }}>
-              <ScrollView
-                ref={contentScrollRef}
-                style={{ flex: 1 }}
-                keyboardShouldPersistTaps="handled"
-                automaticallyAdjustKeyboardInsets
-                contentContainerStyle={[
-                  styles.scrollContent,
-                  compactScreen && styles.scrollContentCompact,
-                ]}
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handlePullToRefresh}
-                  colors={[stitchColors.emeraldTone]}
-                />
-              }
-            >
+            {/* Content: chaque onglet principal garde son état et défilement dans son propre calque */}
+            <KeyboardSafeView style={styles.stageContainer}>
               {isSectionRendered('stages') && (
-                <View style={hiddenIfInactive('stages')}>
+                <TabPane active={activeSection === 'stages'}>
                   <StagesScreen
                     focusJobId={focusJobId}
                     onFocusHandled={clearFocusJobStable}
                     studentProfile={stagesStudentProfile}
-                    onOpenWallet={openAccountStable}
+                    onOpenWallet={goAccount}
                     onProfileSaved={applyProfilePatchStable}
+                  />
+                </TabPane>
+              )}
+
+              {activeSection === 'applications' && (
+                <View style={styles.tabPaneOverlay}>
+                  <ApplicationsTimelineScreen
+                    studentName={studentProfile?.name || 'Étudiant'}
+                    onBack={goAccount}
+                    onOpenOffers={goStages}
                   />
                 </View>
               )}
 
-              {activeSection === 'applications' && (
-                <ApplicationsTimelineScreen
-                  studentName={studentProfile?.name || 'Étudiant'}
-                  onBack={() => openSection('account')}
-                  onOpenOffers={() => openSection('stages')}
-                />
-              )}
-
               {isSectionRendered('resources') && (
-                <View style={hiddenIfInactive('resources')}>
-                <ResourcesScreen
-                  documents={pdfDocuments}
-                  packs={pdfPacks}
-                  purchasedDocumentIds={effectivePurchasedDocuments}
-                  purchasedPackIds={purchasedPacks}
-                  ownedDocuments={ownedLibrary}
-                  documentsLoading={documentsLoading}
-                  documentsError={documentsError}
-                  purchasingDocumentId={purchasingDocumentId}
-                  purchasingPackId={purchasingPackId}
-                  onBuyDocument={buyDocument}
-                  onBuyPack={buyPack}
-                  onOpenPdf={setReadingDocument}
-                  onRefreshDocuments={() => refreshDocuments()}
-                  onOpenAssistant={() => openSection('documents')}
-                  onOpenWallet={() => setRechargeVisible(true)}
-                  onSharePdfs={() => setShareVisible(true)}
-                  onOpenContributions={() => setContributionsVisible(true)}
-                />
-                </View>
+                <TabPane active={activeSection === 'resources'}>
+                  <ResourcesScreen
+                    documents={pdfDocuments}
+                    packs={pdfPacks}
+                    purchasedDocumentIds={effectivePurchasedDocuments}
+                    purchasedPackIds={purchasedPacks}
+                    ownedDocuments={ownedLibrary}
+                    documentsLoading={documentsLoading}
+                    documentsError={documentsError}
+                    purchasingDocumentId={purchasingDocumentId}
+                    purchasingPackId={purchasingPackId}
+                    onBuyDocument={buyDocumentStable}
+                    onBuyPack={buyPackStable}
+                    onOpenPdf={setReadingDocument}
+                    onRefreshDocuments={refreshDocsStable}
+                    onOpenAssistant={goDocuments}
+                    onOpenWallet={openRecharge}
+                    onSharePdfs={openShare}
+                    onOpenContributions={openContributions}
+                  />
+                </TabPane>
               )}
 
               {isSectionRendered('home') && (
-                <View style={hiddenIfInactive('home')}>
-                <HomeScreen
-                  studentProfile={studentProfile}
-                  studentName={studentProfile?.name}
-                  studentSkills={studentProfile?.skills ?? []}
-                  profileComplete={Boolean(
-                    studentProfile?.name
-                    && studentProfile?.university
-                    && studentProfile?.faculty
-                    && studentProfile?.level
-                    && studentProfile?.skills?.length
-                  )}
-                  balance={balance}
-                  iaCredits={iaCredits}
-                  transactions={transactions}
-                  onRecharge={() => openSection('account')}
-                  onStages={() => openSection('stages')}
-                  onApplications={() => openSection('applications')}
-                  onProfileSaved={applyApplicationProfilePatch}
-                  onDocuments={() => openSection('documents')}
-                  onResources={() => openSection('resources')}
-                  onProfile={() => openSection('account')}
-                />
+                <TabPane active={activeSection === 'home'}>
+                  <HomeScreen
+                    studentProfile={studentProfile}
+                    studentName={studentProfile?.name}
+                    studentSkills={studentSkillsStable}
+                    profileComplete={profileCompleteStable}
+                    balance={balance}
+                    iaCredits={iaCredits}
+                    transactions={transactions}
+                    onRecharge={goAccount}
+                    onStages={goStages}
+                    onApplications={goApplications}
+                    onProfileSaved={applyProfilePatchStable}
+                    onDocuments={goDocuments}
+                    onResources={goResources}
+                    onProfile={goAccount}
+                  />
+                </TabPane>
+              )}
+
+              {activeSection === 'explore' && (
+                <View style={styles.tabPaneOverlay}>
+                  <ExploreScreen
+                    documents={pdfDocuments}
+                    packs={pdfPacks}
+                    purchasedDocumentIds={effectivePurchasedDocuments}
+                    loading={documentsLoading}
+                    error={documentsError}
+                    onBuyDocument={buyDocumentStable}
+                    onBuyPack={buyPackStable}
+                    purchasingDocumentId={purchasingDocumentId}
+                    purchasingPackId={purchasingPackId}
+                    onRefresh={refreshDocsStable}
+                  />
                 </View>
               )}
 
-              {isSectionRendered('explore') && (
-                <View style={hiddenIfInactive('explore')}>
-                <ExploreScreen
-                  documents={pdfDocuments}
-                  packs={pdfPacks}
-                  purchasedDocumentIds={effectivePurchasedDocuments}
-                  loading={documentsLoading}
-                  error={documentsError}
-                  onBuyDocument={buyDocument}
-                  onBuyPack={buyPack}
-                  purchasingDocumentId={purchasingDocumentId}
-                  purchasingPackId={purchasingPackId}
-                  onRefresh={() => refreshDocuments()}
-                />
+              {activeSection === 'library' && (
+                <View style={styles.tabPaneOverlay}>
+                  <LibraryScreen
+                    ownedDocuments={ownedLibrary}
+                    onOpenDocument={setReadingDocument}
+                    onExplore={goResources}
+                    onSharePdfs={openShare}
+                    onOpenContributions={openContributions}
+                  />
                 </View>
               )}
 
-              {isSectionRendered('library') && (
-                <View style={hiddenIfInactive('library')}>
-                <LibraryScreen
-                  ownedDocuments={ownedLibrary}
-                  onOpenDocument={setReadingDocument}
-                  onExplore={() => openSection('resources')}
-                  onSharePdfs={() => setShareVisible(true)}
-                  onOpenContributions={() => setContributionsVisible(true)}
-                />
-                </View>
+              {isSectionRendered('documents') && (
+                <TabPane active={activeSection === 'documents'}>
+                  <DocumentsScreen
+                    onEditDocument={setEditingDocumentId}
+                    accountProfile={studentProfile}
+                  />
+                </TabPane>
               )}
 
-              {activeSection === 'documents' && (
-                <DocumentsScreen
-                  onEditDocument={(id) => setEditingDocumentId(id)}
-                  accountProfile={studentProfile}
-                />
+              {isSectionRendered('account') && (
+                <TabPane active={activeSection === 'account'}>
+                  <ProfileScreen
+                    studentProfile={studentProfile}
+                    balance={balance}
+                    iaCredits={iaCredits}
+                    transactions={transactions}
+                    purchasedDocumentsCount={ownedLibrary.length}
+                    syncingAccount={syncingAccount}
+                    onEditProfile={openEditProfile}
+                    onOpenNotificationsSettings={openNotifSettings}
+                    onOpenSecuritySettings={openSecurity}
+                    onOpenSupport={openSupport}
+                    onSync={syncAccountStable}
+                    onRecharge={openRecharge}
+                    onPremium={goPremium}
+                    onLibrary={goResources}
+                    onDocuments={goDocuments}
+                    onApplications={goApplications}
+                    onSignInPress={openSignIn}
+                    onSignOut={signOutStable}
+                    onDeleteAccount={openDeleteAccount}
+                  />
+                </TabPane>
               )}
-
-              {activeSection === 'account' && (
-                <ProfileScreen
-                  studentProfile={studentProfile}
-                  balance={balance}
-                  iaCredits={iaCredits}
-                  transactions={transactions}
-                  purchasedDocumentsCount={ownedLibrary.length}
-                  syncingAccount={syncingAccount}
-                  onEditProfile={() => setEditProfileVisible(true)}
-                  onOpenNotificationsSettings={() => {
-                    Notifications.getPermissionsAsync()
-                      .then((perm) => setNotifPermission(perm.granted ? 'granted' : 'denied'))
-                      .catch(() => setNotifPermission('unknown'));
-                    setNotificationsSettingsVisible(true);
-                  }}
-                  onOpenSecuritySettings={() => setSecuritySettingsVisible(true)}
-                  onOpenSupport={() => setSupportModalVisible(true)}
-                  onSync={() => syncStudentAccount(studentSession ?? undefined)}
-                  onRecharge={() => { setRechargeVisible(true); }}
-                  onPremium={() => openSection('premium')}
-                  onLibrary={() => openSection('resources')}
-                  onDocuments={() => openSection('documents')}
-                  onApplications={() => openSection('applications')}
-                  onSignInPress={() => {
-                    setAuthMode('sign-in');
-                    setAuthNotice('');
-                    setAuthVisible(true);
-                  }}
-                  onSignOut={signOutStudent}
-                  onDeleteAccount={() => setDeleteAccountVisible(true)}
-                />
-              )}
-
-
 
               {activeSection !== 'stages' && activeSection !== 'applications' && activeSection !== 'resources' && activeSection !== 'premium' && activeSection !== 'account' && activeSection !== 'home' && activeSection !== 'explore' && activeSection !== 'library' && activeSection !== 'documents' ? (
-                <PdfStudentSection
-                  documents={pdfDocuments}
-                  packs={pdfPacks}
-                  purchasedDocumentIds={effectivePurchasedDocuments}
-                  purchasedPackIds={purchasedPacks}
-                  onBuyDocument={buyDocument}
-                  onBuyPack={buyPack}
-                  formatCoins={formatCoins}
-                  accessToken={studentSession ? 'better-auth' : undefined}
-                  loading={documentsLoading}
-                  error={documentsError}
-                  purchasingDocumentId={purchasingDocumentId}
-                  purchasingPackId={purchasingPackId}
-                  onRefresh={() => refreshDocuments()}
-                  externalTab={activeSection === 'explore' ? 'packs' : 'library'}
-                />
+                <ScrollView style={styles.tabPaneOverlay} showsVerticalScrollIndicator={false}>
+                  <PdfStudentSection
+                    documents={pdfDocuments}
+                    packs={pdfPacks}
+                    purchasedDocumentIds={effectivePurchasedDocuments}
+                    purchasedPackIds={purchasedPacks}
+                    onBuyDocument={buyDocument}
+                    onBuyPack={buyPack}
+                    formatCoins={formatCoins}
+                    accessToken={studentSession ? 'better-auth' : undefined}
+                    loading={documentsLoading}
+                    error={documentsError}
+                    purchasingDocumentId={purchasingDocumentId}
+                    purchasingPackId={purchasingPackId}
+                    onRefresh={refreshDocsStable}
+                    externalTab={activeSection === 'explore' ? 'packs' : 'library'}
+                  />
+                </ScrollView>
               ) : null}
-              </ScrollView>
             </KeyboardSafeView>
 
-            <SimplePdfReaderModal
-              document={readingDocument}
-              accessToken={studentSession ? 'better-auth' : undefined}
-              onClose={() => setReadingDocument(null)}
-            />
+            {readingDocument ? (
+              <SimplePdfReaderModal
+                document={readingDocument}
+                accessToken={studentSession ? 'better-auth' : undefined}
+                onClose={() => setReadingDocument(null)}
+              />
+            ) : null}
 
-            <SharePdfsModal
-              visible={shareVisible}
-              onClose={() => setShareVisible(false)}
-              onOpenContributions={() => {
-                setShareVisible(false);
-                setContributionsVisible(true);
-              }}
-              onOpenDocument={(documentId) => {
-                const doc = pdfDocuments.find((d) => d.id === documentId);
-                if (doc) {
+            {shareVisible ? (
+              <SharePdfsModal
+                visible={shareVisible}
+                onClose={() => setShareVisible(false)}
+                onOpenContributions={() => {
                   setShareVisible(false);
-                  setReadingDocument(doc);
-                }
-              }}
-            />
+                  setContributionsVisible(true);
+                }}
+                onOpenDocument={(documentId) => {
+                  const doc = pdfDocuments.find((d) => d.id === documentId);
+                  if (doc) {
+                    setShareVisible(false);
+                    setReadingDocument(doc);
+                  }
+                }}
+              />
+            ) : null}
 
-            <MyContributionsScreen
-              visible={contributionsVisible}
-              onClose={() => setContributionsVisible(false)}
-              onShare={() => {
-                setContributionsVisible(false);
-                setShareVisible(true);
-              }}
-              onRefreshAccount={refreshAfterContributions}
-            />
+            {contributionsVisible ? (
+              <MyContributionsScreen
+                visible={contributionsVisible}
+                onClose={() => setContributionsVisible(false)}
+                onShare={() => {
+                  setContributionsVisible(false);
+                  setShareVisible(true);
+                }}
+                onRefreshAccount={refreshAfterContributions}
+              />
+            ) : null}
 
             {/* BottomNav */}
             {!keyboardOpen && (
               <BottomNav
                 activeSection={activeSection}
-                onPress={(key) => openSection(key as AppSection)}
+                onPress={openNavSectionStable}
               />
             )}
           </View>
@@ -1561,65 +1572,68 @@ export function AppShell() {
         {/* ── Modals ── */}
 
         {/* Account Modal */}
-        <Modal transparent animationType="slide" visible={accountVisible}>
-          <ModalCard>
-            <Text style={styles.modalTitle}>Mon compte</Text>
-            <View style={styles.accountHeader}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{initials}</Text>
+        {accountVisible && (
+          <Modal transparent animationType="slide" visible>
+            <ModalCard>
+              <Text style={styles.modalTitle}>Mon compte</Text>
+              <View style={styles.accountHeader}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{initials}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{studentProfile?.name ?? 'Étudiant Campus 360'}</Text>
+                  <Text style={{ ...stitchTypography.bodyMd, color: stitchColors.onSurfaceVariant }}>{studentProfile?.email ?? studentSession?.user.email ?? 'Connecte'}{syncingAccount ? ' - sync...' : ''}</Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>{studentProfile?.name ?? 'Étudiant Campus 360'}</Text>
-                <Text style={{ ...stitchTypography.bodyMd, color: stitchColors.onSurfaceVariant }}>{studentProfile?.email ?? studentSession?.user.email ?? 'Connecte'}{syncingAccount ? ' - sync...' : ''}</Text>
+              <View style={styles.walletPanel}>
+                <View style={styles.walletPanelTop}>
+                  <Text style={styles.kicker}>Solde du wallet</Text>
+                  <Pressable onPress={() => syncStudentAccount(studentSession ?? undefined)}>
+                    <Text style={styles.inlineUtilityText}>{syncingAccount ? 'Sync...' : 'Actualiser'}</Text>
+                  </Pressable>
+                </View>
+                <Text style={styles.walletAmount}>{formatCoins(balance)} FCFA</Text>
+                <Text style={styles.walletHint}>Portefeuille prépayé • {iaCredits} crédit{iaCredits > 1 ? 's' : ''} IA</Text>
               </View>
-            </View>
-            <View style={styles.walletPanel}>
-              <View style={styles.walletPanelTop}>
-                <Text style={styles.kicker}>Solde du wallet</Text>
-                <Pressable onPress={() => syncStudentAccount(studentSession ?? undefined)}>
-                  <Text style={styles.inlineUtilityText}>{syncingAccount ? 'Sync...' : 'Actualiser'}</Text>
+              <View style={styles.accountQuickRow}>
+                <Pressable style={styles.accountQuickAction} onPress={() => { setAccountVisible(false); openSection('library'); }}>
+                  <Text style={styles.accountQuickActionLabel}>Bibliothèque</Text>
+                  <Text style={styles.accountQuickActionValue}>{`${purchasedDocuments.length} PDF`}</Text>
+                </Pressable>
+                <Pressable style={styles.accountQuickAction} onPress={() => { setAccountVisible(false); setRechargeVisible(true); }}>
+                  <Text style={styles.accountQuickActionLabel}>Wallet</Text>
+                  <Text style={styles.accountQuickActionValue}>{`${formatCoins(balance)} FCFA`}</Text>
                 </Pressable>
               </View>
-              <Text style={styles.walletAmount}>{formatCoins(balance)} FCFA</Text>
-              <Text style={styles.walletHint}>Portefeuille prépayé • {iaCredits} crédit{iaCredits > 1 ? 's' : ''} IA</Text>
-            </View>
-            <View style={styles.accountQuickRow}>
-              <Pressable style={styles.accountQuickAction} onPress={() => { setAccountVisible(false); openSection('library'); }}>
-                <Text style={styles.accountQuickActionLabel}>Bibliothèque</Text>
-                <Text style={styles.accountQuickActionValue}>{`${purchasedDocuments.length} PDF`}</Text>
-              </Pressable>
-              <Pressable style={styles.accountQuickAction} onPress={() => { setAccountVisible(false); setRechargeVisible(true); }}>
-                <Text style={styles.accountQuickActionLabel}>Wallet</Text>
-                <Text style={styles.accountQuickActionValue}>{`${formatCoins(balance)} FCFA`}</Text>
-              </Pressable>
-            </View>
-            <View style={{ marginTop: 8 }}>
-              <PrimaryButtonLocal label="Recharger mon portefeuille (MoMo / OM)" fluid onPress={() => { setAccountVisible(false); setRechargeVisible(true); }} />
-            </View>
-            {!studentProfile?.email && (
               <View style={{ marginTop: 8 }}>
-                <PrimaryButtonLocal
-                  label="Se connecter avec mon compte existant"
-                  variant="secondary"
-                  fluid
-                  onPress={() => {
-                    setAccountVisible(false);
-                    setAuthMode('sign-in');
-                    setAuthNotice('');
-                    setAuthVisible(true);
-                  }}
-                />
+                <PrimaryButtonLocal label="Recharger mon portefeuille (MoMo / OM)" fluid onPress={() => { setAccountVisible(false); setRechargeVisible(true); }} />
               </View>
-            )}
-            <View style={styles.modalFooterRow}>
-              <Pressable style={styles.ghostAction} onPress={() => setAccountVisible(false)}><Text style={styles.ghostActionText}>Fermer</Text></Pressable>
-              <Pressable style={styles.ghostDangerAction} onPress={signOutStudent}><Text style={styles.ghostDangerActionText}>Déconnexion</Text></Pressable>
-            </View>
-          </ModalCard>
-        </Modal>
+              {!studentProfile?.email && (
+                <View style={{ marginTop: 8 }}>
+                  <PrimaryButtonLocal
+                    label="Se connecter avec mon compte existant"
+                    variant="secondary"
+                    fluid
+                    onPress={() => {
+                      setAccountVisible(false);
+                      setAuthMode('sign-in');
+                      setAuthNotice('');
+                      setAuthVisible(true);
+                    }}
+                  />
+                </View>
+              )}
+              <View style={styles.modalFooterRow}>
+                <Pressable style={styles.ghostAction} onPress={() => setAccountVisible(false)}><Text style={styles.ghostActionText}>Fermer</Text></Pressable>
+                <Pressable style={styles.ghostDangerAction} onPress={signOutStudent}><Text style={styles.ghostDangerActionText}>Déconnexion</Text></Pressable>
+              </View>
+            </ModalCard>
+          </Modal>
+        )}
 
         {/* Recharge Modal */}
-        <Modal transparent animationType="slide" visible={rechargeVisible}>
+        {rechargeVisible && (
+          <Modal transparent animationType="slide" visible>
           <ModalCard>
             <View style={styles.rechargeHero}>
               <View style={styles.rechargeHeroBadge}><Text style={styles.rechargeHeroBadgeText}>C</Text></View>
@@ -1692,9 +1706,11 @@ export function AppShell() {
             )}
           </ModalCard>
         </Modal>
+        )}
 
         {/* Insufficient Modal */}
-        <Modal transparent animationType="fade" visible={insufficientVisible}>
+        {insufficientVisible && (
+          <Modal transparent animationType="fade" visible>
           <ModalCard>
             <View style={styles.rechargeHero}>
               <View style={[styles.rechargeHeroBadge, styles.rechargeHeroAlert]}><Text style={styles.rechargeHeroBadgeText}>!</Text></View>
@@ -1711,9 +1727,11 @@ export function AppShell() {
             </View>
           </ModalCard>
         </Modal>
+        )}
 
         {/* Notifications Modal */}
-        <Modal transparent animationType="slide" visible={notificationsVisible} onRequestClose={() => setNotificationsVisible(false)}>
+        {notificationsVisible && (
+          <Modal transparent animationType="slide" visible onRequestClose={() => setNotificationsVisible(false)}>
           <Pressable style={styles.modalBackdrop} onPress={() => setNotificationsVisible(false)}>
             <Pressable style={[styles.dropdownModalCard, { height: '65%', padding: 0 }]} onPress={() => {}}>
               <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: stitchColors.inkFaint, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1771,19 +1789,23 @@ export function AppShell() {
             </Pressable>
           </Pressable>
         </Modal>
+        )}
 
-        <EditProfileModal
-          visible={editProfileVisible}
-          profile={studentProfile}
-          onClose={() => setEditProfileVisible(false)}
-          onSaved={(updated) => {
-            setStudentProfile(updated);
-            showToast('Informations mises à jour.', 'success');
-          }}
-        />
+        {editProfileVisible && (
+          <EditProfileModal
+            visible={editProfileVisible}
+            profile={studentProfile}
+            onClose={() => setEditProfileVisible(false)}
+            onSaved={(updated) => {
+              setStudentProfile(updated);
+              showToast('Informations mises à jour.', 'success');
+            }}
+          />
+        )}
 
         {/* Notifications Settings */}
-        <Modal transparent animationType="slide" visible={notificationsSettingsVisible} onRequestClose={() => setNotificationsSettingsVisible(false)}>
+        {notificationsSettingsVisible && (
+          <Modal transparent animationType="slide" visible onRequestClose={() => setNotificationsSettingsVisible(false)}>
           <Pressable style={styles.modalBackdrop} onPress={() => setNotificationsSettingsVisible(false)}>
             <Pressable style={[styles.dropdownModalCard, { height: '55%', padding: 0 }]} onPress={() => {}}>
               <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: stitchColors.inkFaint, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1820,9 +1842,11 @@ export function AppShell() {
             </Pressable>
           </Pressable>
         </Modal>
+        )}
 
         {/* Security Settings */}
-        <Modal transparent animationType="slide" visible={securitySettingsVisible} onRequestClose={() => setSecuritySettingsVisible(false)}>
+        {securitySettingsVisible && (
+          <Modal transparent animationType="slide" visible onRequestClose={() => setSecuritySettingsVisible(false)}>
           <Pressable style={styles.modalBackdrop} onPress={() => setSecuritySettingsVisible(false)}>
             <Pressable style={[styles.dropdownModalCard, { height: '85%', padding: 0 }]} onPress={() => {}}>
               <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: stitchColors.inkFaint, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1849,9 +1873,11 @@ export function AppShell() {
             </Pressable>
           </Pressable>
         </Modal>
+        )}
 
         {/* Support Modal */}
-        <Modal transparent animationType="slide" visible={supportModalVisible} onRequestClose={() => setSupportModalVisible(false)}>
+        {supportModalVisible && (
+          <Modal transparent animationType="slide" visible onRequestClose={() => setSupportModalVisible(false)}>
           <Pressable style={styles.modalBackdrop} onPress={() => setSupportModalVisible(false)}>
             <Pressable style={[styles.dropdownModalCard, { padding: 0 }]} onPress={() => {}}>
               <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: stitchColors.inkFaint, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1880,61 +1906,74 @@ export function AppShell() {
             </Pressable>
           </Pressable>
         </Modal>
+        )}
 
         {/* Delete Account Modal */}
-        <DeleteAccountModal
-          visible={deleteAccountVisible}
-          onClose={() => setDeleteAccountVisible(false)}
-          onAccountDeleted={signOutStudent}
-        />
-
+        {deleteAccountVisible && (
+          <DeleteAccountModal
+            visible={deleteAccountVisible}
+            onClose={() => setDeleteAccountVisible(false)}
+            onAccountDeleted={signOutStudent}
+          />
+        )}
 
         {/* Auth Modal when triggered from within the application */}
-        <Modal
-          visible={authVisible}
-          animationType="slide"
-          onRequestClose={() => setAuthVisible(false)}
-        >
-          <AuthScreen
-            mode={authMode}
-            email={authEmail}
-            password={authPassword}
-            name={authName}
-            loading={authLoading}
-            notice={authNotice}
-            canGoogle={authCapabilities.google}
-            canPasswordReset={authCapabilities.passwordReset}
-            passwordConfirm={authPasswordConfirm}
-            onPasswordConfirmChange={setAuthPasswordConfirm}
-            otp={authOtp}
-            otpCooldown={otpCooldown}
-            onOtpChange={setAuthOtp}
-            onResendOtp={resendAuthOtp}
-            onModeChange={(nextMode) => { setAuthNotice(''); setAuthOtp(''); setAuthMode(nextMode); }}
-            onEmailChange={setAuthEmail}
-            onPasswordChange={setAuthPassword}
-            onNameChange={setAuthName}
-            onSubmit={submitAuth}
-            onGoogle={handleGoogleSignIn}
-            onClose={() => setAuthVisible(false)}
-          />
-        </Modal>
+        {authVisible && (
+          <Modal
+            visible
+            animationType="slide"
+            onRequestClose={() => setAuthVisible(false)}
+          >
+            <SafeAreaView style={styles.safeArea}>
+              <AuthScreen
+                mode={authMode}
+                email={authEmail}
+                password={authPassword}
+                name={authName}
+                loading={authLoading}
+                notice={authNotice}
+                canGoogle={authCapabilities.google}
+                canPasswordReset={authCapabilities.passwordReset}
+                passwordConfirm={authPasswordConfirm}
+                onPasswordConfirmChange={setAuthPasswordConfirm}
+                otp={authOtp}
+                otpCooldown={otpCooldown}
+                onOtpChange={setAuthOtp}
+                onResendOtp={resendAuthOtp}
+                onModeChange={(nextMode) => { setAuthNotice(''); setAuthOtp(''); setAuthMode(nextMode); }}
+                onEmailChange={setAuthEmail}
+                onPasswordChange={setAuthPassword}
+                onNameChange={setAuthName}
+                onSubmit={submitAuth}
+                onGoogle={handleGoogleSignIn}
+                onClose={() => setAuthVisible(false)}
+              />
+            </SafeAreaView>
+          </Modal>
+        )}
 
       </SafeAreaView>
-    </SafeAreaProvider>
+
+      {!splashDone && (
+        <BootSplash fontsReady={fontsReady} ready={bootReady} onDone={onSplashDone} />
+      )}
+    </View>
   );
 }
 
 // ── Shared styles (from original App.tsx) ────────────────────────────────────
 const styles = StyleSheet.create({
+  rootFull: { flex: 1, backgroundColor: stitchColors.paper },
   safeArea: { flex: 1, backgroundColor: stitchColors.surface },
   appShell: { flex: 1, backgroundColor: stitchColors.background },
-  sectionHidden: { display: 'none' },
-  scrollContent: { width: '100%', maxWidth: 1040, alignSelf: 'center', paddingBottom: 160 },
-  scrollContentCompact: { paddingBottom: 116 },
-  // Same white + logo as the native splash, so the opening looks like a single screen.
-  loadingScreen: { flex: 1, backgroundColor: stitchColors.paper, justifyContent: 'center', alignItems: 'center' },
-  loadingLogo: { width: 96, height: 96, borderRadius: 24 },
+  bootFallback: { flex: 1, backgroundColor: stitchColors.paper },
+  stageContainer: { flex: 1, minHeight: 0, position: 'relative' },
+  tabPaneWeb: { flex: 1, minHeight: 0, width: '100%' },
+  tabPaneHiddenWeb: { display: 'none' },
+  tabPaneNative: { ...StyleSheet.absoluteFillObject, backgroundColor: stitchColors.background },
+  tabPaneVisible: { opacity: 1, zIndex: 1 },
+  tabPaneHidden: { opacity: 0, zIndex: 0 },
+  tabPaneOverlay: { flex: 1, minHeight: 0, width: '100%', backgroundColor: stitchColors.background },
   modalCardBounded: { maxHeight: '92%' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(19, 27, 46, 0.32)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: stitchColors.surfaceContainerLowest, borderTopLeftRadius: stitchRadius.xl, borderTopRightRadius: stitchRadius.xl, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, shadowColor: stitchColors.ink, shadowOffset: { width: 0, height: -8 }, shadowOpacity: 0.12, shadowRadius: 24, elevation: 16 },

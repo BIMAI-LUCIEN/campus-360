@@ -197,18 +197,20 @@ export function Pill({
   active = false,
   onPress,
   style,
+  containerStyle,
 }: {
   label: string;
   active?: boolean;
   onPress?: () => void;
   style?: ViewStyle;
+  containerStyle?: ViewStyle;
 }) {
   const content = (
-    <View style={[active ? styles.pillActive : styles.pillInactive, style]}>
+    <View style={[active ? styles.pillActive : styles.pillInactive, !onPress && containerStyle, style]}>
       <Text style={[styles.pillText, { color: active ? stitchColors.white : stitchColors.inkMuted }]}>{label}</Text>
     </View>
   );
-  if (onPress) return <Pressable onPress={onPress}>{content}</Pressable>;
+  if (onPress) return <Pressable onPress={onPress} style={containerStyle}>{content}</Pressable>;
   return content;
 }
 
@@ -415,15 +417,26 @@ export function SecondaryButton({
 export function BottomNav({
   activeSection,
   onPress,
+  bottomInset = 0,
 }: {
   activeSection: string;
   onPress: (section: string) => void;
+  bottomInset?: number;
 }) {
-  // On the smallest phones the bar with its pill would be wider than the screen.
-  const narrow = useWindowDimensions().width < 360;
+  const { width } = useWindowDimensions();
+  const compact = width < 400;
+  const narrow = width < 360;
+  const wide = width > 560;
+  const padBottom = Math.max(Platform.OS === 'ios' ? 20 : 12, bottomInset + 6);
   return (
-    <View style={styles.bottomNavWrap} pointerEvents="box-none">
-      <View style={styles.bottomNav}>
+    <View style={[styles.bottomNavWrap, { paddingBottom: padBottom }]} pointerEvents="box-none">
+      <View
+        style={[
+          styles.bottomNav,
+          narrow && styles.bottomNavNarrow,
+          wide && styles.bottomNavWide,
+        ]}
+      >
         {NAV_ITEMS.map(({ key, label, Icon }) => {
           const active = activeSection === key;
           if (active) {
@@ -433,10 +446,22 @@ export function BottomNav({
                 testID={`nav-${key}`}
                 accessibilityLabel={label}
                 onPress={() => onPress(key)}
-                style={({ pressed }) => [styles.navActivePill, narrow && styles.navItemNarrow, pressed && { opacity: 0.9 }]}
+                style={({ pressed }) => [
+                  styles.navActivePill,
+                  compact && styles.navActivePillCompact,
+                  narrow && styles.navItemNarrow,
+                  pressed && { opacity: 0.9 },
+                ]}
               >
-                <Icon size={17} color={stitchColors.white} strokeWidth={2.4} />
-                <Text style={styles.navActiveLabel}>{label}</Text>
+                <Icon size={narrow ? 15 : 17} color={stitchColors.white} strokeWidth={2.4} />
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.82}
+                  style={[styles.navActiveLabel, compact && styles.navActiveLabelCompact]}
+                >
+                  {label}
+                </Text>
               </Pressable>
             );
           }
@@ -447,9 +472,14 @@ export function BottomNav({
               accessibilityLabel={label}
               onPress={() => onPress(key)}
               hitSlop={8}
-              style={({ pressed }) => [styles.navInactiveItem, narrow && styles.navItemNarrow, pressed && { opacity: 0.6 }]}
+              style={({ pressed }) => [
+                styles.navInactiveItem,
+                compact && styles.navInactiveCompact,
+                narrow && styles.navItemNarrow,
+                pressed && { opacity: 0.6 },
+              ]}
             >
-              <Icon size={20} color={stitchColors.inkMuted} strokeWidth={1.8} />
+              <Icon size={narrow ? 19 : 20} color={stitchColors.inkMuted} strokeWidth={1.8} />
             </Pressable>
           );
         })}
@@ -1385,6 +1415,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     alignItems: 'center',
+    paddingHorizontal: 12,
     paddingBottom: Platform.OS === 'ios' ? 24 : 16,
     paddingTop: 8,
     zIndex: 100,
@@ -1393,6 +1424,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    maxWidth: 520,
     backgroundColor: stitchColors.surface,
     borderWidth: 1,
     borderColor: stitchColors.paperSoft,
@@ -1406,13 +1438,22 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 12,
   },
+  bottomNavNarrow: {
+    paddingHorizontal: 6,
+    gap: 2,
+  },
+  bottomNavWide: {
+    paddingHorizontal: 14,
+    gap: 10,
+  },
   navActivePill: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 1,
     gap: 7,
     backgroundColor: stitchColors.sienna,
     borderRadius: stitchRadius.full,
-    paddingHorizontal: 16,
+    paddingHorizontal: 15,
     paddingVertical: 9,
     shadowColor: stitchColors.sienna,
     shadowOffset: { width: 0, height: 4 },
@@ -1420,21 +1461,32 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 4,
   },
+  navActivePillCompact: {
+    paddingHorizontal: 12,
+    gap: 5,
+  },
   navActiveLabel: {
     fontFamily: SANS,
     fontSize: 13,
     fontWeight: '700',
     color: stitchColors.white,
+    flexShrink: 1,
+  },
+  navActiveLabelCompact: {
+    fontSize: 12,
   },
   navItemNarrow: {
-    paddingHorizontal: 9,
+    paddingHorizontal: 8,
   },
   navInactiveItem: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 13,
     paddingVertical: 9,
     borderRadius: stitchRadius.full,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  navInactiveCompact: {
+    paddingHorizontal: 10,
   },
 
   // Dashboard Hub styles
@@ -1499,10 +1551,11 @@ const styles = StyleSheet.create({
   },
 
   // TopBar — Curved Royal Violet & Legacy Aliases
+  // AppShell already wraps content inside SafeAreaView, so TopBar does not duplicate status-bar padding.
   topBarCurved: {
-    paddingTop: Platform.OS === 'ios' ? 52 : (Platform.OS === 'web' ? 24 : 40),
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 16,
+    paddingHorizontal: 18,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
     shadowColor: stitchColors.sienna,

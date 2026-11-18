@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   Pressable,
   TextInput,
   RefreshControl,
@@ -13,7 +14,9 @@ import {
   Platform,
   Linking,
   Share,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   MapPin,
   Clock,
@@ -222,6 +225,197 @@ const KIND_FILTERS: { label: string; value: 'Tous' | 'stage' | 'emploi' }[] = [
   { label: 'Emplois', value: 'emploi' },
 ];
 
+interface StageJobCardProps {
+  job: StageJob;
+  index: number;
+  listNow: Date;
+  isWide: boolean;
+  onSelect: (job: StageJob) => void;
+  onApply: (job: StageJob) => void;
+  onOpenOnSite: (job: StageJob) => void;
+}
+
+const StageJobCard = React.memo(function StageJobCard({
+  job,
+  index,
+  listNow,
+  isWide,
+  onSelect,
+  onApply,
+  onOpenOnSite,
+}: StageJobCardProps) {
+  const matchScore = job.matchScore || 0;
+  const companyInitials = job.company?.name
+    ? job.company.name.slice(0, 2).toUpperCase()
+    : 'CP';
+  const cardBannerUri = getRotatingJobBanner(job, index);
+  const addedLabel = formatAddedAgo(job.createdAt, listNow);
+  const linkOffer = isLinkApply(job);
+
+  return (
+    <Pressable
+      testID={`card-job-${job.id}`}
+      style={[styles.jobCard, isWide && styles.jobCardWide]}
+      onPress={() => onSelect(job)}
+    >
+      {/* 1. Hero Image Cover */}
+      <View style={styles.cardHeroImageContainer}>
+        <Image source={{ uri: cardBannerUri }} style={styles.cardHeroImage} resizeMode="cover" />
+        <LinearGradient
+          colors={['rgba(15, 23, 42, 0.45)', 'rgba(15, 23, 42, 0.05)', 'rgba(15, 23, 42, 0.20)']}
+          style={styles.cardHeroOverlay}
+        />
+
+        {/* Contract Badge on Left, AI Match Badge on Right */}
+        <View style={styles.floatingBadgesRow}>
+          <View style={styles.floatingContractBadge}>
+            <Text style={styles.floatingContractText}>{job.kind === 'emploi' ? 'Emploi' : job.contractType || 'Stage'}</Text>
+          </View>
+
+          <View style={styles.floatingMatchBadge}>
+            <Star size={11} color={stitchColors.emeraldTone} fill={stitchColors.emeraldTone} />
+            <Text style={styles.floatingMatchText}>
+              {matchScore}% Match
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* 2. Card Content Body */}
+      <View style={styles.cardBody}>
+        {/* Company Info Row */}
+        <View style={styles.companyRow}>
+          <View style={styles.companyAvatarBox}>
+            {job.company?.logoUrl ? (
+              <Image source={{ uri: job.company.logoUrl }} style={styles.companyLogoImg} resizeMode="cover" />
+            ) : (
+              <Text style={styles.companyInitialsText}>{companyInitials}</Text>
+            )}
+          </View>
+          <View style={{ flex: 1, paddingRight: 6 }}>
+            <View style={styles.companyNameRow}>
+              <Text style={styles.cardCompanyName} numberOfLines={1}>
+                {job.company?.name}
+              </Text>
+              {job.company?.status === 'VERIFIED' && (
+                <CheckCircle2 size={13} color={stitchColors.emeraldTone} />
+              )}
+            </View>
+            <Text style={styles.companyIndustry} numberOfLines={1}>
+              {job.company?.industry || 'Entreprise'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Job Title */}
+        <Text style={styles.cardJobTitle} numberOfLines={2}>
+          {job.title}
+        </Text>
+
+        {/* Location & Duration & Meta */}
+        <View style={styles.metaRow}>
+          <MapPin size={12} color={stitchColors.inkMuted} style={{ marginRight: 4 }} />
+          <Text style={styles.metaText} numberOfLines={1}>
+            {[job.location, job.duration].filter(Boolean).join(' · ') || 'Lieu et durée à préciser'}
+          </Text>
+        </View>
+        {addedLabel ? (
+          <View style={styles.metaRow}>
+            <Clock size={12} color={stitchColors.inkMuted} style={{ marginRight: 4 }} />
+            <Text style={styles.metaText} accessibilityLabel={addedLabel}>
+              {addedLabel}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Skills Outline Tags */}
+        <View style={styles.skillsRow}>
+          {job.requirements.slice(0, 3).map((skill, sIdx) => (
+            <View key={sIdx} style={styles.skillTag}>
+              <Text style={styles.skillTagText} numberOfLines={1}>{skill}</Text>
+            </View>
+          ))}
+          {job.requirements.length > 3 && (
+            <View style={styles.skillTag}>
+              <Text style={styles.skillTagText}>+{job.requirements.length - 3}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Divider */}
+        <View style={styles.cardDivider} />
+
+        {/* Bottom Row: Stipend & Direct CTA (stacked for LINK offers so stipend never crushes) */}
+        <View style={[styles.cardBottomRow, linkOffer && styles.cardBottomRowStacked]}>
+          <View style={[styles.stipendCol, !linkOffer && styles.stipendColInline]}>
+            <Text style={styles.stipendLabel}>Indemnité mensuelle</Text>
+            <Text style={styles.stipendAmount}>
+              {job.stipend ? job.stipend.replace(/\(.*\)/, '').trim() : 'Rémunération non précisée'}
+            </Text>
+            <Text style={styles.applyPriceText} testID={`apply-price-${job.id}`}>
+              {applyPriceLine(job, linkOffer)}
+            </Text>
+          </View>
+
+          {linkOffer ? (
+            <View style={styles.linkActionsCol}>
+              {!isOfferExpired(job) && (
+                <Pressable
+                  testID={`btn-postuler-${job.id}`}
+                  style={[styles.applyBtn, styles.applyBtnFull]}
+                  onPress={(e) => {
+                    if (e && typeof e.stopPropagation === 'function') {
+                      e.stopPropagation();
+                    }
+                    onApply(job);
+                  }}
+                >
+                  <Sparkles size={13} color={stitchColors.white} />
+                  <Text style={styles.applyBtnText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                    {formatKitButtonLabel(jobApplyPrice(job))}
+                  </Text>
+                </Pressable>
+              )}
+              <Pressable
+                testID={`btn-site-direct-${job.id}`}
+                style={styles.directSiteLinkBtn}
+                onPress={(e) => {
+                  if (e && typeof e.stopPropagation === 'function') {
+                    e.stopPropagation();
+                  }
+                  onOpenOnSite(job);
+                }}
+              >
+                <ExternalLink size={12} color={stitchColors.primary} />
+                <Text style={styles.directSiteLinkText}>{APPLY_LINK_LABEL}</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              testID={`btn-postuler-${job.id}`}
+              style={[styles.applyBtn, { flexShrink: 0 }]}
+              onPress={(e) => {
+                if (e && typeof e.stopPropagation === 'function') {
+                  e.stopPropagation();
+                }
+                onApply(job);
+              }}
+            >
+              <Sparkles size={13} color={stitchColors.white} />
+              <Text style={styles.applyBtnText}>Postuler</Text>
+            </Pressable>
+          )}
+        </View>
+        {linkOffer && !isOfferExpired(job) && (
+          <Text style={styles.noRefundHintText} testID={`kit-no-refund-${job.id}`}>
+            {APPLY_LINK_NO_REFUND_NOTICE}
+          </Text>
+        )}
+      </View>
+    </Pressable>
+  );
+});
+
 function StagesScreenBase({
   studentProfile,
   onSelectJob,
@@ -230,6 +424,12 @@ function StagesScreenBase({
   focusJobId,
   onFocusHandled,
 }: StagesScreenProps) {
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isWide = width >= 760;
+  const isCompact = width < 380;
+  const heroHeight = Math.min(320, Math.max(220, Math.round(height * 0.30)));
+
   // Offers already loaded in this session are shown at once; the network only refreshes them.
   const [jobs, setJobs] = useState<StageJob[]>(
     () => peekStageJobs({ userSkills: studentProfile.skills, studentProfile }) ?? [],
@@ -411,9 +611,6 @@ function StagesScreenBase({
 
   // `jobs` already carries the match fields (computed in stagesApi with the same profile):
   // recomputing them on every render made each tap re-score the whole list.
-  // One clock reading per render, shared by every card's "added X ago" label.
-  const listNow = new Date();
-
   const displayedJobs = useMemo(() => {
     if (showTopThreeOnly) {
       return [...jobs].sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)).slice(0, 3);
@@ -421,9 +618,124 @@ function StagesScreenBase({
     return jobs;
   }, [jobs, showTopThreeOnly]);
 
+  // One clock reading per list refresh, shared by every card's "added X ago" label.
+  const listNow = useMemo(() => new Date(), [displayedJobs]);
+
   const detailMatch = useMemo(() => {
     return selectedDetailJob ? analyzeJobMatch(selectedDetailJob, studentProfile) : null;
   }, [selectedDetailJob, studentProfile]);
+
+  const handleSelectJob = useCallback((job: StageJob) => {
+    setSelectedDetailJob(job);
+  }, []);
+
+  const handleApplyJob = useCallback((job: StageJob) => {
+    setApplyingJob(job);
+  }, []);
+
+  const renderFeedHeader = useCallback(() => (
+    <>
+      {/* An offer seen outside the app: its flyer, screenshot or text becomes a tailored CV */}
+      <Pressable
+        style={styles.externalOfferCard}
+        onPress={() => setShowExternalOffer(true)}
+        testID="btn-external-offer"
+        accessibilityRole="button"
+      >
+        <View style={styles.externalOfferIcon}>
+          <ImagePlus size={20} color={stitchColors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.externalOfferTitle}>Une offre vue ailleurs ?</Text>
+          <Text style={styles.externalOfferText}>
+            Ajoute l’affiche, la capture ou le texte : ton CV est adapté à l’offre.
+          </Text>
+        </View>
+        <ChevronRight size={18} color={stitchColors.inkMuted} />
+      </Pressable>
+
+      {/* Results count bar */}
+      <View style={styles.resultsBar}>
+        <Text style={styles.resultsCountText}>
+          {displayedJobs.length} opportunité{displayedJobs.length > 1 ? 's' : ''} disponible{displayedJobs.length > 1 ? 's' : ''}
+        </Text>
+      </View>
+    </>
+  ), [displayedJobs.length]);
+
+  const renderFeedEmpty = useCallback(() => {
+    if (loading) {
+      return (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color={stitchColors.sienna} />
+          <Text style={styles.loadingText}>Calcul des meilleures affinités de stage...</Text>
+        </View>
+      );
+    }
+    if (loadError) {
+      return (
+        <View style={styles.emptyBox}>
+          <View style={styles.emptyIconCircle}>
+            <Building2 size={36} color={stitchColors.sienna} />
+          </View>
+          <Text style={styles.emptyTitle}>Impossible de charger les offres</Text>
+          <Text style={styles.emptySubtitle}>{loadError}</Text>
+          <Pressable
+            style={styles.resetFiltersBtn}
+            onPress={() => {
+              setLoading(true);
+              loadData(true);
+            }}
+          >
+            <Text style={styles.resetFiltersBtnText}>Réessayer</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.emptyBox}>
+        <View style={styles.emptyIconCircle}>
+          <Building2 size={36} color={stitchColors.sienna} />
+        </View>
+        {searchQuery.trim() || activeSector !== 'Tous' || activeKind !== 'Tous' || showTopThreeOnly ? (
+          <>
+            <Text style={styles.emptyTitle}>Aucune offre trouvée</Text>
+            <Text style={styles.emptySubtitle}>
+              Essaie de réinitialiser la recherche ou de changer les filtres de secteur.
+            </Text>
+            <Pressable
+              style={styles.resetFiltersBtn}
+              onPress={() => {
+                setSearchQuery('');
+                setActiveSector('Tous');
+                setActiveKind('Tous');
+                setShowTopThreeOnly(false);
+              }}
+            >
+              <Text style={styles.resetFiltersBtnText}>Réinitialiser les filtres</Text>
+            </Pressable>
+          </>
+        ) : (
+          <Text style={styles.emptyTitle}>Aucune offre publiée pour le moment.</Text>
+        )}
+      </View>
+    );
+  }, [loading, loadError, searchQuery, activeSector, activeKind, showTopThreeOnly]);
+
+  const renderJobItem = useCallback(
+    ({ item, index }: { item: StageJob; index: number }) => (
+      <StageJobCard
+        job={item}
+        index={index}
+        listNow={listNow}
+        isWide={isWide}
+        onSelect={handleSelectJob}
+        onApply={handleApplyJob}
+        onOpenOnSite={openOnSite}
+      />
+    ),
+    [listNow, isWide, handleSelectJob, handleApplyJob, openOnSite],
+  );
 
   return (
     <View style={styles.container}>
@@ -517,11 +829,25 @@ function StagesScreenBase({
         </ScrollView>
       </View>
 
-      {/* ── Main Job Feed ────────────────────────────────────────── */}
-      <ScrollView
+      {/* ── Main Job Feed (virtualized FlatList for instant tab switch & 60fps scroll) ── */}
+      <FlatList
+        key={isWide ? 'stages-grid' : 'stages-list'}
+        data={loading || loadError ? [] : displayedJobs}
+        keyExtractor={(item) => item.id}
+        numColumns={isWide ? 2 : 1}
+        columnWrapperStyle={isWide ? styles.gridRow : undefined}
+        renderItem={renderJobItem}
+        ListHeaderComponent={renderFeedHeader}
+        ListEmptyComponent={renderFeedEmpty}
         style={styles.feedScroll}
         contentContainerStyle={styles.feedContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        initialNumToRender={5}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        updateCellsBatchingPeriod={40}
+        removeClippedSubviews={Platform.OS === 'android'}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -530,257 +856,7 @@ function StagesScreenBase({
             colors={[stitchColors.sienna]}
           />
         }
-      >
-        {/* An offer seen outside the app: its flyer, screenshot or text becomes a tailored CV */}
-        <Pressable
-          style={styles.externalOfferCard}
-          onPress={() => setShowExternalOffer(true)}
-          testID="btn-external-offer"
-          accessibilityRole="button"
-        >
-          <View style={styles.externalOfferIcon}>
-            <ImagePlus size={20} color={stitchColors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.externalOfferTitle}>Une offre vue ailleurs ?</Text>
-            <Text style={styles.externalOfferText}>
-              Ajoute l’affiche, la capture ou le texte : ton CV est adapté à l’offre.
-            </Text>
-          </View>
-          <ChevronRight size={18} color={stitchColors.inkMuted} />
-        </Pressable>
-
-        {/* Results count bar */}
-        <View style={styles.resultsBar}>
-          <Text style={styles.resultsCountText}>
-            {displayedJobs.length} opportunité{displayedJobs.length > 1 ? 's' : ''} disponible{displayedJobs.length > 1 ? 's' : ''}
-          </Text>
-        </View>
-
-        {loading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color={stitchColors.sienna} />
-            <Text style={styles.loadingText}>Calcul des meilleures affinités de stage...</Text>
-          </View>
-        ) : loadError ? (
-          <View style={styles.emptyBox}>
-            <View style={styles.emptyIconCircle}>
-              <Building2 size={36} color={stitchColors.sienna} />
-            </View>
-            <Text style={styles.emptyTitle}>Impossible de charger les offres</Text>
-            <Text style={styles.emptySubtitle}>{loadError}</Text>
-            <Pressable
-              style={styles.resetFiltersBtn}
-              onPress={() => {
-                setLoading(true);
-                loadData(true);
-              }}
-            >
-              <Text style={styles.resetFiltersBtnText}>Réessayer</Text>
-            </Pressable>
-          </View>
-        ) : displayedJobs.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <View style={styles.emptyIconCircle}>
-              <Building2 size={36} color={stitchColors.sienna} />
-            </View>
-            {searchQuery.trim() || activeSector !== 'Tous' || activeKind !== 'Tous' || showTopThreeOnly ? (
-              <>
-                <Text style={styles.emptyTitle}>Aucune offre trouvée</Text>
-                <Text style={styles.emptySubtitle}>
-                  Essaie de réinitialiser la recherche ou de changer les filtres de secteur.
-                </Text>
-                <Pressable
-                  style={styles.resetFiltersBtn}
-                  onPress={() => {
-                    setSearchQuery('');
-                    setActiveSector('Tous');
-                    setActiveKind('Tous');
-                    setShowTopThreeOnly(false);
-                  }}
-                >
-                  <Text style={styles.resetFiltersBtnText}>Réinitialiser les filtres</Text>
-                </Pressable>
-              </>
-            ) : (
-              <Text style={styles.emptyTitle}>Aucune offre publiée pour le moment.</Text>
-            )}
-          </View>
-        ) : (
-          displayedJobs.map((job, index) => {
-            const matchScore = job.matchScore || 0;
-            const companyInitials = job.company?.name
-              ? job.company.name.slice(0, 2).toUpperCase()
-              : 'CP';
-            const cardBannerUri = getRotatingJobBanner(job, index);
-            const addedLabel = formatAddedAgo(job.createdAt, listNow);
-
-            return (
-              <Pressable
-                key={job.id}
-                testID={`card-job-${job.id}`}
-                style={styles.jobCard}
-                onPress={() => setSelectedDetailJob(job)}
-              >
-                {/* 1. Hero Image Cover */}
-                <View style={styles.cardHeroImageContainer}>
-                  <Image source={{ uri: cardBannerUri }} style={styles.cardHeroImage} resizeMode="cover" />
-                  <LinearGradient
-                    colors={['rgba(15, 23, 42, 0.45)', 'rgba(15, 23, 42, 0.05)', 'rgba(15, 23, 42, 0.20)']}
-                    style={styles.cardHeroOverlay}
-                  />
-
-                  {/* Contract Badge on Left, AI Match Badge on Right */}
-                  <View style={styles.floatingBadgesRow}>
-                    <View style={styles.floatingContractBadge}>
-                      <Text style={styles.floatingContractText}>{job.kind === 'emploi' ? 'Emploi' : job.contractType || 'Stage'}</Text>
-                    </View>
-
-                    <View style={styles.floatingMatchBadge}>
-                      <Star size={11} color={stitchColors.emeraldTone} fill={stitchColors.emeraldTone} />
-                      <Text style={styles.floatingMatchText}>
-                        ★ {matchScore}% Match
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* 2. Card Content Body */}
-                <View style={styles.cardBody}>
-                  {/* Company Info Row */}
-                  <View style={styles.companyRow}>
-                    <View style={styles.companyAvatarBox}>
-                      {job.company?.logoUrl ? (
-                        <Image source={{ uri: job.company.logoUrl }} style={styles.companyLogoImg} resizeMode="cover" />
-                      ) : (
-                        <Text style={styles.companyInitialsText}>{companyInitials}</Text>
-                      )}
-                    </View>
-                    <View style={{ flex: 1, paddingRight: 6 }}>
-                      <View style={styles.companyNameRow}>
-                        <Text style={styles.cardCompanyName} numberOfLines={1}>
-                          {job.company?.name}
-                        </Text>
-                        {job.company?.status === 'VERIFIED' && (
-                          <CheckCircle2 size={13} color={stitchColors.emeraldTone} />
-                        )}
-                      </View>
-                      <Text style={styles.companyIndustry} numberOfLines={1}>
-                        {job.company?.industry || 'Entreprise'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Job Title */}
-                  <Text style={styles.cardJobTitle} numberOfLines={2}>
-                    {job.title}
-                  </Text>
-
-                  {/* Location & Duration & Meta */}
-                  <View style={styles.metaRow}>
-                    <MapPin size={12} color={stitchColors.inkMuted} style={{ marginRight: 4 }} />
-                    <Text style={styles.metaText}>
-                      {[job.location, job.duration].filter(Boolean).join(' · ') || 'Lieu et durée à préciser'}
-                    </Text>
-                  </View>
-                  {addedLabel ? (
-                    <View style={styles.metaRow}>
-                      <Clock size={12} color={stitchColors.inkMuted} style={{ marginRight: 4 }} />
-                      <Text style={styles.metaText} accessibilityLabel={addedLabel}>
-                        {addedLabel}
-                      </Text>
-                    </View>
-                  ) : null}
-
-                  {/* Skills Outline Tags */}
-                  <View style={styles.skillsRow}>
-                    {job.requirements.slice(0, 3).map((skill, sIdx) => (
-                      <View key={sIdx} style={styles.skillTag}>
-                        <Text style={styles.skillTagText} numberOfLines={1}>{skill}</Text>
-                      </View>
-                    ))}
-                    {job.requirements.length > 3 && (
-                      <View style={styles.skillTag}>
-                        <Text style={styles.skillTagText}>+{job.requirements.length - 3}</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Divider */}
-                  <View style={styles.cardDivider} />
-
-                  {/* Bottom Row: Stipend & Single Direct CTA */}
-                  <View style={styles.cardBottomRow}>
-                    <View style={styles.stipendCol}>
-                      <Text style={styles.stipendLabel}>Indemnité mensuelle</Text>
-                      <Text style={styles.stipendAmount}>
-                        {job.stipend ? job.stipend.replace(/\(.*\)/, '').trim() : 'Rémunération non précisée'}
-                      </Text>
-                      <Text style={styles.applyPriceText} testID={`apply-price-${job.id}`}>
-                        {applyPriceLine(job, isLinkApply(job))}
-                      </Text>
-                    </View>
-
-                    {isLinkApply(job) ? (
-                      <View style={styles.linkActionsCol}>
-                        {!isOfferExpired(job) && (
-                          <Pressable
-                            testID={`btn-postuler-${job.id}`}
-                            style={styles.applyBtn}
-                            onPress={(e) => {
-                              if (e && typeof e.stopPropagation === 'function') {
-                                e.stopPropagation();
-                              }
-                              setApplyingJob(job);
-                            }}
-                          >
-                            <Sparkles size={13} color={stitchColors.white} />
-                            <Text style={styles.applyBtnText}>
-                              {formatKitButtonLabel(jobApplyPrice(job))}
-                            </Text>
-                          </Pressable>
-                        )}
-                        <Pressable
-                          testID={`btn-site-direct-${job.id}`}
-                          style={styles.directSiteLinkBtn}
-                          onPress={(e) => {
-                            if (e && typeof e.stopPropagation === 'function') {
-                              e.stopPropagation();
-                            }
-                            openOnSite(job);
-                          }}
-                        >
-                          <ExternalLink size={12} color={stitchColors.primary} />
-                          <Text style={styles.directSiteLinkText}>{APPLY_LINK_LABEL}</Text>
-                        </Pressable>
-                      </View>
-                    ) : (
-                      <Pressable
-                        testID={`btn-postuler-${job.id}`}
-                        style={styles.applyBtn}
-                        onPress={(e) => {
-                          if (e && typeof e.stopPropagation === 'function') {
-                            e.stopPropagation();
-                          }
-                          setApplyingJob(job);
-                        }}
-                      >
-                        <Sparkles size={13} color={stitchColors.white} />
-                        <Text style={styles.applyBtnText}>Postuler</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                  {isLinkApply(job) && !isOfferExpired(job) && (
-                    <Text style={styles.noRefundHintText} testID={`kit-no-refund-${job.id}`}>
-                      {APPLY_LINK_NO_REFUND_NOTICE}
-                    </Text>
-                  )}
-                </View>
-              </Pressable>
-            );
-          })
-        )}
-      </ScrollView>
+      />
 
       {/* ── Immersive Stage Detail Screen (Screen 2 Reference) ──────── */}
       {selectedDetailJob && (
@@ -793,11 +869,14 @@ function StagesScreenBase({
           <View style={styles.detailModalContainer}>
             <ScrollView
               style={styles.detailScroll}
-              contentContainerStyle={styles.detailScrollContent}
+              contentContainerStyle={[
+                styles.detailScrollContent,
+                isLinkApply(selectedDetailJob) && !isOfferExpired(selectedDetailJob) && { paddingBottom: 170 },
+              ]}
               showsVerticalScrollIndicator={false}
             >
               {/* Feature 1: Full-Bleed Hero Image Header with Curved Bottom & Floating Action Buttons */}
-              <View style={styles.detailHeroContainer}>
+              <View style={[styles.detailHeroContainer, { height: heroHeight }]}>
                 <Image
                   source={{ uri: getRotatingJobBanner(selectedDetailJob) }}
                   style={styles.detailHeroImage}
@@ -809,7 +888,7 @@ function StagesScreenBase({
                 />
 
                 {/* Floating Circular Action Buttons: Back, Share, Favorite */}
-                <View style={styles.detailFloatingHeader}>
+                <View style={[styles.detailFloatingHeader, { top: Math.max(Platform.OS === 'ios' ? 48 : 36, insets.top + 8) }]}>
                   <Pressable
                     testID="btn-detail-back"
                     style={styles.detailCircleBtn}
@@ -859,7 +938,7 @@ function StagesScreenBase({
                   <View style={styles.aiMatchPill}>
                     <Star size={12} color={stitchColors.emeraldTone} fill={stitchColors.emeraldTone} style={{ marginRight: 4 }} />
                     <Text style={styles.aiMatchPillText}>
-                      ★ {selectedDetailJob.matchScore || detailMatch?.score || 0}% Match
+                      {selectedDetailJob.matchScore || detailMatch?.score || 0}% Match
                     </Text>
                   </View>
                 </View>
@@ -1212,8 +1291,16 @@ function StagesScreenBase({
             </ScrollView>
 
             {/* Feature 9: Fixed Sticky Bottom Bar (Rendered Outside ScrollView) */}
-            <View style={styles.stickyBottomBar}>
-              <View style={styles.stipendCol}>
+            <View
+              style={[
+                styles.stickyBottomBar,
+                (isLinkApply(selectedDetailJob) && !isOfferExpired(selectedDetailJob)) || isCompact
+                  ? styles.stickyBottomBarStacked
+                  : null,
+                { paddingBottom: Math.max(Platform.OS === 'ios' ? 32 : 16, insets.bottom + 10) },
+              ]}
+            >
+              <View style={[styles.stipendCol, !(isLinkApply(selectedDetailJob) && !isOfferExpired(selectedDetailJob)) && !isCompact && styles.stipendColInline]}>
                 <Text style={styles.stipendLabel}>INDEMNITÉ</Text>
                 <View style={styles.stipendValueRow}>
                   <Text style={styles.stipendAmount}>
@@ -1231,11 +1318,11 @@ function StagesScreenBase({
                   {!isOfferExpired(selectedDetailJob) && (
                     <Pressable
                       testID="btn-sticky-apply"
-                      style={styles.stickyApplyBtn}
+                      style={[styles.stickyApplyBtn, styles.applyBtnFull]}
                       onPress={handleApplyFromDetail}
                     >
                       <Sparkles size={16} color={stitchColors.white} />
-                      <Text style={styles.stickyApplyBtnText}>
+                      <Text style={styles.stickyApplyBtnText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
                         {formatKitButtonLabel(jobApplyPrice(selectedDetailJob))}
                       </Text>
                     </Pressable>
@@ -1252,7 +1339,7 @@ function StagesScreenBase({
               ) : (
                 <Pressable
                   testID="btn-sticky-apply"
-                  style={styles.stickyApplyBtn}
+                  style={[styles.stickyApplyBtn, isCompact && styles.applyBtnFull, !isCompact && { flexShrink: 0 }]}
                   onPress={handleApplyFromDetail}
                 >
                   <Sparkles size={17} color={stitchColors.white} />
@@ -1346,7 +1433,7 @@ const styles = StyleSheet.create({
 
   // Feed Header & Search Bar
   header: {
-    paddingTop: Platform.OS === 'ios' ? 48 : 36,
+    paddingTop: 14,
     paddingHorizontal: 16,
     paddingBottom: 12,
     backgroundColor: stitchColors.paper, // #FFFFFF
@@ -1455,7 +1542,14 @@ const styles = StyleSheet.create({
   feedContent: {
     padding: 16,
     gap: 16,
-    paddingBottom: 40,
+    paddingBottom: 120,
+    width: '100%',
+    maxWidth: 1040,
+    alignSelf: 'center',
+  },
+  gridRow: {
+    gap: 14,
+    justifyContent: 'space-between',
   },
   resultsBar: {
     flexDirection: 'row',
@@ -1530,6 +1624,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: stitchColors.paperSoft,
     ...stitchShadows.card,
+  },
+  jobCardWide: {
+    flex: 1,
   },
   cardHeroImageContainer: {
     width: '100%',
@@ -1691,15 +1788,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
+  },
+  cardBottomRowStacked: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 12,
   },
   stipendCol: {
+    width: '100%',
+  },
+  stipendColInline: {
     flex: 1,
+    width: undefined,
   },
   applyPriceText: {
-    fontSize: 10.5,
+    fontSize: 11,
     color: stitchColors.sienna,
     fontWeight: '700',
-    marginTop: 3,
+    marginTop: 4,
+    lineHeight: 15,
   },
   stipendLabel: {
     fontSize: 9.5,
@@ -1713,16 +1821,21 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     fontWeight: '800',
     color: stitchColors.emeraldTone,
+    lineHeight: 20,
   },
   applyBtn: {
     backgroundColor: stitchColors.sienna,
     borderRadius: stitchRadius.button, // 16
     paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     ...stitchShadows.primary,
+  },
+  applyBtnFull: {
+    width: '100%',
   },
   applyBtnText: {
     color: stitchColors.white,
@@ -1730,9 +1843,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   linkActionsCol: {
-    alignItems: 'flex-end',
+    alignItems: 'center',
     gap: 6,
-    flexShrink: 1,
+    width: '100%',
   },
   directSiteLinkBtn: {
     flexDirection: 'row',
@@ -1854,6 +1967,7 @@ const styles = StyleSheet.create({
   // Feature 3: Badges
   detailBadgesRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 10,
@@ -1872,6 +1986,7 @@ const styles = StyleSheet.create({
     color: stitchColors.sienna,
     fontSize: 12,
     fontWeight: '700',
+    flexShrink: 1,
   },
   aiMatchPill: {
     flexDirection: 'row',
@@ -1880,6 +1995,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5.5,
     borderRadius: stitchRadius.full,
+    flexShrink: 0,
   },
   aiMatchPillText: {
     color: stitchColors.emeraldTone,
@@ -1898,8 +2014,10 @@ const styles = StyleSheet.create({
   },
   companyDirectionRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: stitchColors.paperSoft,
@@ -1909,7 +2027,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     flex: 1,
-    paddingRight: 10,
+    minWidth: 180,
+    paddingRight: 4,
   },
   detailCompanyName: {
     fontSize: 14.5,
@@ -2267,7 +2386,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
     ...stitchShadows.floating,
+  },
+  stickyBottomBarStacked: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
   },
   stipendValueRow: {
     flexDirection: 'row',
@@ -2282,9 +2407,10 @@ const styles = StyleSheet.create({
     backgroundColor: stitchColors.sienna,
     borderRadius: stitchRadius.button, // 16
     paddingVertical: 13,
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     ...stitchShadows.primary,
   },
@@ -2329,4 +2455,8 @@ const styles = StyleSheet.create({
 });
 
 // Memoized: the tab container re-renders on every navigation tap, the list must not re-render with it.
-export const StagesScreen = React.memo(StagesScreenBase);
+const StagesScreenMemo = React.memo(StagesScreenBase);
+
+export function StagesScreen(props: StagesScreenProps) {
+  return <StagesScreenMemo {...props} />;
+}
