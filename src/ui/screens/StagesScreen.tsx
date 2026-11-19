@@ -48,6 +48,7 @@ import { ExternalOfferModal } from '../../features/stages/ExternalOfferModal';
 import { analyzeJobMatch } from '../../features/stages/aiMatchEngine';
 import { cleanPhoneNumber } from '../../features/whatsapp/whatsappService';
 import { SearchFilterBar } from '../GlassComponents';
+import { AdaptiveOfferImage, hasCustomFlyer } from '../AdaptiveOfferImage';
 import {
   fontFamilies,
   stitchColors,
@@ -206,6 +207,10 @@ export function getWorkspacePhotos(job: StageJob): string[] {
   return pool.slice(0, 5);
 }
 
+function getSectorFallbackBanner(job: StageJob, index: number = 0): string {
+  return getRotatingJobBanner({ ...job, flyerUrl: undefined }, index);
+}
+
 const SECTORS = [
   'Tous',
   'Tech & IA',
@@ -230,6 +235,7 @@ interface StageJobCardProps {
   index: number;
   listNow: Date;
   isWide: boolean;
+  cardWidth: number;
   onSelect: (job: StageJob) => void;
   onApply: (job: StageJob) => void;
   onOpenOnSite: (job: StageJob) => void;
@@ -240,6 +246,7 @@ const StageJobCard = React.memo(function StageJobCard({
   index,
   listNow,
   isWide,
+  cardWidth,
   onSelect,
   onApply,
   onOpenOnSite,
@@ -248,7 +255,9 @@ const StageJobCard = React.memo(function StageJobCard({
   const companyInitials = job.company?.name
     ? job.company.name.slice(0, 2).toUpperCase()
     : 'CP';
+  const customFlyer = hasCustomFlyer(job);
   const cardBannerUri = getRotatingJobBanner(job, index);
+  const fallbackBannerUri = customFlyer ? getSectorFallbackBanner(job, index) : cardBannerUri;
   const addedLabel = formatAddedAgo(job.createdAt, listNow);
   const linkOffer = isLinkApply(job);
 
@@ -258,28 +267,57 @@ const StageJobCard = React.memo(function StageJobCard({
       style={[styles.jobCard, isWide && styles.jobCardWide]}
       onPress={() => onSelect(job)}
     >
-      {/* 1. Hero Image Cover */}
-      <View style={styles.cardHeroImageContainer}>
-        <Image source={{ uri: cardBannerUri }} style={styles.cardHeroImage} resizeMode="cover" />
-        <LinearGradient
-          colors={['rgba(15, 23, 42, 0.45)', 'rgba(15, 23, 42, 0.05)', 'rgba(15, 23, 42, 0.20)']}
-          style={styles.cardHeroOverlay}
-        />
+      {/* 1. Offer visual: real DB flyers render full & uncropped above a clean header; fallback photos stay compact cover */}
+      {customFlyer ? (
+        <>
+          <View style={styles.cardFlyerBadgeHeader}>
+            <View style={styles.floatingContractBadge}>
+              <Text style={styles.floatingContractText}>{job.kind === 'emploi' ? 'Emploi' : job.contractType || 'Stage'}</Text>
+            </View>
 
-        {/* Contract Badge on Left, AI Match Badge on Right */}
-        <View style={styles.floatingBadgesRow}>
-          <View style={styles.floatingContractBadge}>
-            <Text style={styles.floatingContractText}>{job.kind === 'emploi' ? 'Emploi' : job.contractType || 'Stage'}</Text>
+            <View style={styles.floatingMatchBadge}>
+              <Star size={11} color={stitchColors.emeraldTone} fill={stitchColors.emeraldTone} />
+              <Text style={styles.floatingMatchText}>
+                {matchScore}% Match
+              </Text>
+            </View>
           </View>
+          <AdaptiveOfferImage
+            uri={cardBannerUri}
+            fallbackUri={fallbackBannerUri}
+            width={cardWidth}
+            defaultAspectRatio={0.9}
+            minAspectRatio={0.6}
+            maxAspectRatio={2.4}
+            maxHeight={isWide ? 360 : 480}
+            fallbackHeight={155}
+            style={styles.cardFlyerImageWrap}
+            accessibilityLabel={`Affiche de l'offre ${job.title}`}
+          />
+        </>
+      ) : (
+        <View style={styles.cardHeroImageContainer}>
+          <Image source={{ uri: cardBannerUri }} style={styles.cardHeroImage} resizeMode="cover" />
+          <LinearGradient
+            colors={['rgba(15, 23, 42, 0.45)', 'rgba(15, 23, 42, 0.05)', 'rgba(15, 23, 42, 0.20)']}
+            style={styles.cardHeroOverlay}
+          />
 
-          <View style={styles.floatingMatchBadge}>
-            <Star size={11} color={stitchColors.emeraldTone} fill={stitchColors.emeraldTone} />
-            <Text style={styles.floatingMatchText}>
-              {matchScore}% Match
-            </Text>
+          {/* Contract Badge on Left, AI Match Badge on Right */}
+          <View style={styles.floatingBadgesRow}>
+            <View style={styles.floatingContractBadge}>
+              <Text style={styles.floatingContractText}>{job.kind === 'emploi' ? 'Emploi' : job.contractType || 'Stage'}</Text>
+            </View>
+
+            <View style={styles.floatingMatchBadge}>
+              <Star size={11} color={stitchColors.emeraldTone} fill={stitchColors.emeraldTone} />
+              <Text style={styles.floatingMatchText}>
+                {matchScore}% Match
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
+      )}
 
       {/* 2. Card Content Body */}
       <View style={styles.cardBody}>
@@ -428,7 +466,12 @@ function StagesScreenBase({
   const insets = useSafeAreaInsets();
   const isWide = width >= 760;
   const isCompact = width < 380;
+  const cardWidth = isWide
+    ? Math.floor((Math.min(width, 1040) - 48) / 2)
+    : Math.max(240, Math.min(width, 1040) - 32);
   const heroHeight = Math.min(320, Math.max(220, Math.round(height * 0.30)));
+  const detailHeroWidth = Math.min(width, 680);
+  const detailMaxFlyerHeight = Math.round(Math.max(height * 0.85, 680));
 
   // Offers already loaded in this session are shown at once; the network only refreshes them.
   const [jobs, setJobs] = useState<StageJob[]>(
@@ -729,12 +772,13 @@ function StagesScreenBase({
         index={index}
         listNow={listNow}
         isWide={isWide}
+        cardWidth={cardWidth}
         onSelect={handleSelectJob}
         onApply={handleApplyJob}
         onOpenOnSite={openOnSite}
       />
     ),
-    [listNow, isWide, handleSelectJob, handleApplyJob, openOnSite],
+    [listNow, isWide, cardWidth, handleSelectJob, handleApplyJob, openOnSite],
   );
 
   return (
@@ -859,7 +903,11 @@ function StagesScreenBase({
       />
 
       {/* ── Immersive Stage Detail Screen (Screen 2 Reference) ──────── */}
-      {selectedDetailJob && (
+      {selectedDetailJob && (() => {
+        const detailHasFlyer = hasCustomFlyer(selectedDetailJob);
+        const detailBannerUri = getRotatingJobBanner(selectedDetailJob);
+        const detailFallbackUri = getSectorFallbackBanner(selectedDetailJob);
+        return (
         <Modal
           visible={!!selectedDetailJob}
           animationType="slide"
@@ -875,54 +923,120 @@ function StagesScreenBase({
               ]}
               showsVerticalScrollIndicator={false}
             >
-              {/* Feature 1: Full-Bleed Hero Image Header with Curved Bottom & Floating Action Buttons */}
-              <View style={[styles.detailHeroContainer, { height: heroHeight }]}>
-                <Image
-                  source={{ uri: getRotatingJobBanner(selectedDetailJob) }}
-                  style={styles.detailHeroImage}
-                  resizeMode="cover"
-                />
-                <LinearGradient
-                  colors={['rgba(15, 23, 42, 0.50)', 'rgba(15, 23, 42, 0.05)', 'rgba(15, 23, 42, 0.40)']}
-                  style={styles.detailHeroOverlay}
-                />
-
-                {/* Floating Circular Action Buttons: Back, Share, Favorite */}
-                <View style={[styles.detailFloatingHeader, { top: Math.max(Platform.OS === 'ios' ? 48 : 36, insets.top + 8) }]}>
-                  <Pressable
-                    testID="btn-detail-back"
-                    style={styles.detailCircleBtn}
-                    onPress={() => setSelectedDetailJob(null)}
+              {/* Feature 1: Full adaptive flyer when DB flyerUrl exists; cover hero otherwise */}
+              {detailHasFlyer ? (
+                <View>
+                  <View
+                    style={[
+                      styles.detailTopBarClean,
+                      { paddingTop: Math.max(Platform.OS === 'ios' ? 48 : 36, insets.top + 8) },
+                    ]}
                   >
-                    <ChevronLeft size={22} color={stitchColors.ink} />
-                  </Pressable>
-
-                  <View style={styles.detailHeaderActions}>
                     <Pressable
-                      testID="btn-detail-share"
+                      testID="btn-detail-back"
                       style={styles.detailCircleBtn}
-                      onPress={() => handleShareJob(selectedDetailJob)}
+                      onPress={() => setSelectedDetailJob(null)}
                     >
-                      <Share2 size={19} color={stitchColors.ink} />
+                      <ChevronLeft size={22} color={stitchColors.ink} />
                     </Pressable>
 
-                    <Pressable
-                      testID="btn-detail-favorite"
-                      accessibilityRole="button"
-                      accessibilityLabel={favorites[selectedDetailJob.id] ? "Retirer des favoris" : "Ajouter aux favoris"}
-                      accessibilityState={{ selected: !!favorites[selectedDetailJob.id] }}
-                      style={styles.detailCircleBtn}
-                      onPress={() => toggleFavorite(selectedDetailJob.id)}
-                    >
-                      <Heart
-                        size={19}
-                        color={favorites[selectedDetailJob.id] ? stitchColors.error : stitchColors.ink}
-                        fill={favorites[selectedDetailJob.id] ? stitchColors.error : 'transparent'}
-                      />
-                    </Pressable>
+                    <Text style={styles.detailTopBarTitle} numberOfLines={1}>
+                      Affiche de l'offre
+                    </Text>
+
+                    <View style={styles.detailHeaderActions}>
+                      <Pressable
+                        testID="btn-detail-share"
+                        style={styles.detailCircleBtn}
+                        onPress={() => handleShareJob(selectedDetailJob)}
+                      >
+                        <Share2 size={19} color={stitchColors.ink} />
+                      </Pressable>
+
+                      <Pressable
+                        testID="btn-detail-favorite"
+                        accessibilityRole="button"
+                        accessibilityLabel={favorites[selectedDetailJob.id] ? "Retirer des favoris" : "Ajouter aux favoris"}
+                        accessibilityState={{ selected: !!favorites[selectedDetailJob.id] }}
+                        style={styles.detailCircleBtn}
+                        onPress={() => toggleFavorite(selectedDetailJob.id)}
+                      >
+                        <Heart
+                          size={19}
+                          color={favorites[selectedDetailJob.id] ? stitchColors.error : stitchColors.ink}
+                          fill={favorites[selectedDetailJob.id] ? stitchColors.error : 'transparent'}
+                        />
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <View style={styles.detailFlyerStage}>
+                    <AdaptiveOfferImage
+                      testID="detail-offer-flyer"
+                      uri={detailBannerUri}
+                      fallbackUri={detailFallbackUri}
+                      width={detailHeroWidth}
+                      defaultAspectRatio={0.85}
+                      minAspectRatio={0.45}
+                      maxAspectRatio={2.5}
+                      maxHeight={detailMaxFlyerHeight}
+                      fallbackHeight={heroHeight}
+                      style={styles.detailFlyerFrame}
+                      showZoomHint
+                      accessibilityLabel={`Affiche de l'offre ${selectedDetailJob.title}`}
+                      onPress={() => setSelectedPreviewPhoto(detailBannerUri)}
+                    />
                   </View>
                 </View>
-              </View>
+              ) : (
+                <View style={[styles.detailHeroContainer, { height: heroHeight }]}>
+                  <Image
+                    source={{ uri: detailBannerUri }}
+                    style={styles.detailHeroImage}
+                    resizeMode="cover"
+                  />
+                  <LinearGradient
+                    colors={['rgba(15, 23, 42, 0.50)', 'rgba(15, 23, 42, 0.05)', 'rgba(15, 23, 42, 0.40)']}
+                    style={styles.detailHeroOverlay}
+                  />
+
+                  {/* Floating Circular Action Buttons: Back, Share, Favorite */}
+                  <View style={[styles.detailFloatingHeader, { top: Math.max(Platform.OS === 'ios' ? 48 : 36, insets.top + 8) }]}>
+                    <Pressable
+                      testID="btn-detail-back"
+                      style={styles.detailCircleBtn}
+                      onPress={() => setSelectedDetailJob(null)}
+                    >
+                      <ChevronLeft size={22} color={stitchColors.ink} />
+                    </Pressable>
+
+                    <View style={styles.detailHeaderActions}>
+                      <Pressable
+                        testID="btn-detail-share"
+                        style={styles.detailCircleBtn}
+                        onPress={() => handleShareJob(selectedDetailJob)}
+                      >
+                        <Share2 size={19} color={stitchColors.ink} />
+                      </Pressable>
+
+                      <Pressable
+                        testID="btn-detail-favorite"
+                        accessibilityRole="button"
+                        accessibilityLabel={favorites[selectedDetailJob.id] ? "Retirer des favoris" : "Ajouter aux favoris"}
+                        accessibilityState={{ selected: !!favorites[selectedDetailJob.id] }}
+                        style={styles.detailCircleBtn}
+                        onPress={() => toggleFavorite(selectedDetailJob.id)}
+                      >
+                        <Heart
+                          size={19}
+                          color={favorites[selectedDetailJob.id] ? stitchColors.error : stitchColors.ink}
+                          fill={favorites[selectedDetailJob.id] ? stitchColors.error : 'transparent'}
+                        />
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+              )}
 
               {/* Detail Content Container */}
               <View style={styles.detailContent}>
@@ -1361,24 +1475,30 @@ function StagesScreenBase({
                 style={styles.photoPreviewOverlay}
                 onPress={() => setSelectedPreviewPhoto(null)}
               >
+                <Pressable
+                  style={[
+                    styles.photoPreviewCloseBtn,
+                    { top: Math.max(Platform.OS === 'ios' ? 48 : 32, insets.top + 10) },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Fermer l'aperçu de l'affiche"
+                  onPress={() => setSelectedPreviewPhoto(null)}
+                >
+                  <X size={20} color={stitchColors.white} />
+                </Pressable>
                 <View style={styles.photoPreviewContainer}>
                   <Image
                     source={{ uri: selectedPreviewPhoto }}
                     style={styles.photoPreviewImage}
                     resizeMode="contain"
                   />
-                  <Pressable
-                    style={styles.photoPreviewCloseBtn}
-                    onPress={() => setSelectedPreviewPhoto(null)}
-                  >
-                    <X size={20} color={stitchColors.white} />
-                  </Pressable>
                 </View>
               </Pressable>
             </Modal>
           )}
         </Modal>
-      )}
+        );
+      })()}
 
       {/* AI Apply Modal (1-Click Background Dispatch Flow) */}
       <AiApplyModal
@@ -1640,6 +1760,20 @@ const styles = StyleSheet.create({
   },
   cardHeroOverlay: {
     ...StyleSheet.absoluteFillObject,
+  },
+  cardFlyerBadgeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 10,
+    backgroundColor: stitchColors.paper,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchColors.paperSoft,
+  },
+  cardFlyerImageWrap: {
+    backgroundColor: stitchColors.paperSoft,
   },
   floatingBadgesRow: {
     position: 'absolute',
@@ -1903,6 +2037,36 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     zIndex: 10,
+  },
+  detailTopBarClean: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: stitchColors.paper,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchColors.glassBorder,
+    gap: 10,
+  },
+  detailTopBarTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: stitchColors.inkMuted,
+  },
+  detailFlyerStage: {
+    width: '100%',
+    backgroundColor: stitchColors.paperSoft,
+    alignItems: 'center',
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
+  },
+  detailFlyerFrame: {
+    maxWidth: 680,
+    alignSelf: 'center',
   },
   detailCircleBtn: {
     width: 42,
@@ -2430,7 +2594,7 @@ const styles = StyleSheet.create({
   },
   photoPreviewContainer: {
     width: '100%',
-    height: '70%',
+    height: '88%',
     borderRadius: 16,
     overflow: 'hidden',
     position: 'relative',
@@ -2443,14 +2607,17 @@ const styles = StyleSheet.create({
   },
   photoPreviewCloseBtn: {
     position: 'absolute',
-    top: 16,
+    top: 32,
     right: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    zIndex: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(15, 23, 42, 0.78)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
   },
 });
 

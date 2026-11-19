@@ -60,6 +60,7 @@ import {
   type CategoryItem,
 } from '../GlassComponents';
 import { getRotatingJobBanner } from './StagesScreen';
+import { hasCustomFlyer } from '../AdaptiveOfferImage';
 import { analyzeJobMatch } from '../../features/stages/aiMatchEngine';
 
 interface HomeScreenProps {
@@ -334,35 +335,67 @@ function HomeScreenBase({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.carouselScroll}
             >
-              {recommendedJobs.map((job, index) => (
+              {recommendedJobs.map((job, index) => {
+                const customFlyer = hasCustomFlyer(job);
+                return (
                 <Pressable
                   key={job.id}
                   style={({ pressed }) => [styles.carouselCard, { width: carouselCardWidth }, pressed && { opacity: 0.94 }]}
                   onPress={() => startApply(job)}
                 >
-                  <View style={styles.carouselImageWrap}>
-                    <Image
-                      source={{ uri: getRotatingJobBanner(job, index) }}
-                      style={styles.carouselImage}
-                      resizeMode="cover"
-                    />
-                    <LinearGradient
-                      colors={['rgba(15, 23, 42, 0.1)', 'rgba(15, 23, 42, 0.82)']}
-                      style={styles.carouselImageGradient}
-                    />
-                    <View style={styles.carouselBadgeTop}>
-                      <Text style={styles.carouselBadgeTopText}>{job.contractType || 'Stage'}</Text>
-                    </View>
-                    {index === 0 && (
-                      <View style={styles.carouselTopPick}>
-                        <Text style={styles.carouselTopPickText}>★ Meilleur choix</Text>
+                  {customFlyer ? (
+                    <>
+                      <View style={styles.carouselFlyerHeader}>
+                        <View style={styles.carouselFlyerHeaderRow}>
+                          <View style={styles.carouselFlyerContractPill}>
+                            <Text style={styles.carouselFlyerContractText} numberOfLines={1}>
+                              {job.contractType || 'Stage'}
+                            </Text>
+                          </View>
+                          {index === 0 && (
+                            <View style={styles.carouselFlyerTopPick}>
+                              <Text style={styles.carouselTopPickText}>★ Meilleur choix</Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={[styles.carouselFlyerMatchBadge, { backgroundColor: matchTone(job.matchScore ?? 0) }]}>
+                          <Zap size={10} color={stitchColors.white} fill={stitchColors.white} />
+                          <Text style={styles.carouselMatchText}>{job.matchScore ?? 0}% de correspondance</Text>
+                        </View>
                       </View>
-                    )}
-                    <View style={[styles.carouselMatchBadge, { backgroundColor: matchTone(job.matchScore ?? 0) }]}>
-                      <Zap size={10} color={stitchColors.white} fill={stitchColors.white} />
-                      <Text style={styles.carouselMatchText}>{job.matchScore ?? 0}% de correspondance</Text>
+                      <View style={styles.carouselFlyerWrap}>
+                        <Image
+                          source={{ uri: getRotatingJobBanner(job, index) }}
+                          style={styles.carouselImage}
+                          resizeMode="contain"
+                        />
+                      </View>
+                    </>
+                  ) : (
+                    <View style={styles.carouselImageWrap}>
+                      <Image
+                        source={{ uri: getRotatingJobBanner(job, index) }}
+                        style={styles.carouselImage}
+                        resizeMode="cover"
+                      />
+                      <LinearGradient
+                        colors={['rgba(15, 23, 42, 0.1)', 'rgba(15, 23, 42, 0.82)']}
+                        style={styles.carouselImageGradient}
+                      />
+                      <View style={styles.carouselBadgeTop}>
+                        <Text style={styles.carouselBadgeTopText}>{job.contractType || 'Stage'}</Text>
+                      </View>
+                      {index === 0 && (
+                        <View style={styles.carouselTopPick}>
+                          <Text style={styles.carouselTopPickText}>★ Meilleur choix</Text>
+                        </View>
+                      )}
+                      <View style={[styles.carouselMatchBadge, { backgroundColor: matchTone(job.matchScore ?? 0) }]}>
+                        <Zap size={10} color={stitchColors.white} fill={stitchColors.white} />
+                        <Text style={styles.carouselMatchText}>{job.matchScore ?? 0}% de correspondance</Text>
+                      </View>
                     </View>
-                  </View>
+                  )}
 
                   <View style={styles.carouselBody}>
                     <Text style={styles.carouselTitle} numberOfLines={2}>
@@ -401,7 +434,8 @@ function HomeScreenBase({
                     </View>
                   </View>
                 </Pressable>
-              ))}
+                );
+              })}
             </ScrollView>
           </View>
         )}
@@ -794,6 +828,54 @@ const styles = StyleSheet.create({
     height: 125,
     backgroundColor: stitchColors.glassBorder,
     position: 'relative',
+  },
+  carouselFlyerHeader: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 8,
+    backgroundColor: stitchColors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchColors.paperSoft,
+    gap: 6,
+  },
+  carouselFlyerHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  carouselFlyerContractPill: {
+    backgroundColor: stitchColors.paperSoft,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    flexShrink: 1,
+  },
+  carouselFlyerContractText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: stitchColors.ink,
+  },
+  carouselFlyerTopPick: {
+    backgroundColor: stitchColors.primaryContainer,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  carouselFlyerMatchBadge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  carouselFlyerWrap: {
+    width: '100%',
+    height: 168,
+    backgroundColor: stitchColors.paperSoft,
+    padding: 4,
   },
   carouselImage: {
     width: '100%',
