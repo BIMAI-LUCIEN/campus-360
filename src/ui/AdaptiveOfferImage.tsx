@@ -151,6 +151,10 @@ export const AdaptiveOfferImage = React.memo(function AdaptiveOfferImage({
     [uri],
   );
 
+  const handleLoadEnd = useCallback(() => {
+    setLoaded(true);
+  }, []);
+
   const handleError = useCallback(() => {
     if (fallbackUri) {
       setFailed(true);
@@ -182,16 +186,14 @@ export const AdaptiveOfferImage = React.memo(function AdaptiveOfferImage({
     { minAspectRatio, maxAspectRatio, maxHeight },
   );
 
-  const body = (
-    <View
-      style={[styles.frame, { height: adaptiveHeight }, style]}
-      onLayout={handleLayout}
-    >
+  const children = (
+    <>
       <Image
         source={{ uri }}
         style={styles.image}
         resizeMode="contain"
         onLoad={handleLoad}
+        onLoadEnd={handleLoadEnd}
         onError={handleError}
         accessibilityLabel={accessibilityLabel}
       />
@@ -208,7 +210,7 @@ export const AdaptiveOfferImage = React.memo(function AdaptiveOfferImage({
           <Text style={styles.zoomHintText}>Agrandir</Text>
         </View>
       )}
-    </View>
+    </>
   );
 
   if (onPress) {
@@ -216,17 +218,23 @@ export const AdaptiveOfferImage = React.memo(function AdaptiveOfferImage({
       <Pressable
         testID={testID}
         onPress={onPress}
+        onLayout={handleLayout}
+        style={[styles.frame, { height: adaptiveHeight }, style]}
         accessibilityRole="imagebutton"
         accessibilityLabel={accessibilityLabel ?? "Voir l'affiche en plein écran"}
       >
-        {body}
+        {children}
       </Pressable>
     );
   }
 
   return (
-    <View testID={testID}>
-      {body}
+    <View
+      testID={testID}
+      onLayout={handleLayout}
+      style={[styles.frame, { height: adaptiveHeight }, style]}
+    >
+      {children}
     </View>
   );
 });

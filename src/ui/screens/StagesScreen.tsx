@@ -2065,6 +2065,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   detailFlyerFrame: {
+    width: '100%',
     maxWidth: 680,
     alignSelf: 'center',
   },

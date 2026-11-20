@@ -114,6 +114,7 @@ function HomeScreenBase({
   const [refreshing, setRefreshing] = useState(false);
   const [applyingJob, setApplyingJob] = useState<StageJob | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+  const [failedFlyers, setFailedFlyers] = useState<Record<string, boolean>>({});
   const { openOnSite } = useApplyOnSite();
 
   // Same rule as the Stages screen: an offer without recipient is applied to on its website.
@@ -336,7 +337,10 @@ function HomeScreenBase({
               contentContainerStyle={styles.carouselScroll}
             >
               {recommendedJobs.map((job, index) => {
-                const customFlyer = hasCustomFlyer(job);
+                const customFlyer = hasCustomFlyer(job) && !failedFlyers[job.id];
+                const bannerUri = failedFlyers[job.id]
+                  ? getRotatingJobBanner({ ...job, flyerUrl: undefined }, index)
+                  : getRotatingJobBanner(job, index);
                 return (
                 <Pressable
                   key={job.id}
@@ -365,16 +369,19 @@ function HomeScreenBase({
                       </View>
                       <View style={styles.carouselFlyerWrap}>
                         <Image
-                          source={{ uri: getRotatingJobBanner(job, index) }}
+                          source={{ uri: bannerUri }}
                           style={styles.carouselImage}
                           resizeMode="contain"
+                          onError={() =>
+                            setFailedFlyers((prev) => (prev[job.id] ? prev : { ...prev, [job.id]: true }))
+                          }
                         />
                       </View>
                     </>
                   ) : (
                     <View style={styles.carouselImageWrap}>
                       <Image
-                        source={{ uri: getRotatingJobBanner(job, index) }}
+                        source={{ uri: bannerUri }}
                         style={styles.carouselImage}
                         resizeMode="cover"
                       />

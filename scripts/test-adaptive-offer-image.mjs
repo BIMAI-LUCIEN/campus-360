@@ -21,16 +21,26 @@ function loadAdaptiveOfferModule() {
   });
 
   const mod = { exports: {} };
+  const Fragment = Symbol('Fragment');
+  const createElement = (type, props, ...children) => ({
+    type,
+    props: props || {},
+    children: children.flat().filter((c) => c !== null && c !== undefined && c !== false),
+  });
   const fakeReact = {
-    default: { memo: (c) => c },
+    Fragment,
+    createElement,
     memo: (c) => c,
     useState: (init) => [typeof init === 'function' ? init() : init, () => {}],
     useEffect: () => {},
     useCallback: (fn) => fn,
   };
+  fakeReact.default = fakeReact;
+
+  const FakeImage = Object.assign(function Image() {}, { getSize: () => {} });
   const fakeRn = {
     ActivityIndicator: 'ActivityIndicator',
-    Image: { getSize: () => {} },
+    Image: FakeImage,
     Pressable: 'Pressable',
     StyleSheet: {
       create: (s) => s,
@@ -52,10 +62,18 @@ function loadAdaptiveOfferModule() {
 
   const fn = new Function('require', 'module', 'exports', transpiled.outputText);
   fn(customRequire, mod, mod.exports);
-  return mod.exports;
+  return { ...mod.exports, Fragment, FakeImage };
 }
 
-const { hasCustomFlyer, computeAdaptiveImageHeight } = loadAdaptiveOfferModule();
+function flattenStyle(style) {
+  if (!style) return {};
+  if (Array.isArray(style)) {
+    return Object.assign({}, ...style.map(flattenStyle));
+  }
+  return style;
+}
+
+const { hasCustomFlyer, computeAdaptiveImageHeight, AdaptiveOfferImage, Fragment, FakeImage } = loadAdaptiveOfferModule();
 
 test('hasCustomFlyer : détecte uniquement les vraies affiches non placeholder', () => {
   assert.equal(hasCustomFlyer(null), false);
@@ -88,5 +106,36 @@ test('computeAdaptiveImageHeight : borne les ratios extrêmes et protège des en
       assert.equal(Number.isFinite(h), true);
       assert.ok(h > 0);
     }
+  }
+});
+
+test('AdaptiveOfferImage : racine Pressable/View porte directement width 100% et height > 0 sans wrapper intermédiaire', () => {
+  for (const withPress of [true, false]) {
+    const tree = AdaptiveOfferImage({
+      uri: 'https://media.licdn.com/dms/image/v2/D4E22AQHWAty32-Ocow/feedshar.jpg',
+      fallbackUri: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c',
+      width: 390,
+      style: { maxWidth: 680, alignSelf: 'center' },
+      showZoomHint: withPress,
+      onPress: withPress ? () => {} : undefined,
+      testID: 'detail-offer-flyer',
+    });
+
+    assert.equal(tree.type, withPress ? 'Pressable' : 'View');
+    const rootStyle = flattenStyle(tree.props.style);
+    assert.equal(rootStyle.width, '100%');
+    assert.equal(typeof rootStyle.height, 'number');
+    assert.ok(rootStyle.height > 0);
+
+    const directChildren = tree.children.flatMap((c) => (c?.type === Fragment ? c.children : [c]));
+    const imgNode = directChildren.find((c) => c?.type === FakeImage);
+    assert.ok(imgNode, 'Image doit être enfant direct de la racine');
+    const imgStyle = flattenStyle(imgNode.props.style);
+    assert.equal(imgStyle.width, '100%');
+    assert.equal(imgStyle.height, '100%');
+    assert.equal(imgNode.props.resizeMode, 'contain');
+    assert.equal(typeof imgNode.props.onLoad, 'function');
+    assert.equal(typeof imgNode.props.onLoadEnd, 'function');
+    assert.equal(typeof imgNode.props.onError, 'function');
   }
 });

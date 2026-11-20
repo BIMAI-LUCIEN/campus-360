@@ -1851,3 +1851,9 @@ Lit `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `EXPO_APP_ORIGIN`, 
   - `src/ui/screens/StagesScreen.tsx` : séparation de la barre haute (`detailTopBarClean`, `cardFlyerBadgeHeader`) au-dessus de l'affiche afin que barre d'état, boutons et badges ne recouvrent plus le flyer ; tap sur l'affiche ouvre le lightbox agrandi (`height: '88%'`, bouton fermer en overlay hors affiche). Les offres sans `flyerUrl` gardent le bandeau `cover` compact.
   - `src/ui/screens/HomeScreen.tsx` : carrousel `Recommandé pour toi` adapte les cartes ayant un vrai `flyerUrl` (`carouselFlyerHeader` au-dessus + `carouselFlyerWrap` en `contain` sans dégradé sombre).
   - Vérifié : `scripts/test-adaptive-offer-image.mjs` (3/3), `npm run typecheck` (0), `npm run lint:colors` (142 <= 146), `test-challenger-m3-adversarial.mjs` (83/83), `apply-method-link.test.mjs` (14/14), export Expo Web (`2 717 modules`, exit 0).
+
+- **2026-11-20** — **Correctif affiche blanche au clic (`AdaptiveOfferImage`) + repli `403` carrousel** :
+  - `src/ui/AdaptiveOfferImage.tsx` : suppression du wrapper `<Pressable>`/`<View>` sans largeur qui écrasait l'affiche à `0 px` de large sous `detailFlyerStage` (`alignItems: 'center'`) ; `styles.frame` (`width: '100%'`) est désormais appliqué directement sur l'élément racine avec `onLoadEnd` pour clore le loader.
+  - `src/ui/screens/StagesScreen.tsx` (`detailFlyerFrame`) : ajout explicite de `width: '100%'`.
+  - `src/ui/screens/HomeScreen.tsx` (`failedFlyers`) : bascule automatique sur la bannière sectorielle `cover` lorsqu'une URL `flyerUrl` expirée (ex. `403` Facebook) échoue au chargement.
+  - Vérifié : `scripts/test-adaptive-offer-image.mjs` (4/4), `npm run typecheck` (0), `npm run lint:colors` (142 <= 146), `test-challenger-m3-adversarial.mjs` (83/83), `apply-method-link.test.mjs` (14/14), export Expo Web (`2 717` modules).
