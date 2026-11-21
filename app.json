@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.campus360b.app",
+      "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "883197197586",
+    "project_id": "salon-a34e0",
+    "storage_bucket": "salon-a34e0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:883197197586:android:81af338b18738021a307cb",
+        "android_client_info": {
+          "package_name": "com.campus360b.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAN1Hiz3S_qRvxXeu5qgNpIM14HpJFy3tI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
