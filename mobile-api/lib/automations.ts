@@ -95,8 +95,8 @@ export const sendTopUpReceipt = async (userId: string, amountCoins: number, refe
   try {
     const amount = new Intl.NumberFormat('fr-FR').format(amountCoins);
     await sendPushToUser(userId, {
-      title: 'Recharge confirmée',
-      body: `${amount} coins ont été ajoutés à ton wallet.`,
+      title: `💸 +${amount} coins dans la poche !`,
+      body: 'Recharge confirmée. Ton wallet vient de prendre du muscle — prêt pour postuler ou générer tes docs.',
       data: { type: 'wallet_topup', reference },
     });
     const contact = await getUserContact(userId);
@@ -154,10 +154,10 @@ export const sendWelcomeWithOffers = async (userId: string, skills: readonly str
       .slice(0, 3);
 
     await sendPushToUser(userId, {
-      title: `Bienvenue sur ${APP_NAME} !`,
+      title: `🎉 Bienvenue dans l’arène, ${APP_NAME} !`,
       body: ranked.length
-        ? `${ranked.length} stages correspondent déjà à ton profil. Découvre-les.`
-        : 'Ton profil est prêt. Les stages qui te correspondent arrivent ici.',
+        ? `On a déjà ${ranked.length} stage${ranked.length > 1 ? 's' : ''} qui te correspond${ranked.length > 1 ? 'ent' : ''}. Le premier qui postule gagne !`
+        : 'Ton profil est prêt. Dès qu’un bon stage passe par ici, on te sonne !',
       data: { type: 'welcome', jobIds: ranked.map((entry) => entry.job.id) },
     });
 

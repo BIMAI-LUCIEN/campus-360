@@ -11,13 +11,13 @@ const MAX_PER_RUN = 500;
 export const buildFollowupNotice = (companies: string[]) => {
   if (companies.length === 1) {
     return {
-      title: `Des nouvelles de ${companies[0]} ?`,
-      body: "Une semaine sans réponse. Dis-nous si l'entreprise t'a répondu, sinon relance-la en un geste.",
+      title: `👀 ${companies[0]} fait le mort ?`,
+      body: '7 jours sans réponse… Ton CV est peut-être tombé sous sa tasse de café. Relance-les en un geste !',
     };
   }
   return {
-    title: `${companies.length} candidatures sans réponse`,
-    body: 'Une semaine sans réponse. Dis-nous où tu en es, sinon relance ces entreprises en un geste.',
+    title: `👀 ${companies.length} entreprises jouent à cache-cache`,
+    body: 'Une semaine sans nouvelles ! Dis-nous où ça en est ou relance-les avant qu’elles ne t’oublient.',
   };
 };
 

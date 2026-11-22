@@ -100,8 +100,8 @@ export const runJobAlerts = async (): Promise<JobAlertsResult> => {
     for (const [index, { job, score }] of shown.entries()) {
       const more = index === shown.length - 1 && others > 0 ? ` Et ${others} autre${others > 1 ? 's' : ''} pour toi.` : '';
       await sendPushToUser(student.userId, {
-        title: score >= 85 ? '🔥 Un stage fait pour toi' : 'Nouveau stage pour toi',
-        body: `${job.title} chez ${job.companyName}${job.location ? ` (${job.location})` : ''} · ${score} % de correspondance.${more}`,
+        title: score >= 85 ? '🔥 Ce stage crie ton prénom !' : '👀 Un stage te fait de l’œil',
+        body: `${job.title} chez ${job.companyName}${job.location ? ` (${job.location})` : ''} · ${score} % de match. Postule avant quelqu’un d’autre !${more}`,
         data: { type: 'job_match', jobId: job.id, score },
       });
       matchAlerts += 1;
@@ -114,12 +114,12 @@ export const runJobAlerts = async (): Promise<JobAlertsResult> => {
   const extra = jobs.length > 2 ? ` et ${jobs.length - 2} autre${jobs.length - 2 > 1 ? 's' : ''}` : '';
   await inBatches(digestTargets, 20, async (student) => {
     await sendPushToUser(student.userId, {
-      title: jobs.length > 1 ? `${jobs.length} nouveaux stages publiés` : 'Nouveau stage publié',
+      title: jobs.length > 1 ? `🚀 ${jobs.length} nouveaux stages viennent de tomber` : '🚀 Un nouveau stage vient de tomber',
       body:
         `${titles}${extra}.` +
         (student.skills.length || student.faculty
-          ? ' Regarde-les dans l’app.'
-          : ' Ajoute ta filière et tes compétences dans ton profil pour recevoir les offres qui te correspondent.'),
+          ? ' Ouvre l’app avant que les places partent !'
+          : ' Ajoute ta filière et tes compétences dans ton profil : je ne lis pas encore dans les pensées 👀'),
       data: { type: 'job_digest', jobIds: jobs.map((job) => job.id) },
     });
   });

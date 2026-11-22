@@ -510,8 +510,8 @@ export async function POST(request: NextRequest) {
 
     if (user.id) {
       void sendPushToUser(user.id, {
-        title: 'Ton document est prêt 🎉',
-        body: `${docTitle} a son premier jet. Ouvre-le pour compléter les passages entre crochets.`,
+        title: '🎉 Ton doc est sorti du four !',
+        body: `${docTitle} a son premier jet. Passe relire les [passages entre crochets] avant de l’imprimer !`,
         data: { type: 'document_generated', documentId },
       });
     }
