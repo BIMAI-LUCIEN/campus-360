@@ -593,7 +593,7 @@ export const getAuthHeaders = async (): Promise<Record<string, string>> => {
 // Like authFetchRaw, against an explicit backend. Multipart bodies keep their own content type.
 // Reads give up after this delay so screens show an error and a retry instead of an endless spinner.
 // Writes and AI generations are left without a limit: they can legitimately take longer.
-const READ_TIMEOUT_MS = 20_000;
+const READ_TIMEOUT_MS = 45_000;
 
 export const authFetchRawAt = async (baseUrl: string, path: string, init: RequestInit = {}) => {
   const isMultipart = typeof FormData !== 'undefined' && init.body instanceof FormData;

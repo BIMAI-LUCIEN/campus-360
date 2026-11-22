@@ -1362,7 +1362,7 @@ function AppShellInner() {
                 onLocationPress={goAccount}
                 iaCredits={iaCredits}
                 onWalletPress={goAccount}
-                onSearchPress={goStages}
+                showSearch={false}
               />
             )}
 

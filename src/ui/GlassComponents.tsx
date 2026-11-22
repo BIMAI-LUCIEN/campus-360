@@ -645,7 +645,7 @@ export function TopBar({
       style={[styles.topBarCurved, style]}
     >
       {/* ── Row 1: Location Pill & Action Buttons ── */}
-      <View style={styles.topBarHeaderRow}>
+      <View style={[styles.topBarHeaderRow, !showSearch && { marginBottom: 0 }]}>
         {showLocation ? (
           <Pressable
             onPress={onLocationPress}
