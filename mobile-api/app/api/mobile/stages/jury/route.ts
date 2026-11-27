@@ -50,16 +50,22 @@ export async function POST(request: NextRequest) {
     const messages = buildCvJuryMessages(cvText, offer);
     const atsFromCode = evaluateAts(cv, { template, requirements: offer.requirements });
     let jury = null;
-    for (const model of CV_MODELS) {
+    for (let idx = 0; idx < CV_MODELS.length; idx += 1) {
+      const model = CV_MODELS[idx];
       try {
         const raw = await callLlm(messages, {
-          temperature: 0.2, maxTokens: 5000, title: 'Campus 360 Jury CV',
-          models: [model], timeoutMs: 60_000,
+          temperature: 0.2,
+          maxTokens: 5000,
+          title: 'Campus 360 Jury CV',
+          models: [model],
+          effort: 'low',
+          timeoutMs: idx === 0 ? 35_000 : 25_000,
         });
         jury = parseCvJury(raw, cvText, offerText);
         if (jury) break;
-      } catch {
-        // A provider failure may be recoverable on the next model.
+        console.warn(`[stage-jury] ${model}: jury answer unreadable (${raw ? `${raw.length} chars` : 'empty'})`);
+      } catch (err) {
+        console.warn(`[stage-jury] ${model} failed:`, err instanceof Error ? err.message : String(err));
       }
     }
     if (!jury) throw new MobileApiError("Le jury n'a pas pu relire ton CV. Aucun coin n'a été débité.", 502);

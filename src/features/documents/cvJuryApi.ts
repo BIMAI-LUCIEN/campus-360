@@ -70,7 +70,12 @@ const post = async <T,>(path: string, body: unknown): Promise<T> => {
     throw new JuryApiError('Connexion impossible. Vérifie ta connexion et réessaie.', 0);
   }
   const data = (await res.json().catch(() => null)) as (T & { error?: string }) | null;
-  if (!res.ok || !data) throw new JuryApiError(data?.error || `Erreur serveur (${res.status}).`, res.status);
+  if (!res.ok || !data) {
+    const message = res.status === 504 || res.status === 502 || res.status === 503
+      ? 'Le serveur met trop de temps à répondre. Réessaie dans quelques secondes.'
+      : data?.error || `Erreur serveur (${res.status}).`;
+    throw new JuryApiError(message, res.status);
+  }
   return data;
 };
 

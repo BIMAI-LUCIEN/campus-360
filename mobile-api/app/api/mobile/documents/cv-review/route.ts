@@ -60,8 +60,16 @@ export async function POST(request: NextRequest) {
     });
     // An answer cut off or unreadable goes to the next model, not to the student.
     let jury = null;
-    for (const model of CV_MODELS) {
-      const raw = await callLlm(messages, { temperature: 0.2, maxTokens: 5000, title: 'Campus 360 Jury CV', models: [model], timeoutMs: 60_000 });
+    for (let idx = 0; idx < CV_MODELS.length; idx += 1) {
+      const model = CV_MODELS[idx];
+      const raw = await callLlm(messages, {
+        temperature: 0.2,
+        maxTokens: 5000,
+        title: 'Campus 360 Jury CV',
+        models: [model],
+        effort: 'low',
+        timeoutMs: idx === 0 ? 35_000 : 25_000,
+      });
       jury = parseCvJury(raw, cvText, offerText);
       if (jury) break;
       console.warn(`[cv-review] ${model}: jury answer unreadable (${raw ? `${raw.length} chars` : 'empty'})`);

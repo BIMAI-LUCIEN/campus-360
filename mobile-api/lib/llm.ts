@@ -22,12 +22,14 @@ export const CV_MODELS = [PRIMARY_MODEL, 'openai/gpt-4o-mini', 'google/gemini-2.
 export const modelsToTry = (fallbacks: string[] = DRAFTING_MODELS): string[] =>
   Array.from(new Set([process.env.OPENROUTER_MODEL || PRIMARY_MODEL, ...fallbacks]));
 
-type ReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+export type ReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 const EFFORTS: ReasoningEffort[] = ['low', 'medium', 'high', 'xhigh', 'max'];
 
 // Claude reasoning effort, `high` unless OPENROUTER_REASONING_EFFORT says otherwise.
 // Measured on a 250-word report section (2026-11-12): high 8.6 s, xhigh 18 s, max 60 s.
-export const reasoningEffort = (): ReasoningEffort => {
+// Measured on CV Jury prompt (2026-11-27): high 26 s+, low 11.5 s.
+export const reasoningEffort = (override?: ReasoningEffort): ReasoningEffort => {
+  if (override && EFFORTS.includes(override)) return override;
   const value = process.env.OPENROUTER_REASONING_EFFORT?.trim().toLowerCase() as ReasoningEffort | undefined;
   return value && EFFORTS.includes(value) ? value : 'high';
 };
@@ -44,12 +46,12 @@ const THINKING_HEADROOM: Record<ReasoningEffort, number> = {
 
 const isClaude = (model: string) => model.startsWith('anthropic/');
 
-export const modelRequestOptions = (model: string): Record<string, unknown> =>
-  isClaude(model) ? { reasoning: { effort: reasoningEffort() } } : {};
+export const modelRequestOptions = (model: string, effort?: ReasoningEffort): Record<string, unknown> =>
+  isClaude(model) ? { reasoning: { effort: reasoningEffort(effort) } } : {};
 
 /** max_tokens for a request whose visible answer needs `answerTokens`. */
-export const outputTokensFor = (model: string, answerTokens: number): number =>
-  isClaude(model) ? answerTokens + THINKING_HEADROOM[reasoningEffort()] : answerTokens;
+export const outputTokensFor = (model: string, answerTokens: number, effort?: ReasoningEffort): number =>
+  isClaude(model) ? answerTokens + THINKING_HEADROOM[reasoningEffort(effort)] : answerTokens;
 
 export type LlmContentPart =
   | { type: 'text'; text: string }
@@ -62,6 +64,7 @@ export type LlmOptions = {
   maxTokens?: number;
   title?: string;
   timeoutMs?: number;
+  effort?: ReasoningEffort;
   /** Replaces the drafting models, e.g. VISION_MODELS for a message with images. */
   models?: string[];
 };
@@ -86,8 +89,8 @@ export const callLlm = async (messages: LlmMessage[], options: LlmOptions = {}):
           model,
           messages,
           temperature: options.temperature ?? 0.5,
-          max_tokens: outputTokensFor(model, options.maxTokens ?? 1500),
-          ...modelRequestOptions(model),
+          max_tokens: outputTokensFor(model, options.maxTokens ?? 1500, options.effort),
+          ...modelRequestOptions(model, options.effort),
         }),
         signal: AbortSignal.timeout(options.timeoutMs ?? 60_000),
       });

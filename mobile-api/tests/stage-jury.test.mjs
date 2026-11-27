@@ -53,7 +53,7 @@ const fixture = ({ user = true, paid = true, balance = 200, modelFails = false }
     },
   };
   const exports = {};
-  runInNewContext(outputText, { exports, require: (name) => dependencies[name] });
+  runInNewContext(outputText, { exports, require: (name) => dependencies[name], console });
   const post = (second = false) => exports.POST(new Request('http://localhost/api/mobile/stages/jury', {
     method: 'POST', body: JSON.stringify({ jobId, cv: {}, second }),
   }));
