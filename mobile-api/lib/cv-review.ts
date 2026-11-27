@@ -6,12 +6,9 @@
 import type { PoolClient } from 'pg';
 
 import type { AtsResult } from './cv-ats';
-import { hasPaidApplicationOn } from './stage-charge-core';
 import type { JuryResult } from './cv-jury';
 
 export const FREE_REVIEW_PREFIX = 'cv-review-free:';
-/** Same as stageApplyReference in lib/stage-charge.ts. */
-export const STAGE_APPLY_PREFIX = 'stage-apply:';
 
 export type ReviewMode = 'free' | 'paid' | 'replay';
 
@@ -49,9 +46,7 @@ export const sqlReviewBillingDeps = (query: PoolClient['query'] | ((text: string
   const q = query as (text: string, values: unknown[]) => Promise<{ rows: any[] }>;
   const exists = async (text: string, values: unknown[]) => (await q(text, values)).rows.length > 0;
   return {
-    // A paid application (stages/cv, "stage-apply:<jobId>") also brings one free
-    // review of its CV (decision 34.16 of 2026-11-11: the jury is included).
-    ownsCvGeneration: (userId, source) => source.startsWith(STAGE_APPLY_PREFIX) ? hasPaidApplicationOn({ query: (sql, params) => q(sql, params ?? []) }, userId, source) : exists(
+    ownsCvGeneration: (userId, source) => exists(
       `select 1 from public.app_wallet_transactions
         where user_id = $1 and type = 'ai_generation' and status = 'success'
           and reference_id = $2 and reference_id like 'cv-%' and reference_id not like 'cv-review%'

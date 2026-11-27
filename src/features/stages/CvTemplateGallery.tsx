@@ -5,7 +5,7 @@ import { CV_TEMPLATES, type CvTemplateId } from './cvHtml';
 import { fontFamilies, stitchColors, stitchRadius } from '../../theme/stitch';
 
 // Pictures rendered from the real templates by mobile-api/scripts/render-cv-thumbnails.mjs.
-const THUMBNAILS: Record<CvTemplateId, ImageSourcePropType> = {
+const THUMBNAILS: Partial<Record<string, ImageSourcePropType>> = {
   classic: require('../../../assets/cv-templates/classic.png'),
   prestige: require('../../../assets/cv-templates/prestige.png'),
   ingenieur: require('../../../assets/cv-templates/ingenieur.png'),
@@ -45,7 +45,9 @@ export function CvTemplateGallery({ value, onChange, layout = 'grid' }: CvTempla
             ) : (
               <>
                 <View style={styles.thumbFrame}>
-                  <Image source={THUMBNAILS[t.id]} style={styles.thumb} resizeMode="cover" />
+                  {THUMBNAILS[t.id] ? (
+                    <Image source={THUMBNAILS[t.id]!} style={styles.thumb} resizeMode="cover" />
+                  ) : null}
                   {active && (
                     <View style={styles.checkBadge}>
                       <Check size={13} color={stitchColors.white} strokeWidth={3} />

@@ -112,3 +112,49 @@ export const refundApplicationOn = async (client: ChargeClient, userId: string, 
     );
   }
 };
+
+export class StageJuryPassError extends Error {
+  constructor(readonly status: 409 | 429) {
+    super(status === 429 ? 'Les deux passages du jury ont déjà été utilisés.' : 'Commence par le premier passage du jury.');
+  }
+}
+
+export const stageJuryReference = (jobId: string) => `stage-jury:${jobId}`;
+
+export const hasStageJuryPassOn = async (
+  client: ChargeClient, userId: string, reference: string,
+): Promise<boolean> => Boolean((await client.query(
+  `select 1 from public.app_wallet_transactions where user_id = $1 and reference_id = $2
+   and type = 'purchase' and status = 'success' limit 1`,
+  [userId, reference],
+)).rows[0]);
+
+/** Recheck under the wallet lock when recording a successful model response. */
+export const checkStageJuryOn = async (
+  client: ChargeClient, userId: string, jobId: string, second: boolean, price: number, settle: boolean,
+): Promise<StageCharge> => {
+  const wallet = await client.query(
+    `select balance_coins from public.app_wallets where user_id = $1${settle ? ' for update' : ''}`, [userId],
+  );
+  const balance = Number(wallet.rows[0]?.balance_coins ?? 0);
+  const initialRef = stageJuryReference(jobId);
+  const initialDone = await hasStageJuryPassOn(client, userId, initialRef);
+  const reference = second ? `${initialRef}:correction` : initialRef;
+  if (second && !initialDone) throw new StageJuryPassError(409);
+  if (second ? await hasStageJuryPassOn(client, userId, reference) : initialDone) throw new StageJuryPassError(429);
+
+  const charged = second ? 0 : price;
+  if (!wallet.rows[0] || balance < charged) throw new InsufficientFundsError(price, balance);
+  if (settle) {
+    if (charged) await client.query(
+      'update public.app_wallets set balance_coins = balance_coins - $1, updated_at = now() where user_id = $2',
+      [charged, userId],
+    );
+    await client.query(
+      `insert into public.app_wallet_transactions (user_id, type, amount_coins, reference_id, status)
+       values ($1, 'purchase', $2, $3, 'success')`,
+      [userId, -charged, reference],
+    );
+  }
+  return { charged, creditsUsed: 0, balance: balance - charged };
+};

@@ -3,7 +3,7 @@
 // Everything is driven by environment variables and must be explicit in production:
 //   FREE_LAUNCH_MODE   'true' | 'false'  (required in production)
 //   FREE_LAUNCH_UNTIL  ISO date           (required in production when the mode is 'true')
-//   STARTING_COINS     overrides the signup bonus (default 1000 during the launch, 300 after; 1 coin = 1 FCFA)
+//   STARTING_COINS     overrides the signup bonus (default 2000 during the launch, 300 after; 1 coin = 1 FCFA)
 //   AI_COST_*          AI credits per action once the free launch is over
 // Errors are thrown on first use, never at import time (next build has no env).
 // This file exists twice, identical: mobile-api/lib/free-launch.ts and
@@ -54,7 +54,7 @@ const boundedInt = (raw: string | undefined, fallback: number, max: number, mess
 };
 
 // Same values as LAUNCH_SIGNUP_BONUS / SIGNUP_BONUS in mobile-api/lib/pricing.ts (test).
-export const LAUNCH_STARTING_COINS = 1000;
+export const LAUNCH_STARTING_COINS = 2000;
 export const STARTING_COINS = 300;
 
 export const resolveStartingCoins = (env: Env, now: Date = new Date()): number =>

@@ -1293,3 +1293,163 @@ Rejeté : kit stocké seulement dans le téléphone (compteur contournable, doss
 ### 8. Risques
 - **Clés étrangères en base :** une offre TikTok pourrait être référencée par une candidature (`stage_applications`) ou un kit (`stage_application_kits`). Le `--dry-run` doit inspecter les tables liées avant toute suppression définitive.
 - **Reels Facebook remontés par `apify_agent.scrape_facebook_posts` :** couverts par le filtre d'URL dans `filter_agent.py`.
+
+
+---
+
+## 24. Cadrage validé : Parcours rédaction CV assistée (5–10 min) et Pop-up Jury 100 FCFA avant postulation (2026-11-20, voie Bounded)
+
+### 1. Problème et cible
+- **Constat (code relu le 2026-11-20) :** Dans `src/features/stages/AiApplyModal.tsx`, l'étudiant choisit aujourd'hui un modèle et dispose seulement d'une zone de notes libres (`cvNotes`) avant de payer et lancer `POST /api/mobile/stages/cv`. L'édition détaillée (`CvEditor`) et le Jury (`CvJuryPanel`) n'arrivent qu'en onglets secondaires après génération, et `stages/cv` offrait jusqu'ici un 1er passage Jury gratuit (`stage-apply:<jobId>`).
+- **Cible :** Étudiant qui postule à une offre de stage ou d'emploi dans Campus 360 et veut bâtir un CV complet, fidèle à son parcours réel, en **5 à 10 minutes maximum**, sans syndrome de la page blanche.
+- **Promesse :** L'étudiant prépare, importe ses CV de référence, complète avec l'aide active de l'IA et valide lui-même son contenu *avant* de payer la candidature ; juste après le paiement et la génération, un pop-up lui propose le passage devant le Jury (100 FCFA, correction incluse) avant d'envoyer sa candidature.
+
+### 2. Fonctionnalités
+**V1 (validée)**
+1. **Rédaction complète assistée avant paiement (5–10 min, Option A) :**
+   - **Infos & CV de référence :** pré-remplissage depuis le profil et *Mon parcours* (`cv_background`), avec ajout possible d'un ou plusieurs CV de référence (PDF / photo / texte via `cv-background/import`) qui enrichissent le parcours et se sauvegardent sur le compte.
+   - **Aide IA active au remplissage :**
+     - Questions de précision ciblées sur l'offre (`POST /api/mobile/documents/cv-precisions`, gratuit, plafonné par le quota journalier).
+     - Bouton d'aide à la formulation par expérience (`cv-suggest`) transformant des mots-clés en puces *verbe + périmètre + résultat* (avec `[À COMPLÉTER]` si chiffre manquant, zéro fait inventé).
+   - **Relecture, corrections manuelles & choix du modèle :** édition complète dans `CvEditor` + sélection du template (`CvTemplateGallery`) jusqu'à ce que l'étudiant confirme qu'il a fini.
+2. **Paiement & Génération finale :** débit standard de la candidature (300/500 FCFA ou 1–2 crédits pack via `chargeStageApplication`), puis génération du CV final ciblé (`POST /api/mobile/stages/cv`) à partir du brouillon validé, des précisions et du profil, avec contrôle anti-hallucination (`parseCvFill`).
+3. **Pop-up Jury payant (100 FCFA) + Correction incluse (Option A) :**
+   - Juste après la génération, affichage d'un pop-up : *« Voulez-vous faire juger votre CV par le Jury ? Coût : 100 FCFA »* (*Oui, faire juger · 100 FCFA* / *Non, postuler directement*).
+   - Si accepté : débit de **100 coins (100 FCFA)** (ou ouverture `PaymentModal` si solde insuffisant) → affichage de l'évaluation (`CvJuryPanel` : score /7, critères éliminatoires, questions).
+   - Si l'étudiant répond aux questions du Jury, la **réécriture corrective est incluse** dans les 100 FCFA (pas de second débit) → puis passage à l'écran **Postuler** (envoi WhatsApp / e-mail / kit `LINK`).
+
+**Rejeté**
+- Entretien 100 % conversationnel (chat libre avant paiement) : trop lent sur mobile (> 10 min) et plus coûteux en tokens.
+- Facturation séparée du verdict Jury (100 FCFA) et de la correction : friction inutile pour l'étudiant.
+- Maintien du 1er passage Jury gratuit sur les candidatures stage (`stage-apply:<jobId>` dans Module 36) : remplacé par le pop-up optionnel à 100 FCFA.
+
+### 3. Parcours
+1. **Préparation & Rédaction (gratuit, 5–10 min)** : Profil express (si incomplet) → *1. Infos & import CV de référence* → *2. Compléter avec l'IA* (`cv-precisions` + `cv-suggest`) → *3. Corriger dans `CvEditor` & choisir le template* → clic « J'ai terminé · Générer ».
+2. **Paiement & Génération** : Débit candidature (300/500 FCFA ou 1–2 crédits) → génération CV ciblé + lettre (`stages/cv`).
+3. **Pop-up Jury → Correction → Postulation** :
+   - Pop-up *« Faire juger mon CV ? 100 FCFA »* :
+     - **Non** → Aperçu final & **Postuler** (WhatsApp / E-mail / Kit `LINK`).
+     - **Oui (100 FCFA)** → Verdict Jury (`CvJuryPanel`) → Réponses & **Correction incluse** → Aperçu final & **Postuler**.
+
+```
+Rédaction assistée (Infos + CV réf + Précisions IA + Aide missions + CvEditor + Template)
+  └─> Paiement (300/500 FCFA ou crédits) + Génération CV
+        └─> Pop-up Jury (100 FCFA) ─┬─ Non ──────────────────────> Aperçu & Postuler
+                                    └─ Oui (100 coins) ─> Jury ─> Correction (incluse) ─> Postuler
+```
+
+### 4. Modèle économique
+- **Rédaction avant paiement :** gratuite (import CV, `cv-precisions`, `cv-suggest`), protégée par le quota journalier anti-abus (60 requêtes IA / 24 h). Coût API estimé < 2 FCFA par candidat sur Claude Haiku 5.5.
+- **Candidature (inchangé, §19) :** 300 FCFA (non rémunérée) ou 500 FCFA (rémunérée/emploi), ou 1 / 2 crédits pack (`stage-apply:<jobId>`), remboursé si la génération échoue.
+- **Upsell Jury candidature :** **100 FCFA (100 coins)** facturés une seule fois par offre (`stage-jury:<jobId>`), remboursés si l'appel Jury échoue. Inclut le verdict (`cv-review`) et la réécriture corrective (`stages/cv` idempotent sur `stage-apply:<jobId>`). Coût LLM réel mesuré : ~0,96 FCFA par passage Jury (marge > 98 %).
+
+### 6. Architecture (delta sur l'existant)
+- **Pricing (`mobile-api/lib/pricing.ts` et miroir app `src/features/stages/stagePricing.ts`) :** ajouter la constante `STAGE_JURY_PRICE = 100`.
+- **Backend (`mobile-api/`) :**
+  - `POST /api/mobile/stages/cv` : accepter le brouillon structuré (`draftCv` / `background`), les réponses `precisions` et, pour la phase de correction post-jury, `currentCv` + `answers` (toujours idempotent sur `stage-apply:<jobId>`, sans second débit). Sauvegarder/mettre à jour `cv_background` si l'étudiant a enrichi son parcours.
+  - Facturation Jury stage (`POST /api/mobile/stages/jury` ou mode coins sur `documents/cv-review`) : débiter `STAGE_JURY_PRICE` (100 coins) sur `app_wallets.balance_coins` avec référence idempotente `stage-jury:<jobId>` (remboursement automatique si LLM 502) ; retirer la gratuité automatique sur `stage-apply:<jobId>` pour le flux candidature stage.
+  - Réutilisation directe de `POST /api/mobile/account/cv-background/import`, `POST /api/mobile/documents/cv-precisions` et `POST /api/mobile/documents/cv-suggest`.
+- **App mobile (`src/features/stages/AiApplyModal.tsx`) :**
+  - Découper l'étape pré-paiement en sous-étapes fluides (Infos/CV de référence → Précisions IA → `CvEditor` + `CvTemplateGallery`) avec sauvegarde locale/compte pour ne rien perdre.
+  - Ajouter la modale/pop-up Jury (100 FCFA) immédiatement après la génération réussie, branchée sur `PaymentModal` si solde < 100 coins, puis `CvJuryPanel` + bouton de réécriture corrective incluse → étape `send`.
+
+### 8. Risques
+- **Abus des appels IA gratuits avant paiement (`cv-background/import`, `cv-precisions`, `cv-suggest`) :** mitigé par `enforceAiQuota` (60 requêtes/24 h) et le cache serveur existant sur `cv-precisions`.
+- **Allongement du tunnel avant paiement :** mitigé par le pré-remplissage automatique depuis *Mon parcours* (dès la 2e candidature, l'étape 1 est quasi instantanée) et la possibilité de passer les questions de précision.
+- **Double débit ou perte de coins en cas d'échec Jury :** débit atomique avec référence idempotente `stage-jury:<jobId>` et remboursement automatique en cas d'erreur LLM, sur le même modèle que `stage-charge.ts`.
+- **Hallucinations pendant l'aide à la rédaction :** `cv-background/import`, `cv-suggest` et `cv-fill` conservent le contrôle strict des faits et des chiffres (`parseCvFill` / `numbersGrounded`) + marqueurs `[À COMPLÉTER]`.
+
+### Prochaine étape
+`/plan-task` pour découper ce cadrage en tâches.
+
+
+---
+
+## 25. Cadrage validé : Bonus lancement 2 000 coins, parcours candidature 6 étapes, galerie designs CV en DB et fiabilisation push Android (2026-11-26, voie Bounded)
+
+### 1. Problème et cible
+- **Constats :**
+  1. Le bonus d'inscription de lancement est encore à `1 000 coins` alors que l'objectif d'acquisition au lancement est de `2 000 coins` pour permettre aux nouveaux étudiants de tester plusieurs candidatures + Jury sans friction immédiate.
+  2. Le parcours de candidature actuel ne correspond pas à l'enchaînement attendu par l'étudiant (Module 38 non déployé en OTA/VPS, et l'ordre local met l'édition complète avant la génération et envoie directement à *Envoyer* en cas de refus du Jury sans passer par une vérification finale claire).
+  3. Le sélecteur de modèles de CV (`CvTemplateGallery`) s'affiche directement en grosse grille 2 colonnes qui encombre l'écran, avec seulement 5 modèles codés en dur dans `src/features/stages/cvHtml.ts`.
+  4. Les notifications push hors de l'app restent bloquées sur Android : `mobile-api/lib/push.ts` envoie sans `priority: 'high'` ni journalisation des erreurs Expo/FCM, et `src/AppShell.tsx` masque toute erreur réelle derrière un message générique tout en cachant le bouton de réessai dès que la permission OS est accordée.
+- **Cible :** Étudiant sur l'app mobile Campus 360 (Android / iOS / Web).
+- **Promesse :** Un nouveau compte démarre avec `2 000 coins`, suit un tunnel de candidature naturel en 6 étapes, choisit parmi **15 designs de CV** via un bouton + modale alimentée par PostgreSQL, et reçoit ses alertes push même téléphone verrouillé / app fermée.
+
+### 2. Fonctionnalités
+
+**V1 (validée)**
+1. **Bonus de lancement à 2 000 coins (nouveaux inscrits uniquement) :**
+   - Passage de `LAUNCH_STARTING_COINS` / `LAUNCH_SIGNUP_BONUS` de `1 000` à `2 000` (bonus post-lancement conservé à `300` coins).
+   - Alignement des textes publics (`landing-site`, app) et de la variable `STARTING_COINS` en production si présente.
+   - Aucun rattrapage rétroactif sur les comptes déjà créés.
+2. **Parcours de candidature en 6 étapes (`AiApplyModal` + `StageCvPrepWizard`) :**
+   - **Étape 1 — Infos selon l'offre (gratuit) :** 2 écrans rapides : *(a)* Parcours & import CV de référence pré-rempli (`cv_background`) → *(b)* Questions ciblées IA sur l'offre (`cv-precisions`) + bouton compact `Design du CV` (facultatif) → CTA `Payer et générer`.
+   - **Étape 2 — Paiement & Génération IA :** débit standard (`300` / `500 FCFA` ou `1` / `2` crédits pack, remboursé en cas d'échec) + génération CV ciblé + lettre (`POST /api/mobile/stages/cv`).
+   - **Étape 3 — Correction :** édition du CV (`CvEditor` + suggestions IA `cv-suggest`) et de la lettre générée, puis bouton `Continuer vers le Jury`.
+   - **Étape 4 — Jury (optionnel, 200 FCFA) :** proposition claire *« Faire juger mon CV · 200 FCFA (correction post-jury incluse) »* ou *« Passer sans Jury »* vers la Vérification. Si accepté : verdict Jury (`CvJuryPanel`) + réécriture corrective incluse → bouton `Passer à la vérification`.
+   - **Étape 5 — Vérification finale :** aperçu réel du CV + lettre + correspondance, bouton compact `Changer de design` (+ couleur / police / interligne), contrôle des champs manquants (`missingCvFields`).
+   - **Étape 6 — Postulation :** envoi WhatsApp / E-mail ou kit `LINK` + accusé de réception.
+3. **Catalogue de 15 designs de CV en base de données + sélecteur par bouton/modale :**
+   - Remplacement de la grille inline par un **bouton compact** (`Design du CV : <Nom> · Changer`) ouvrant une **modale galerie** (filtres par catégorie + cartes d'aperçu visuel) dans `StageCvPrepWizard`, `AiApplyModal`, `DocumentsScreen` et `CvBuilderModal`.
+   - Table PostgreSQL `cv_templates` pré-remplie avec **15 designs professionnels** : les 5 existants (*Officiel, Prestige, Ingénieur, Étudiant, ATS*) + **10 nouveaux** (*Exécutif, Suisse Minimal, Bandeau Royal, Colonne Droite, Créatif Studio, Finance Sobre, Tech Dark-Header, Académique, Compact 1-Page, Moderne Émeraude*).
+   - Moteur de layouts/CSS paramétrique côté app alimenté par `GET /api/mobile/cv-templates` avec **cache local et repli hors-ligne** (ajout/activation/tri de designs directement en base sans republier l'app).
+4. **Fiabilisation complète des notifications push hors de l'app (Android) :**
+   - `mobile-api/lib/push.ts` : ajout de `priority: 'high'`, canal Android explicite, lecture de la réponse Expo Push (logs des tickets en erreur + purge automatique des tokens `DeviceNotRegistered`).
+   - Route `POST /api/mobile/notifications/test` (protégée par session + rate-limit) permettant à l'étudiant/admin de déclencher une notification push test immédiate sur son appareil.
+   - `src/AppShell.tsx` : séparation des erreurs (`FCM natif absent / ancien APK` vs `erreur réseau/API`), affichage du diagnostic clair + version du binaire, bouton **« Réessayer l'activation »** toujours accessible si `pushIssue` est actif, et bouton **« Envoyer une alerte test »** une fois enregistré.
+   - Vérification end-to-end sur téléphone avec l'APK embarquant `google-services.json` (`apk-v1.2.0-117` ou nouveau build APK si changement natif).
+
+**V1.5 (repoussé)**
+- Interface CRUD de gestion des `cv_templates` directement dans le portail admin (`recruiter-web`).
+- Rattrapage ciblé ou codes promo coins pour campagnes campus.
+
+**Rejeté**
+- Paiement uniquement en fin de parcours (risque de consommation IA sans conversion).
+- Rendu HTML des templates uniquement côté serveur (dépendance réseau, latence mobile, perte du mode hors-ligne).
+- Éditeur complet `CvEditor` imposé avant génération (alourdit l'étape 1 maintenant que l'étape 3 *Correction* est dédiée).
+
+### 3. Parcours
+```
+1. Infos selon l'offre (gratuit : Parcours/CV réf → Questions IA ciblées + bouton Design)
+   └─> 2. Paiement (300/500 F ou crédits) & Génération IA (CV + lettre)
+         └─> 3. Correction (CvEditor + aide IA + édition lettre)
+               └─> 4. Jury (optionnel · 200 F, correction post-jury incluse)
+                     ├─ Oui (200 F) → Verdict Jury → Correction incluse ─┐
+                     └─ Passer sans Jury ────────────────────────────────┤
+                                                                         ▼
+                                     5. Vérification finale (Aperçu CV/Lettre + bouton Design & Style)
+                                       └─> 6. Postulation (WhatsApp / E-mail / Kit LINK)
+```
+
+### 4. Modèle économique
+- **Bonus d'inscription lancement :** `2 000 coins` (nouveaux inscrits uniquement) ; `300 coins` après la période de lancement (`FREE_LAUNCH_UNTIL`).
+- **Candidature (inchangé) :** `300 FCFA` (stage non rémunéré) ou `500 FCFA` (rémunéré / emploi), ou `1` / `2` crédits pack (`stage-apply:<jobId>`).
+- **Jury candidature (révisé par rapport à §24) :** **`200 FCFA`** (`STAGE_JURY_PRICE = 200`, `stage-jury:<jobId>`), optionnel, réécriture corrective incluse.
+- **Designs de CV :** tous inclus sans surcoût dans la candidature / génération de CV (levier de conversion et de différenciation produit).
+
+### 6. Architecture (delta sur l'existant)
+- **Coins lancement & prix Jury :**
+  - `mobile-api/lib/free-launch.ts` & jumeau `recruiter-web/lib/free-launch.ts` (`LAUNCH_STARTING_COINS = 2000`), `mobile-api/lib/pricing.ts` (`LAUNCH_SIGNUP_BONUS = 2000`), `mobile-api/lib/stage-pricing.ts` & miroir `src/features/stages/stagePricing.ts` (`STAGE_JURY_PRICE = 200`), tests de parité associés, textes `landing-site/` et contrôle `.env` VPS (`STARTING_COINS`).
+- **Parcours 6 étapes :**
+  - `src/features/stages/StageCvPrepWizard.tsx` : simplifié en 2 écrans rapides (`reference` → `precisions` + bouton `CvTemplatePickerButton` + CTA `Payer et générer`), retrait de `CvEditor` de l'étape pré-paiement.
+  - `src/features/stages/AiApplyModal.tsx` : machine à états alignée sur les 6 étapes (`prep` → `generating` → `correct` → `jury` → `verify` → `send` → `sent`) avec indicateur d'étapes clair et passage systématique par `verify` avant `send` (que le Jury soit accepté ou passé).
+- **Designs de CV en base de données :**
+  - Migration SQL `mobile-api/sql/0034_cv_templates.sql` (soumise à accord avant exécution sur Supabase) : table `public.cv_templates` (`id` text PK, `label`, `description`, `category`, `layout_family`, `theme_config` jsonb, `custom_css` text, `thumbnail_url` text, `is_active` boolean, `sort_order` int, `created_at`, `updated_at`) + seed des 15 designs.
+  - Route publique/mobile `GET /api/mobile/cv-templates` (cache HTTP court, renvoie les designs actifs triés).
+  - Moteur `src/features/stages/cvHtml.ts` : support des `layout_family` paramétriques + `theme_config` + `custom_css` (assaini) + repli local sur les modèles embarqués si hors-ligne.
+  - Composants UI `CvTemplatePickerButton.tsx` (bouton compact) + `CvTemplatePickerModal.tsx` (galerie modale filtrable avec aperçu).
+- **Push notifications Android :**
+  - `mobile-api/lib/push.ts` : `priority: 'high'`, traitement des tickets Expo Push, suppression des tokens invalides (`DeviceNotRegistered`), logs structurés sans fuite PII.
+  - `mobile-api/app/api/mobile/notifications/test/route.ts` : envoi d'un push de test sur les tokens enregistrés de l'utilisateur courant.
+  - `src/AppShell.tsx` : diagnostic précis de l'échec `getExpoPushTokenAsync` vs `registerPushToken`, affichage version/canal, bouton de réessai même si `notifPermission === 'granted'`, et bouton test push.
+
+### 8. Risques
+- **Sécurité CSS/HTML des templates en DB :** `custom_css` doit être borné/validé (pas de `<script>`, pas d'injection `</style>`, pas d'`url(javascript:)`) et toutes les données étudiantes restent échappées par `escapeDeep`.
+- **Base partagée Supabase :** la migration `0034_cv_templates.sql` nécessite un accord explicite avant application en production ; le code app/API doit tolérer son absence gracieusement (repli sur les modèles intégrés).
+- **Variable `STARTING_COINS` sur le VPS :** si elle est explicitement posée à `1000` dans `.env` sur le VPS, elle écrasera `LAUNCH_STARTING_COINS = 2000` ; à vérifier obligatoirement au déploiement.
+- **APK natif Android pour les push :** un ancien APK installé avant `78433a2` ne peut pas recevoir de push FCM via OTA ; il faut impérativement vérifier/réinstaller l'APK intégrant `google-services.json` et tester écran verrouillé (en vérifiant aussi les réglages d'économie de batterie constructeur sur Xiaomi/Tecno/Infinix).
+- **Coexistence Module 38 non commité :** les modifications locales du Module 38 (`StageCvPrepWizard`, `StageJuryPromptModal`, `AiApplyModal`, `stages/jury`) seront directement adaptées et livrées dans ce nouveau lot unifié.
+
+### Prochaine étape
+`/plan-task` pour découper ce cadrage en tâches.

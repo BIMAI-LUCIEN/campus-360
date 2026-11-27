@@ -28,7 +28,7 @@ const categories = [
       },
       {
         q: "L'app est gratuite ?",
-        a: "L'inscription et la lecture des PDF sont gratuites, avec 3 actions IA gratuites par jour. Pendant le lancement, 1 000 coins te sont offerts à l'inscription. Le reste se paie à l'usage avec ton wallet, sans abonnement.",
+        a: "L'inscription et la lecture des PDF sont gratuites, avec 3 actions IA gratuites par jour. Pendant le lancement, 2 000 coins te sont offerts à l'inscription. Le reste se paie à l'usage avec ton wallet, sans abonnement.",
       },
       {
         q: "Y a-t-il une version iPhone ?",

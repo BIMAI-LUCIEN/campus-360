@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Check, X } from 'lucide-react-native';
+import { Check, Sparkles, X } from 'lucide-react-native';
 
 import {
   updateStudentProfile,
@@ -27,6 +27,7 @@ interface EditProfileModalProps {
   profile: StudentProfile | null;
   onClose: () => void;
   onSaved: (updated: StudentProfile) => void;
+  onManageSkills?: () => void;
 }
 
 const PHONE_RE = /^[+0-9 ()\-]+$/;
@@ -41,7 +42,7 @@ const validatePhone = (value: string, label: string): string | null => {
 };
 
 /** Modal for editing the student's account identity, contact numbers, and academic profile. */
-export function EditProfileModal({ visible, profile, onClose, onSaved }: EditProfileModalProps) {
+export function EditProfileModal({ visible, profile, onClose, onSaved, onManageSkills }: EditProfileModalProps) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [whatsappPhone, setWhatsappPhone] = useState('');
@@ -207,6 +208,36 @@ export function EditProfileModal({ visible, profile, onClose, onSaved }: EditPro
               otherPlaceholder="Ex : Master 2"
             />
 
+            {onManageSkills ? (
+              <View style={styles.skillsCard}>
+                <View style={styles.skillsCardHeader}>
+                  <View style={styles.skillsTitleRow}>
+                    <Sparkles size={16} color={stitchColors.primary} />
+                    <Text style={styles.label}>Mes compétences ({profile?.skills?.length ?? 0})</Text>
+                  </View>
+                  <Pressable onPress={onManageSkills} disabled={saving} hitSlop={8}>
+                    <Text style={styles.manageLink}>Gérer</Text>
+                  </Pressable>
+                </View>
+                {profile?.skills?.length ? (
+                  <View style={styles.skillsChips}>
+                    {profile.skills.slice(0, 6).map((item) => (
+                      <View key={item} style={styles.skillPill}>
+                        <Text style={styles.skillPillText}>{item}</Text>
+                      </View>
+                    ))}
+                    {profile.skills.length > 6 ? (
+                      <View style={styles.skillPill}>
+                        <Text style={styles.skillPillText}>+{profile.skills.length - 6}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : (
+                  <Text style={styles.hint}>Ajoute toutes tes compétences acquises pour booster ton matching.</Text>
+                )}
+              </View>
+            ) : null}
+
             {error ? (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>{error}</Text>
@@ -339,6 +370,47 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: stitchColors.inkFaint,
     marginVertical: 4,
+  },
+  skillsCard: {
+    backgroundColor: stitchColors.surface,
+    borderWidth: 1,
+    borderColor: stitchColors.glassBorder,
+    borderRadius: stitchRadius.md,
+    padding: 14,
+    gap: 10,
+  },
+  skillsCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  skillsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  manageLink: {
+    fontFamily: fontFamilies.displaySemi,
+    fontSize: 13,
+    fontWeight: '700',
+    color: stitchColors.primary,
+  },
+  skillsChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  skillPill: {
+    backgroundColor: stitchColors.siennaBg,
+    borderRadius: stitchRadius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  skillPillText: {
+    fontFamily: fontFamilies.interMedium,
+    fontSize: 12,
+    color: stitchColors.primary,
   },
   errorBox: {
     backgroundColor: stitchColors.errorBg,

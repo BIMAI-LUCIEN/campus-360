@@ -84,7 +84,11 @@ test('chaque gabarit du CV garde le contenu et la photo, et échappe les valeurs
     assert.ok(empty.includes('[à compléter]'), template);
     assert.ok(!empty.includes('<img'), template);
   }
-  assert.deepEqual(m.CV_TEMPLATES.map(t => t.id), ['classic', 'prestige', 'ingenieur', 'etudiant', 'ats']);
+  assert.deepEqual(m.CV_TEMPLATES.map(t => t.id), [
+    'classic', 'prestige', 'ingenieur', 'etudiant', 'ats',
+    'executif', 'suisse', 'royal', 'colonne-droite', 'creatif',
+    'finance', 'tech', 'academique', 'compact', 'emeraude',
+  ]);
   // ATS: same content and escaping, no photo by design.
   const ats = emptyCv();
   ats.detailsPersonnels = { nom: 'Ndi', prenom: 'Awa', email: 'awa@exemple.cm', telephone: '237600000000' };
@@ -208,4 +212,38 @@ test('36.1 : ville, liens et disponibilité imprimés dans les 5 modèles ; anci
   const merged = m.mergeAiCv(old2(), { titrePoste: 'Stagiaire' });
   assert.equal(merged.detailsPersonnels.ville, 'Bafoussam');
   function old2() { return { ...emptyCv(), detailsPersonnels: { nom: 'N', prenom: 'A', email: '', telephone: '', adresse: 'Bafoussam' } }; }
+});
+
+
+test('39.5 : 15 designs intégrés + design dynamique DB + rejet CSS dangereux', () => {
+  assert.equal(m.CV_TEMPLATES.length, 15);
+  const cv = emptyCv();
+  cv.detailsPersonnels = { nom: 'Bimai', prenom: 'Miguel', email: 'm@exemple.cm', telephone: '237690000000', ville: 'Douala' };
+  cv.experiences = [{ poste: 'Dev', entreprise: 'BCT', ville: 'Douala', periode: '2026', missions: ['API <b>safe</b>'] }];
+  for (const tpl of m.CV_TEMPLATES) {
+    const html = m.generateOfficialCvHtml(cv, tpl.id);
+    assert.ok(html.includes('BIMAI'), tpl.id);
+    assert.ok(html.includes('Douala'), tpl.id);
+    assert.ok(!html.includes('<b>safe</b>'), `${tpl.id} échappement`);
+  }
+  // Dynamic design registered as if fetched from PostgreSQL cv_templates.
+  m.registerCvTemplates([
+    ...m.CV_TEMPLATES,
+    {
+      id: 'studio-douala',
+      label: 'Studio Douala',
+      description: 'Design injecté depuis PostgreSQL',
+      category: 'creatif',
+      layoutFamily: 'banner-top',
+      themeConfig: { accent: '#9333EA', headerBg: '#581C87', headerText: '#FFFFFF', showPhoto: true },
+      customCss: '</style><script>alert(1)</script>',
+      sortOrder: 200,
+    },
+  ]);
+  assert.equal(m.isCvTemplateId('studio-douala'), true);
+  const dynHtml = m.generateOfficialCvHtml(cv, 'studio-douala');
+  assert.ok(dynHtml.includes('#9333EA'));
+  assert.ok(!dynHtml.includes('<script>alert(1)'));
+  // Clean registry back to built-in 15.
+  m.registerCvTemplates([]);
 });

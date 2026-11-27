@@ -17,7 +17,7 @@ const plans = [
     description: "Lecture de tous les PDF et 3 actions IA par jour",
     period: "Toujours gratuit",
     features: [
-      "1 000 coins offerts à l'inscription pendant le lancement (300 ensuite)",
+      "2 000 coins offerts à l'inscription pendant le lancement (300 ensuite)",
       "Tous les PDF et annales en lecture libre",
       "Plan de rapport et de mémoire gratuits",
     ],
@@ -87,7 +87,7 @@ export function Pricing() {
             Tu paies seulement ce que tu utilises.
           </h2>
           <p className="text-lg text-[var(--color-ink-muted)] max-w-2xl mx-auto">
-            Lecture des PDF gratuite, 1 000 coins offerts au lancement, puis paiement à l'usage par Orange Money ou MTN MoMo dès 500 FCFA. Aucun abonnement.
+            Lecture des PDF gratuite, 2 000 coins offerts au lancement, puis paiement à l'usage par Orange Money ou MTN MoMo dès 500 FCFA. Aucun abonnement.
           </p>
         </div>
 

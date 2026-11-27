@@ -1,18 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
 import { enforceAiQuota } from '@/lib/ai-quota';
-import { cvBackgroundToText } from '@/lib/cv-background';
+import { cvBackgroundSchema, cvBackgroundToText } from '@/lib/cv-background';
 import { getCvBackground } from '@/lib/cv-background-db';
-import { buildCvFillMessages, buildKitCoverLetter, cvFillRequestSchema, parseCvFill } from '@/lib/cv-fill';
+import { buildCvFillMessages, buildKitCoverLetter, cvFillRequestSchema, juryAnswersText, parseCvFill } from '@/lib/cv-fill';
+import { cvToText, officialCvSchema } from '@/lib/cv-schema';
 import { CV_MODELS, callLlm, isLlmConfigured } from '@/lib/llm';
 import { MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
-import { chargeStageApplication, isCharged, refundStageApplication } from '@/lib/stage-charge';
+import { chargeStageApplication, hasPaidStageJury, isCharged, refundStageApplication } from '@/lib/stage-charge';
 import { upsertStageKitLetter } from '@/lib/stage-kits';
 import { getStageJob } from '@/lib/stages-db';
 
 export const runtime = 'nodejs';
 
 export const OPTIONS = (request: NextRequest) => withCors(new NextResponse(null, { status: 204 }), request);
+
+const responseSchema = z.object({
+  question: z.string().trim().max(300),
+  reponse: z.string().trim().max(600),
+});
+
+const requestSchema = cvFillRequestSchema.extend({
+  background: cvBackgroundSchema.optional(),
+  currentCv: officialCvSchema.optional(),
+  precisions: z.array(responseSchema).max(10).optional(),
+  answers: z.array(responseSchema).max(8).optional(),
+}).refine((input) => !input.answers?.length || Boolean(input.currentCv));
 
 // Fills the CV of an application with the AI, from the student's profile and
 // notes, targeted at the offer. The application is paid here, before the AI
@@ -23,7 +37,7 @@ export async function POST(request: NextRequest) {
     const access = await requireMobileUser(request);
     if (access.response || !access.user) return withCors(access.response!, request);
 
-    const parsed = cvFillRequestSchema.safeParse(await request.json().catch(() => null));
+    const parsed = requestSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) throw new MobileApiError('Données du CV invalides.', 400);
     if (!isLlmConfigured()) throw new MobileApiError("L'IA n'est pas disponible pour le moment.", 503);
 
@@ -36,30 +50,44 @@ export async function POST(request: NextRequest) {
       throw new MobileApiError('Offre de stage indisponible ou expirée.', 404);
     }
 
-    await enforceAiQuota(request, { userId: access.user.id, route: 'cv-fill' });
-
     const userId = access.user.id;
+    const { background, currentCv, precisions, answers, notes } = parsed.data;
+    const correcting = Boolean(answers?.length);
+    if (correcting && !(await hasPaidStageJury(userId, job.id))) {
+      throw new MobileApiError('Le premier passage du jury est requis avant la correction.', 402);
+    }
+
+    await enforceAiQuota(request, { userId, route: 'cv-fill' });
+
+    // Once edited, the draft is the reference: importing an older profile here
+    // would reintroduce entries the student just removed.
+    const reference = currentCv
+      ? cvToText({ ...currentCv, detailsPersonnels: { nom: '', prenom: '', email: '', telephone: '' } })
+      : cvBackgroundToText(background ?? (await getCvBackground(userId).catch(() => null)));
+    const input = {
+      ...parsed.data,
+      notes: [juryAnswersText(answers), juryAnswersText(precisions), notes, reference]
+        .filter(Boolean).join('\n\n').slice(0, 12000),
+    };
+    const messages = buildCvFillMessages(input);
+
     const payment = await chargeStageApplication(userId, job);
     const refund = () =>
       isCharged(payment) ? refundStageApplication(userId, job.id).catch(() => undefined) : undefined;
 
-    // The background saved on the account ("Mon parcours") counts as the student's
-    // own words, like the notes: the model may use it, the grounding check accepts it.
-    const background = cvBackgroundToText(await getCvBackground(userId).catch(() => null));
-    const input = background
-      ? { ...parsed.data, notes: [background, parsed.data.notes].filter(Boolean).join('\n\nPour cette offre : ') }
-      : parsed.data;
-
-    let cv;
+    let cv = null;
     try {
-      const raw = await callLlm(buildCvFillMessages(input), {
-        temperature: 0.3,
-        maxTokens: 1800,
-        title: 'Campus 360 CV',
-        models: CV_MODELS,
-        timeoutMs: 45_000,
-      });
-      cv = parseCvFill(raw, input);
+      for (const model of CV_MODELS) {
+        const raw = await callLlm(messages, {
+          temperature: 0.3,
+          maxTokens: 3500,
+          title: 'Campus 360 CV',
+          models: [model],
+          timeoutMs: 45_000,
+        });
+        cv = parseCvFill(raw, input);
+        if (cv) break;
+      }
     } catch (error) {
       await refund();
       throw error;
@@ -70,8 +98,8 @@ export async function POST(request: NextRequest) {
     }
 
     let kit = undefined;
-    if (job.applyMethod === 'LINK') {
-      const letter = buildKitCoverLetter(parsed.data, access.user.name);
+    if (job.applyMethod === 'LINK' && !correcting) {
+      const letter = buildKitCoverLetter(input, access.user.name);
       kit = await upsertStageKitLetter(userId, job.id, letter).catch(() => undefined);
     }
 

@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { loadTs } from './helpers/load-ts.mjs';
 
-const { chargeApplicationOn, refundApplicationOn, InsufficientFundsError } = await loadTs('lib/stage-charge-core.ts');
+const { chargeApplicationOn, refundApplicationOn, InsufficientFundsError, checkStageJuryOn, StageJuryPassError } = await loadTs('lib/stage-charge-core.ts');
 
 // Fake pg client: a wallet, credit grants and what was already paid, in memory.
 const fakeDb = ({ balance = 1000, grants = [], usages = [], purchases = [] } = {}) => {
@@ -120,4 +120,25 @@ test('offre LINK : débitée une seule fois par stage-apply:<jobId> même en ré
   assert.deepEqual(firstGen, { charged: 300, creditsUsed: 0, balance: 700 });
   const secondGen = await chargeApplicationOn(db, 'u', 'stage-apply:link-job-1', 300, 1);
   assert.deepEqual(secondGen, { charged: 0, creditsUsed: 0, balance: 700 });
+});
+
+test('jury : contrôle sans débit, passage à 100 coins, correction incluse et plafond', async () => {
+  const db = fakeDb({ balance: 100, grants: [{ id: 'pack', expiresAt: future, left: 5 }] });
+  await assert.rejects(checkStageJuryOn(db, 'u', 'job', true, 100, false), { status: 409 });
+  await checkStageJuryOn(db, 'u', 'job', false, 100, false);
+  assert.equal(db.state.balance, 100);
+  assert.deepEqual(db.state.purchases, []);
+  assert.equal((await checkStageJuryOn(db, 'u', 'job', false, 100, true)).charged, 100);
+  assert.equal((await checkStageJuryOn(db, 'u', 'job', true, 100, true)).charged, 0);
+  await assert.rejects(checkStageJuryOn(db, 'u', 'job', false, 100, true), StageJuryPassError);
+  await assert.rejects(checkStageJuryOn(db, 'u', 'job', true, 100, true), { status: 429 });
+  assert.equal(db.state.balance, 0);
+  assert.equal(db.state.grants[0].left, 5);
+  assert.equal(db.state.purchases[0].reference, 'stage-jury:job');
+});
+
+test('jury : les crédits de pack ne couvrent pas un solde de coins insuffisant', async () => {
+  const db = fakeDb({ balance: 99, grants: [{ id: 'pack', expiresAt: future, left: 5 }] });
+  await assert.rejects(checkStageJuryOn(db, 'u', 'job', false, 100, false), InsufficientFundsError);
+  assert.deepEqual(db.state.purchases, []);
 });

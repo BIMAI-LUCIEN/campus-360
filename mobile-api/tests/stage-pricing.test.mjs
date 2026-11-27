@@ -7,6 +7,10 @@ import { loadTs } from './helpers/load-ts.mjs';
 
 const m = await loadTs('lib/stage-pricing.ts');
 
+test('jury candidature : 200 coins (contexte.md §25)', () => {
+  assert.equal(m.STAGE_JURY_PRICE, 200);
+});
+
 test('offre rémunérée : 500 coins ou 2 crédits', () => {
   assert.equal(m.stageApplyPrice({ kind: 'stage', stipend: '50 000 FCFA/mois' }), 500);
   assert.equal(m.stageApplyPrice({ kind: 'stage', stipend: 'Rémunéré' }), 500);

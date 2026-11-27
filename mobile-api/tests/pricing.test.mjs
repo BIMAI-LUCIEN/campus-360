@@ -23,7 +23,7 @@ test('grille v2 : rédaction, IA et coins gratuits', () => {
   assert.equal(p.EXTERNAL_CV_PRICE, 300);
   assert.equal(p.FREE_AI_ACTIONS_PER_DAY, 3);
   assert.equal(p.QUESTIONS_PER_ACTION, 5);
-  assert.equal(p.LAUNCH_SIGNUP_BONUS, 1000);
+  assert.equal(p.LAUNCH_SIGNUP_BONUS, 2000);
   assert.equal(p.SIGNUP_BONUS, 300);
 });
 

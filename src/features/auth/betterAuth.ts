@@ -757,3 +757,27 @@ export const registerPushToken = async (
     method: 'POST',
     body: JSON.stringify({ pushToken, deviceName, deviceType }),
   })).json() as Promise<{ ok: boolean }>;
+
+export type PushTestResult = {
+  ok: boolean;
+  tokenCount: number;
+  delivered: number;
+  removedInvalid: number;
+  errors: string[];
+  error?: string;
+};
+
+export const sendTestPushNotification = async (): Promise<PushTestResult> => {
+  const res = await authFetchRaw('/api/mobile/notifications/test', { method: 'POST' });
+  const data = (await res.json().catch(() => null)) as Partial<PushTestResult> | null;
+  if (!res.ok) {
+    throw new Error(data?.error || `Impossible d’envoyer la notification test (HTTP ${res.status}).`);
+  }
+  return {
+    ok: Boolean(data?.ok),
+    tokenCount: Number(data?.tokenCount ?? 0),
+    delivered: Number(data?.delivered ?? 0),
+    removedInvalid: Number(data?.removedInvalid ?? 0),
+    errors: Array.isArray(data?.errors) ? data.errors.map(String) : [],
+  };
+};

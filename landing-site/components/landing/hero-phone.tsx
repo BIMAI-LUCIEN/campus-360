@@ -7,7 +7,7 @@ import { FileText, GraduationCap, Sparkles, Wallet } from "lucide-react";
 const chips = [
   { icon: Sparkles, label: "74 % de correspondance", sub: "Offres classées selon ta filière", style: "-left-16 top-24 -rotate-3", z: "120px", tone: "text-[var(--color-sienna)]", float: "float-y" },
   { icon: FileText, label: "CV adapté à l'offre", sub: "Lettre comprise, dès 300 FCFA", style: "-right-20 top-56", z: "90px", tone: "text-[var(--color-sienna)]", float: "float-y-slow" },
-  { icon: Wallet, label: "1 000 coins offerts", sub: "À l'inscription, au lancement", style: "-left-12 bottom-40", z: "140px", tone: "text-[var(--color-sienna)]", float: "float-y-slow" },
+  { icon: Wallet, label: "2 000 coins offerts", sub: "À l'inscription, au lancement", style: "-left-12 bottom-40", z: "140px", tone: "text-[var(--color-sienna)]", float: "float-y-slow" },
   { icon: GraduationCap, label: "Coach soutenance", sub: "Questions pièges du jury", style: "-right-14 bottom-16 rotate-3", z: "70px", tone: "text-[var(--color-sienna)]", float: "float-y" },
 ];
 

@@ -112,7 +112,7 @@ export const GENERAL_SKILLS = [
   'Résolution de problèmes',
 ] as const;
 
-export const MAX_SKILLS = 8;
+export const MAX_SKILLS = 20;
 
 /** Skills suggested for a faculty (custom faculties only get the general skills). */
 export const suggestedSkillsFor = (faculty: string): string[] => {

@@ -71,6 +71,6 @@ export const FREE_AI_ACTIONS_PER_DAY = 3;
 export const QUESTIONS_PER_ACTION = 5;
 
 // Free coins.
-export const LAUNCH_SIGNUP_BONUS = 1000;
+export const LAUNCH_SIGNUP_BONUS = 2000;
 export const SIGNUP_BONUS = 300;
 export const CONTRIBUTION_REWARD = 50;

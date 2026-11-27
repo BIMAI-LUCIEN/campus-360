@@ -4,6 +4,7 @@
 // No imports: the mobile app keeps an identical copy of these rules in
 // src/features/stages/stagePricing.ts (a test compares the two).
 
+export const STAGE_JURY_PRICE = 200;
 export const STAGE_APPLY_PRICE_PAID = 500;
 export const STAGE_APPLY_PRICE_UNPAID = 300;
 // Credits taken from a pack instead of coins (contexte.md §19).

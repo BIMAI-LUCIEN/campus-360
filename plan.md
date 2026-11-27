@@ -2,10 +2,16 @@
 
 > **Progression globale :** 110/161 tâches validées (68%) — Module 25 (scraping des offres) : 13/18 ; Module 24 (galerie de modèles de rapports) : 8/13 ; Module 23 (préparation V1) : 0/26 ; Module 20 : 16/16 validées ; Module 21 : 9/9 validées ; Module 19 : 10 en cours ; hors Module 19 : 3 en cours, 2 ouvertes  
 > **Couverture MVP :** 100% des fonctionnalités du cadrage `contexte.md` (Template CV Officiel, Ingestion n8n, Mobile Money, Onboarding Express, Suivi J+7, Expédition Automatisée WhatsApp/Email via Evolution API & N8N, Éditeur de documents §13, Style du document & rédaction §14)  
-> **Dernière mise à jour :** 2026-11-11 par /plan-task (module 36)
+> **Dernière mise à jour :** 2026-11-26 par /execute --all (module 39 : 39.1 à 39.12 validées)
 
 ---
 ## Reprise
+- **Tâche en cours :** aucune
+- **Prochaine :** 39.13 🔒 — Mise en production (migration `0035`, vérif `STARTING_COINS` VPS, déploiement VPS/OTA et test push téléphone)
+- **Reste (Module 39) :** 1 tâche `[!]` 🔒 : `39.13` (39.1 à 39.12 `[X]` le 2026-11-26 ; `mobile-api` `npm test` 518 pass / 0 fail / 20 skip ; 4 typechecks à 0 ; `lint:colors` 141/146 ; banc Playwright 375×812 px `E2E_M39_PASS` sur les 6 étapes + modale 15 designs + Jury 200 FCFA, `scrollWidth=375`, solde 2000 → 1700 → 1500 FCFA). Non vérifiés : base PostgreSQL partagée, vrai paiement SasPay, réception push écran verrouillé sur téléphone Android physique.
+- **Module 38 (rédaction CV assistée et Jury) :** 38.1 à 38.9 `[X]` le 2026-11-21 (recalibré et absorbé dans le Module 39 selon `contexte.md §25` ; `38.10 🔒` fusionnée dans **39.13 🔒**).
+- **Carte CV :** `contexte-code.md` annonce `fcd08ed`. 145 fichiers ont changé depuis ce commit dans `src/features/stages`, `mobile-api/lib` et les routes documents de l'API. Zone 38.3 vérifiée et documentée séparément au commit `e8fe6ed`. Les autres zones CV restent à resynchroniser.
+- **Arbre de travail :** cadrage et notes du module 38 dans `contexte.md`, `plan.md` et `journal.md`. Modifications préexistantes dans `scripts/agents/` et fichiers non suivis hors périmètre, à traiter séparément.
 - **Hors plan (2026-11-12) :** livré `922bfb7` (VPS et OTA) : Claude Haiku 5.5 effort `high` en modèle IA principal (`OPENROUTER_MODEL` VPS mis à jour) et délai d'export PDF/DOCX porté à 120 s. Restent ouverts : crédits IA affichés 5 pour 4, « Corrige les fautes » ne lit pas la section, 1er clic « + Section » sans effet, Entrée n'envoie pas dans le cadrage.
 - **Module 36 (rédaction du CV alignée sur le jury) :** exécuté le 2026-11-11 (`/execute --all`) : 36.1 à 36.8 et 36.10 `[X]`, 36.9 `[!]` (code et tests faits, parcours navigateur non joué : candidature payée sur une vraie offre), 36.11 `[X]` livrée (`2bd21d2`, VPS et OTA). mobile-api 493 pass / 0 fail / 17 skip, typecheck app et API 0, `lint:colors` 143. Reste : parcours navigateur de 36.9 (candidature payée).
 - **Module 35 (kit de candidature pour les offres `LINK`) :** livré le 2026-11-06 (`2016b97`, plan `b923e7e`) : 35.1 à 35.12 `[X]`, migration `0032` appliquée en production, OTA publiée. Coût IA d'un kit mesuré (35.5) : ≈ 0,94 FCFA pour 7 appels. Recontrôlé le 2026-11-08 (`/plan-check`) : `api/health` 200, `POST /stages/kit/answers` et `GET /stages/kit` sans session → 401. Pas d'entrée de livraison dans `journal.md` (preuves seulement dans la ligne de 35.12).
@@ -14,8 +20,7 @@
 - **Module 33 (relance recruteur et suivi) :** livré le 2026-11-02 (commit `58d7d1a`, VPS et OTA, migration 0029 appliquée). 33.1 annulée ; 33.3 à 33.12 `[X]` ; 33.13 `[~]` ; 33.2, 33.14, 33.15, 33.16 `[!]` 🔒. Cron des rappels installé le 2026-11-02, premier passage le 2026-11-03 à 9 h, à contrôler dans `/var/log/campus-followups.log`. Suite : relance réelle vers une adresse de test (33.2, 33.16), parcours réel 33.15.
 - **Module 32 (alertes de nouveaux stages) :** 32.1 à 32.5 `[X]` le 2026-11-01 (tsc app/mobile-api 0, mobile-api 379 pass / 0 fail) ; 32.6 cron au déploiement ; 32.7 🔒 Firebase/FCM pour le push Android.
 - **Module 31 (audit app mobile, lots 2 à 5) :** 31.1 à 31.23 `[X]` le 2026-11-01 (typecheck app, mobile-api, recruiter-web 0 ; mobile-api 369 pass / 0 fail / 20 skip ; lint:colors 147, baseline abaissée ; expo-web : suivi en chargement puis erreur, profil en initiales). Non vérifié sur téléphone. Migration 0027 à appliquer au déploiement.
-- **Tâche en cours :** aucune. 27.9 `[X]` le 2026-11-09 (migration 0033 appliquée sur la base partagée). Prochaine : 27.10 (droits d'écriture publics sur `documents`, 🔒).
-- **Prochaine (Module 27) :** migration 0023 appliquée le 2026-10-30 (avec 0024_pricing_v2, venue d'un autre chantier : ne plus modifier ce fichier). Poser `ADMIN_SERVICE_SECRET` et `MOBILE_API_INTERNAL_URL` dans les `.env.local` locaux, puis parcours navigateur 27.6 (admin) et 27.7 (`expo-web-local`, 375 px) avec des sessions ouvertes par l'utilisateur, puis 27.8. `lint:colors` échoue sur `DocumentsScreen.tsx` (+4, commit `65679ce`, hors Module 27).
+- **Module 27 :** 27.6 à 27.9 `[X]`. Prochaine tâche du module : 27.10 (droits d'écriture publics sur `documents`, 🔒).
 - **Module 28 (modèle économique v2) :** exécuté le 2026-10-30 : 28.1 à 28.7 et 28.13 `[X]` ; 28.8 à 28.12 `[!]` (interface écrite et typée, parcours navigateur à faire avec une session étudiante ; 0024 déjà appliquée). Suite : `/test-and-verify` 28.8–28.11. Points ouverts : `documents/generate` et `generate-full` encore sur les crédits IA (`aiCost`, gratuit pendant le lancement) ; frais passerelle et coût IA à vérifier ; `lint:colors` en échec sur `DocumentsScreen.tsx` (15 > 11, déjà dans HEAD) ; rien n'est commité.
 - **Module 30 (zone du PDF pour l'IA) :** 30.1 à 30.8 `[X]`, livré le 2026-10-31 (commit `b80a8dd`, VPS sur `0a1f9ee`, OTA publiée) : API, admin et landing en 200, viewer de production avec le bouton IA, `/api/ai/pdf-chat` sans session → 401. 30.9 `[!]` : coût OpenRouter, cas Pass/scan flou, test sur téléphone, carte. 30.10 `[ ]` : PDF `concours-iut-douala-2023` dont le contenu ne correspond pas au titre. Décision en attente : miniature dans l'historique.
   - **Déploiement VPS (à corriger) :** quand un run échoue (ici délai SSH de 10 min pendant le build de `mobile-api`), `/opt/campus-360` reste sur le nouveau commit ; le run suivant calcule les fichiers modifiés depuis ce commit et saute `mobile-api` et `recruiter-web`. Rebuild fait à la main le 2026-10-31. **Corrigé le 2026-11-01 (non commité) :** `deploy-vps.sh` prend `/var/lib/campus360/last-good-sha` comme base du diff et du retour arrière (repli sur HEAD si absent ou invalide) ; workflow : `command_timeout: 50m`, `timeout-minutes: 60`. Scénario de l'incident rejoué dans un dépôt temporaire : `mobile-api` n'est plus sauté. Les workflows Vercel et « Design guard » échouaient déjà avant (`1d2e483`).
@@ -34,8 +39,8 @@
   - **24.13 (IA de vision) :** non commencée ; choix du modèle et premier appel payant à valider.
   - 🔒 **Module 25 :** 25.18 (choix A/B et feu vert VPS), 25.2, 25.10, 25.15, 25.16 (inchangés).
   - **Migrations :** toutes appliquées (0000, 0004 à 0015) ; 0013 le 2026-10-23.
-- **Commit de référence :** `b923e7e` (docs(plan): module 35 kit LINK livré en production).
-- **Dernière entrée journal :** 2026-11-09 · Tâche 27.9 · execute
+- **Commit de référence :** `bf63b20`
+- **Dernière entrée journal :** 2026-11-26 · Module 39 (39.1 à 39.12) · execute --all
 ---
 
 ## 🏛️ HISTORIQUE DES MODULES DÉJÀ VALIDÉS (1 à 8)
@@ -3708,3 +3713,175 @@ La plus récente en haut.
   - **DoD :** `python scripts/agents/cleanup_video_offers.py --dry-run` retourne `0` offre vidéo restante dans `stage_jobs`.
 
 **Reprise :** Module 37 terminé (`37.1` à `37.4` validées). Pensez à déployer le code Python sur le VPS si le planificateur y tourne.
+
+
+---
+
+## 📝 MODULE 38 : Parcours rédaction CV assistée (5–10 min) et Pop-up Jury 100 FCFA avant postulation
+
+**Cadrage :** [contexte.md §24](contexte.md) (voie Bounded, validé le 2026-11-20).
+**Décisions déjà prises :**
+- Enchaînement validé : Rédaction complète assistée avant paiement (5–10 min, gratuite, Option A) → Paiement candidature & Génération (`stages/cv`) → Pop-up Jury optionnel à **100 FCFA** (100 coins, réécriture corrective incluse, Option A) → Correction → Postulation (WhatsApp / E-mail / Kit `LINK`).
+- Zéro fait inventé maintenu sur toute la chaîne (`parseCvFill`, `numbersGrounded`, marqueurs `[À COMPLÉTER]`).
+- Remplace le 1er passage Jury gratuit sur candidature stage (`stage-apply:<jobId>`, Module 36 / 34.16) ; les CV autonomes de `CvBuilderModal` (`cv-...`) conservent leurs règles existantes.
+- Aucune migration SQL requise : `app_users.cv_background`, `app_wallets` et `app_wallet_transactions` suffisent (référence idempotente `stage-jury:<jobId>`).
+
+**Hypothèses appliquées le 2026-11-20 (GO ALL).**
+- V1 avec PDF, Word (.docx) et texte. L'extraction photo et scan reste hors de ce lot.
+- Second passage après correction inclus dans les 100 FCFA, dans la limite de deux verdicts par offre.
+- Le jury précontrôle le solde puis débite au premier verdict réussi. Une réponse IA inutilisable laisse le solde et le compteur intacts. Une réponse HTTP perdue après validation n'est actuellement pas récupérable depuis le serveur.
+
+### Lot A : données et règles
+
+- [X] **Tâche 38.1 : Tarif Jury candidature (`STAGE_JURY_PRICE = 100`) et fusion de CV de référence**
+  - **État :** Le préremplissage est côté app. Le parcours existant prévaut. À poste et entreprise identiques, des périodes différentes restent distinctes. Tests de fusion et parité passés.
+  - **Fichiers :** `mobile-api/lib/stage-pricing.ts`, `src/features/stages/stagePricing.ts`, `mobile-api/lib/cv-background.ts`, `src/features/profile/cvBackgroundApi.ts`, `mobile-api/tests/stage-pricing.test.mjs`, `mobile-api/tests/cv-background.test.mjs`
+  - **Action :** Ajouter la constante `STAGE_JURY_PRICE = 100` dans les deux fichiers jumeaux `stage-pricing.ts` et `stagePricing.ts`. Ajouter un utilitaire pur `mergeCvBackground(current, imported)` (API + app) qui fusionne sans doublon un ou plusieurs CV de référence importés (expériences, formations, compétences, logiciels, qualités, langues, loisirs) dans le parcours existant sans écraser les saisies déjà présentes, et un convertisseur `backgroundToOfficialCv(base, background)` pour pré-remplir `CvEditor` avant la génération.
+  - **DoD :** `cd mobile-api && node --test tests/stage-pricing.test.mjs tests/cv-background.test.mjs` passe (parité jumeaux vérifiée, fusion de 2 CV sans doublon ni perte, plafonds de liste respectés) ; `npm run typecheck` et `cd mobile-api && npm run typecheck` code 0.
+
+- [X] **Tâche 38.2 : Facturation idempotente en coins du Jury candidature (`stage-jury:<jobId>`) et retrait du bypass gratuit stage**
+  - **État :** Le portefeuille est débité après verdict valide et contrôlé sous verrou. Un rejeu ne crée aucun second débit. Le premier jury d’un CV autonome reste éligible à la gratuité.
+  - **Fichiers :** `mobile-api/lib/stage-charge-core.ts`, `mobile-api/lib/stage-charge.ts`, `mobile-api/lib/cv-review.ts`, `mobile-api/tests/stage-charge.test.mjs`, `mobile-api/tests/cv-review.test.mjs`
+  - **Action :** Ajouter dans `stage-charge-core.ts` et `stage-charge.ts` le débit atomique en coins seuls (`chargeStageJury`, référence `stage-jury:<jobId>`, montant `STAGE_JURY_PRICE`, verrou `for update` sur `app_wallets`, erreur 409 si solde < 100 coins, verrouillage du rejeu et débit après verdict réussi). Retirer dans `cv-review.ts` le bypass gratuit sur le préfixe `stage-apply:` tout en conservant le 1er passage gratuit pour les CV autonomes (`cv-...`) de `CvBuilderModal`.
+  - **DoD :** `cd mobile-api && node --test tests/stage-charge.test.mjs tests/cv-review.test.mjs` passe : débit unique de 100 coins sur `stage-jury:<jobId>`, rejeu sans second débit, solde insuffisant → 409, aucun débit sur échec du jury, `stage-apply:<jobId>` non gratuit sur `documents/cv-review`, `cv-...` toujours gratuit au 1er passage.
+
+### Lot B : services et API
+
+- [X] **Tâche 38.3 : Aide à la formulation par expérience (`cv-suggest`) à partir de mots-clés sans invention**
+  - **Validation :** 21 tests ciblés passés (validation 401/400 avec dépendances simulées, chiffres et marqueur, quota et cache). Typechecks app et API code 0. Le client mobile est prévu en 38.6.
+  - **Fichiers :** `mobile-api/lib/cv-suggest.ts`, `mobile-api/app/api/mobile/documents/cv-suggest/route.ts`, `mobile-api/tests/cv-suggest.test.mjs`
+  - **Action :** Étendre `POST /api/mobile/documents/cv-suggest` pour accepter un champ optionnel `keywords` (notes courtes / mots-clés de l'étudiant sur son expérience, 500 caractères max) en plus de `poste`. Quand `keywords` est fourni, le modèle reformule uniquement ces faits en 2 à 4 puces *verbe d'action + périmètre + résultat* (avec `[À COMPLÉTER : ...]` si chiffre absent) et le serveur filtre tout chiffre non présent dans `keywords` (`numbersGrounded`), sous `enforceAiQuota` ; sans `keywords`, le comportement mis en cache par intitulé de poste reste inchangé.
+  - **DoD :** `cd mobile-api && node --test tests/cv-suggest.test.mjs` passe : sans session → 401, `keywords` > 500 caractères → 400, chiffre inventé retiré, emplacement `[À COMPLÉTER]` conservé, mode titre seul toujours servi depuis le cache.
+
+- [X] **Tâche 38.4 : Accepter le brouillon complet, les précisions et la correction post-jury dans `POST /api/mobile/stages/cv`**
+  - **État :** Le brouillon édité prévaut sur le parcours enregistré. La correction exige un premier passage du jury et conserve la lettre du kit LINK. Contrats HTTP et débit unique testés avec dépendances simulées.
+  - **Fichiers :** `mobile-api/lib/cv-fill.ts`, `mobile-api/app/api/mobile/stages/cv/route.ts`, `mobile-api/tests/cv-fill.test.mjs`
+  - **Action :** Étendre le schéma de `POST /api/mobile/stages/cv` pour accepter `background` (parcours structuré), `currentCv` (brouillon édité ou CV à corriger), `precisions` (réponses aux questions pré-génération, max 10) et `answers` (réponses au Jury, max 8), tous intégrés dans la source d'ancrage de `parseCvFill` (aucun fait inventé). L'offre reste facturée une seule fois via `chargeStageApplication(userId, job)` (`stage-apply:<jobId>`), garantissant 0 surcoût lors de la réécriture corrective post-jury ; porter `maxTokens` à 3500 avec bascule séquentielle sur `CV_MODELS` comme dans `documents/cv-fill`.
+  - **DoD :** `cd mobile-api && node --test tests/cv-fill.test.mjs` passe : brouillon + précisions pris en compte dans le grounding, réécriture avec `currentCv` + `answers` sans second débit, payload invalide → 400, offre expirée → 404.
+
+- [X] **Tâche 38.5 : Endpoint dédié `POST /api/mobile/stages/jury` (100 coins, verdict + relecture post-correction incluse)**
+  - **État :** Endpoint et quota raccordés. Tests simulés 401/402/409/429/502 et débit unique de 100 coins, second passage à zéro.
+  - **Fichiers :** `mobile-api/app/api/mobile/stages/jury/route.ts` (nouveau), `mobile-api/lib/ai-quota-rules.ts`, `mobile-api/tests/stage-jury.test.mjs` (nouveau)
+  - **Action :** Créer `POST /api/mobile/stages/jury` authentifié (`requireMobileUser`) qui vérifie que la candidature de l'offre est payée (`hasPaidStageApplication`, sinon 402), applique `enforceAiQuota`, débite `STAGE_JURY_PRICE` (100 coins) une seule fois par `(userId, jobId)` via `chargeStageJury` (autorisant jusqu'à 2 appels réussis par offre pour couvrir le verdict initial + le tableau avant/après post-correction sans double débit), exécute `evaluateAts` + `buildCvJuryMessages` + `parseCvJury` + `applyEliminatingCriteria`, ne débite qu’après une réponse IA valide (502 sinon), et renvoie `{ score, total, potentiel, ats, jury, payment }`.
+  - **DoD :** `cd mobile-api && node --test tests/stage-jury.test.mjs` passe : sans session → 401, candidature non payée → 402, solde < 100 coins → 409, 1er appel débite 100 coins, 2e appel (post-correction) débite 0, 3e appel → 429, échec LLM → 502 sans débit.
+
+### Lot C : interface (application)
+
+- [X] **Tâche 38.6 : Clients API mobile pour la rédaction assistée, la formulation IA et le Jury stage 100 FCFA**
+  - **État :** Validée le 2026-11-21 (typecheck app code 0, `lint:colors` 142 <= 146). En Expo Web 375×812 px (contre fixture locale), la saisie de mots-clés dans `MissionSuggestions` gère l'état vide avec retry, affiche l'erreur sur 502 puis ajoute la puce dans les missions au retry (`03-prep-editor-suggest.png`).
+  - **Fichiers :** `src/features/stages/stagesApi.ts`, `src/features/documents/cvJuryApi.ts`, `src/features/stages/CvEditorExtras.tsx`, `src/features/stages/CvEditor.tsx`
+  - **Action :** Mettre à jour `fillCvWithAi` (`stagesApi.ts`) pour transmettre `background`, `currentCv`, `precisions` et `answers`. Ajouter `reviewStageCv({ jobId, cv, template, offer })` (`cvJuryApi.ts`) appelant `POST /api/mobile/stages/jury`, et enrichir `MissionSuggestions` (`CvEditorExtras.tsx`) avec un champ court « Mots-clés de tes tâches » + bouton « Formuler avec l'IA » appelant `suggestMissions` en mode `keywords` (états chargement, erreur réessayable, vide).
+  - **DoD :** `npm run typecheck` code 0 ; `npm run lint:colors` sans hausse (<= 142) ; dans `expo-web-local` à 375 px, l'aide à la formulation dans `CvEditor` affiche le chargement, ajoute une puce cliquable dans les missions ou affiche une erreur réessayable.
+
+- [X] **Tâche 38.7 : Assistant de rédaction complète avant paiement dans `AiApplyModal` (objectif 5–10 min)**
+  - **État :** Validée le 2026-11-21 (typecheck app code 0, `lint:colors` 142, `cv-background.test.mjs` 7/7 dont `mergeBackgroundIntoCv`). Correctifs appliqués : fusion d'un 2e CV dans le brouillon sans perte (`mergeBackgroundIntoCv`), garde de rendu `error ? … : null` pour React Native natif, indicateur 3 sous-étapes et compteurs parcours. Vérifiée à 375×812 px contre fixture locale (`01-prep-reference.png` à `03-prep-editor-suggest.png`, `scrollWidth <= 375`) jusqu'à la génération `stages/cv` avec 2 expériences et la précision ville. Import PDF/Word réel non joué sur navigateur.
+  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`, `src/features/stages/StageCvPrepWizard.tsx` (nouveau)
+  - **Action :** Remplacer l'écran unique `template` d'`AiApplyModal` par un assistant en 3 sous-étapes (conservation des saisies lors des allers-retours) : (1) *Infos & CV de référence* (pré-rempli depuis profil + *Mon parcours*, ajout d'un ou plusieurs CV PDF/Word/texte fusionnés par `mergeCvBackground` et sauvegardés via `saveCvBackground`, états chargement/erreur/vide) ; (2) *Compléter avec l'IA* (réutilisation de `CvPrecisions` ciblé sur l'offre, avec bouton « Passer ») ; (3) *Vérifier, corriger & modèle* (`CvEditor` pré-rempli avec aide `MissionSuggestions` + `CvTemplateGallery` + bouton « J'ai terminé · Générer mon CV » indiquant le tarif 300/500 FCFA ou crédits). Compatible avec les offres classiques et le mode kit `LINK`.
+  - **DoD :** `npm run typecheck` code 0, `npm run lint:colors` sans hausse ; dans `expo-web-local` à 375 px, l'étudiant importe un CV de référence, répond à une question de précision, corrige un champ dans `CvEditor`, choisit un modèle et lance la génération qui reprend ses données ; zéro débordement horizontal (`scrollWidth <= 375`).
+
+- [X] **Tâche 38.8 : Pop-up Jury 100 FCFA, correction incluse et passage vers Postulation**
+  - **État :** Validée le 2026-11-21 contre fixture locale déterministe (`04-jury-prompt.png` à `09-send-after-jury.png`, 375×812 px, 0 débordement). Correctifs : solde et erreur affichés dans `StageJuryPromptModal`, `cvText` mis à jour après correction, `OffersModal` et `PaymentModal` imbriqués dans `<Modal>` d'`AiApplyModal`. Écart connu web : sur `react-native-web`, `PaymentModal` reste visuellement derrière le modal parent (`06-jury-insufficient-payment.png`). Refus Jury (`stage-jury-skip`), recharge (`PaymentModal`), verdict `3/7`, correction incluse, avant/après `3/7 → 5/7` et envoi vérifiés. Recharge réelle SasPay et débit PostgreSQL à vérifier sur base de test.
+  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`, `src/features/stages/StageJuryPromptModal.tsx` (nouveau), `src/features/documents/CvJuryPanel.tsx`
+  - **Action :** Juste après le succès de `stages/cv`, afficher un pop-up dédié : *« Voulez-vous faire juger votre CV par le Jury ? Coût : 100 FCFA (correction incluse) »* avec deux boutons (**Faire juger mon CV · 100 FCFA** / **Non, postuler directement**). En cas de solde < 100 coins (ou erreur 409), ouvrir `PaymentModal` puis permettre de relancer sans perdre le CV ; si accepté, ouvrir `CvJuryPanel` branché sur `reviewStageCv` et sur la correction incluse (`fillCvWithAi` avec `currentCv` + `answers` suivie du 2e passage avant/après), puis bouton principal « Postuler maintenant » vers l'étape `send` (ou `ApplyKitPanel` sur offre `LINK`).
+  - **DoD :** `npm run typecheck` code 0, `npm run lint:colors` sans hausse ; dans `expo-web-local` à 375 px, après génération : (a) « Non, postuler directement » mène directement à l'envoi sans débit de 100 coins ; (b) « Faire juger · 100 FCFA » avec solde insuffisant ouvre `PaymentModal` ; (c) avec solde suffisant, affiche le verdict /7, permet de corriger sans surcoût, affiche le avant/après et envoie le CV corrigé.
+
+### Lot D : câblage et validation
+
+- [X] **Tâche 38.9 : Validation complète de bout en bout (tests automatisés + parcours navigateur 375 px)**
+  - **État :** Validée le 2026-11-21 (`mobile-api` `npm test` → 503 pass / 0 fail / 20 skipped sans serveur/clé ; typechecks app et API à 0 ; `lint:colors` 142/146 ; banc Playwright 375×812 px exit 0 contre fixture locale 3001/3002 avec 0 erreur JS, 0 erreur console inattendue, `1 × stage-apply` et `1 × stage-jury` par offre ; `.agent/campus38-fixture.cjs` supprimé ; verdict complet dans `journal.md`). Non vérifiés : base PostgreSQL partagée, vrai paiement SasPay, envoi réel, appareil Android/iOS.
+  - **Fichiers :** aucun, sauf correctifs éventuels ; captures dans `.agent/screenshots/m38/`
+  - **Action :** Exécuter `/test-and-verify` sur le module 38 : suite complète `mobile-api` (`npm test`), typecheck app + `mobile-api`, `npm run lint:colors`, puis deux parcours réels sur `expo-web-local` à 375 px (1 : rédaction complète + import CV + précisions + édition + modèle → paiement & génération → refus pop-up Jury → postulation ; 2 : acceptation pop-up Jury 100 FCFA → verdict → correction incluse → tableau avant/après → postulation). Contrôler en base : un seul débit `stage-apply:<jobId>` et un seul débit `stage-jury:<jobId>` de 100 coins.
+  - **DoD :** `cd mobile-api && npm test` 0 échec ; `npm run typecheck` et `cd mobile-api && npm run typecheck` code 0 ; `npm run lint:colors` sans régression ; tableau de verdict complet dans `journal.md` avec captures et 0 erreur console bloquante.
+
+- [!] **Tâche 38.10 : Mise en production (VPS + OTA `production` & `preview`)** 🔒
+  - **État :** 38.1 à 38.9 validées localement ; attend l'accord explicite de Miguel pour commit, push, déploiement VPS et OTA.
+  - **Fichiers :** aucun (commit, push et déploiement après accord explicite)
+  - **Action :** Après feu vert explicite de l'utilisateur, committer le module 38, pousser sur `main` (déclenchant `Deploy to VPS`, `Design guard` et `Publish OTA update` sur `production` et `preview`), puis exécuter les sondes de production.
+  - **DoD :** `/deploy-and-push` : `https://api.campus360b.site/api/health` → 200 `db: connected`, `POST https://api.campus360b.site/api/mobile/stages/jury` sans session → 401, OTA publiée sur `production` et `preview`.
+
+
+---
+
+## 🚀 MODULE 39 : Lancement 2 000 coins, parcours candidature 6 étapes (Jury 200 FCFA), 15 designs CV en DB et push Android fiabilisées
+
+**Cadrage :** [contexte.md §25](contexte.md) (voie Bounded, validé le 2026-11-26).  
+**Décisions actées :**
+- Bonus lancement à **`2 000 coins`** pour les **nouveaux inscrits uniquement** (`300` après lancement, aucun rattrapage rétroactif).
+- Parcours candidature recalibré en **6 étapes** : `1. Infos selon l'offre (2 écrans rapides : parcours/CV réf → questions IA + bouton Design)` → `2. Paiement (300/500 F ou crédits) & Génération` → `3. Correction (CvEditor + aide IA + lettre)` → `4. Jury optionnel à 200 FCFA (correction incluse) ou Passer` → `5. Vérification finale (aperçu + bouton Design & Style)` → `6. Postulation`.
+- Catalogue CV : **bouton compact + modale galerie filtrable**, table PostgreSQL `cv_templates` (**15 designs** : 5 existants + 10 nouveaux) sur moteur paramétrique/CSS avec cache offline (ajout en base sans republier l'app ; CRUD admin en V1.5). Note : la migration porte le numéro **`0035`** car `0034_wallet_topup_idempotency.sql` existe déjà dans `mobile-api/sql/`.
+- Push Android : `priority: 'high'`, lecture des tickets Expo + purge `DeviceNotRegistered`, route `POST /api/mobile/notifications/test`, diagnostic réel + bouton réessai/test dans `AppShell.tsx`, vérification sur APK FCM (`apk-v1.2.0-117` ou rebuild).
+- Remplace et absorbe `38.10 🔒` : le code local du Module 38 est recalibré et livré dans **39.13 🔒**.
+
+### Lot A — Données, migration et tarification
+
+- [X] **Tâche 39.1 : Bonus lancement à 2 000 coins et Jury candidature à 200 FCFA (code + tests de parité)**
+  - **Fichiers :** `mobile-api/lib/free-launch.ts`, `recruiter-web/lib/free-launch.ts`, `mobile-api/lib/pricing.ts`, `mobile-api/lib/stage-pricing.ts`, `src/features/stages/stagePricing.ts`, `mobile-api/tests/{free-launch,pricing,stage-pricing,stage-jury}.test.mjs`
+  - **Action :** Passer `LAUNCH_STARTING_COINS` de `1000` à `2000` dans les deux fichiers jumeaux `free-launch.ts` (`STARTING_COINS` reste à `300`), `LAUNCH_SIGNUP_BONUS` à `2000` dans `pricing.ts`, et `STAGE_JURY_PRICE` de `100` à `200` dans `stage-pricing.ts` et son miroir `src/features/stages/stagePricing.ts`. Mettre à jour les tests unitaires de parité et de facturation Jury (`stage-jury.test.mjs`) pour valider les nouveaux montants sans régression.
+  - **DoD :** `cd mobile-api && node --test tests/free-launch.test.mjs tests/pricing.test.mjs tests/stage-pricing.test.mjs tests/stage-jury.test.mjs tests/twin-files.test.mjs` passe à 100 % (0 échec) ; `npm run typecheck`, `cd mobile-api && npm run typecheck` et `cd recruiter-web && npm run typecheck` sortent en code 0.
+
+- [X] **Tâche 39.2 : Migration SQL `0035_cv_templates.sql` — table `public.cv_templates` et seed des 15 designs**
+  - **Fichiers :** `mobile-api/sql/0035_cv_templates.sql` (nouveau), `mobile-api/tests/migration-0035.test.mjs` (nouveau)
+  - **Action :** Écrire la migration SQL idempotente créant `public.cv_templates` (`id` text PK, `label`, `description`, `category`, `layout_family`, `theme_config` jsonb, `custom_css` text, `thumbnail_url` text, `is_active` boolean, `sort_order` int, `created_at`, `updated_at`), contraintes `CHECK` sur `category` et `layout_family`, index sur `(is_active, sort_order)`, et seed `ON CONFLICT (id) DO NOTHING` pour **15 designs** (5 existants : `classic`, `prestige`, `ingenieur`, `etudiant`, `ats` + 10 nouveaux : `executif`, `suisse`, `royal`, `colonne-droite`, `creatif`, `finance`, `tech`, `academique`, `compact`, `emeraude`). Écrire `migration-0035.test.mjs` pour valider structure, idempotence, 15 slugs distincts et absence de CSS dangereux. *(Ne pas appliquer sur Supabase avant accord explicite en 39.13 🔒.)*
+  - **DoD :** `cd mobile-api && node --test tests/migration-0035.test.mjs tests/migrate.test.mjs` passe à 100 % (0 échec) et atteste la présence des 15 designs dans le seed.
+
+### Lot B — Services et API (`mobile-api/`)
+
+- [X] **Tâche 39.3 : Service et route `GET /api/mobile/cv-templates` (assainissement CSS + repli intégré)**
+  - **Fichiers :** `mobile-api/lib/cv-templates.ts` (nouveau), `mobile-api/app/api/mobile/cv-templates/route.ts` (nouveau), `mobile-api/tests/cv-templates.test.mjs` (nouveau)
+  - **Action :** Implémenter dans `cv-templates.ts` la validation/assainissement de `custom_css` (taille max 4 Ko, blocage `<script>`, `</style>`, `@import`, `expression(`, `url(javascript:)`), la liste embarquée des 15 designs de repli et la lecture SQL des modèles `is_active = true` triés par `sort_order` (avec repli silencieux sur la liste embarquée si la table `cv_templates` n'existe pas encore ou si Postgres est indisponible). Exposer `GET /api/mobile/cv-templates` (`Cache-Control: public, max-age=300`) retournant `{ templates, source: 'db' | 'fallback' }` sans jamais divulguer d'erreur SQL brute.
+  - **DoD :** `cd mobile-api && node --test tests/cv-templates.test.mjs` passe à 100 % (15 designs en repli, filtrage `is_active`, tri `sort_order`, rejet des payloads CSS malveillants) ; `cd mobile-api && npm run typecheck` code 0.
+
+- [X] **Tâche 39.4 : Fiabilisation push Android (`priority: 'high'`, tickets Expo, purge tokens) et route `POST /api/mobile/notifications/test`**
+  - **Fichiers :** `mobile-api/lib/push.ts`, `mobile-api/app/api/mobile/notifications/test/route.ts` (nouveau), `mobile-api/tests/push.test.mjs` (nouveau)
+  - **Action :** Mettre à jour `push.ts` pour envoyer `priority: 'high'` et `channelId: 'default'` dans chaque message Expo Push, parser les tickets retournés par `exp.host`, journaliser les erreurs sans exposer de token complet ni de PII, et supprimer de `app_user_push_tokens` tout token renvoyant `DeviceNotRegistered`. Créer `POST /api/mobile/notifications/test` (protégé par `requireMobileUser` et rate-limit 5 req/h) déclenchant un push immédiat sur les appareils de l'utilisateur courant et retournant `{ ok, tokenCount, delivered, errors }` (422 explicite si aucun appareil enregistré).
+  - **DoD :** `cd mobile-api && node --test tests/push.test.mjs` passe à 100 % (vérifie `priority: 'high'`, purge sur `DeviceNotRegistered`, 401 sans session, 422 si 0 token, 200 avec rapport de livraison) ; `cd mobile-api && npm run typecheck` code 0.
+
+### Lot C — Moteur CV et interfaces (`src/` et `landing-site/`)
+
+- [X] **Tâche 39.5 : Moteur de rendu paramétrique des 15 designs CV et client cache offline**
+  - **Fichiers :** `src/features/stages/cvHtml.ts`, `src/features/stages/cvTemplatesApi.ts` (nouveau), `mobile-api/scripts/render-cv-thumbnails.mjs`, `mobile-api/tests/cv-html.test.mjs`
+  - **Action :** Étendre `cvHtml.ts` pour supporter les 10 familles de mise en page paramétriques (`classic`, `sidebar-left`, `sidebar-right`, `banner-top`, `timeline`, `minimal-swiss`, `ats-clean`, `executive-split`, `compact-grid`, `editorial`), les 15 designs embarqués de repli, l'injection de `theme_config` + `custom_css` assaini et la compatibilité totale avec `escapeDeep` et `CvStyle`. Créer `cvTemplatesApi.ts` chargeant `GET /api/mobile/cv-templates` avec cache local (`localJsonStore`) et repli offline sur les 15 designs embarqués. Étendre `cv-html.test.mjs` et `render-cv-thumbnails.mjs` aux 15 designs + un design dynamique simulé depuis la DB.
+  - **DoD :** `cd mobile-api && node --test tests/cv-html.test.mjs` passe à 100 % (15 designs + 1 design dynamique DB + rejet CSS dangereux + échappement HTML) ; `npm run typecheck` code 0.
+
+- [X] **Tâche 39.6 : Sélecteur compact de design CV (bouton + modale galerie filtrable) et branchement écrans CV**
+  - **Fichiers :** `src/features/stages/CvTemplatePickerButton.tsx` (nouveau), `src/features/stages/CvTemplatePickerModal.tsx` (nouveau), `src/features/stages/CvTemplateGallery.tsx`, `src/features/documents/DocumentsScreen.tsx`, `src/features/documents/CvBuilderModal.tsx`
+  - **Action :** Créer `CvTemplatePickerButton` (bouton compact montrant le nom du design sélectionné, sa catégorie et un indicateur « Changer ») et `CvTemplatePickerModal` (modale plein écran avec onglets de catégories *Tous / ATS / Moderne / Classique / Créatif / Tech / Académique*, grille d'aperçus visuels alimentée par `cvTemplatesApi`, états chargement / erreur / repli hors-ligne, et validation en 1 tap). Remplacer la grosse grille inline dans `DocumentsScreen.tsx` et `CvBuilderModal.tsx` par ce couple bouton + modale en respectant strictement les tokens `stitchColors`.
+  - **DoD :** `npm run typecheck` code 0 et `npm run lint:colors` sans hausse ; dans Expo Web à 375 px, l'écran CV n'affiche plus la grille inline mais le bouton compact, le clic ouvre la modale avec les 15 designs filtrables par catégorie, la sélection met à jour le bouton et l'aperçu sans débordement (`scrollWidth <= 375`).
+
+- [X] **Tâche 39.7 : Étape 1 simplifiée dans `StageCvPrepWizard` (2 écrans rapides + bouton Design)**
+  - **Fichiers :** `src/features/stages/StageCvPrepWizard.tsx`, `src/features/stages/AiApplyModal.tsx`
+  - **Action :** Refactoriser `StageCvPrepWizard` en 2 sous-étapes rapides avant paiement : *(1a)* Parcours & import CV de référence pré-rempli (`cv_background`) → *(1b)* Questions ciblées IA sur l'offre (`cv-precisions`, bouton « Passer » conservé) + `CvTemplatePickerButton` (design facultatif modifiable plus tard) + encart tarifaire + CTA `Payer et générer`. Retirer `CvEditor` et la grille inline `CvTemplateGallery` de l'étape 1 (déplacés en étapes 3 et 5) tout en préservant les états chargement / erreur / réessai et la conservation du brouillon.
+  - **DoD :** `npm run typecheck` code 0 et `npm run lint:colors` sans hausse ; dans Expo Web à 375 px, l'étape 1 enchaîne `Parcours → Questions IA + bouton Design → Payer et générer` sans afficher `CvEditor` ni la grille inline, et passe correctement `precisions` + `template` à `stages/cv`.
+
+- [X] **Tâche 39.8 : Tunnel candidature 6 étapes (`Correction → Jury 200 FCFA → Vérification finale → Postulation`)**
+  - **Fichiers :** `src/features/stages/AiApplyModal.tsx`, `src/features/stages/StageJuryPromptModal.tsx`, `src/features/documents/CvJuryPanel.tsx`
+  - **Action :** Aligner la machine à états et le stepper d'`AiApplyModal` sur les 6 étapes : `1. Infos` → `2. Génération` → `3. Correction` (`CvEditor` + `MissionSuggestions` + édition de la lettre générée, bouton `Continuer vers le Jury`) → `4. Jury` (`StageJuryPromptModal` mis à jour à **200 FCFA** avec *« Faire juger mon CV · 200 FCFA (correction incluse) »* ou *« Passer sans Jury »* → vers `5. Vérification` ; si accepté, `CvJuryPanel` + réécriture corrective incluse → bouton `Passer à la vérification`) → `5. Vérification finale` (aperçu CV + lettre + correspondance, `CvTemplatePickerButton` + `CvStylePicker`, contrôle `missingCvFields`, passage obligatoire avant envoi même sans Jury) → `6. Postulation` (WhatsApp / E-mail / Kit `LINK` + reçu).
+  - **DoD :** `npm run typecheck` code 0 et `npm run lint:colors` sans hausse ; dans Expo Web à 375 px, les deux chemins (`Correction → Passer sans Jury → Vérification → Postulation` et `Correction → Jury 200 F → Correction post-jury → Vérification → Postulation`) aboutissent sans erreur console ni débordement (`scrollWidth <= 375`), avec au plus 1 débit `stage-apply` et 1 débit `stage-jury` de 200 coins.
+
+- [X] **Tâche 39.9 : Diagnostic push Android précis, réessai et test push dans `AppShell.tsx`**
+  - **Fichiers :** `src/AppShell.tsx`, `src/features/auth/betterAuth.ts`
+  - **Action :** Ajouter `sendTestPushNotification()` dans `betterAuth.ts` appelant `POST /api/mobile/notifications/test`. Dans `AppShell.tsx`, distinguer l'échec `getExpoPushTokenAsync` (ex. binaire Android sans FCM / `google-services.json` vs erreur réseau) de l'échec `registerPushToken` (erreur API) et afficher le diagnostic exact + version/canal dans la modale « Gérer les notifications ». Garder le bouton **« Réessayer l'activation »** visible dès que `pushIssue` est renseigné (même quand `notifPermission === 'granted'`), et afficher un bouton **« Envoyer une notification test »** avec retour succès/erreur dès qu'un token est enregistré.
+  - **DoD :** `npm run typecheck` code 0 et `npm run lint:colors` sans hausse ; dans Expo Web (et vérifié sur Android en 39.13), la modale « Gérer les notifications » affiche l'état détaillé (permission, statut token, diagnostic), le bouton Réessayer relance `registerForPush`, et le bouton Test affiche la réponse réelle du serveur.
+
+- [X] **Tâche 39.10 : Mise à jour bonus lancement « 2 000 coins » — pages principales `landing-site/`**
+  - **Fichiers :** `landing-site/app/page.tsx`, `landing-site/app/tarifs/page.tsx`, `landing-site/app/fonctionnalites/page.tsx`, `landing-site/app/inscription/page.tsx`, `landing-site/app/telecharger/page.tsx`, `landing-site/app/aide/page.tsx`
+  - **Action :** Remplacer toutes les mentions « 1 000 coins offerts » / bonus de lancement par « 2 000 coins » dans ces 6 pages sans toucher aux tarifs du Pack Starter (`1 000 FCFA`) ni du Pass 7 jours (`1 000 FCFA`).
+  - **DoD :** `cd landing-site && npx tsc --noEmit` code 0 ; `git grep "1 000 coins" landing-site/app/` ne renvoie plus que `conditions/page.tsx` (traité en 39.11).
+
+- [X] **Tâche 39.11 : Mise à jour bonus lancement « 2 000 coins » — conditions, composants et présentation `landing-site/`**
+  - **Fichiers :** `landing-site/app/conditions/page.tsx`, `landing-site/components/pricing.tsx`, `landing-site/components/landing/hero-phone.tsx`, `landing-site/components/landing/scroll-story.tsx`, `landing-site/film/presentation.html`
+  - **Action :** Mettre à jour les mentions du bonus de bienvenue de lancement à `2 000 coins` (en conservant `300 coins ensuite`) dans les conditions, la grille tarifaire, les cartes d'accueil et la présentation HTML.
+  - **DoD :** `cd landing-site && npx tsc --noEmit` code 0 ; `git grep "1 000 coins" landing-site/` retourne 0 occurrence (et Pack Starter / Pass 7 jours restent à `1 000 FCFA`).
+
+### Lot D — Câblage, validation et mise en production
+
+- [X] **Tâche 39.12 : Validation complète de bout en bout (tests automatisés + parcours 6 étapes 375 px)**
+  - **Fichiers :** aucun (sauf correctifs éventuels) ; captures dans `.agent/screenshots/m39/`
+  - **Action :** Exécuter `/test-and-verify` sur le module 39 : suite complète `cd mobile-api && npm test`, typecheck des 4 services (`racine`, `mobile-api`, `recruiter-web`, `landing-site`), `npm run lint:colors`, et banc Playwright Expo Web à 375×812 px vérifiant les 6 étapes (avec Jury 200 FCFA et sans Jury), l'ouverture de la modale de 15 designs + filtrage par catégorie + changement de design à l'étape 5, et la modale « Gérer les notifications ».
+  - **DoD :** `cd mobile-api && npm test` 0 échec ; 4 typechecks en code 0 ; `npm run lint:colors` sans régression ; 0 erreur console bloquante et `scrollWidth <= 375` sur les 6 étapes ; tableau de verdict consigné dans `journal.md`.
+
+- [!] **Tâche 39.13 : Mise en production (migration `0035`, vérif `STARTING_COINS` VPS, déploiement VPS/OTA et test push téléphone)** 🔒
+  - **État :** 39.1 à 39.12 validées localement ; attend l'accord explicite de Miguel pour appliquer `0035_cv_templates.sql` sur Supabase, vérifier `STARTING_COINS` sur le VPS, committer/pousser sur `main` (VPS + `landing-site` + OTA `production` & `preview`) et tester le push sur téléphone Android.
+  - **Fichiers :** aucun (opérations de production soumises à accord explicite)
+  - **Action :** Après feu vert explicite de Miguel : (1) appliquer `mobile-api/sql/0035_cv_templates.sql` sur Supabase et confirmer les 15 lignes dans `cv_templates` ; (2) vérifier la variable `STARTING_COINS` dans `.env` sur le VPS afin qu'elle ne reste pas figée à `1000` ; (3) committer et pousser les modules 38 + 39 unifiés sur `main` (déploiement VPS, `landing-site`, et EAS OTA sur `production` & `preview`) ; (4) exécuter les sondes prod (`/api/health` → 200, `/api/mobile/cv-templates` → 200 avec 15 designs, `/api/mobile/notifications/test` sans session → 401) et tester la réception d'un push écran verrouillé sur téléphone Android avec l'APK intégrant `google-services.json` (`apk-v1.2.0-117` ou nouveau build APK si changement natif).
+  - **DoD :** `/deploy-and-push` vert : `GET https://api.campus360b.site/api/mobile/cv-templates` → 200 (`15` designs), nouvel inscrit en prod crédité de `2 000` coins, OTA publiée sur `production` et `preview`, et notification push test reçue hors app sur téléphone Android.

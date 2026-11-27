@@ -46,6 +46,8 @@
 
 
 
+> **Contrôle ciblé (2026-11-20, `e8fe6ed`) :** route et service de suggestions de missions (§6), tests `mobile-api/tests/cv-suggest.test.mjs` et filtre numérique `numbersGrounded` dans `mobile-api/lib/cv-fill.ts`. Le reste de la carte conserve son commit de référence.
+
 ## Sommaire
 
 
@@ -1092,6 +1094,7 @@ Méthodes relevées dans le code. Toutes les routes `mobile/*` exigent une sessi
 
 | POST | `/api/mobile/stages/apply-on-site` | `mobile/stages/apply-on-site/route.ts` | Oui (offre `LINK` seulement, gratuit, 422 sinon) |
 
+| POST | `/api/mobile/documents/cv-suggest` | `mobile/documents/cv-suggest/route.ts` | Oui (suggestions de missions par poste, cachées par intitulé et soumises au quota sur appel IA) |
 | POST | `/api/mobile/stages/cv` | `mobile/stages/cv/route.ts` | Oui (adapte le CV à l'offre, toutes méthodes y compris `LINK` non expirée, débit unique `stage-apply:<jobId>`, enregistre la lettre du kit `LINK`) |
 
 | GET | `/api/mobile/stages/kit` | `mobile/stages/kit/route.ts` | Oui (renvoie le kit `LINK` de l'étudiant connecté, 404 sinon) |

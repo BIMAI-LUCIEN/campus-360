@@ -58,6 +58,7 @@ import {
   completeStudentOnboarding,
   registerPushToken,
   unregisterPushToken,
+  sendTestPushNotification,
   fetchNotificationsInbox,
   markNotificationsRead,
   clearNotificationsInbox,
@@ -105,6 +106,7 @@ import { SharePdfsModal } from './features/pdf/SharePdfsModal';
 import { MyContributionsScreen } from './features/pdf/MyContributionsScreen';
 import { ProfileScreen } from './ui/screens/ProfileScreen';
 import { EditProfileModal } from './features/profile/EditProfileModal';
+import { SkillsManagerModal } from './features/profile/SkillsManagerModal';
 import { AuthScreen } from './ui/screens/AuthScreen';
 import { DocumentsScreen } from './features/documents/DocumentsScreen';
 import { StagesScreen } from './ui/screens/StagesScreen';
@@ -216,12 +218,6 @@ function TabPane({ active, children }: { active: boolean; children: React.ReactN
     </View>
   );
 }
-
-const onboardingSlides = [
-  { title: 'Trouve le bon PDF', text: 'Recherche par université, filière, matière ou niveau.' },
-  { title: 'Lecture libre', text: 'Lis tous les PDF gratuitement. L’IA te donne 3 actions par jour, puis le Pass Révision.' },
-  { title: 'Lis et revise', text: 'Garde tes achats et utilise l assistant pour réviser plus vite.' },
-];
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -343,6 +339,7 @@ function AppShellInner() {
   const [editingDocumentId, setEditingDocumentId] = React.useState<string | null>(null);
   const [securitySettingsVisible, setSecuritySettingsVisible] = React.useState(false);
   const [editProfileVisible, setEditProfileVisible] = React.useState(false);
+  const [skillsManagerVisible, setSkillsManagerVisible] = React.useState(false);
   const [deleteAccountVisible, setDeleteAccountVisible] = React.useState(false);
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
@@ -459,11 +456,16 @@ function AppShellInner() {
   );
   // Why this phone gets no push (shown in the notification settings), or null.
   const [pushIssue, setPushIssue] = React.useState<string | null>(null);
+  const [pushRegistered, setPushRegistered] = React.useState(false);
+  const [pushBusy, setPushBusy] = React.useState(false);
+  const [pushTestState, setPushTestState] = React.useState<{ ok: boolean; message: string } | null>(null);
 
   // ── Effects ──────────────────────────────────────────────────────────────
   // Asks the phone for permission (once) and sends the Expo push token to the API.
   const registerForPush = React.useCallback(async (askPermission: boolean) => {
     if (Platform.OS === 'web') return;
+    setPushBusy(true);
+    setPushTestState(null);
     try {
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
@@ -479,23 +481,87 @@ function AppShellInner() {
         granted = (await Notifications.requestPermissionsAsync()).granted;
       }
       setNotifPermission(granted ? 'granted' : 'denied');
-      if (!granted) return;
+      if (!granted) {
+        setPushRegistered(false);
+        return;
+      }
       const projectId =
         Constants.expoConfig?.extra?.eas?.projectId ??
         Constants.easConfig?.projectId;
-      if (!projectId) { setPushIssue('Configuration push absente de cette version de l’app.'); return; }
-      const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
-      pushTokenRef.current = tokenResult.data;
-      await registerPushToken(
-        tokenResult.data,
-        Platform.OS === 'android' ? 'Android Device' : Platform.OS === 'ios' ? 'iOS Device' : 'Web Device',
-        Platform.OS === 'android' ? 'android' : Platform.OS === 'ios' ? 'ios' : 'web',
-      );
-      setPushIssue(null);
+      if (!projectId) {
+        setPushRegistered(false);
+        setPushIssue('Configuration push absente de cette version de l’app (projectId manquant).');
+        return;
+      }
+
+      let token = '';
+      try {
+        const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
+        token = tokenResult.data;
+      } catch (tokenError) {
+        const raw = tokenError instanceof Error ? tokenError.message : String(tokenError);
+        console.warn('[push] token retrieval failed:', raw);
+        setPushRegistered(false);
+        if (/Default FirebaseApp is not initialized|Firebase|FCM|google-services/i.test(raw)) {
+          setPushIssue(
+            'L’APK installé sur ton téléphone ne contient pas encore Firebase (FCM). Télécharge la dernière version sur campus360b.site/telecharger pour recevoir les alertes hors de l’app.',
+          );
+        } else {
+          setPushIssue(
+            `Impossible d’activer les alertes push sur cet appareil (${raw.slice(0, 140)}). Tes notifications restent visibles dans la cloche.`,
+          );
+        }
+        return;
+      }
+
+      pushTokenRef.current = token;
+      try {
+        await registerPushToken(
+          token,
+          Platform.OS === 'android' ? 'Android Device' : Platform.OS === 'ios' ? 'iOS Device' : 'Web Device',
+          Platform.OS === 'android' ? 'android' : Platform.OS === 'ios' ? 'ios' : 'web',
+        );
+        setPushRegistered(true);
+        setPushIssue(null);
+      } catch (apiError) {
+        const raw = apiError instanceof Error ? apiError.message : String(apiError);
+        console.warn('[push] token server registration failed:', raw);
+        setPushRegistered(false);
+        setPushIssue(`Appareil prêt, mais l’enregistrement serveur a échoué (${raw.slice(0, 120)}). Appuie sur Réessayer.`);
+      }
     } catch (error) {
-      // Typically a build without Firebase (FCM) on Android: the inbox still works.
-      console.warn('[push] registration failed:', error);
-      setPushIssue('Les alertes sur l’écran du téléphone ne sont pas encore disponibles sur cette version. Tes notifications restent visibles dans la cloche.');
+      const raw = error instanceof Error ? error.message : String(error);
+      console.warn('[push] registration failed:', raw);
+      setPushRegistered(false);
+      setPushIssue(`Activation des notifications impossible (${raw.slice(0, 140)}).`);
+    } finally {
+      setPushBusy(false);
+    }
+  }, []);
+
+  const handleTestPush = React.useCallback(async () => {
+    setPushBusy(true);
+    setPushTestState(null);
+    try {
+      const report = await sendTestPushNotification();
+      if (report.ok) {
+        setPushTestState({
+          ok: true,
+          message: `Alerte test envoyée sur ${report.delivered} appareil(s). Si tu ne la vois pas écran verrouillé, désactive l’économie de batterie pour Campus 360.`,
+        });
+      } else {
+        setPushTestState({
+          ok: false,
+          message: `Envoi non livré (${report.errors.join(', ') || 'erreur Expo/FCM'}). Appuie sur Réessayer l’activation.`,
+        });
+      }
+    } catch (error) {
+      setPushTestState({
+        ok: false,
+        message: error instanceof Error ? error.message : 'Test push impossible.',
+      });
+    } finally {
+      setPushBusy(false);
     }
   }, []);
 
@@ -1139,6 +1205,7 @@ function AppShellInner() {
   const openShare = React.useCallback(() => setShareVisible(true), []);
   const openContributions = React.useCallback(() => setContributionsVisible(true), []);
   const openEditProfile = React.useCallback(() => setEditProfileVisible(true), []);
+  const openSkillsManager = React.useCallback(() => setSkillsManagerVisible(true), []);
   const openSecurity = React.useCallback(() => setSecuritySettingsVisible(true), []);
   const openSupport = React.useCallback(() => setSupportModalVisible(true), []);
   const openDeleteAccount = React.useCallback(() => setDeleteAccountVisible(true), []);
@@ -1483,6 +1550,7 @@ function AppShellInner() {
                     purchasedDocumentsCount={ownedLibrary.length}
                     syncingAccount={syncingAccount}
                     onEditProfile={openEditProfile}
+                    onManageSkills={openSkillsManager}
                     onOpenNotificationsSettings={openNotifSettings}
                     onOpenSecuritySettings={openSecurity}
                     onOpenSupport={openSupport}
@@ -1800,6 +1868,22 @@ function AppShellInner() {
               setStudentProfile(updated);
               showToast('Informations mises à jour.', 'success');
             }}
+            onManageSkills={() => {
+              setEditProfileVisible(false);
+              setSkillsManagerVisible(true);
+            }}
+          />
+        )}
+
+        {skillsManagerVisible && (
+          <SkillsManagerModal
+            visible={skillsManagerVisible}
+            profile={studentProfile}
+            onClose={() => setSkillsManagerVisible(false)}
+            onSaved={(updated) => {
+              setStudentProfile(updated);
+              showToast('Compétences mises à jour.', 'success');
+            }}
           />
         )}
 
@@ -1816,7 +1900,7 @@ function AppShellInner() {
                   </View>
                 </Pressable>
               </View>
-              <View style={{ flex: 1, padding: 20, gap: 16 }}>
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, gap: 14 }}>
                 <Text style={{ fontSize: 16, fontWeight: '600', color: stitchColors.inkSoft }}>
                   {notifPermission === 'granted'
                     ? 'Notifications activées'
@@ -1824,21 +1908,48 @@ function AppShellInner() {
                       ? 'Notifications désactivées'
                       : 'État des notifications inconnu'}
                 </Text>
+                <Text testID="push-status-summary" style={{ fontSize: 12.5, fontWeight: '600', color: pushRegistered ? stitchColors.emeraldDeep : stitchColors.inkMuted }}>
+                  {Platform.OS === 'web'
+                    ? `Version web · v${Constants.expoConfig?.version ?? '1.2.0'} (alertes push actives sur l’application Android/iOS)`
+                    : pushRegistered
+                      ? `Appareil enregistré pour les alertes hors app · v${Constants.expoConfig?.version ?? '1.2.0'}`
+                      : `Appareil non encore enregistré · v${Constants.expoConfig?.version ?? '1.2.0'}`}
+                </Text>
                 <Text style={{ fontSize: 13, color: stitchColors.inkMuted, lineHeight: 19 }}>
                   Campus 360 te prévient des nouveaux stages qui te correspondent, de tes candidatures et de tes recharges. Pour les activer ou les couper, passe par les réglages de ton téléphone.
                 </Text>
                 {pushIssue ? (
-                  <Text style={{ fontSize: 13, color: stitchColors.warningDeep, lineHeight: 19 }}>{pushIssue}</Text>
+                  <Text testID="push-issue-text" style={{ fontSize: 13, color: stitchColors.warningDeep, lineHeight: 19 }}>{pushIssue}</Text>
                 ) : null}
-                {notifPermission !== 'granted' && Platform.OS !== 'web' && (
-                  <PrimaryButtonLocal label="Activer les notifications" onPress={() => { void registerForPush(true); }} />
+                {pushTestState ? (
+                  <Text
+                    testID="push-test-result"
+                    style={{
+                      fontSize: 13,
+                      lineHeight: 19,
+                      color: pushTestState.ok ? stitchColors.emeraldDeep : stitchColors.error,
+                    }}
+                  >
+                    {pushTestState.message}
+                  </Text>
+                ) : null}
+                {Platform.OS !== 'web' && (notifPermission !== 'granted' || Boolean(pushIssue) || !pushRegistered) && (
+                  <PrimaryButtonLocal
+                    label={pushBusy ? 'Activation en cours…' : notifPermission !== 'granted' ? 'Activer les notifications' : 'Réessayer l’activation'}
+                    onPress={() => { if (!pushBusy) void registerForPush(true); }}
+                  />
                 )}
                 <PrimaryButtonLocal
+                  label={pushBusy ? 'Envoi en cours…' : 'Envoyer une alerte test'}
+                  variant={pushRegistered ? 'primary' : 'secondary'}
+                  onPress={() => { if (!pushBusy) void handleTestPush(); }}
+                />
+                <PrimaryButtonLocal
                   label="Ouvrir les réglages"
-                  variant={notifPermission !== 'granted' && Platform.OS !== 'web' ? 'secondary' : 'primary'}
+                  variant="secondary"
                   onPress={() => { Linking.openSettings().catch(() => {}); }}
                 />
-              </View>
+              </ScrollView>
             </Pressable>
           </Pressable>
         </Modal>

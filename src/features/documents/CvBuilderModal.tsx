@@ -5,7 +5,7 @@ import { X } from 'lucide-react-native';
 import { authFetch } from '../auth/betterAuth';
 import { cvBackgroundFilledCount, fetchCvBackground, importCvFromFile, type CvBackground } from '../profile/cvBackgroundApi';
 import { CvEditor } from '../stages/CvEditor';
-import { CvTemplateGallery } from '../stages/CvTemplateGallery';
+import { CvTemplatePickerButton } from '../stages/CvTemplatePickerButton';
 import { CvStylePicker } from '../stages/CvStylePicker';
 import { CvTemplatePreview } from '../stages/CvTemplatePreview';
 import { mergeAiCv, missingCvFields, type CvStyle, type CvTemplateId } from '../stages/cvHtml';
@@ -411,8 +411,8 @@ export function CvBuilderModal({
 
               {!isLetter ? (
                 <>
-                  <Text style={styles.label}>5. Le modèle</Text>
-                  <CvTemplateGallery layout="strip" value={template} onChange={setTemplate} />
+                  <Text style={styles.label}>5. Le design du CV</Text>
+                  <CvTemplatePickerButton compact value={template} onChange={setTemplate} />
                 </>
               ) : null}
 
@@ -482,7 +482,7 @@ export function CvBuilderModal({
               ) : (
                 <>
                   <View style={styles.templateStrip}>
-                    <CvTemplateGallery layout="strip" value={template} onChange={setTemplate} />
+                    <CvTemplatePickerButton compact value={template} onChange={setTemplate} />
                   </View>
                   <CvStylePicker value={cvStyle} onChange={setCvStyle} />
                   <View style={styles.previewBox}>

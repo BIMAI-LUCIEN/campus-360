@@ -37,8 +37,9 @@ type Props = {
   /** New verdict; `previousScore` is set after a correction. */
   onReviewed: (review: CvReview, previousScore?: number) => void;
   /** CV rewritten with the student's answers, and the generation it came from. */
-  onCorrected: (cv: OfficialCvData, sourceGenerationId: string) => void;
+  onCorrected?: (cv: OfficialCvData, sourceGenerationId: string) => void;
   onSwitchToAts: () => void;
+  stageCorrection?: (cv: OfficialCvData, answers: { question: string; reponse: string }[], before: CvReview) => Promise<CvReview>;
   onCreditsChange?: (credits: number) => void;
 };
 
@@ -47,7 +48,7 @@ type Props = {
  * AI), their reasons quoted from the CV, the errors by severity and the questions
  * whose answers let the AI correct the CV without inventing anything.
  */
-export function CvJuryPanel({ cv, template, offer, sourceGenerationId, review, previousScore, student, onReviewed, onCorrected, onSwitchToAts, onCreditsChange }: Props) {
+export function CvJuryPanel({ cv, template, offer, sourceGenerationId, review, previousScore, student, onReviewed, onCorrected, onSwitchToAts, stageCorrection, onCreditsChange }: Props) {
   const [busy, setBusy] = React.useState<string | null>(null);
   const [error, setError] = React.useState<{ message: string; noCredits: boolean } | null>(null);
   const [answers, setAnswers] = React.useState<Record<number, string>>({});
@@ -57,8 +58,8 @@ export function CvJuryPanel({ cv, template, offer, sourceGenerationId, review, p
   const fail = (e: unknown) => {
     const status = e instanceof JuryApiError ? e.status : 0;
     setError({
-      message: status === 402 ? 'Il te faut 2 crédits IA pour cette action. Recharge ton portefeuille puis réessaie.' : e instanceof Error ? e.message : 'Le jury n’a pas pu répondre.',
-      noCredits: status === 402,
+      message: status === 402 && !stageCorrection ? 'Il te faut 2 crédits IA pour cette action. Recharge ton portefeuille puis réessaie.' : e instanceof Error ? e.message : 'Le jury n’a pas pu répondre.',
+      noCredits: status === 402 && !stageCorrection,
     });
   };
 
@@ -85,11 +86,16 @@ export function CvJuryPanel({ cv, template, offer, sourceGenerationId, review, p
     setError(null);
     setBusy('L’IA corrige ton CV avec tes réponses…');
     try {
+      if (stageCorrection) {
+        onReviewed(await stageCorrection(cv, given, review), review.score);
+        setBusy(null);
+        return;
+      }
       const target = offer && offer.title.trim().length >= 2 ? offer : offerFromTitle(cv.titrePoste || review.jury.posteVise || 'Stage');
       const fixed = await correctCvWithJury({ cv, offer: target, answers: given, student });
       if (fixed.remainingCredits !== undefined) onCreditsChange?.(fixed.remainingCredits);
       const merged = mergeAiCv(cv, fixed.cv);
-      onCorrected(merged, fixed.generationId);
+      onCorrected?.(merged, fixed.generationId);
       await run(merged, fixed.generationId, review);
     } catch (e) {
       fail(e);
@@ -123,14 +129,14 @@ export function CvJuryPanel({ cv, template, offer, sourceGenerationId, review, p
           <ActivityIndicator color={stitchColors.primary} />
           <Text style={styles.body}>{busy}</Text>
         </View>
-      ) : (
+      ) : !stageCorrection ? (
         <>
           <Pressable testID="jury-run" style={styles.primary} onPress={() => run(cv, sourceGenerationId)}>
             <Text style={styles.primaryText}>{review ? 'Refaire juger mon CV' : 'Faire juger mon CV'}</Text>
           </Pressable>
           <Text style={styles.hint}>La première relecture de chaque CV généré est gratuite, les suivantes coûtent 2 crédits IA.</Text>
         </>
-      )}
+      ) : null}
 
       {error ? (
         <View testID="jury-error" style={styles.errorBox}>
@@ -215,7 +221,7 @@ export function CvJuryPanel({ cv, template, offer, sourceGenerationId, review, p
             </View>
           ) : null}
 
-          {review.jury.questions.length ? (
+          {review.jury.questions.length && (!stageCorrection || !review.avant) ? (
             <View style={styles.card} testID="jury-questions">
               <Text style={styles.judgeName}>Questions pour toi</Text>
               <Text style={styles.hint}>Réponds seulement ce qui est vrai : l’IA n’ajoute à ton CV que ce que tu écris ici. Les premières rapportent le plus.</Text>
@@ -237,7 +243,7 @@ export function CvJuryPanel({ cv, template, offer, sourceGenerationId, review, p
               <Pressable testID="jury-correct" style={[styles.primary, (!answered || Boolean(busy)) && styles.disabled]} disabled={!answered || Boolean(busy)} onPress={correct}>
                 <Text style={styles.primaryText}>Corriger avec le jury</Text>
               </Pressable>
-              <Text style={styles.hint}>Correction : une nouvelle génération du CV (2 crédits IA), puis une relecture gratuite.</Text>
+              <Text style={styles.hint}>{stageCorrection ? 'Correction et seconde relecture incluses.' : 'Correction : une nouvelle génération du CV (2 crédits IA), puis une relecture gratuite.'}</Text>
             </View>
           ) : null}
         </>

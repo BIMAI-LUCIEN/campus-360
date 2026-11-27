@@ -122,3 +122,45 @@ export const cvBackgroundToText = (b: CvBackground | null | undefined): string =
   if (b.loisirs.length) lines.push(`Loisirs : ${b.loisirs.join(', ')}`);
   return lines.join('\n');
 };
+
+const normalizedEntry = (value: string) => value.trim().toLowerCase().replace(/\s+/g, ' ');
+
+const mergeEntries = <T>(
+  current: T[], imported: T[], limit: number, keyOf: (item: T) => string,
+  combine: (saved: T, incoming: T) => T = (saved) => saved,
+): T[] => {
+  const entries = new Map<string, T>();
+  for (const value of [...current, ...imported]) {
+    const key = keyOf(value);
+    const saved = entries.get(key);
+    if (saved !== undefined) entries.set(key, combine(saved, value));
+    else if (key && entries.size < limit) entries.set(key, value);
+  }
+  return [...entries.values()];
+};
+
+const mergeStrings = (current: string[], imported: string[], limit: number) =>
+  mergeEntries(current, imported, limit, normalizedEntry);
+
+const recordKey = (...parts: string[]) => JSON.stringify(parts.map(normalizedEntry));
+
+/** Existing values win. Different periods preserve distinct positions or degrees. */
+export const mergeCvBackground = (current: CvBackground, imported: CvBackground): CvBackground => ({
+  profil: current.profil || imported.profil,
+  experiences: mergeEntries(current.experiences, imported.experiences, 10,
+    (e) => recordKey(e.poste, e.entreprise, e.periode),
+    (saved, incoming) => ({
+      ...saved,
+      ville: saved.ville || incoming.ville,
+      missions: mergeStrings(saved.missions, incoming.missions, 8),
+    })),
+  formations: mergeEntries(current.formations, imported.formations, 8,
+    (f) => recordKey(f.diplome, f.etablissement, f.periode),
+    (saved, incoming) => ({ ...saved, ville: saved.ville || incoming.ville })),
+  competences: mergeStrings(current.competences, imported.competences, 30),
+  logiciels: mergeStrings(current.logiciels, imported.logiciels, 30),
+  qualites: mergeStrings(current.qualites, imported.qualites, 10),
+  langues: mergeEntries(current.langues, imported.langues, 8, (l) => normalizedEntry(l.langue),
+    (saved, incoming) => ({ ...saved, niveau: saved.niveau || incoming.niveau })),
+  loisirs: mergeStrings(current.loisirs, imported.loisirs, 10),
+});

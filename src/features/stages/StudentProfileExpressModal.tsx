@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Check, MessageCircle, Plus, X } from 'lucide-react-native';
+import { Check, Info, MessageCircle, Plus, X } from 'lucide-react-native';
 
 import { FACULTY_NAMES, LEVELS, MAX_SKILLS, suggestedSkillsFor } from '../onboarding/academicCatalog';
 import { fontFamilies, stitchColors } from '../../theme/stitch';
@@ -164,7 +164,13 @@ export function StudentProfileExpressModal({
 
             {needs.skills ? (
               <View style={styles.block}>
-                <Text style={styles.label}>Tes compétences</Text>
+                <Text style={styles.label}>Tes compétences ({skills.length}/{MAX_SKILLS})</Text>
+                <View style={styles.skillsTipBox}>
+                  <Info size={15} color={stitchColors.primary} />
+                  <Text style={styles.skillsTipText}>
+                    Indique toutes tes compétences acquises (outils, langues, projets…) pour un meilleur matching et un CV plus complet.
+                  </Text>
+                </View>
                 <View style={styles.chips}>
                   {suggestions.map((skill) => {
                     const selected = skills.includes(skill);
@@ -244,6 +250,22 @@ const styles = StyleSheet.create({
   input: { flex: 1, paddingVertical: 12, fontFamily: fontFamilies.inter, fontSize: 14, color: stitchColors.ink },
   help: { fontFamily: fontFamilies.inter, fontSize: 12, color: stitchColors.inkMuted },
   error: { fontFamily: fontFamilies.inter, fontSize: 12, color: stitchColors.error },
+  skillsTipBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: stitchColors.siennaBg,
+  },
+  skillsTipText: {
+    flex: 1,
+    fontFamily: fontFamilies.interMedium,
+    fontSize: 12,
+    lineHeight: 17,
+    color: stitchColors.primary,
+  },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row',

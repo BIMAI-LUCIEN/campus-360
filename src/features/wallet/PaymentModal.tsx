@@ -266,6 +266,8 @@ export function PaymentModal({
               </Text>
             </View>
             <Pressable
+              testID="payment-modal-close"
+              accessibilityLabel="Fermer"
               style={styles.closeBtn}
               onPress={handleResetAndClose}
               disabled={loading || waitingUssd}

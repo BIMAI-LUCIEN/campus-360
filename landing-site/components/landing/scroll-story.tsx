@@ -43,7 +43,7 @@ const steps = [
   {
     n: "06",
     title: "Un wallet, zéro abonnement",
-    desc: "Recharge par MTN MoMo ou Orange Money dès 500 FCFA. 1 000 coins offerts à l'inscription pendant le lancement.",
+    desc: "Recharge par MTN MoMo ou Orange Money dès 500 FCFA. 2 000 coins offerts à l'inscription pendant le lancement.",
     shot: "/images/screens/profil.webp",
     alt: "Profil avec le wallet Campus 360 Pay et les crédits de candidature",
   },

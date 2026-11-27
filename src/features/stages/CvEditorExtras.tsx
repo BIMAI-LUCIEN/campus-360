@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { stitchColors } from '../../theme/stitch';
 import type { CvRubrique, CvRubriqueKind } from '../../types';
@@ -95,11 +95,13 @@ export function MissionSuggestions({ poste, missions, onAdd, testID }: {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const load = async () => {
+  const [keywords, setKeywords] = React.useState('');
+
+  const load = async (notes?: string) => {
     setBusy(true);
     setError(null);
     try {
-      setItems(await suggestMissions(poste));
+      setItems(await suggestMissions(poste, notes));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Suggestions indisponibles.');
     } finally {
@@ -110,10 +112,36 @@ export function MissionSuggestions({ poste, missions, onAdd, testID }: {
   if (poste.trim().length < 2) return null;
   return (
     <View style={styles.suggest}>
+      <TextInput
+        testID={testID ? `${testID}-keywords` : undefined}
+        accessibilityLabel="Mots-clés de tes tâches"
+        placeholder="Mots-clés de tes tâches"
+        placeholderTextColor={stitchColors.inkMuted}
+        style={styles.suggestion}
+        value={keywords}
+        onChangeText={setKeywords}
+        maxLength={500}
+      />
+      {keywords.trim() ? (
+        <Pressable testID={testID ? `${testID}-formulate` : undefined} style={styles.suggestButton} onPress={() => void load(keywords.trim())} disabled={busy}>
+          {busy ? <ActivityIndicator color={stitchColors.primary} /> : <Text style={styles.suggestText}>Formuler avec l’IA</Text>}
+        </Pressable>
+      ) : null}
       {items === null ? (
-        <Pressable testID={testID} style={styles.suggestButton} onPress={load} disabled={busy}>
+        <Pressable testID={testID} style={styles.suggestButton} onPress={() => void load()} disabled={busy}>
           {busy ? <ActivityIndicator color={stitchColors.primary} /> : <Text style={styles.suggestText}>Suggestions de missions</Text>}
         </Pressable>
+      ) : items.length === 0 ? (
+        <View style={styles.suggest} testID={testID ? `${testID}-empty` : undefined}>
+          <Text style={styles.hint}>Aucune suggestion pour ces mots-clés. Essaie d’être plus précis ou relance.</Text>
+          <Pressable
+            style={styles.suggestButton}
+            onPress={() => void load(keywords.trim() || undefined)}
+            disabled={busy}
+          >
+            <Text style={styles.suggestText}>Réessayer</Text>
+          </Pressable>
+        </View>
       ) : (
         <>
           <Text style={styles.hint}>Ajoute seulement ce que tu as vraiment fait.</Text>

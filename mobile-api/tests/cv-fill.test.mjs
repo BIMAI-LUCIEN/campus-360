@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import { runInNewContext } from 'node:vm';
+import ts from 'typescript';
+import { z } from 'zod';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -245,4 +249,75 @@ test('36.3 : sans expérience gardée, la formation passe en premier (gabarits c
     const usual = cvHtml.generateOfficialCvHtml(base, template);
     assert.ok(usual.indexOf('Expérience professionnelle</') < usual.indexOf('Formation</'), template);
   }
+});
+
+test('stages/cv : brouillon et réponses ancrés, correction sans nouveau débit ni remplacement du kit', async () => {
+  const fill = await loadTsWithPackages('lib/cv-fill.ts');
+  const { officialCvSchema, cvToText } = await loadTsWithPackages('lib/cv-schema.ts');
+  const { cvBackgroundSchema, cvBackgroundToText } = await loadTsWithPackages('lib/cv-background.ts');
+  const source = fs.readFileSync('app/api/mobile/stages/cv/route.ts', 'utf8');
+  const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } });
+  const exports = {};
+  let expired = false;
+  let hasJury = true;
+  let paid = false;
+  let debits = 0;
+  let letters = 0;
+  let grounded;
+  class MobileApiError extends Error {
+    constructor(message, status) {
+      super(message);
+      this.status = status;
+    }
+  }
+  const deps = {
+    zod: { z },
+    'next/server': { NextResponse: Response },
+    '@/lib/ai-quota': { enforceAiQuota: async () => {} },
+    '@/lib/cv-background': { cvBackgroundSchema, cvBackgroundToText },
+    '@/lib/cv-background-db': { getCvBackground: async () => { throw new Error('brouillon prioritaire'); } },
+    '@/lib/cv-fill': { ...fill, parseCvFill: (_raw, input) => {
+      grounded = input.notes;
+      return { titrePoste: 'Assistant' };
+    } },
+    '@/lib/cv-schema': { officialCvSchema, cvToText },
+    '@/lib/llm': { CV_MODELS: ['test'], isLlmConfigured: () => true, callLlm: async () => '{}' },
+    '@/lib/stage-charge': {
+      hasPaidStageJury: async () => hasJury,
+      chargeStageApplication: async () => { if (!paid) { debits += 1; paid = true; } return {}; },
+    },
+    '@/lib/stage-kits': { upsertStageKitLetter: async () => { letters += 1; return {}; } },
+    '@/lib/stages-db': { getStageJob: async () => expired ? null : { id: 'job', applyMethod: 'LINK' } },
+    '@/lib/mobile-access': {
+      requireMobileUser: async () => ({ user: { id: 'student', name: 'Awa' } }),
+      mobileErrorResponse: (error) => Response.json({ error: error.message }, { status: error.status ?? 500 }),
+      withCors: (response) => response,
+      MobileApiError,
+    },
+  };
+  runInNewContext(outputText, { exports, require: (name) => deps[name] });
+  const base = {
+    jobId: 'job', job: { title: 'Assistant' }, student: {},
+    currentCv: { detailsPersonnels: { email: 'awa@example.test' }, competences: {}, profil: 'Travail en caisse' },
+    background: { profil: 'Profil ancien' },
+    precisions: [{ question: 'Quel volume ?', reponse: '12 factures' }],
+  };
+  const post = (patch = {}) => exports.POST(new Request('http://localhost/api/mobile/stages/cv', {
+    method: 'POST', body: JSON.stringify({ ...base, ...patch }),
+  }));
+  assert.equal((await post()).status, 200);
+  assert.match(grounded, /12 factures/);
+  assert.match(grounded, /Travail en caisse/);
+  assert.doesNotMatch(grounded, /awa@example|Profil ancien/);
+  const correction = { answers: [{ question: 'Quel outil ?', reponse: 'Excel' }] };
+  hasJury = false;
+  assert.equal((await post(correction)).status, 402);
+  hasJury = true;
+  assert.equal((await post(correction)).status, 200);
+  assert.match(grounded, /Excel/);
+  assert.equal(debits, 1);
+  assert.equal(letters, 1);
+  assert.equal((await post({ currentCv: null })).status, 400);
+  expired = true;
+  assert.equal((await post()).status, 404);
 });

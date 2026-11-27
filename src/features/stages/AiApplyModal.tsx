@@ -26,9 +26,8 @@ import {
   Zap,
   AlertCircle,
   MessageSquare,
-  Sparkles,
 } from 'lucide-react-native';
-import type { StageJob } from '../../types';
+import type { OfficialCvData, StageJob } from '../../types';
 import {
   generateIaApplication,
   fillCvWithAi,
@@ -42,8 +41,9 @@ import { APPLY_LINK_NO_REFUND_NOTICE, isLinkApply } from './applyTarget';
 import { ApplyKitPanel } from './ApplyKitPanel';
 import { useApplyOnSite } from './useApplyOnSite';
 import { exportApplicationPdf, buildWhatsAppPitch, generateCvPdfBase64 } from './pdfExportService';
-import { mergeAiCv, missingCvFields, type CvTemplateId } from './cvHtml';
-import { CvTemplateGallery } from './CvTemplateGallery';
+import { mergeAiCv, missingCvFields, normalizeCv, type CvStyle, type CvTemplateId } from './cvHtml';
+import { CvTemplatePickerButton } from './CvTemplatePickerButton';
+import { CvStylePicker } from './CvStylePicker';
 import { CvTemplatePreview } from './CvTemplatePreview';
 import { composeApplicationMail, type ApplicationMailResult } from './applicationMail';
 import { StudentProfileExpressModal } from './StudentProfileExpressModal';
@@ -54,13 +54,14 @@ import { stitchColors, fontFamilies, stitchRadius } from '../../theme/stitch';
 import { fetchOffers } from '../wallet/offersApi';
 import { OffersModal } from '../wallet/OffersModal';
 import { applyPriceLabel, jobApplyCredits, jobApplyPrice, jobIsPaid } from './applyPrice';
-import { saveCvToLibrary } from './cvLibrary';
+import { saveCvToLibrary, updateCvInLibrary } from './cvLibrary';
 import { CvEditor } from './CvEditor';
 import { CvJuryPanel } from '../documents/CvJuryPanel';
-import type { CvReview } from '../documents/cvJuryApi';
+import { judgeSnapshot, JuryApiError, reviewStageCv, type CvReview } from '../documents/cvJuryApi';
+import { StageCvPrepWizard, type StageCvDraft } from './StageCvPrepWizard';
+import { StageJuryPromptModal } from './StageJuryPromptModal';
+import { STAGE_JURY_PRICE } from './stagePricing';
 import type { CareerOffer } from '../documents/careerContextApi';
-import { CvBackgroundScreen } from '../profile/CvBackgroundScreen';
-import { cvBackgroundFilledCount, fetchCvBackground } from '../profile/cvBackgroundApi';
 import { companyEmail, companyWhatsapp, CONTACT_UNAVAILABLE } from './contactTargets';
 import { AppAlert } from '../../ui/AppAlert';
 import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
@@ -69,7 +70,7 @@ import { KeyboardSafeView } from '../../ui/KeyboardSafeView';
 const jobAsOffer = (job: StageJob | null): CareerOffer | null =>
   job
     ? {
-      kind: 'stage',
+      kind: job.kind === 'emploi' ? 'emploi' : 'stage',
       title: job.title,
       company: job.company?.name ?? '',
       location: job.location ?? '',
@@ -117,22 +118,26 @@ export function AiApplyModal({
   onRecharge,
   onProfileSaved,
 }: AiApplyModalProps) {
-  // template: the student picks the CV layout and tells the AI what is not in the profile.
-  const [step, setStep] = useState<'template' | 'generating' | 'preview' | 'send' | 'sent'>('template');
+  // 6-step funnel (contexte.md §25, Module 39):
+  // 1. prep (infos offre) -> 2. generating -> 3. correct -> 4. jury-prompt / jury -> 5. verify -> 6. send -> sent
+  const [step, setStep] = useState<'prep' | 'generating' | 'correct' | 'jury-prompt' | 'jury' | 'verify' | 'send' | 'sent'>('prep');
   const { openOnSite } = useApplyOnSite();
   const isSiteMode = isLinkApply(job);
   const [cvTemplate, setCvTemplate] = useState<CvTemplateId>('classic');
-  // Kept while the screen lives, so the next application starts from the same notes.
-  const [cvNotes, setCvNotes] = useState('');
-  const [cvAiNotice, setCvAiNotice] = useState<string | null>(null);
+  const [cvStyle, setCvStyle] = useState<CvStyle>({});
+  const [correctTab, setCorrectTab] = useState<'cv' | 'letter'>('cv');
   const progressTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [progressMsg, setProgressMsg] = useState("Analyse de l'offre et correspondance des compétences...");
   const [result, setResult] = useState<GeneratedApplicationResult | null>(null);
   const [activePreviewTab, setActivePreviewTab] = useState<'letter' | 'cv' | 'match' | 'jury'>('letter');
-  // Jury before sending (decision 34.16): optional, never blocks the application.
+  // Optional jury before sending.
   const [cvReview, setCvReview] = useState<CvReview | undefined>(undefined);
   const [cvPreviousScore, setCvPreviousScore] = useState<number | undefined>(undefined);
-  const [cvSourceGeneration, setCvSourceGeneration] = useState<string | undefined>(undefined);
+  const [juryBusy, setJuryBusy] = useState(false);
+  const juryPending = useRef(false);
+  const generating = useRef(false);
+  const savedCv = useRef<Promise<string | undefined>>(Promise.resolve(undefined));
+  const [juryError, setJuryError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editableLetter, setEditableLetter] = useState('');
   const [editableCv, setEditableCv] = useState('');
@@ -144,16 +149,6 @@ export function AiApplyModal({
   const [currentProfile, setCurrentProfile] = useState(studentProfile);
   const [showExpressModal, setShowExpressModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  // "Mon parcours" saved on the account: the AI reads it for every application.
-  const [backgroundCount, setBackgroundCount] = useState<number | null>(null);
-  const [showBackground, setShowBackground] = useState(false);
-  const refreshBackground = () =>
-    fetchCvBackground()
-      .then((res) => setBackgroundCount(res.saved ? cvBackgroundFilledCount(res.background) : 0))
-      .catch(() => setBackgroundCount(null));
-  useEffect(() => {
-    if (visible) void refreshBackground();
-  }, [visible]);
   // Wallet balance in coins (1 coin = 1 FCFA): the application is paid before the AI writes it.
   const [balanceCoins, setBalanceCoins] = useState<number | null>(null);
   // Pack credits valid now: used before the coins (1, or 2 for a paid offer).
@@ -237,20 +232,21 @@ export function AiApplyModal({
   };
 
   useEffect(() => {
-    if (visible && job && !isLinkApply(job)) {
+    if (visible && job) {
       // If student has incomplete profile, prompt express modal first
-      if (isProfileIncomplete) {
+      if (isProfileIncomplete && !isLinkApply(job)) {
         setShowExpressModal(true);
         return;
       }
 
-      // The student can fill everything in first: payment is asked just before generation.
-      setStep('template');
+      // The student fills in offer-specific info first; payment is asked right before generation.
+      setStep('prep');
       setResult(null);
       setIsEditing(false);
+      setCorrectTab('cv');
       setCopiedPitch(false);
     }
-  }, [visible, job, currentProfile, isProfileIncomplete]);
+  }, [visible, job, isProfileIncomplete]);
 
   useEffect(() => () => progressTimers.current.forEach(clearTimeout), []);
 
@@ -261,70 +257,96 @@ export function AiApplyModal({
   const canAfford = !mustPay || paysWithCredits || (balanceCoins !== null && balanceCoins >= applyPrice);
   const creditsLabel = `${applyCredits} crédit${applyCredits > 1 ? 's' : ''}`;
 
-  // Letter and match are written on the device; the CV is filled by the AI
-  // (/api/mobile/stages/cv), which charges the application first. When the AI
-  // fails the coins come back and the CV falls back to the profile alone.
-  const startGeneration = async () => {
+  const saveApplicationCv = (officialCv: OfficialCvData, review?: CvReview) => {
     if (!job) return;
+    const entry = {
+      templateId: cvTemplate,
+      jobId: job.id,
+      jobTitle: job.title,
+      company: job.company?.name ?? '',
+      officialCv,
+      ...(review ? { review } : {}),
+    };
+    const previous = review ? savedCv.current : Promise.resolve(undefined);
+    savedCv.current = previous.then(async (id) => {
+      if (!id) return (await saveCvToLibrary(entry)).id;
+      await updateCvInLibrary(id, entry);
+      return id;
+    }).catch(() => undefined);
+  };
+
+  const startGeneration = async (draft: StageCvDraft) => {
+    if (!job || generating.current) return;
     if (!canAfford) {
       setShowPaymentModal(true);
       return;
     }
+    generating.current = true;
     setStep('generating');
-    setCvAiNotice(null);
     setProgressMsg("Lecture de ton profil et de l'offre...");
     progressTimers.current.forEach(clearTimeout);
     progressTimers.current = [
-      setTimeout(() => setProgressMsg("L'IA remplit ton CV et rédige ta lettre..."), 1200),
+      setTimeout(() => setProgressMsg("L'IA adapte ton CV à l'offre..."), 1200),
       setTimeout(() => setProgressMsg('Mise en page dans le modèle choisi...'), 4000),
     ];
     try {
-      // Paid first: a balance too low stops here, before anything is written.
-      let aiCv: Awaited<ReturnType<typeof fillCvWithAi>> | null = null;
-      try {
-        aiCv = await fillCvWithAi(job, currentProfile, cvNotes);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : '';
-        if (/solde insuffisant/i.test(message)) {
-          await refreshBalance();
-          setStep('template');
-          setShowPaymentModal(true);
-          return;
-        }
-        console.warn('[AiApplyModal] AI CV fill failed:', err);
-      }
-      void refreshBalance();
       const res = await generateIaApplication(job, currentProfile);
-      const officialCv = res.officialCv ? mergeAiCv(res.officialCv, aiCv) : undefined;
-      const cvText = officialCv ? buildCvText(officialCv) : res.cvText;
+      const { photoUrl, ...currentCv } = normalizeCv(draft.currentCv);
+      const aiCv = await fillCvWithAi(job, currentProfile, '', { ...draft, currentCv });
+      const officialCv = mergeAiCv({ ...draft.currentCv, photoUrl }, aiCv);
+      const cvText = buildCvText(officialCv);
       setResult({ ...res, officialCv, cvText });
       setCvReview(undefined);
       setCvPreviousScore(undefined);
-      // The paid application (stages/cv) brings one free review of its CV.
-      setCvSourceGeneration(aiCv ? `stage-apply:${job.id}` : undefined);
-      if (officialCv) {
-        // Keep this CV in the library, whatever happens to the application afterwards.
-        void saveCvToLibrary({
-          templateId: cvTemplate,
-          jobId: job.id,
-          jobTitle: job.title,
-          company: job.company?.name ?? '',
-          officialCv,
-          ...(aiCv ? { sourceGenerationId: `stage-apply:${job.id}` } : {}),
-        }).catch(() => {});
-      }
+      setJuryError(null);
+      saveApplicationCv(officialCv);
       setEditableLetter(res.letterText);
       setEditableCv(cvText);
-      if (!aiCv) {
-        setCvAiNotice("L'IA n'a pas pu compléter ton CV pour le moment : il reprend les informations de ton profil.");
-      }
       setActivePreviewTab('cv');
-      setStep('preview');
+      setCorrectTab('cv');
+      setStep('correct');
+      void refreshBalance();
     } catch (err) {
-      AppAlert.alert('Erreur', err instanceof Error ? err.message : 'Impossible de générer la candidature. Réessayez.');
-      setStep('template');
+      setStep('prep');
+      const message = err instanceof Error ? err.message : 'Impossible de générer la candidature.';
+      if (/solde insuffisant/i.test(message)) {
+        setShowPaymentModal(true);
+        void refreshBalance();
+      } else {
+        AppAlert.alert('Erreur', message);
+      }
     } finally {
+      generating.current = false;
       progressTimers.current.forEach(clearTimeout);
+    }
+  };
+
+  const startStageJury = async () => {
+    if (!job || !result?.officialCv || juryPending.current) return;
+    if (balanceCoins !== null && balanceCoins < STAGE_JURY_PRICE) {
+      setShowPaymentModal(true);
+      return;
+    }
+    juryPending.current = true;
+    setJuryBusy(true);
+    setJuryError(null);
+    try {
+      const review = await reviewStageCv({ jobId: job.id, cv: result.officialCv, template: cvTemplate });
+      setCvReview(review);
+      saveApplicationCv(result.officialCv, review);
+      setActivePreviewTab('jury');
+      setStep('jury');
+      void refreshBalance();
+    } catch (err) {
+      if (err instanceof JuryApiError && err.status === 409 && /solde insuffisant/i.test(err.message)) {
+        setShowPaymentModal(true);
+        void refreshBalance();
+      } else {
+        setJuryError(err instanceof Error ? err.message : 'Le jury est indisponible.');
+      }
+    } finally {
+      juryPending.current = false;
+      setJuryBusy(false);
     }
   };
 
@@ -700,13 +722,27 @@ export function AiApplyModal({
             </View>
 
             {step !== 'sent' && (
-              <View style={styles.stepper}>
+              <View style={styles.stepper} testID="apply-stepper">
                 {([
-                  'Préparer',
+                  'Infos',
+                  'Générer',
+                  'Corriger',
+                  'Jury',
                   'Vérifier',
-                  isSiteMode ? 'Ton dossier' : 'Envoyer',
+                  isSiteMode ? 'Dossier' : 'Postuler',
                 ] as const).map((label, i) => {
-                  const current = step === 'template' || step === 'generating' ? 0 : step === 'preview' ? 1 : 2;
+                  const current =
+                    step === 'prep'
+                      ? 0
+                      : step === 'generating'
+                        ? 1
+                        : step === 'correct'
+                          ? 2
+                          : step === 'jury-prompt' || step === 'jury'
+                            ? 3
+                            : step === 'verify'
+                              ? 4
+                              : 5;
                   return (
                     <View key={label} style={styles.stepperItem}>
                       <View style={[styles.stepperDot, i <= current && styles.stepperDotActive]}>
@@ -721,87 +757,193 @@ export function AiApplyModal({
               </View>
             )}
 
-            {/* Étape 0 : Choix du modèle de CV et notes pour l'IA */}
-            {step === 'template' && (
-              <View style={styles.previewContainer}>
-                <ScrollView
-                  style={styles.previewScroll}
-                  contentContainerStyle={styles.templateStepContent}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  <Pressable style={styles.backgroundCard} onPress={() => setShowBackground(true)} testID="btn-open-background">
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.backgroundCardTitle}>
-                        {backgroundCount ? 'Ton parcours est enregistré' : 'Ajoute ton parcours'}
-                      </Text>
-                      <Text style={styles.backgroundCardText}>
-                        {backgroundCount
-                          ? "L'IA reprend tes expériences, formations et langues. Touche pour les compléter."
-                          : "Importe ton CV ou remplis tes expériences une fois : l'IA s'en servira à chaque candidature."}
-                      </Text>
-                    </View>
-                    <Text style={styles.backgroundCardAction}>{backgroundCount ? 'Modifier' : 'Ajouter'}</Text>
-                  </Pressable>
-
-                  <Text style={styles.templateStepTitle}>Choisis le modèle de ton CV</Text>
-                  <Text style={styles.templateStepSubtitle}>
-                    L'IA le remplit avec ton profil et l'adapte à cette offre. Tu pourras encore changer de modèle avant l'envoi.
-                  </Text>
-                  <CvTemplateGallery value={cvTemplate} onChange={setCvTemplate} />
-
-                  <Text style={styles.notesLabel}>Pour cette offre, à ajouter (facultatif)</Text>
-                  <TextInput
-                    testID="cv-notes-input"
-                    style={styles.notesInput}
-                    multiline
-                    maxLength={4000}
-                    value={cvNotes}
-                    onChangeText={setCvNotes}
-                    placeholder="Ce qui compte pour ce poste et n'est pas dans ton parcours. Ex : j'ai déjà utilisé Sage lors d'un projet de classe."
-                    placeholderTextColor={stitchColors.inkSubtle}
-                    textAlignVertical="top"
-                  />
-                  <Text style={styles.notesHint}>
-                    L'IA n'utilise que ton profil, ton parcours et ce que tu écris ici : elle n'invente ni entreprise, ni diplôme, ni langue.
-                  </Text>
-                </ScrollView>
-                <View style={styles.templateFooter}>
-                  {mustPay && (
+            {/* Étape 1 : Infos de l'étudiant en fonction de l'offre */}
+            {(step === 'prep' || step === 'generating') && (
+              <View style={[styles.previewContainer, step === 'generating' && { display: 'none' }]}>
+                <StageCvPrepWizard
+                  key={job.id}
+                  offer={jobAsOffer(job)!}
+                  base={async () => {
+                    const { officialCv } = await generateIaApplication(job, currentProfile);
+                    if (!officialCv) throw new Error('Impossible de préparer le CV.');
+                    return officialCv;
+                  }}
+                  template={cvTemplate}
+                  onTemplate={setCvTemplate}
+                  generateLabel={canAfford ? `Payer ${paysWithCredits ? creditsLabel : applyPriceLabel(job)} et générer` : 'Recharger mon portefeuille'}
+                  billing={mustPay ? (
                     <View style={styles.payGate} testID="apply-pay-gate">
-                      <Text style={styles.payGateText}>
-                        Candidature : {applyPriceLabel(job)} ou {creditsLabel} • Ton solde :{' '}
-                        {balanceCoins === null ? '…' : `${balanceCoins} FCFA`} • Crédits : {credits}
-                      </Text>
-                      <Text style={styles.payGateHint}>
-                        {canAfford
-                          ? "CV adapté et lettre compris. Payé une seule fois à la génération, rendu si l'IA ou l'envoi échoue."
-                          : 'Recharge ton portefeuille ou prends un pack pour que l’IA rédige ton CV et ta lettre.'}
-                      </Text>
-                      {isSiteMode && (
-                        <Text style={styles.payGateHint} testID="modal-kit-no-refund">
-                          {APPLY_LINK_NO_REFUND_NOTICE}
-                        </Text>
-                      )}
+                      <Text style={styles.payGateText}>Candidature : {applyPriceLabel(job)} ou {creditsLabel} · Solde : {balanceCoins ?? '…'} FCFA · Crédits : {credits}</Text>
+                      {isSiteMode && <Text style={styles.payGateHint}>{APPLY_LINK_NO_REFUND_NOTICE}</Text>}
                       <Pressable onPress={() => setShowOffers(true)} testID="btn-open-packs">
-                        <Text style={styles.payGateLink}>Packs : 5 candidatures pour 1 000 F, 12 pour 2 000 F</Text>
+                        <Text style={styles.payGateLink}>Voir les packs de candidature</Text>
                       </Pressable>
                     </View>
-                  )}
-                  <Pressable
-                    testID="btn-generate-cv"
-                    style={({ pressed }) => [styles.primaryOneClickBtn, styles.generateCvBtn, pressed && { opacity: 0.9 }]}
-                    onPress={canAfford ? startGeneration : () => setShowPaymentModal(true)}
+                  ) : null}
+                  onGenerate={(draft) => void startGeneration(draft)}
+                />
+              </View>
+            )}
+
+            {/* Étape 3 : Correction du CV et de la lettre générés */}
+            {step === 'correct' && result && (
+              <View style={styles.previewContainer} testID="apply-step-correct">
+                <View style={styles.tabBar}>
+                  <View style={styles.tabGroup}>
+                    <Pressable
+                      testID="correct-tab-cv"
+                      style={[styles.tabBtn, correctTab === 'cv' && styles.tabBtnActive]}
+                      onPress={() => setCorrectTab('cv')}
+                    >
+                      <Building2 size={14} color={correctTab === 'cv' ? stitchColors.white : stitchColors.inkSubtle} />
+                      <Text style={[styles.tabBtnText, correctTab === 'cv' && styles.tabBtnTextActive]}>Mon CV</Text>
+                    </Pressable>
+                    <Pressable
+                      testID="correct-tab-letter"
+                      style={[styles.tabBtn, correctTab === 'letter' && styles.tabBtnActive]}
+                      onPress={() => setCorrectTab('letter')}
+                    >
+                      <FileText size={14} color={correctTab === 'letter' ? stitchColors.white : stitchColors.inkSubtle} />
+                      <Text style={[styles.tabBtnText, correctTab === 'letter' && styles.tabBtnTextActive]}>Ma lettre</Text>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {correctTab === 'letter' && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.aiToolbarScroll}
+                    contentContainerStyle={styles.aiToolbarContent}
                   >
-                    <Sparkles size={16} color={stitchColors.white} />
+                    <Pressable style={styles.aiPill} onPress={() => handleReformulateTone('formal')}>
+                      <Text style={styles.aiPillText}>Plus formel</Text>
+                    </Pressable>
+                    <Pressable style={styles.aiPill} onPress={() => handleReformulateTone('concise')}>
+                      <Text style={styles.aiPillText}>Plus concis</Text>
+                    </Pressable>
+                    <Pressable style={styles.aiPill} onPress={() => handleReformulateTone('impact')}>
+                      <Text style={styles.aiPillText}>Compétences clés</Text>
+                    </Pressable>
+                  </ScrollView>
+                )}
+
+                <ScrollView
+                  style={styles.previewScroll}
+                  contentContainerStyle={styles.previewScrollContent}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <Text style={styles.cvAiNotice}>
+                    Relis et corrige ton CV et ta lettre générés par l’IA avant le passage au Jury.
+                  </Text>
+                  {correctTab === 'cv' && result.officialCv ? (
+                    <CvEditor
+                      cv={result.officialCv}
+                      onChange={(officialCv) => {
+                        const nextText = buildCvText(officialCv);
+                        setResult((current) => (current ? { ...current, officialCv, cvText: nextText } : current));
+                        setEditableCv(nextText);
+                        saveApplicationCv(officialCv, cvReview);
+                      }}
+                    />
+                  ) : (
+                    <TextInput
+                      testID="correct-letter-input"
+                      style={styles.editorTextInput}
+                      multiline
+                      value={editableLetter}
+                      onChangeText={setEditableLetter}
+                      placeholderTextColor={stitchColors.inkMuted}
+                    />
+                  )}
+                </ScrollView>
+
+                <View style={styles.stepFooter}>
+                  <Pressable
+                    testID="btn-go-jury"
+                    style={({ pressed }) => [styles.primaryOneClickBtn, styles.footerPrimaryBtn, pressed && { opacity: 0.9 }]}
+                    onPress={() => setStep(cvReview ? 'jury' : 'jury-prompt')}
+                  >
                     <Text style={styles.primaryOneClickBtnText}>
-                      {canAfford
-                        ? mustPay
-                          ? paysWithCredits
-                            ? `Utiliser ${creditsLabel} et générer`
-                            : `Payer ${applyPriceLabel(job)} et générer`
-                          : 'Générer mon CV et ma lettre'
-                        : 'Recharger mon portefeuille'}
+                      {cvReview ? `Continuer vers le Jury (${cvReview.score}/7)` : 'Continuer vers le Jury'}
                     </Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            {/* Étape 4a : Proposition du Jury (optionnel · 200 FCFA) */}
+            {step === 'jury-prompt' && (
+              <View style={styles.previewContainer}>
+                <StageJuryPromptModal
+                  busy={juryBusy}
+                  error={juryError}
+                  balanceCoins={balanceCoins}
+                  onAccept={() => void startStageJury()}
+                  onSkip={() => {
+                    setActivePreviewTab('cv');
+                    setStep('verify');
+                  }}
+                />
+              </View>
+            )}
+
+            {/* Étape 4b : Verdict du Jury + correction post-jury incluse */}
+            {step === 'jury' && result?.officialCv && (
+              <View style={styles.previewContainer} testID="apply-step-jury">
+                <ScrollView
+                  style={styles.previewScroll}
+                  contentContainerStyle={styles.previewScrollContent}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <View testID="apply-jury">
+                    <Text style={styles.cvAiNotice}>
+                      Verdict du Jury : réponds aux questions pour lancer la réécriture corrective incluse, ou passe à la vérification finale.
+                    </Text>
+                    <CvJuryPanel
+                      cv={result.officialCv}
+                      template={cvTemplate}
+                      offer={jobAsOffer(job)}
+                      review={cvReview}
+                      previousScore={cvPreviousScore}
+                      student={{
+                        fullName: currentProfile.fullName || undefined,
+                        university: currentProfile.university || undefined,
+                        major: currentProfile.major || undefined,
+                        educationLevel: currentProfile.educationLevel || undefined,
+                        skills: currentProfile.skills,
+                      }}
+                      onReviewed={(next, before) => { setCvReview(next); setCvPreviousScore(before); }}
+                      stageCorrection={async (cv, answers, before) => {
+                        const { photoUrl: _photo, ...currentCv } = normalizeCv(cv);
+                        const fresh = await fillCvWithAi(job, currentProfile, '', { currentCv, answers });
+                        const officialCv = mergeAiCv(cv, fresh);
+                        const review = await reviewStageCv({ jobId: job.id, cv: officialCv, template: cvTemplate, second: true });
+                        const next = { ...review, avant: { score: before.score, juges: judgeSnapshot(before) } };
+                        const nextCvText = buildCvText(officialCv);
+                        setResult((current) => (current ? { ...current, officialCv, cvText: nextCvText } : current));
+                        setEditableCv(nextCvText);
+                        saveApplicationCv(officialCv, next);
+                        return next;
+                      }}
+                      onSwitchToAts={() => {
+                        setCvTemplate('ats');
+                        setActivePreviewTab('cv');
+                        setStep('verify');
+                      }}
+                    />
+                  </View>
+                </ScrollView>
+                <View style={styles.stepFooter}>
+                  <Pressable
+                    testID="btn-jury-to-verify"
+                    style={({ pressed }) => [styles.primaryOneClickBtn, styles.footerPrimaryBtn, pressed && { opacity: 0.9 }]}
+                    onPress={() => {
+                      setActivePreviewTab('cv');
+                      setStep('verify');
+                    }}
+                  >
+                    <Text style={styles.primaryOneClickBtnText}>Passer à la vérification</Text>
                   </Pressable>
                 </View>
               </View>
@@ -837,9 +979,9 @@ export function AiApplyModal({
               </View>
             )}
 
-            {/* Étape 2 : Prévisualisation, Onglets, Édition & Sorties */}
-            {step === 'preview' && result && (
-              <View style={styles.previewContainer}>
+            {/* Étape 5 : Vérification finale (aperçu CV, design & style, lettre, correspondance) */}
+            {step === 'verify' && result && (
+              <View style={styles.previewContainer} testID="apply-step-verify">
                 {/* Tab Bar */}
                 <View style={styles.tabBar}>
                   <View style={styles.tabGroup}>
@@ -881,7 +1023,7 @@ export function AiApplyModal({
                       </Text>
                     </Pressable>
 
-                    {result.officialCv ? (
+                    {result.officialCv && cvReview ? (
                       <Pressable
                         testID="tab-jury"
                         style={[styles.tabBtn, activePreviewTab === 'jury' && styles.tabBtnActive]}
@@ -919,44 +1061,36 @@ export function AiApplyModal({
 
                   {activePreviewTab !== 'match' && activePreviewTab !== 'jury' && (
                     <Pressable
+                      testID="verify-back-correct"
                       style={[styles.editToggleBtn, isEditing && styles.editToggleBtnActive]}
-                      onPress={() => setIsEditing(!isEditing)}
+                      onPress={() => {
+                        setIsEditing(false);
+                        setCorrectTab(activePreviewTab === 'letter' ? 'letter' : 'cv');
+                        setStep('correct');
+                      }}
                     >
-                      <Edit3 size={13} color={isEditing ? stitchColors.white : '#A78BFA'} />
-                      <Text style={[styles.editToggleText, isEditing && styles.editToggleTextActive]}>
-                        {isEditing ? 'Voir le rendu' : activePreviewTab === 'cv' ? 'Modifier le CV' : 'Modifier la lettre'}
-                      </Text>
+                      <Edit3 size={13} color={stitchColors.primary} />
+                      <Text style={styles.editToggleText}>Corriger</Text>
                     </Pressable>
                   )}
                 </View>
 
-                {/* AI Quick Reformulation Toolbar (Lettre) */}
-                {activePreviewTab === 'letter' && !isEditing && (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.aiToolbarScroll}
-                    contentContainerStyle={styles.aiToolbarContent}
-                  >
-                    <Pressable style={styles.aiPill} onPress={() => handleReformulateTone('formal')}>
-                      <Text style={styles.aiPillText}>Plus formel</Text>
-                    </Pressable>
-                    <Pressable style={styles.aiPill} onPress={() => handleReformulateTone('concise')}>
-                      <Text style={styles.aiPillText}>Plus concis</Text>
-                    </Pressable>
-                    <Pressable style={styles.aiPill} onPress={() => handleReformulateTone('impact')}>
-                      <Text style={styles.aiPillText}>Compétences clés</Text>
-                    </Pressable>
-                  </ScrollView>
-                )}
+                {result.officialCv && missingCvFields(result.officialCv).length > 0 ? (
+                  <View style={styles.missingFieldsBanner} testID="verify-missing-fields">
+                    <AlertCircle size={14} color={stitchColors.warningDeep} />
+                    <Text style={styles.missingFieldsText}>
+                      Champs à compléter avant l’envoi : {missingCvFields(result.officialCv).join(', ')}.
+                    </Text>
+                  </View>
+                ) : null}
 
                 {/* Main Content Area */}
                 {activePreviewTab === 'cv' && !isEditing && result.officialCv ? (
                   <View style={styles.cvPreviewArea}>
-                    {cvAiNotice && <Text style={styles.cvAiNotice}>{cvAiNotice}</Text>}
-                    <CvTemplateGallery layout="strip" value={cvTemplate} onChange={setCvTemplate} />
+                    <CvTemplatePickerButton compact value={cvTemplate} onChange={setCvTemplate} label="Design du CV" />
+                    <CvStylePicker value={cvStyle} onChange={setCvStyle} />
                     <View style={styles.cvPreviewPage}>
-                      <CvTemplatePreview cv={result.officialCv} template={cvTemplate} />
+                      <CvTemplatePreview cv={result.officialCv} template={cvTemplate} style={cvStyle} />
                     </View>
                   </View>
                 ) : (
@@ -974,7 +1108,6 @@ export function AiApplyModal({
                         cv={result.officialCv}
                         template={cvTemplate}
                         offer={jobAsOffer(job)}
-                        sourceGenerationId={cvSourceGeneration}
                         review={cvReview}
                         previousScore={cvPreviousScore}
                         student={{
@@ -985,11 +1118,17 @@ export function AiApplyModal({
                           skills: currentProfile.skills,
                         }}
                         onReviewed={(next, before) => { setCvReview(next); setCvPreviousScore(before); }}
-                        onCorrected={(officialCv, generation) => {
-                          // The corrected CV is the one sent; the application is not charged again.
-                          setResult((current) => (current ? { ...current, officialCv } : current));
-                          setEditableCv(buildCvText(officialCv));
-                          setCvSourceGeneration(generation);
+                        stageCorrection={async (cv, answers, before) => {
+                          const { photoUrl: _photo, ...currentCv } = normalizeCv(cv);
+                          const fresh = await fillCvWithAi(job, currentProfile, '', { currentCv, answers });
+                          const officialCv = mergeAiCv(cv, fresh);
+                          const review = await reviewStageCv({ jobId: job.id, cv: officialCv, template: cvTemplate, second: true });
+                          const next = { ...review, avant: { score: before.score, juges: judgeSnapshot(before) } };
+                          const nextCvText = buildCvText(officialCv);
+                          setResult((current) => current ? { ...current, officialCv, cvText: nextCvText } : current);
+                          setEditableCv(nextCvText);
+                          saveApplicationCv(officialCv, next);
+                          return next;
                         }}
                         onSwitchToAts={() => { setCvTemplate('ats'); setActivePreviewTab('cv'); }}
                       />
@@ -1063,7 +1202,7 @@ export function AiApplyModal({
                       onPress={() => setStep('send')}
                     >
                       <Text style={styles.primaryOneClickBtnText}>
-                        {isSiteMode ? 'Voir mon dossier complet' : "Continuer vers l'envoi"}
+                        {isSiteMode ? 'Voir mon dossier complet' : 'Postuler maintenant'}
                       </Text>
                     </Pressable>
                   </View>
@@ -1071,12 +1210,12 @@ export function AiApplyModal({
               </View>
             )}
 
-            {/* Étape 3 : Envoi (canal, copie du texte, suivi) */}
+            {/* Étape 6 : Postulation (canal, copie du texte, suivi) */}
             {step === 'send' && result && (
               <View style={styles.previewContainer}>
                 <ScrollView style={styles.previewScroll} contentContainerStyle={styles.sendStepContent}>
-                  <Pressable style={styles.backLink} onPress={() => setStep('preview')} hitSlop={8}>
-                    <Text style={styles.backLinkText}>‹ Revenir à mon CV et ma lettre</Text>
+                  <Pressable style={styles.backLink} onPress={() => setStep('verify')} hitSlop={8}>
+                    <Text style={styles.backLinkText}>‹ Revenir à la vérification</Text>
                   </Pressable>
                   {isSiteMode ? (
                     <ApplyKitPanel
@@ -1089,7 +1228,6 @@ export function AiApplyModal({
                         educationLevel: currentProfile.educationLevel,
                         skills: currentProfile.skills,
                       }}
-                      notes={cvNotes}
                       downloadingPdf={downloadingPdf}
                       onDownloadPdf={handleDownloadPdf}
                       onOpenSite={(targetJob) => openOnSite(targetJob)}
@@ -1386,6 +1524,29 @@ export function AiApplyModal({
               </View>
             )}
           </View>
+          <OffersModal
+            visible={showOffers}
+            focus="pack"
+            reasonMessage="Un pack donne des crédits de candidature valables 30 jours : 1 crédit par offre non rémunérée, 2 par offre rémunérée."
+            onClose={() => setShowOffers(false)}
+            onPurchased={(state) => {
+              setCredits(state.credits);
+              void refreshBalance();
+            }}
+          />
+
+          {/* Modal Paiement Mobile Money si solde épuisé */}
+          <PaymentModal
+            visible={showPaymentModal}
+            defaultPhone={currentProfile.phoneWhatsapp || ''}
+            minimumAmount={Math.max(0, (step === 'jury-prompt' ? STAGE_JURY_PRICE : applyPrice) - (balanceCoins ?? 0))}
+            reasonMessage={step === 'jury-prompt' ? `Jury (${STAGE_JURY_PRICE} FCFA). Recharge ton portefeuille pour continuer.` : `Candidature (${job ? applyPriceLabel(job) : ''}). Recharge ton portefeuille Mobile Money pour continuer.`}
+            onClose={() => setShowPaymentModal(false)}
+            onPaymentSuccess={async () => {
+              setShowPaymentModal(false);
+              await refreshBalance();
+            }}
+          />
         </KeyboardSafeView>
       </Modal>
 
@@ -1403,36 +1564,6 @@ export function AiApplyModal({
           onClose();
         }}
         onSaveAndContinue={handleExpressProfileSaved}
-      />
-
-      <CvBackgroundScreen
-        visible={showBackground}
-        onClose={() => setShowBackground(false)}
-        onSaved={(b) => setBackgroundCount(cvBackgroundFilledCount(b))}
-      />
-
-      <OffersModal
-        visible={showOffers}
-        focus="pack"
-        reasonMessage="Un pack donne des crédits de candidature valables 30 jours : 1 crédit par offre non rémunérée, 2 par offre rémunérée."
-        onClose={() => setShowOffers(false)}
-        onPurchased={(state) => {
-          setCredits(state.credits);
-          void refreshBalance();
-        }}
-      />
-
-      {/* Modal Paiement Mobile Money si solde épuisé */}
-      <PaymentModal
-        visible={showPaymentModal}
-        defaultPhone={currentProfile.phoneWhatsapp || ''}
-        minimumAmount={Math.max(0, applyPrice - (balanceCoins ?? 0))}
-        reasonMessage={`Candidature (${job ? applyPriceLabel(job) : ''}). Recharge ton portefeuille Mobile Money pour continuer.`}
-        onClose={() => setShowPaymentModal(false)}
-        onPaymentSuccess={async () => {
-          setShowPaymentModal(false);
-          await refreshBalance();
-        }}
       />
     </>
   );
@@ -1472,6 +1603,7 @@ const styles = StyleSheet.create({
   },
   headerTitleRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
@@ -1628,6 +1760,7 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
@@ -1637,7 +1770,9 @@ const styles = StyleSheet.create({
     borderBottomColor: stitchColors.paperSoft,
   },
   tabGroup: {
+    maxWidth: '100%',
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
   },
   tabBtn: {
@@ -1726,94 +1861,58 @@ const styles = StyleSheet.create({
   previewScrollContent: {
     paddingVertical: 10,
   },
-  templateStepContent: {
-    paddingTop: 14,
-    paddingBottom: 24,
-  },
-  templateStepTitle: {
-    fontFamily: fontFamilies.display,
-    fontSize: 18,
-    color: stitchColors.ink,
-  },
-  templateStepSubtitle: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 13,
-    lineHeight: 19,
-    color: stitchColors.inkMuted,
-    marginTop: 4,
-    marginBottom: 14,
-  },
-  notesLabel: {
-    fontFamily: fontFamilies.interSemi,
-    fontSize: 13.5,
-    color: stitchColors.ink,
-    marginTop: 20,
-    marginBottom: 6,
-  },
-  notesInput: {
-    minHeight: 104,
-    borderWidth: 1,
-    borderColor: stitchColors.outlineVariant,
-    borderRadius: stitchRadius.sm,
-    backgroundColor: stitchColors.white,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontFamily: fontFamilies.inter,
-    fontSize: 13.5,
-    lineHeight: 19,
-    color: stitchColors.ink,
-  },
-  notesHint: {
-    fontFamily: fontFamilies.inter,
-    fontSize: 11.5,
-    lineHeight: 16,
-    color: stitchColors.inkMuted,
-    marginTop: 6,
-  },
   stepper: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    gap: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: stitchColors.paperSoft,
   },
-  stepperItem: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  stepperItem: { flex: 1, alignItems: 'center', gap: 3, minWidth: 0 },
   stepperDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: stitchColors.paperSoft,
   },
   stepperDotActive: { backgroundColor: stitchColors.primary },
-  stepperDotText: { fontSize: 11, fontWeight: '700', color: stitchColors.inkMuted },
+  stepperDotText: { fontSize: 10, fontWeight: '700', color: stitchColors.inkMuted },
   stepperDotTextActive: { color: stitchColors.white },
-  stepperLabel: { flexShrink: 1, fontSize: 12, color: stitchColors.inkMuted, fontWeight: '600' },
-  stepperLabelActive: { color: stitchColors.ink },
-  backgroundCard: {
+  stepperLabel: { fontSize: 9.5, color: stitchColors.inkMuted, fontWeight: '600', textAlign: 'center' },
+  stepperLabelActive: { color: stitchColors.ink, fontWeight: '700' },
+  missingFieldsBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    marginBottom: 18,
-    borderRadius: stitchRadius.lg,
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: stitchRadius.sm,
+    backgroundColor: stitchColors.paperSoft,
     borderWidth: 1,
-    borderColor: stitchColors.primary,
-    backgroundColor: stitchColors.siennaBg,
+    borderColor: stitchColors.warningDeep,
   },
-  backgroundCardTitle: { fontSize: 15, fontWeight: '700', color: stitchColors.ink },
-  backgroundCardText: { marginTop: 3, fontSize: 13, lineHeight: 18, color: stitchColors.inkMuted },
-  backgroundCardAction: { fontSize: 14, fontWeight: '700', color: stitchColors.primary },
+  missingFieldsText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: stitchColors.warningDeep,
+  },
   stepFooter: {
     flexDirection: 'row',
     gap: 10,
     paddingHorizontal: 16,
     paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: stitchColors.white,
     borderTopWidth: 1,
     borderTopColor: stitchColors.outlineVariant,
+    zIndex: 2,
   },
   footerSecondaryBtn: {
     minHeight: 50,
@@ -1831,12 +1930,6 @@ const styles = StyleSheet.create({
   sendStepContent: { padding: 16, paddingBottom: 24 },
   backLink: { alignSelf: 'flex-start', paddingVertical: 6, marginBottom: 8 },
   backLinkText: { color: stitchColors.primary, fontSize: 14, fontWeight: '600' },
-  templateFooter: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: stitchColors.outlineVariant,
-  },
   payGate: {
     marginBottom: 10,
     gap: 2,
@@ -1858,6 +1951,8 @@ const styles = StyleSheet.create({
   },
   cvPreviewArea: {
     flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
     paddingHorizontal: 16,
     paddingTop: 8,
     gap: 8,
@@ -2097,10 +2192,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 3,
-  },
-  generateCvBtn: {
-    backgroundColor: stitchColors.primary,
-    shadowColor: stitchColors.primary,
   },
   primaryOneClickBtnText: {
     fontFamily: fontFamilies.outfit,

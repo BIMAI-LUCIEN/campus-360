@@ -79,16 +79,12 @@ test('36.6 : « jusqu’à Z/7 » compte les juges dont le potentiel atteint 7, 
   assert.match(read('app/api/mobile/documents/cv-review/route.ts'), /potentiel: juryPotential\(ats, jury\)/);
 });
 
-test('36.9 : une candidature payée (stage-apply) donne droit à une relecture gratuite de son CV ; non payée, non', async () => {
-  const paid = new Set(['credit:u1:stage-apply:job-9']);
-  const query = async (sql, params) => {
-    const [userId, ref] = params;
-    if (/app_credit_usages/.test(sql)) return { rows: paid.has(`credit:${userId}:${ref}`) ? [{ x: 1 }] : [] };
-    if (/type = 'purchase'/.test(sql)) return { rows: [] };
-    return { rows: [] };
-  };
-  const deps = review.sqlReviewBillingDeps(query);
-  assert.equal(await deps.ownsCvGeneration('u1', 'stage-apply:job-9'), true);
-  assert.equal(await deps.ownsCvGeneration('u1', 'stage-apply:job-10'), false);
-  assert.equal(await deps.ownsCvGeneration('u2', 'stage-apply:job-9'), false);
+
+test('38.2 : une candidature payée ne déclenche plus de jury gratuit dans documents/cv-review', async () => {
+  const deps = review.sqlReviewBillingDeps(async (sql, params) => {
+    assert.match(sql, /reference_id like 'cv-%'/);
+    return { rows: params[1] === 'cv-autonome' ? [{ ok: 1 }] : [] };
+  });
+  assert.equal(await deps.ownsCvGeneration('u1', 'stage-apply:job-9'), false);
+  assert.equal(await deps.ownsCvGeneration('u1', 'cv-autonome'), true);
 });

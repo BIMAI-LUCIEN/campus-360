@@ -28,6 +28,10 @@ export function CvPrecisions({
   onRetry,
   onSkip,
   onSubmit,
+  submitLabel = "Générer avec mes réponses",
+  skipLabel = "Passer",
+  allowEmptySubmit = false,
+  footer,
 }: {
   questions: PrecisionQuestion[];
   answers: Record<string, string>;
@@ -38,8 +42,13 @@ export function CvPrecisions({
   onRetry: () => void;
   onSkip: () => void;
   onSubmit: () => void;
+  submitLabel?: string;
+  skipLabel?: string;
+  allowEmptySubmit?: boolean;
+  footer?: React.ReactNode;
 }) {
   const answered = questions.some((q) => (answers[q.id] || '').trim());
+  const canSubmit = !loading && (allowEmptySubmit || answered);
   return (
     <ScrollView testID="cv-precisions" contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.label}>Quelques précisions avant de rédiger</Text>
@@ -86,17 +95,19 @@ export function CvPrecisions({
         ))
         : null}
 
+      {footer}
+
       <View style={styles.row}>
         <Pressable testID="cv-precisions-skip" style={[styles.secondary, styles.grow]} onPress={onSkip}>
-          <Text style={styles.secondaryText}>Passer</Text>
+          <Text style={styles.secondaryText}>{skipLabel}</Text>
         </Pressable>
         <Pressable
           testID="cv-precisions-submit"
-          style={[styles.primary, styles.grow, (loading || !answered) && styles.disabled]}
+          style={[styles.primary, styles.grow, !canSubmit && styles.disabled]}
           onPress={onSubmit}
-          disabled={loading || !answered}
+          disabled={!canSubmit}
         >
-          <Text style={styles.primaryText}>Générer avec mes réponses</Text>
+          <Text style={styles.primaryText}>{submitLabel}</Text>
         </Pressable>
       </View>
     </ScrollView>

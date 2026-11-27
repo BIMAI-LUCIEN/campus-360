@@ -25,9 +25,9 @@ test('hors production, l’absence de variable garde le gratuit', () => {
   assert.equal(m.resolveFreeLaunch({ NODE_ENV: 'development' }).active, true);
 });
 
-test('solde de départ : 1 000 pendant le lancement, 300 ensuite, borné', () => {
+test('solde de départ : 2 000 pendant le lancement, 300 ensuite, borné', () => {
   const launch = { NODE_ENV: 'production', FREE_LAUNCH_MODE: 'true', FREE_LAUNCH_UNTIL: '2027-01-01' };
-  assert.equal(m.resolveStartingCoins(launch, new Date('2026-11-01T00:00:00Z')), 1000);
+  assert.equal(m.resolveStartingCoins(launch, new Date('2026-11-01T00:00:00Z')), 2000);
   assert.equal(m.resolveStartingCoins(launch, new Date('2027-02-01T00:00:00Z')), 300);
   assert.equal(m.resolveStartingCoins({ NODE_ENV: 'production', FREE_LAUNCH_MODE: 'false' }), 300);
   assert.equal(m.resolveStartingCoins({ STARTING_COINS: '2500' }), 2500);

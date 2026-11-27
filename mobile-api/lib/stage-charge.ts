@@ -1,8 +1,12 @@
 import { databasePool } from './database';
 import { MobileApiError } from './mobile-access';
-import { stageApplyCredits, stageApplyPrice, type StagePricingInput } from './stage-pricing';
+import { STAGE_JURY_PRICE, stageApplyCredits, stageApplyPrice, type StagePricingInput } from './stage-pricing';
 import {
   chargeApplicationOn,
+  checkStageJuryOn,
+  hasStageJuryPassOn,
+  stageJuryReference,
+  StageJuryPassError,
   hasPaidApplicationOn,
   InsufficientFundsError,
   refundApplicationOn,
@@ -54,3 +58,20 @@ export const isCharged = (payment: StageCharge) => payment.charged > 0 || paymen
 /** Gives the credits or the coins back when the application could not be delivered. */
 export const refundStageApplication = async (userId: string, jobId: string): Promise<void> =>
   inTransaction((client) => refundApplicationOn(client, userId, stageApplyReference(jobId)));
+
+export const hasPaidStageJury = (userId: string, jobId: string): Promise<boolean> =>
+  hasStageJuryPassOn(databasePool, userId, stageJuryReference(jobId));
+
+export const chargeStageJury = async (userId: string, jobId: string, second: boolean, settle: boolean): Promise<StageCharge> => {
+  try {
+    return settle
+      ? await inTransaction((client) => checkStageJuryOn(client, userId, jobId, second, STAGE_JURY_PRICE, true))
+      : await checkStageJuryOn(databasePool, userId, jobId, second, STAGE_JURY_PRICE, false);
+  } catch (error) {
+    if (error instanceof StageJuryPassError) throw new MobileApiError(error.message, error.status);
+    if (error instanceof InsufficientFundsError) {
+      throw new MobileApiError(`Solde insuffisant : le jury coûte ${error.price} FCFA.`, 409);
+    }
+    throw error;
+  }
+};

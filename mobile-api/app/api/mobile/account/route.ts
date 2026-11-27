@@ -3,11 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { databasePool } from '@/lib/database';
+import { MAX_ACCOUNT_SKILLS, MAX_SKILL_LENGTH, MIN_SKILL_LENGTH, sanitizeSkills } from '@/lib/account-skills';
 import { corsPreflight, MobileApiError, mobileErrorResponse, requireMobileUser, withCors } from '@/lib/mobile-access';
 import { ACCOUNT_DELETION_CONFIRM, deleteAccount } from '@/lib/account-deletion';
 import { getInstanceName, logoutInstance } from '@/lib/evolution-api';
 import { canStoreFiles, deleteStoredFile } from '@/lib/file-storage';
 import { rateLimit } from '@/lib/rate-limit';
+import { ensureStageStudent } from '@/lib/stages-db';
 
 export const runtime = 'nodejs';
 
@@ -38,9 +40,23 @@ const updateProfileSchema = z.object({
   university: textField(120),
   faculty: textField(120),
   level: z.string().trim().max(60).optional(),
+  skills: z.array(z.string().trim().min(MIN_SKILL_LENGTH).max(MAX_SKILL_LENGTH)).max(MAX_ACCOUNT_SKILLS).optional(),
 });
 
-const MAX_BODY_BYTES = 4 * 1024;
+const MAX_BODY_BYTES = 8 * 1024;
+
+const loadStudentSkills = async (userId: string, betterAuthUserId: string, email: string): Promise<string[]> => {
+  const result = await databasePool.query<{ skills: string[] | null }>(
+    `select skills
+       from public.stage_students
+      where app_user_id = $1 or auth_id = $2 or lower(email) = lower($3)
+      order by (app_user_id = $1) desc
+      limit 1`,
+    [userId, betterAuthUserId, email],
+  );
+  const raw = result.rows[0]?.skills;
+  return Array.isArray(raw) ? raw.map(String) : [];
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,7 +65,7 @@ export async function GET(request: NextRequest) {
     const user = access.user;
 
     // No fake balance or identity on failure: a DB error surfaces as an error response.
-    const [wallet, documents, packs, transactions] = await Promise.all([
+    const [wallet, documents, packs, transactions, skills] = await Promise.all([
       databasePool.query('select balance_coins, ia_credits, report_credits from public.app_wallets where user_id = $1', [user.id]),
       databasePool.query('select document_id from public.app_document_purchases where buyer_id = $1', [user.id]),
       databasePool.query('select pack_id, document_ids from public.app_pack_purchases where buyer_id = $1', [user.id]),
@@ -70,6 +86,7 @@ export async function GET(request: NextRequest) {
          order by tx.created_at desc limit 30`,
         [user.id],
       ),
+      loadStudentSkills(user.id, user.betterAuthUserId, user.email).catch(() => []),
     ]);
 
     const packDocumentIds = packs.rows.flatMap((row) => row.document_ids ?? []);
@@ -85,6 +102,7 @@ export async function GET(request: NextRequest) {
           university: user.university ?? undefined,
           faculty: user.faculty ?? undefined,
           level: user.level ?? undefined,
+          skills,
         },
         wallet: {
           balanceCoins: Number(wallet.rows[0]?.balance_coins ?? 0),
@@ -153,6 +171,26 @@ export async function PATCH(request: NextRequest) {
     );
 
     const row = result.rows[0];
+    let savedSkills: string[];
+    if (parsed.data.skills !== undefined) {
+      const cleanedSkills = sanitizeSkills(parsed.data.skills);
+      const studentId = await ensureStageStudent({
+        id: String(row.id),
+        betterAuthUserId: user.betterAuthUserId,
+        email: row.email ? String(row.email) : user.email,
+        name: String(row.name),
+        phone: row.phone ? String(row.phone) : undefined,
+        whatsappPhone: row.whatsapp_phone ? String(row.whatsapp_phone) : undefined,
+        university: row.university ? String(row.university) : undefined,
+        faculty: row.faculty ? String(row.faculty) : undefined,
+        level: row.level ? String(row.level) : undefined,
+      });
+      await databasePool.query('update public.stage_students set skills = $2 where id = $1', [studentId, cleanedSkills]);
+      savedSkills = cleanedSkills;
+    } else {
+      savedSkills = await loadStudentSkills(user.id, user.betterAuthUserId, user.email).catch(() => []);
+    }
+
     return withCors(
       NextResponse.json({
         id: String(row.id),
@@ -164,6 +202,7 @@ export async function PATCH(request: NextRequest) {
         university: row.university ? String(row.university) : undefined,
         faculty: row.faculty ? String(row.faculty) : undefined,
         level: row.level ? String(row.level) : undefined,
+        skills: savedSkills,
       }),
       request,
     );

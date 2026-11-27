@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Platform, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type { OfficialCvData } from '../../types';
-import { generateOfficialCvHtml, type CvStyle, type CvTemplateId } from './cvHtml';
+import { findCvTemplate, generateOfficialCvHtml, type CvStyle, type CvTemplateId } from './cvHtml';
 import { stitchColors } from '../../theme/stitch';
 
 interface CvTemplatePreviewProps {
@@ -17,11 +17,17 @@ const A4_WIDTH_PX = 794;
 
 // The printed HTML, shrunk to the width of the screen: the page keeps its A4
 // layout (zoom) and the templates printed with page margins get them back.
-const PRINT_PADDING: Partial<Record<CvTemplateId, string>> = { classic: '15mm 20mm', ats: '14mm 17mm' };
+const printPaddingFor = (template: CvTemplateId): string | undefined => {
+  if (template === 'classic') return '15mm 20mm';
+  const def = findCvTemplate(template);
+  if (template === 'ats' || def.layoutFamily === 'ats-clean') return '14mm 17mm';
+  return undefined;
+};
 const fitToWidth = (html: string, width: number, template: CvTemplateId): string => {
   const zoom = Math.max(0.2, Math.min(1, width / A4_WIDTH_PX)).toFixed(4);
+  const pad = printPaddingFor(template);
   const style = `<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>html { zoom: ${zoom}; } body { width: 210mm; ${PRINT_PADDING[template] ? `padding: ${PRINT_PADDING[template]};` : ''} }</style>`;
+<style>html { zoom: ${zoom}; } body { width: 210mm; ${pad ? `padding: ${pad};` : ''} }</style>`;
   return html.replace('</head>', `${style}</head>`);
 };
 

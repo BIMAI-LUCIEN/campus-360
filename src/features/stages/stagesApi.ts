@@ -1,3 +1,4 @@
+import type { CvBackground } from '../profile/cvBackgroundApi';
 import type {
   StageJob,
   StageApplication,
@@ -297,6 +298,12 @@ export async function fillCvWithAi(
   job: StageJob,
   student: { fullName: string; university?: string; major: string; educationLevel: string; skills: string[] },
   notes: string,
+  draft?: {
+    background?: CvBackground;
+    currentCv?: OfficialCvData;
+    precisions?: { question: string; reponse: string }[];
+    answers?: { question: string; reponse: string }[];
+  },
 ): Promise<Partial<OfficialCvData>> {
   const response = await authFetch('/api/mobile/stages/cv', {
     method: 'POST',
@@ -316,6 +323,7 @@ export async function fillCvWithAi(
         skills: student.skills.slice(0, 40),
       },
       notes: notes.trim().slice(0, 4000) || undefined,
+      ...draft,
     }),
   });
   const payload = (await response.json()) as { cv?: Partial<OfficialCvData> };

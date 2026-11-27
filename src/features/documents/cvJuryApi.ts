@@ -157,8 +157,8 @@ export const applyPrecisionContacts = (
   return normalizeCv({ ...cv, detailsPersonnels: details });
 };
 
-export async function suggestMissions(poste: string): Promise<string[]> {
-  const data = await post<{ items: string[] }>('/api/mobile/documents/cv-suggest', { poste });
+export async function suggestMissions(poste: string, keywords?: string): Promise<string[]> {
+  const data = await post<{ items: string[] }>('/api/mobile/documents/cv-suggest', { poste, keywords });
   return data.items;
 }
 
@@ -168,3 +168,15 @@ export const offerFromTitle = (title: string, company = ''): CareerOffer => ({
 });
 
 export type { CvStyle };
+
+export async function reviewStageCv(input: {
+  jobId: string;
+  cv: OfficialCvData;
+  template: CvTemplateId;
+  second?: boolean;
+}): Promise<CvReview> {
+  const { score, total, ats, jury, potentiel } = await post<Omit<CvReview, 'at'>>(
+    '/api/mobile/stages/jury', { ...input, cv: withoutPhoto(input.cv) },
+  );
+  return { score, total, ats, jury, potentiel, at: new Date().toISOString() };
+}

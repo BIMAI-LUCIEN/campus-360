@@ -28,10 +28,10 @@ import { addUrlSource, uploadDocumentFile } from './documentFilesApi';
 import { TemplateGallery } from './TemplateGallery';
 import type { TemplateCard } from './templatesApi';
 import { CvTemplatePreview } from '../stages/CvTemplatePreview';
-import { CvTemplateGallery } from '../stages/CvTemplateGallery';
+import { CvTemplatePickerButton } from '../stages/CvTemplatePickerButton';
 import { exportOfficialCvPdf } from '../stages/pdfExportService';
 import { loadCvLibrary, removeCvFromLibrary, saveCvToLibrary, savedCvTitle, updateCvInLibrary, type SavedCv } from '../stages/cvLibrary';
-import { CV_TEMPLATES, missingCvFields, type CvTemplateId } from '../stages/cvHtml';
+import { findCvTemplate, missingCvFields, type CvTemplateId } from '../stages/cvHtml';
 import { deleteCvPhoto, fetchCvPhoto, pickCvPhoto, saveCvPhoto } from '../stages/cvPhoto';
 import type { OfficialCvData } from '../../types';
 import { isFreeLaunch } from '../../config/launch';
@@ -242,7 +242,7 @@ function DocumentsScreenBase({ onEditDocument, accountProfile }: DocumentsScreen
     };
   }, [studentProfile, cvPhoto]);
 
-  const selectedTemplate = CV_TEMPLATES.find((t) => t.id === cvTemplate) ?? CV_TEMPLATES[0];
+  const selectedTemplate = findCvTemplate(cvTemplate);
 
   const onPickPhoto = async () => {
     try {
@@ -611,7 +611,7 @@ function DocumentsScreenBase({ onEditDocument, accountProfile }: DocumentsScreen
           Choisis la mise en page, ajoute ta photo. Ce qui manque reste marqué [à compléter].
         </Text>
         <View style={styles.cvTemplateGallery}>
-          <CvTemplateGallery value={cvTemplate} onChange={setCvTemplate} />
+          <CvTemplatePickerButton value={cvTemplate} onChange={setCvTemplate} />
         </View>
         {renderPhotoControls()}
         <View style={styles.cvShowcaseActions}>
@@ -834,7 +834,7 @@ function DocumentsScreenBase({ onEditDocument, accountProfile }: DocumentsScreen
                   {selectedSavedCv ? savedCvTitle(selectedSavedCv) : ''}
                 </Text>
                 <Text style={styles.officialCvModalSub}>
-                  {selectedSavedCv ? `Modèle ${CV_TEMPLATES.find((t) => t.id === selectedSavedCv.templateId)?.label ?? ''}` : ''}
+                  {selectedSavedCv ? `Modèle ${findCvTemplate(selectedSavedCv.templateId).label}` : ''}
                 </Text>
               </View>
               <Pressable style={styles.officialCvCloseBtn} onPress={() => setSelectedSavedCv(null)}>
@@ -1220,7 +1220,7 @@ function DocumentsScreenBase({ onEditDocument, accountProfile }: DocumentsScreen
             </View>
 
             <View style={styles.cvPreviewControls}>
-              <CvTemplateGallery layout="strip" value={cvTemplate} onChange={setCvTemplate} />
+              <CvTemplatePickerButton compact value={cvTemplate} onChange={setCvTemplate} />
               {renderPhotoControls()}
             </View>
 

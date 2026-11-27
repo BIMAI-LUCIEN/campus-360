@@ -11,7 +11,10 @@ export const runtime = 'nodejs';
 
 export const OPTIONS = (request: NextRequest) => corsPreflight(request);
 
-const requestSchema = z.object({ poste: z.string().trim().min(2).max(120) }).strict();
+const requestSchema = z.object({
+  poste: z.string().trim().min(2).max(120),
+  keywords: z.string().trim().min(1).max(500).optional(),
+}).strict();
 
 // Free mission suggestions for a job title (decision of 2026-11-06). A cached
 // title costs no AI call and no quota; a new one goes through the AI quota.
@@ -22,6 +25,9 @@ export async function POST(request: NextRequest) {
     const userId = access.user.id;
 
     const parsed = requestSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success && parsed.error.issues.some((issue) => issue.path[0] === 'keywords')) {
+      throw new MobileApiError('Indique des mots-clés de 1 à 500 caractères.', 400);
+    }
     if (!parsed.success || normalizeJobTitle(parsed.data.poste).length < 2) {
       throw new MobileApiError('Indique l’intitulé du poste.', 400);
     }
@@ -33,7 +39,7 @@ export async function POST(request: NextRequest) {
         await enforceAiQuota(request, { userId, route: 'cv-suggest' });
       },
       callModel: (messages) => callLlm(messages, { temperature: 0.4, maxTokens: 500, title: 'Campus 360 CV suggestions', timeoutMs: 30_000 }),
-    });
+    }, parsed.data.keywords);
     if (!result.items.length) throw new MobileApiError("Aucune suggestion pour ce poste pour l'instant. Réessaie.", 502);
     return withCors(NextResponse.json(result), request);
   } catch (error) {

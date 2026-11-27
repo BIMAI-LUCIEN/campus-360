@@ -30,14 +30,14 @@ const faq = [
   },
   {
     q: "Puis-je tester l'IA gratuitement ?",
-    a: "Oui : tous les PDF se lisent gratuitement, avec 3 actions IA gratuites par jour. Pendant le lancement, 1 000 coins sont offerts à l'inscription.",
+    a: "Oui : tous les PDF se lisent gratuitement, avec 3 actions IA gratuites par jour. Pendant le lancement, 2 000 coins sont offerts à l'inscription.",
   },
 ];
 
 export default function TarifsPage() {
   return (
     <SiteShell>
-      <PageHero kicker="Tarifs" title="Tu paies seulement ce que tu" accent="utilises." subtitle="PDF gratuits, 1 000 coins offerts au lancement, candidatures dès 300 FCFA avec CV adapté. Aucun abonnement." />
+      <PageHero kicker="Tarifs" title="Tu paies seulement ce que tu" accent="utilises." subtitle="PDF gratuits, 2 000 coins offerts au lancement, candidatures dès 300 FCFA avec CV adapté. Aucun abonnement." />
 
       <Pricing />
 

@@ -94,7 +94,7 @@ export default function HomePage() {
 
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-[var(--color-ink-subtle)]">
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-[var(--color-emerald)]" /> 1 000 coins offerts au lancement
+                  <CheckCircle2 className="h-4 w-4 text-[var(--color-emerald)]" /> 2 000 coins offerts au lancement
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 text-[var(--color-emerald)]" /> Orange Money & MTN MoMo
@@ -255,7 +255,7 @@ export default function HomePage() {
               Ton <span className="text-gradient-brand">parcours</span>, à 360°.
             </h2>
             <p className="mx-auto mb-10 max-w-lg text-[var(--color-ink-muted)]">
-              Application Android gratuite, sans publicité. 1 000 coins offerts à l&apos;inscription pendant le lancement.
+              Application Android gratuite, sans publicité. 2 000 coins offerts à l&apos;inscription pendant le lancement.
             </p>
             <a href={APK_URL} download="campus-360.apk">
               <Button size="lg" variant="primary" className="gap-2 px-8 font-bold">

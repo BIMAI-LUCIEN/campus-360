@@ -18,7 +18,7 @@ export const OPTIONS = (request: NextRequest) => corsPreflight(request);
 
 const requestSchema = z.object({
   cv: officialCvSchema,
-  template: z.enum(['classic', 'prestige', 'ingenieur', 'etudiant', 'ats']).default('classic'),
+  template: z.string().trim().regex(/^[a-z0-9][a-z0-9-]{1,40}$/).default('classic'),
   offer: careerOfferSchema.nullish(),
   // One id per review: retrying the same one is never charged twice.
   generationId: z.string().trim().min(8).max(200).regex(/^jury-/),

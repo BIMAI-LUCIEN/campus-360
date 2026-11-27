@@ -270,21 +270,249 @@ export function buildCoverLetterHtml(data: DocumentExportData): string {
 </html>`;
 }
 
-// Layouts the student can pick for the CV. "classic" is the official 2-column
-// template; the three others reproduce the references in public/cv/
-// (see generateDesignCvHtml). Thumbnails: assets/cv-templates/<id>.png,
-// rebuilt by scripts/render-cv-thumbnails.mjs.
-export const CV_TEMPLATES = [
-  { id: 'classic', label: 'Officiel', description: 'Le gabarit Campus 360, sobre' },
-  { id: 'prestige', label: 'Prestige', description: 'Photo carrée, colonne marine' },
-  { id: 'ingenieur', label: 'Ingénieur', description: 'Frise chronologique, profil technique' },
-  { id: 'etudiant', label: 'Étudiant', description: 'Minimaliste, bandeau arrondi' },
-  { id: 'ats', label: 'ATS', description: 'Une colonne, lu par les logiciels de tri' },
-] as const;
-export type CvTemplateId = (typeof CV_TEMPLATES)[number]['id'];
+// Layouts the student can pick for the CV. Built-in 15 designs mirror
+// mobile-api/sql/0035_cv_templates.sql; additional designs added in PostgreSQL
+// can be registered at runtime via registerCvTemplates() without an app release.
+
+export type CvTemplateCategory = 'classique' | 'moderne' | 'ats' | 'creatif' | 'tech' | 'academique';
+
+export type CvLayoutFamily =
+  | 'classic'
+  | 'sidebar-left'
+  | 'sidebar-right'
+  | 'banner-top'
+  | 'timeline'
+  | 'ats-clean'
+  | 'executive-split'
+  | 'minimal-swiss'
+  | 'editorial'
+  | 'compact-grid';
+
+export type CvTemplateThemeConfig = {
+  accent?: string;
+  headerBg?: string;
+  headerText?: string;
+  sidebarBg?: string;
+  fontFamily?: 'sans' | 'serif' | 'mono-accent';
+  density?: 'compact' | 'normal' | 'aere';
+  showPhoto?: boolean;
+};
+
+export type CvTemplateDefinition = {
+  id: string;
+  label: string;
+  description: string;
+  category: CvTemplateCategory;
+  layoutFamily: CvLayoutFamily;
+  themeConfig: CvTemplateThemeConfig;
+  customCss?: string;
+  thumbnailUrl?: string | null;
+  sortOrder?: number;
+};
+
+export const CV_TEMPLATE_CATEGORIES: readonly { id: 'tous' | CvTemplateCategory; label: string }[] = [
+  { id: 'tous', label: 'Tous' },
+  { id: 'moderne', label: 'Moderne' },
+  { id: 'classique', label: 'Classique' },
+  { id: 'ats', label: 'ATS' },
+  { id: 'tech', label: 'Tech' },
+  { id: 'creatif', label: 'Créatif' },
+  { id: 'academique', label: 'Académique' },
+];
+
+export const CV_TEMPLATES: readonly CvTemplateDefinition[] = [
+  {
+    id: 'classic',
+    label: 'Officiel',
+    description: 'Le gabarit Campus 360, sobre',
+    category: 'classique',
+    layoutFamily: 'classic',
+    themeConfig: { accent: '#0F172A', headerBg: '#FFFFFF', headerText: '#0F172A', sidebarBg: '#F8FAFC', fontFamily: 'sans', density: 'normal', showPhoto: false },
+    sortOrder: 10,
+  },
+  {
+    id: 'prestige',
+    label: 'Prestige',
+    description: 'Photo carrée, colonne marine',
+    category: 'moderne',
+    layoutFamily: 'sidebar-left',
+    themeConfig: { accent: '#1E3A5F', headerBg: '#FFFFFF', headerText: '#0F172A', sidebarBg: '#0F2537', fontFamily: 'sans', density: 'normal', showPhoto: true },
+    sortOrder: 20,
+  },
+  {
+    id: 'ingenieur',
+    label: 'Ingénieur',
+    description: 'Frise chronologique, profil technique',
+    category: 'tech',
+    layoutFamily: 'timeline',
+    themeConfig: { accent: '#1D4ED8', headerBg: '#111827', headerText: '#FFFFFF', sidebarBg: '#F1F5F9', fontFamily: 'sans', density: 'normal', showPhoto: true },
+    sortOrder: 30,
+  },
+  {
+    id: 'etudiant',
+    label: 'Étudiant',
+    description: 'Minimaliste, bandeau arrondi',
+    category: 'moderne',
+    layoutFamily: 'banner-top',
+    themeConfig: { accent: '#334155', headerBg: '#F1F5F9', headerText: '#0F172A', sidebarBg: '#FFFFFF', fontFamily: 'sans', density: 'normal', showPhoto: true },
+    sortOrder: 40,
+  },
+  {
+    id: 'ats',
+    label: 'ATS',
+    description: 'Une colonne, lu par les logiciels de tri',
+    category: 'ats',
+    layoutFamily: 'ats-clean',
+    themeConfig: { accent: '#111827', headerBg: '#FFFFFF', headerText: '#111827', sidebarBg: '#FFFFFF', fontFamily: 'sans', density: 'compact', showPhoto: false },
+    sortOrder: 50,
+  },
+  {
+    id: 'executif',
+    label: 'Exécutif',
+    description: 'En-tête affirmé, profil cadre & direction',
+    category: 'classique',
+    layoutFamily: 'executive-split',
+    themeConfig: { accent: '#1E293B', headerBg: '#0F172A', headerText: '#FFFFFF', sidebarBg: '#F8FAFC', fontFamily: 'serif', density: 'normal', showPhoto: false },
+    sortOrder: 60,
+  },
+  {
+    id: 'suisse',
+    label: 'Suisse Minimal',
+    description: 'Typographie épurée, grille géométrique',
+    category: 'moderne',
+    layoutFamily: 'minimal-swiss',
+    themeConfig: { accent: '#DC2626', headerBg: '#FFFFFF', headerText: '#111827', sidebarBg: '#FAFAFA', fontFamily: 'sans', density: 'normal', showPhoto: false },
+    sortOrder: 70,
+  },
+  {
+    id: 'royal',
+    label: 'Bandeau Royal',
+    description: 'En-tête violet royal, moderne et lisible',
+    category: 'moderne',
+    layoutFamily: 'banner-top',
+    themeConfig: { accent: '#7C3AED', headerBg: '#5B21B6', headerText: '#FFFFFF', sidebarBg: '#F5F3FF', fontFamily: 'sans', density: 'normal', showPhoto: true },
+    sortOrder: 80,
+  },
+  {
+    id: 'colonne-droite',
+    label: 'Colonne Droite',
+    description: 'Expériences à gauche, atouts à droite',
+    category: 'classique',
+    layoutFamily: 'sidebar-right',
+    themeConfig: { accent: '#0F766E', headerBg: '#FFFFFF', headerText: '#0F172A', sidebarBg: '#F0FDFA', fontFamily: 'sans', density: 'normal', showPhoto: true },
+    sortOrder: 90,
+  },
+  {
+    id: 'creatif',
+    label: 'Créatif Studio',
+    description: 'Accent dynamique pour marketing & design',
+    category: 'creatif',
+    layoutFamily: 'editorial',
+    themeConfig: { accent: '#C2410C', headerBg: '#FFF7ED', headerText: '#7C2D12', sidebarBg: '#FFF7ED', fontFamily: 'sans', density: 'normal', showPhoto: true },
+    sortOrder: 100,
+  },
+  {
+    id: 'finance',
+    label: 'Finance Sobre',
+    description: 'Serif structuré, banque, audit et gestion',
+    category: 'ats',
+    layoutFamily: 'ats-clean',
+    themeConfig: { accent: '#1E3A8A', headerBg: '#FFFFFF', headerText: '#0F172A', sidebarBg: '#FFFFFF', fontFamily: 'serif', density: 'compact', showPhoto: false },
+    sortOrder: 110,
+  },
+  {
+    id: 'tech',
+    label: 'Tech Dark-Header',
+    description: 'En-tête sombre, idéal dev, cloud & data',
+    category: 'tech',
+    layoutFamily: 'timeline',
+    themeConfig: { accent: '#0284C7', headerBg: '#0B1120', headerText: '#F8FAFC', sidebarBg: '#F8FAFC', fontFamily: 'mono-accent', density: 'compact', showPhoto: false },
+    sortOrder: 120,
+  },
+  {
+    id: 'academique',
+    label: 'Académique',
+    description: 'Focus diplômes, recherche et projets',
+    category: 'academique',
+    layoutFamily: 'editorial',
+    themeConfig: { accent: '#4338CA', headerBg: '#FFFFFF', headerText: '#1E1B4B', sidebarBg: '#EEF2FF', fontFamily: 'serif', density: 'normal', showPhoto: false },
+    sortOrder: 130,
+  },
+  {
+    id: 'compact',
+    label: 'Compact 1-Page',
+    description: 'Densité maîtrisée pour tout tenir sur 1 page',
+    category: 'ats',
+    layoutFamily: 'compact-grid',
+    themeConfig: { accent: '#334155', headerBg: '#F8FAFC', headerText: '#0F172A', sidebarBg: '#F8FAFC', fontFamily: 'sans', density: 'compact', showPhoto: false },
+    sortOrder: 140,
+  },
+  {
+    id: 'emeraude',
+    label: 'Moderne Émeraude',
+    description: 'Colonne vert émeraude, frais et contrasté',
+    category: 'creatif',
+    layoutFamily: 'sidebar-left',
+    themeConfig: { accent: '#047857', headerBg: '#FFFFFF', headerText: '#0F172A', sidebarBg: '#064E3B', fontFamily: 'sans', density: 'normal', showPhoto: true },
+    sortOrder: 150,
+  },
+];
+
+export type CvTemplateId = string;
+
+const dynamicTemplates = new Map<string, CvTemplateDefinition>();
+
+const HEX_COLOR_RE = /^#[0-9a-f]{3,8}$/i;
+const FORBIDDEN_CUSTOM_CSS = [
+  /<\/?style/i,
+  /<script/i,
+  /[<>]/,
+  /@import/i,
+  /expression\s*\(/i,
+  /javascript\s*:/i,
+  /vbscript\s*:/i,
+  /behavior\s*:/i,
+  /-moz-binding/i,
+  /url\s*\(\s*['"]?\s*data\s*:\s*text\/html/i,
+];
+
+export const sanitizeCvTemplateCss = (raw?: string | null): string => {
+  if (typeof raw !== 'string') return '';
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed.length > 4096) return '';
+  for (const re of FORBIDDEN_CUSTOM_CSS) {
+    if (re.test(trimmed)) return '';
+  }
+  return trimmed;
+};
+
+const safeHexColor = (value: string | undefined, fallback: string): string =>
+  value && HEX_COLOR_RE.test(value.trim()) ? value.trim() : fallback;
+
+/** Registers templates fetched from PostgreSQL so generateOfficialCvHtml can render them dynamically. */
+export const registerCvTemplates = (list: readonly CvTemplateDefinition[]): void => {
+  dynamicTemplates.clear();
+  for (const item of list) {
+    if (!item || typeof item.id !== 'string' || !/^[a-z0-9][a-z0-9-]{1,40}$/.test(item.id)) continue;
+    dynamicTemplates.set(item.id, {
+      ...item,
+      customCss: sanitizeCvTemplateCss(item.customCss),
+    });
+  }
+};
+
+export const getRegisteredCvTemplates = (): CvTemplateDefinition[] =>
+  dynamicTemplates.size > 0
+    ? [...dynamicTemplates.values()].sort((a, b) => (a.sortOrder ?? 100) - (b.sortOrder ?? 100) || a.id.localeCompare(b.id))
+    : [...CV_TEMPLATES];
+
+export const findCvTemplate = (id?: string | null): CvTemplateDefinition => {
+  const key = (id || 'classic').trim();
+  return dynamicTemplates.get(key) ?? CV_TEMPLATES.find((t) => t.id === key) ?? CV_TEMPLATES[0];
+};
 
 export const isCvTemplateId = (value: unknown): value is CvTemplateId =>
-  CV_TEMPLATES.some((t) => t.id === value);
+  typeof value === 'string' && (dynamicTemplates.has(value) || CV_TEMPLATES.some((t) => t.id === value));
 
 /**
  * Merges what the AI wrote into the CV built from the profile. Identity,
@@ -355,7 +583,7 @@ export type CvStyle = {
 };
 
 // Where each template prints its accent colour.
-const ACCENT_CSS: Record<CvTemplateId, (a: string) => string> = {
+const ACCENT_CSS: Record<string, (a: string) => string> = {
   classic: (a) => `.section-heading { color: ${a} !important; border-bottom-color: ${a} !important; } .blue-divider { background-color: ${a} !important; }`,
   prestige: (a) => `.navy { background: ${a} !important; } .name { color: ${a} !important; }`,
   ingenieur: (a) => `.badge, .rule i { background: ${a} !important; } .job, .tl-date, .tl-org, .contact .ic, .name span { color: ${a} !important; } .heading h2 { border-bottom-color: ${a} !important; } .photo { box-shadow: 0 0 0 0.6mm ${a} !important; }`,
@@ -363,14 +591,18 @@ const ACCENT_CSS: Record<CvTemplateId, (a: string) => string> = {
   ats: (a) => `h1, h2 { color: ${a} !important; } h2 { border-bottom-color: ${a} !important; }`,
 };
 
+const PARAMETRIC_ACCENT_CSS = (a: string) =>
+  `.p-accent-text, .p-sec-title, h2 { color: ${a} !important; } .p-sec-title, h2 { border-bottom-color: ${a} !important; } .p-accent-bg, .p-badge, .p-dot { background-color: ${a} !important; } .p-accent-border { border-color: ${a} !important; }`;
+
 /** Adds the student's settings to a rendered CV; no settings → the HTML unchanged. */
 export const applyCvStyle = (html: string, template: CvTemplateId, style?: CvStyle | null): string => {
   if (!style) return html;
   const accent = CV_ACCENTS.find((a) => a.id === style.accent)?.color;
   const font = CV_FONTS.find((f) => f.id === style.police)?.css;
   const spacing = CV_SPACINGS.find((s) => s.id === style.interligne)?.value;
+  const accentRule = accent ? (ACCENT_CSS[template] ?? PARAMETRIC_ACCENT_CSS)(accent) : '';
   const rules = [
-    accent ? ACCENT_CSS[template](accent) : '',
+    accentRule,
     font ? `body, body * { font-family: ${font} !important; }` : '',
     spacing ? `body, body * { line-height: ${spacing} !important; }` : '',
   ].filter(Boolean).join('\n');
@@ -381,7 +613,8 @@ export const applyCvStyle = (html: string, template: CvTemplateId, style?: CvSty
 
 /**
  * Génère le code HTML du CV. "classic" est le gabarit officiel, "ats" la version
- * une colonne pour les logiciels de tri ; `style` applique les réglages d'aperçu.
+ * une colonne pour les logiciels de tri, et tous les designs DB/paramétriques
+ * sont rendus via leur famille de mise en page + themeConfig + customCss assaini.
  */
 export function generateOfficialCvHtml(cv: OfficialCvData, template: CvTemplateId = 'classic', style?: CvStyle | null): string {
   return applyCvStyle(renderCvHtml(normalizeCv(cv), template), template, style);
@@ -389,7 +622,12 @@ export function generateOfficialCvHtml(cv: OfficialCvData, template: CvTemplateI
 
 function renderCvHtml(cv: OfficialCvData, template: CvTemplateId): string {
   if (template === 'ats') return atsCvHtml(cv);
-  if (template !== 'classic' && isCvTemplateId(template)) return generateDesignCvHtml(cv, template);
+  if (template === 'prestige' || template === 'ingenieur' || template === 'etudiant') {
+    return generateDesignCvHtml(cv, template);
+  }
+  if (template !== 'classic' && isCvTemplateId(template)) {
+    return generateParametricCvHtml(cv, findCvTemplate(template));
+  }
   const c = escapeDeep(cv);
   const p = c.detailsPersonnels;
   const nom = (p.nom || '').toUpperCase();
@@ -670,7 +908,7 @@ function renderCvHtml(cv: OfficialCvData, template: CvTemplateId): string {
 // in the RN theme. Every value is escaped by escapeDeep before it is used.
 // ---------------------------------------------------------------------------
 
-type DesignTemplateId = Exclude<CvTemplateId, 'classic' | 'ats'>;
+type DesignTemplateId = 'prestige' | 'ingenieur' | 'etudiant';
 type EscapedCv = Escaped<OfficialCvData>;
 
 // 24px stroke icons (Lucide shapes), drawn with currentColor.
@@ -1036,6 +1274,374 @@ function atsCvHtml(cv: OfficialCvData): string {
   ${c.langues.length ? bullets(c.langues.map((l) => langueLine(l))) : `<p>${TO_COMPLETE}</p>`}
   ${printedRubriques(c.rubriques).map((r) => `<h2>${r.titre}</h2>${bullets(r.items.filter((i) => i.trim()))}`).join('')}
   ${c.loisirs.length ? `<h2>Centres d'intérêt</h2><p>${c.loisirs.join(', ')}</p>` : ''}
+</body>
+</html>`;
+}
+
+// ---------------------------------------------------------------------------
+// Parametric CV engine (Module 39 — 15 built-in + DB-registered designs).
+// Renders any layoutFamily with themeConfig + sanitized customCss while keeping
+// strict HTML escaping via escapeDeep on every student field.
+// ---------------------------------------------------------------------------
+
+const FONT_STACK: Record<'sans' | 'serif' | 'mono-accent', string> = {
+  sans: '"Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  serif: 'Georgia, "Times New Roman", serif',
+  'mono-accent': '"Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+};
+
+const DENSITY_LH: Record<'compact' | 'normal' | 'aere', number> = {
+  compact: 1.32,
+  normal: 1.45,
+  aere: 1.6,
+};
+
+function generateParametricCvHtml(cv: OfficialCvData, def: CvTemplateDefinition): string {
+  const c = escapeDeep(cv);
+  const p = c.detailsPersonnels;
+  const nom = (p.nom || '').toUpperCase();
+  const prenom = p.prenom || '';
+  const fullName = joinParts([prenom, nom], ' ') || TO_COMPLETE;
+  const cfg = def.themeConfig ?? {};
+  const accent = safeHexColor(cfg.accent, '#1E293B');
+  const headerBg = safeHexColor(cfg.headerBg, '#FFFFFF');
+  const headerText = safeHexColor(cfg.headerText, '#0F172A');
+  const sidebarBg = safeHexColor(cfg.sidebarBg, '#F8FAFC');
+  const fontCss = FONT_STACK[cfg.fontFamily ?? 'sans'];
+  const lineHeight = DENSITY_LH[cfg.density ?? 'normal'];
+  const showPhoto = cfg.showPhoto === true;
+  const safeCustom = sanitizeCvTemplateCss(def.customCss);
+  const family = def.layoutFamily;
+  const isMono = cfg.fontFamily === 'mono-accent';
+
+  // ATS-clean family (e.g. Finance Sobre or DB-added ATS templates): single column, no tables/icons/photo.
+  if (family === 'ats-clean') {
+    const base = atsCvHtml(cv);
+    const override = `<style data-cv-template="${escapeHtml(def.id)}">
+      body { font-family: ${fontCss}; line-height: ${lineHeight}; }
+      h1, h2 { color: ${accent}; }
+      h2 { border-bottom-color: ${accent}; }
+      ${safeCustom}
+    </style>`;
+    return base.replace('</head>', `${override}\n</head>`);
+  }
+
+  const contacts = contactLines(p);
+  const skills = skillItems(c);
+  const soft = softwareLines(c);
+  const rubriques = printedRubriques(c.rubriques);
+  const eduFirst = cv.formationEnPremier || def.category === 'academique';
+
+  const renderExperiences = (timelineMode = false) =>
+    list(
+      c.experiences,
+      (exp) =>
+        timelineMode
+          ? `<div class="p-tl-row">
+              <div class="p-tl-date p-accent-text">${cvPeriode(exp) || '—'}</div>
+              <div class="p-tl-line"><span class="p-dot p-accent-bg"></span></div>
+              <div class="p-tl-body">
+                <div class="p-item-title">${exp.poste}</div>
+                <div class="p-item-sub">${joinParts([exp.entreprise, exp.ville])}</div>
+                ${exp.missions.length ? `<ul class="missions">${exp.missions.map((m) => `<li>${m}</li>`).join('')}</ul>` : ''}
+              </div>
+            </div>`
+          : `<div class="p-item">
+              <div class="p-item-head">
+                <span class="p-item-title">${exp.poste}</span>
+                ${cvPeriode(exp) ? `<span class="p-item-date p-accent-text">${cvPeriode(exp)}</span>` : ''}
+              </div>
+              <div class="p-item-sub">${joinParts([exp.entreprise, exp.ville])}</div>
+              ${exp.missions.length ? `<ul class="missions">${exp.missions.map((m) => `<li>${m}</li>`).join('')}</ul>` : ''}
+            </div>`,
+      `<div class="todo">${TO_COMPLETE}</div>`,
+    );
+
+  const renderFormations = (timelineMode = false) =>
+    list(
+      c.formations,
+      (form) =>
+        timelineMode
+          ? `<div class="p-tl-row">
+              <div class="p-tl-date p-accent-text">${cvPeriode(form) || '—'}</div>
+              <div class="p-tl-line"><span class="p-dot p-accent-bg"></span></div>
+              <div class="p-tl-body">
+                <div class="p-item-title">${form.diplome}</div>
+                <div class="p-item-sub">${joinParts([form.etablissement, form.ville])}</div>
+              </div>
+            </div>`
+          : `<div class="p-item">
+              <div class="p-item-head">
+                <span class="p-item-title">${form.diplome}</span>
+                ${cvPeriode(form) ? `<span class="p-item-date p-accent-text">${cvPeriode(form)}</span>` : ''}
+              </div>
+              <div class="p-item-sub">${joinParts([form.etablissement, form.ville])}</div>
+            </div>`,
+      `<div class="todo">${TO_COMPLETE}</div>`,
+    );
+
+  const mainBlocks = (timelineMode = false) => {
+    const expSec = `<section class="p-sec"><h2 class="p-sec-title">Expériences professionnelles</h2>${renderExperiences(timelineMode)}</section>`;
+    const eduSec = `<section class="p-sec"><h2 class="p-sec-title">Formation</h2>${renderFormations(timelineMode)}</section>`;
+    const extraSecs = rubriques
+      .map(
+        (r) =>
+          `<section class="p-sec"><h2 class="p-sec-title">${r.titre}</h2><ul class="missions">${r.items
+            .filter((i) => i.trim())
+            .map((i) => `<li>${i}</li>`)
+            .join('')}</ul></section>`,
+      )
+      .join('');
+    return `${eduFirst ? `${eduSec}${expSec}` : `${expSec}${eduSec}`}${extraSecs}`;
+  };
+
+  const sideBlocks = (darkText: boolean) => `
+    <section class="p-side-sec">
+      <h3 class="${darkText ? 'p-side-title-dark' : 'p-side-title-light'}">Compétences</h3>
+      <ul class="p-side-list">${list(skills, (s) => `<li>${s}</li>`, `<li>${TO_COMPLETE}</li>`)}</ul>
+    </section>
+    ${soft.length ? `<section class="p-side-sec"><h3 class="${darkText ? 'p-side-title-dark' : 'p-side-title-light'}">Logiciels</h3><ul class="p-side-list">${soft.map((l) => `<li>${l}</li>`).join('')}</ul></section>` : ''}
+    <section class="p-side-sec">
+      <h3 class="${darkText ? 'p-side-title-dark' : 'p-side-title-light'}">Langues</h3>
+      <ul class="p-side-list">${list(c.langues, (l) => `<li>${langueLine(l)}</li>`, `<li>${TO_COMPLETE}</li>`)}</ul>
+    </section>
+    ${c.loisirs.length ? `<section class="p-side-sec"><h3 class="${darkText ? 'p-side-title-dark' : 'p-side-title-light'}">Centres d'intérêt</h3><div class="p-side-inline">${c.loisirs.join(' · ')}</div></section>` : ''}
+  `;
+
+  const contactChips = contacts
+    .map((line) => `<span class="p-chip">${icon(line.icon, 11)}<span>${line.text}</span></span>`)
+    .join('');
+
+  const contactList = contacts
+    .map((line) => `<div class="p-contact-row">${icon(line.icon, 12)}<span>${line.text}</span></div>`)
+    .join('');
+
+  const isDarkSidebar = /^#(0|1|2|3)/i.test(sidebarBg);
+  let bodyMarkup = '';
+  let layoutCss = '';
+
+  if (family === 'sidebar-left') {
+    layoutCss = `
+      .p-grid { display: grid; grid-template-columns: 70mm 1fr; min-height: 297mm; }
+      .p-aside { background: ${sidebarBg}; color: ${isDarkSidebar ? '#F8FAFC' : '#1E293B'}; padding: 12mm 7mm; }
+      .p-main { padding: 12mm 12mm 12mm 10mm; }
+      .p-photo { width: 42mm; height: 42mm; border-radius: 8px; object-fit: cover; margin: 0 auto 6mm; background: rgba(255,255,255,0.16); color: ${isDarkSidebar ? '#FFFFFF' : accent}; font-size: 24pt; }
+      .p-name { font-size: 24pt; font-weight: 800; color: ${accent}; line-height: 1.1; margin: 0 0 1.5mm; }
+      .p-job { font-size: 11.5pt; color: #475569; font-weight: 600; margin-bottom: 5mm; }
+      .p-summary { background: #F8FAFC; border-left: 3px solid ${accent}; padding: 3.5mm 4.5mm; margin-bottom: 6mm; font-size: 9.2pt; }
+    `;
+    bodyMarkup = `
+      <div class="p-grid">
+        <aside class="p-aside">
+          ${showPhoto ? photoOrInitials(cv, nom, prenom, 'p-photo') : ''}
+          <section class="p-side-sec"><h3 class="${isDarkSidebar ? 'p-side-title-light' : 'p-side-title-dark'}">Contact</h3>${contactList}</section>
+          ${sideBlocks(!isDarkSidebar)}
+        </aside>
+        <main class="p-main">
+          <div class="p-name">${fullName}</div>
+          <div class="p-job">${todo(c.titrePoste)}</div>
+          ${c.profil ? `<div class="p-summary">${c.profil}</div>` : ''}
+          ${mainBlocks(false)}
+        </main>
+      </div>`;
+  } else if (family === 'sidebar-right') {
+    layoutCss = `
+      .p-grid { display: grid; grid-template-columns: 1fr 68mm; min-height: 297mm; }
+      .p-main { padding: 12mm 10mm 12mm 12mm; }
+      .p-aside { background: ${sidebarBg}; color: ${isDarkSidebar ? '#F8FAFC' : '#1E293B'}; padding: 12mm 7mm; border-left: 2px solid ${accent}; }
+      .p-photo { width: 38mm; height: 38mm; border-radius: 50%; object-fit: cover; margin: 0 auto 6mm; border: 2px solid ${accent}; background: #E2E8F0; color: ${accent}; font-size: 22pt; }
+      .p-name { font-size: 24pt; font-weight: 800; color: #0F172A; line-height: 1.1; margin: 0 0 1.5mm; }
+      .p-job { font-size: 11.5pt; color: ${accent}; font-weight: 700; margin-bottom: 5mm; }
+      .p-summary { margin-bottom: 6mm; color: #334155; font-size: 9.3pt; }
+    `;
+    bodyMarkup = `
+      <div class="p-grid">
+        <main class="p-main">
+          <div class="p-name">${fullName}</div>
+          <div class="p-job">${todo(c.titrePoste)}</div>
+          ${c.profil ? `<div class="p-summary">${c.profil}</div>` : ''}
+          ${mainBlocks(false)}
+        </main>
+        <aside class="p-aside">
+          ${showPhoto ? photoOrInitials(cv, nom, prenom, 'p-photo') : ''}
+          <section class="p-side-sec"><h3 class="${isDarkSidebar ? 'p-side-title-light' : 'p-side-title-dark'}">Coordonnées</h3>${contactList}</section>
+          ${sideBlocks(!isDarkSidebar)}
+        </aside>
+      </div>`;
+  } else if (family === 'banner-top' || family === 'executive-split') {
+    const isExec = family === 'executive-split';
+    layoutCss = `
+      .p-banner { background: ${headerBg}; color: ${headerText}; padding: ${isExec ? '11mm 14mm 9mm' : '10mm 13mm 8mm'}; display: flex; align-items: center; gap: 7mm; ${isExec ? `border-bottom: 3px solid ${accent};` : ''} }
+      .p-photo { width: 30mm; height: 30mm; border-radius: ${isExec ? '6px' : '50%'}; object-fit: cover; border: 2px solid rgba(255,255,255,0.65); background: rgba(255,255,255,0.18); color: ${headerText}; font-size: 18pt; flex: 0 0 30mm; }
+      .p-name { font-size: ${isExec ? '23pt' : '22pt'}; font-weight: 800; color: ${headerText}; letter-spacing: ${isExec ? '0.6px' : '0.2px'}; margin: 0 0 1mm; }
+      .p-job { font-size: 11pt; opacity: 0.92; font-weight: 600; margin-bottom: 3mm; }
+      .p-chips { display: flex; flex-wrap: wrap; gap: 2mm 4mm; font-size: 8.4pt; opacity: 0.95; }
+      .p-chip { display: inline-flex; align-items: center; gap: 1.5mm; }
+      .p-body { display: grid; grid-template-columns: ${isExec ? '1fr 64mm' : '64mm 1fr'}; gap: 8mm; padding: 9mm 13mm 12mm; }
+      .p-aside-box { background: ${sidebarBg}; padding: 6mm; border-radius: 6px; }
+      .p-summary { padding: 4mm 13mm 0; font-size: 9.3pt; color: #334155; }
+    `;
+    const aside = `<aside class="p-aside-box">${sideBlocks(true)}</aside>`;
+    const main = `<main>${mainBlocks(false)}</main>`;
+    bodyMarkup = `
+      <header class="p-banner">
+        ${showPhoto ? photoOrInitials(cv, nom, prenom, 'p-photo') : ''}
+        <div style="flex:1">
+          <div class="p-name">${fullName}</div>
+          <div class="p-job">${todo(c.titrePoste)}</div>
+          <div class="p-chips">${contactChips}</div>
+        </div>
+      </header>
+      ${c.profil ? `<div class="p-summary">${c.profil}</div>` : ''}
+      <div class="p-body">${isExec ? `${main}${aside}` : `${aside}${main}`}</div>`;
+  } else if (family === 'timeline') {
+    layoutCss = `
+      .p-banner { background: ${headerBg}; color: ${headerText}; padding: 10mm 13mm; border-bottom: 3px solid ${accent}; }
+      .p-name { font-size: 22pt; font-weight: 800; color: ${headerText}; margin: 0 0 1mm; }
+      .p-job { font-size: 11pt; color: ${accent}; font-weight: 700; margin-bottom: 3mm; ${isMono ? 'font-family: "Consolas", "Courier New", monospace;' : ''} }
+      .p-chips { display: flex; flex-wrap: wrap; gap: 2mm 4.5mm; font-size: 8.5pt; color: ${headerText}; opacity: 0.9; }
+      .p-chip { display: inline-flex; align-items: center; gap: 1.5mm; }
+      .p-wrap { padding: 8mm 13mm 12mm; }
+      .p-summary { margin-bottom: 6mm; padding-left: 3.5mm; border-left: 3px solid ${accent}; color: #334155; }
+      .p-tl-row { display: grid; grid-template-columns: 28mm 6mm 1fr; margin-bottom: 3.5mm; }
+      .p-tl-date { font-size: 8.4pt; font-weight: 700; ${isMono ? 'font-family: "Consolas", "Courier New", monospace;' : ''} }
+      .p-tl-line { position: relative; display: flex; justify-content: center; }
+      .p-tl-line::after { content: ""; position: absolute; top: 3mm; bottom: -3.5mm; width: 1px; background: #CBD5E1; }
+      .p-dot { width: 2.2mm; height: 2.2mm; border-radius: 50%; margin-top: 1.2mm; position: relative; z-index: 1; }
+      .p-skills-bar { display: flex; flex-wrap: wrap; gap: 2mm; margin-top: 2mm; }
+      .p-pill { background: ${sidebarBg}; border: 1px solid #CBD5E1; color: #0F172A; padding: 1mm 2.8mm; border-radius: 4px; font-size: 8.5pt; ${isMono ? 'font-family: "Consolas", "Courier New", monospace;' : ''} }
+    `;
+    bodyMarkup = `
+      <header class="p-banner">
+        <div class="p-name">${fullName}</div>
+        <div class="p-job">${todo(c.titrePoste)}</div>
+        <div class="p-chips">${contactChips}</div>
+      </header>
+      <div class="p-wrap">
+        ${c.profil ? `<div class="p-summary">${c.profil}</div>` : ''}
+        ${mainBlocks(true)}
+        <section class="p-sec">
+          <h2 class="p-sec-title">Compétences & Outils</h2>
+          <div class="p-skills-bar">${[...skills, ...soft].map((s) => `<span class="p-pill">${s}</span>`).join('') || `<span class="todo">${TO_COMPLETE}</span>`}</div>
+        </section>
+        <section class="p-sec">
+          <h2 class="p-sec-title">Langues${c.loisirs.length ? ' & Centres d’intérêt' : ''}</h2>
+          <div>${list(c.langues, (l) => langueLine(l), TO_COMPLETE)}${c.loisirs.length ? ` — ${c.loisirs.join(', ')}` : ''}</div>
+        </section>
+      </div>`;
+  } else if (family === 'minimal-swiss') {
+    layoutCss = `
+      .p-wrap { padding: 13mm 15mm; }
+      .p-top { border-top: 4px solid ${accent}; padding-top: 5mm; margin-bottom: 7mm; display: grid; grid-template-columns: 1fr 62mm; gap: 6mm; align-items: start; }
+      .p-name { font-size: 25pt; font-weight: 800; letter-spacing: -0.5px; color: #111827; line-height: 1.05; }
+      .p-job { font-size: 11pt; font-weight: 600; color: ${accent}; margin-top: 1.5mm; text-transform: uppercase; letter-spacing: 0.8px; }
+      .p-summary { margin: 0 0 7mm; font-size: 9.4pt; color: #374151; }
+      .p-cols { display: grid; grid-template-columns: 56mm 1fr; gap: 9mm; }
+    `;
+    bodyMarkup = `
+      <div class="p-wrap">
+        <div class="p-top">
+          <div>
+            <div class="p-name">${fullName}</div>
+            <div class="p-job">${todo(c.titrePoste)}</div>
+          </div>
+          <div>${contactList}</div>
+        </div>
+        ${c.profil ? `<div class="p-summary">${c.profil}</div>` : ''}
+        <div class="p-cols">
+          <aside>${sideBlocks(true)}</aside>
+          <main>${mainBlocks(false)}</main>
+        </div>
+      </div>`;
+  } else if (family === 'compact-grid') {
+    layoutCss = `
+      body { font-size: 8.8pt; }
+      .p-wrap { padding: 10mm 12mm; }
+      .p-top { background: ${headerBg}; border-bottom: 2px solid ${accent}; padding: 4mm 5mm; margin-bottom: 5mm; }
+      .p-name { font-size: 18pt; font-weight: 800; color: ${headerText}; }
+      .p-job { font-size: 10pt; font-weight: 600; color: ${accent}; margin-bottom: 2mm; }
+      .p-chips { display: flex; flex-wrap: wrap; gap: 1.5mm 4mm; font-size: 8.2pt; color: #334155; }
+      .p-chip { display: inline-flex; align-items: center; gap: 1.2mm; }
+      .p-summary { margin-bottom: 4mm; font-size: 8.8pt; color: #334155; }
+      .p-bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; margin-top: 4mm; padding-top: 3mm; border-top: 1px solid #E2E8F0; }
+    `;
+    bodyMarkup = `
+      <div class="p-wrap">
+        <div class="p-top">
+          <div class="p-name">${fullName}</div>
+          <div class="p-job">${todo(c.titrePoste)}</div>
+          <div class="p-chips">${contactChips}</div>
+        </div>
+        ${c.profil ? `<div class="p-summary">${c.profil}</div>` : ''}
+        ${mainBlocks(false)}
+        <div class="p-bottom-grid">
+          <div><h2 class="p-sec-title">Compétences</h2><div>${skills.join(' · ') || TO_COMPLETE}${soft.length ? ` — ${soft.join(' · ')}` : ''}</div></div>
+          <div><h2 class="p-sec-title">Langues${c.loisirs.length ? ' & Loisirs' : ''}</h2><div>${c.langues.map((l) => langueLine(l)).join(' · ') || TO_COMPLETE}${c.loisirs.length ? ` | ${c.loisirs.join(', ')}` : ''}</div></div>
+        </div>
+      </div>`;
+  } else {
+    // 'editorial' (Créatif Studio, Académique) or fallback
+    layoutCss = `
+      .p-shell { border-left: 6mm solid ${accent}; min-height: 297mm; padding: 11mm 13mm 12mm 11mm; }
+      .p-head { background: ${headerBg}; padding: 5mm 6mm; border-radius: 6px; margin-bottom: 6mm; display: flex; align-items: center; gap: 6mm; }
+      .p-photo { width: 28mm; height: 28mm; border-radius: 8px; object-fit: cover; border: 2px solid ${accent}; background: #E2E8F0; color: ${accent}; font-size: 16pt; flex: 0 0 28mm; }
+      .p-name { font-size: 22pt; font-weight: 800; color: ${headerText}; margin: 0 0 1mm; }
+      .p-job { font-size: 11pt; color: ${accent}; font-weight: 700; margin-bottom: 2.5mm; }
+      .p-chips { display: flex; flex-wrap: wrap; gap: 1.5mm 4mm; font-size: 8.5pt; color: #334155; }
+      .p-chip { display: inline-flex; align-items: center; gap: 1.4mm; }
+      .p-summary { margin-bottom: 6mm; color: #334155; font-style: italic; }
+      .p-cols { display: grid; grid-template-columns: 1fr 60mm; gap: 8mm; }
+      .p-aside-box { background: ${sidebarBg}; padding: 5mm; border-radius: 6px; }
+    `;
+    bodyMarkup = `
+      <div class="p-shell">
+        <header class="p-head">
+          ${showPhoto ? photoOrInitials(cv, nom, prenom, 'p-photo') : ''}
+          <div style="flex:1">
+            <div class="p-name">${fullName}</div>
+            <div class="p-job">${todo(c.titrePoste)}</div>
+            <div class="p-chips">${contactChips}</div>
+          </div>
+        </header>
+        ${c.profil ? `<div class="p-summary">${c.profil}</div>` : ''}
+        <div class="p-cols">
+          <main>${mainBlocks(false)}</main>
+          <aside class="p-aside-box">${sideBlocks(true)}</aside>
+        </div>
+      </div>`;
+  }
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Curriculum Vitae — ${fullName}</title>
+  <style>
+    ${BASE_CSS}
+    body { font-family: ${fontCss}; line-height: ${lineHeight}; color: #1E293B; }
+    .p-sec { margin-bottom: 5.5mm; }
+    .p-sec-title { font-size: 11pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: ${accent}; border-bottom: 1.2px solid ${accent}; padding-bottom: 1mm; margin: 0 0 3mm; }
+    .p-item { margin-bottom: 3.8mm; }
+    .p-item-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4mm; }
+    .p-item-title { font-weight: 700; font-size: 10pt; color: #0F172A; }
+    .p-item-date { font-size: 8.6pt; font-weight: 600; white-space: nowrap; }
+    .p-item-sub { font-size: 9pt; color: #475569; margin-top: 0.4mm; }
+    .p-side-sec { margin-bottom: 5mm; }
+    .p-side-title-light { font-size: 9.8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #FFFFFF; border-bottom: 1px solid rgba(255,255,255,0.28); padding-bottom: 1mm; margin: 0 0 2.5mm; }
+    .p-side-title-dark { font-size: 9.8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: ${accent}; border-bottom: 1px solid #CBD5E1; padding-bottom: 1mm; margin: 0 0 2.5mm; }
+    .p-side-list { list-style: none; }
+    .p-side-list li { margin-bottom: 1.5mm; font-size: 8.8pt; }
+    .p-side-inline { font-size: 8.8pt; }
+    .p-contact-row { display: flex; align-items: center; gap: 2mm; margin-bottom: 1.8mm; font-size: 8.5pt; word-break: break-word; }
+    .p-accent-text { color: ${accent}; }
+    .p-accent-bg { background-color: ${accent}; }
+    ${layoutCss}
+    ${safeCustom}
+  </style>
+</head>
+<body>
+  ${bodyMarkup}
 </body>
 </html>`;
 }

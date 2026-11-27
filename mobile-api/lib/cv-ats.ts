@@ -17,7 +17,7 @@ export type AtsResult = {
   problemes: { gravite: Gravite; message: string }[];
 };
 
-export type AtsTemplate = 'classic' | 'prestige' | 'ingenieur' | 'etudiant' | 'ats';
+export type AtsTemplate = string;
 
 const fold = (value: string): string =>
   value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9+#]+/g, ' ').trim();
@@ -67,12 +67,14 @@ const keywordState = (folded: string, keyword: string): { etat: AtsKeywordState;
   return { etat: 'absent' };
 };
 
-const LAYOUT_RISK: Record<AtsTemplate, { gravite: Gravite; message: string } | null> = {
+const LAYOUT_RISK: Record<string, { gravite: Gravite; message: string } | null> = {
   classic: { gravite: 'mineur', message: 'Coordonnées rangées dans un tableau : certains logiciels de tri les lisent mal.' },
   prestige: { gravite: 'majeur', message: 'Mise en page sur deux colonnes avec icônes : le texte risque d’être extrait dans le désordre.' },
   ingenieur: { gravite: 'majeur', message: 'Frise et tableau des compétences : le texte risque d’être extrait dans le désordre.' },
   etudiant: { gravite: 'majeur', message: 'Mise en page sur deux colonnes : le texte risque d’être extrait dans le désordre.' },
   ats: null,
+  finance: null,
+  compact: null,
 };
 
 const TODO = /a completer/;

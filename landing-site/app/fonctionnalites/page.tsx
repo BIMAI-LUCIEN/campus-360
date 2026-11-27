@@ -78,7 +78,7 @@ const features = [
   {
     icon: Wallet,
     title: "Wallet Mobile Money",
-    desc: "1 000 coins offerts au lancement. Recharge dès 500 FCFA via Orange Money ou MTN MoMo, sans abonnement.",
+    desc: "2 000 coins offerts au lancement. Recharge dès 500 FCFA via Orange Money ou MTN MoMo, sans abonnement.",
   },
   {
     icon: Bell,
@@ -95,7 +95,7 @@ const features = [
 export default function FonctionnalitesPage() {
   return (
     <SiteShell>
-      <PageHero kicker="Tout ce que l'app fait pour toi" title="Trouver ton stage, rédiger ton dossier, réussir ta" accent="soutenance." subtitle="Postule, suis tes candidatures et prépare ton rapport au même endroit. 1 000 coins offerts pendant le lancement." />
+      <PageHero kicker="Tout ce que l'app fait pour toi" title="Trouver ton stage, rédiger ton dossier, réussir ta" accent="soutenance." subtitle="Postule, suis tes candidatures et prépare ton rapport au même endroit. 2 000 coins offerts pendant le lancement." />
 
       <section className="py-16 lg:py-24 bg-[var(--color-paper)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -129,7 +129,7 @@ export default function FonctionnalitesPage() {
             Prêt à postuler ?
           </h2>
           <p className="text-[var(--color-ink-muted)] mb-8 max-w-md mx-auto">
-            Téléchargement gratuit. 1 000 coins offerts à l&apos;inscription pendant le lancement.
+            Téléchargement gratuit. 2 000 coins offerts à l&apos;inscription pendant le lancement.
           </p>
           <a
             href="https://campus360b.site/downloads/campus-360.apk"
