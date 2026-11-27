@@ -2,13 +2,13 @@
 
 > **Progression globale :** 110/161 tâches validées (68%) — Module 25 (scraping des offres) : 13/18 ; Module 24 (galerie de modèles de rapports) : 8/13 ; Module 23 (préparation V1) : 0/26 ; Module 20 : 16/16 validées ; Module 21 : 9/9 validées ; Module 19 : 10 en cours ; hors Module 19 : 3 en cours, 2 ouvertes  
 > **Couverture MVP :** 100% des fonctionnalités du cadrage `contexte.md` (Template CV Officiel, Ingestion n8n, Mobile Money, Onboarding Express, Suivi J+7, Expédition Automatisée WhatsApp/Email via Evolution API & N8N, Éditeur de documents §13, Style du document & rédaction §14)  
-> **Dernière mise à jour :** 2026-11-26 par /execute --all (module 39 : 39.1 à 39.12 validées)
+> **Dernière mise à jour :** 2026-11-27 par /execute --all (module 39 livré en production)
 
 ---
 ## Reprise
 - **Tâche en cours :** aucune
-- **Prochaine :** 39.13 🔒 — Mise en production (migration `0035`, vérif `STARTING_COINS` VPS, déploiement VPS/OTA et test push téléphone)
-- **Reste (Module 39) :** 1 tâche `[!]` 🔒 : `39.13` (39.1 à 39.12 `[X]` le 2026-11-26 ; `mobile-api` `npm test` 518 pass / 0 fail / 20 skip ; 4 typechecks à 0 ; `lint:colors` 141/146 ; banc Playwright 375×812 px `E2E_M39_PASS` sur les 6 étapes + modale 15 designs + Jury 200 FCFA, `scrollWidth=375`, solde 2000 → 1700 → 1500 FCFA). Non vérifiés : base PostgreSQL partagée, vrai paiement SasPay, réception push écran verrouillé sur téléphone Android physique.
+- **Prochaine :** rien (Module 39 terminé et déployé)
+- **Reste (Module 39) :** aucune tâche ouverte (`39.1` à `39.13` `[X]` ; migration `0035_cv_templates.sql` appliquée sur Supabase, `STARTING_COINS=2000` sur VPS, commit `75f4744` déployé sur VPS + OTA `production`/`preview`, sondes HTTP vertes). À vérifier côté utilisateur : test push écran verrouillé sur téléphone Android physique (avec APK `v1.2.0-117` intégrant `google-services.json`, 2 ouvertures pour appliquer l'OTA).
 - **Module 38 (rédaction CV assistée et Jury) :** 38.1 à 38.9 `[X]` le 2026-11-21 (recalibré et absorbé dans le Module 39 selon `contexte.md §25` ; `38.10 🔒` fusionnée dans **39.13 🔒**).
 - **Carte CV :** `contexte-code.md` annonce `fcd08ed`. 145 fichiers ont changé depuis ce commit dans `src/features/stages`, `mobile-api/lib` et les routes documents de l'API. Zone 38.3 vérifiée et documentée séparément au commit `e8fe6ed`. Les autres zones CV restent à resynchroniser.
 - **Arbre de travail :** cadrage et notes du module 38 dans `contexte.md`, `plan.md` et `journal.md`. Modifications préexistantes dans `scripts/agents/` et fichiers non suivis hors périmètre, à traiter séparément.
@@ -39,8 +39,8 @@
   - **24.13 (IA de vision) :** non commencée ; choix du modèle et premier appel payant à valider.
   - 🔒 **Module 25 :** 25.18 (choix A/B et feu vert VPS), 25.2, 25.10, 25.15, 25.16 (inchangés).
   - **Migrations :** toutes appliquées (0000, 0004 à 0015) ; 0013 le 2026-10-23.
-- **Commit de référence :** `bf63b20`
-- **Dernière entrée journal :** 2026-11-26 · Module 39 (39.1 à 39.12) · execute --all
+- **Commit de référence :** `75f4744`
+- **Dernière entrée journal :** 2026-11-27 · Module 39 (39.13) · deploy-and-push
 ---
 
 ## 🏛️ HISTORIQUE DES MODULES DÉJÀ VALIDÉS (1 à 8)
@@ -3880,8 +3880,8 @@ La plus récente en haut.
   - **Action :** Exécuter `/test-and-verify` sur le module 39 : suite complète `cd mobile-api && npm test`, typecheck des 4 services (`racine`, `mobile-api`, `recruiter-web`, `landing-site`), `npm run lint:colors`, et banc Playwright Expo Web à 375×812 px vérifiant les 6 étapes (avec Jury 200 FCFA et sans Jury), l'ouverture de la modale de 15 designs + filtrage par catégorie + changement de design à l'étape 5, et la modale « Gérer les notifications ».
   - **DoD :** `cd mobile-api && npm test` 0 échec ; 4 typechecks en code 0 ; `npm run lint:colors` sans régression ; 0 erreur console bloquante et `scrollWidth <= 375` sur les 6 étapes ; tableau de verdict consigné dans `journal.md`.
 
-- [!] **Tâche 39.13 : Mise en production (migration `0035`, vérif `STARTING_COINS` VPS, déploiement VPS/OTA et test push téléphone)** 🔒
-  - **État :** 39.1 à 39.12 validées localement ; attend l'accord explicite de Miguel pour appliquer `0035_cv_templates.sql` sur Supabase, vérifier `STARTING_COINS` sur le VPS, committer/pousser sur `main` (VPS + `landing-site` + OTA `production` & `preview`) et tester le push sur téléphone Android.
+- [X] **Tâche 39.13 : Mise en production (migration `0035`, vérif `STARTING_COINS` VPS, déploiement VPS/OTA et test push téléphone)** 🔒
+  - **État :** Validée et livrée le 2026-11-27 (`75f4744`). Migration `0035_cv_templates.sql` appliquée sur Supabase (15 designs actifs), `STARTING_COINS=2000` mis à jour sur `/opt/campus-360/mobile-api/.env.local`, workflows `Deploy to VPS` (`45998263051`), `Design guard` (`45998263053`) et `Publish OTA update` (`45998262922`) verts, sondes prod OK (`/api/health` 200, `/api/mobile/cv-templates` 200 avec `source: 'db'` et 15 designs, `/api/mobile/notifications/test` & `/api/mobile/stages/jury` sans session → 401). Reste : test visuel et push écran verrouillé sur téléphone Android physique par Miguel.
   - **Fichiers :** aucun (opérations de production soumises à accord explicite)
   - **Action :** Après feu vert explicite de Miguel : (1) appliquer `mobile-api/sql/0035_cv_templates.sql` sur Supabase et confirmer les 15 lignes dans `cv_templates` ; (2) vérifier la variable `STARTING_COINS` dans `.env` sur le VPS afin qu'elle ne reste pas figée à `1000` ; (3) committer et pousser les modules 38 + 39 unifiés sur `main` (déploiement VPS, `landing-site`, et EAS OTA sur `production` & `preview`) ; (4) exécuter les sondes prod (`/api/health` → 200, `/api/mobile/cv-templates` → 200 avec 15 designs, `/api/mobile/notifications/test` sans session → 401) et tester la réception d'un push écran verrouillé sur téléphone Android avec l'APK intégrant `google-services.json` (`apk-v1.2.0-117` ou nouveau build APK si changement natif).
   - **DoD :** `/deploy-and-push` vert : `GET https://api.campus360b.site/api/mobile/cv-templates` → 200 (`15` designs), nouvel inscrit en prod crédité de `2 000` coins, OTA publiée sur `production` et `preview`, et notification push test reçue hors app sur téléphone Android.
